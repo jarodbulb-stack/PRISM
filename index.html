@@ -4776,7 +4776,7 @@
             <div class="modal-body" style="padding: 30px;">
                 <div style="text-align: center; margin-bottom: 25px;">
                     <div style="font-size: 4rem; margin-bottom: 10px;">🏠</div>
-                    <h1 style="margin: 0; color: var(--primary); font-size: 2rem;">CARENT</h1>
+                    <h1 style="margin: 0; color: var(--primary); font-size: 2rem;">PRISM</h1>
                     <p style="color: var(--text-secondary); margin-top: 5px;">Property • Rental • Income • Sales • Management</p>
                     <p style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 5px;">by OMNIGRID ONLINE</p>
                 </div>
@@ -6424,7 +6424,7 @@
         // =====================
         // DATABASE SETUP
         // =====================
-        const DB_NAME = 'CarentDB';
+        const DB_NAME = 'PrismDB';
         const DB_VERSION = 9;  // v9: Added Task Management System
         let db = null;
         let dbReady = false;
@@ -9034,7 +9034,7 @@
             const receiptHTML = `
                 <div class="receipt">
                     <div class="receipt-header">
-                        <h2>CARENT</h2>
+                        <h2>PRISM</h2>
                         <p>Payment Receipt</p>
                         <p style="font-size: 0.8rem; color: var(--text-secondary);">${new Date().toLocaleString()}</p>
                     </div>
@@ -9138,7 +9138,7 @@
                 statementHTML = `
                     <div class="receipt statement-of-account">
                         <div class="receipt-header">
-                            <h2>CARENT</h2>
+                            <h2>PRISM</h2>
                             <p><strong>Statement of Account</strong></p>
                             <p style="font-size: 0.8rem; color: var(--text-secondary);">As of ${today}</p>
                         </div>
@@ -9245,7 +9245,7 @@
                 statementHTML = `
                     <div class="receipt statement-of-account">
                         <div class="receipt-header">
-                            <h2>CARENT</h2>
+                            <h2>PRISM</h2>
                             <p><strong>Statement of Account</strong></p>
                             <p style="font-size: 0.8rem; color: var(--text-secondary);">As of ${today}</p>
                         </div>
@@ -9421,7 +9421,7 @@
                     </style>
                 </head>
                 <body>
-                    <h1>🏠 CARENT - Tenant Report</h1>
+                    <h1>🏠 PRISM - Tenant Report</h1>
                     <p style="text-align: center; color: #6b7280;">Generated: ${new Date().toLocaleString()}</p>
 
                     <h2>Tenant Information</h2>
@@ -9465,7 +9465,7 @@
                     `}
 
                     <div class="footer">
-                        <p>CARENT by OMNIGRID | Rental & Credit Management System</p>
+                        <p>PRISM by OMNIGRID | Property, Rental, Income & Sales Management</p>
                     </div>
 
                     <scr` + `ipt>window.onload = function() { window.print(); }<\/scr` + `ipt>
@@ -9524,7 +9524,7 @@
                     </style>
                 </head>
                 <body>
-                    <h1>💰 CARENT - Credit/Loan Report</h1>
+                    <h1>💰 PRISM - Credit/Loan Report</h1>
                     <p style="text-align: center; color: #6b7280;">Generated: ${new Date().toLocaleString()}</p>
 
                     <h2>Debtor Information</h2>
@@ -9565,7 +9565,7 @@
                     `}
 
                     <div class="footer">
-                        <p>CARENT by OMNIGRID | Rental & Credit Management System</p>
+                        <p>PRISM by OMNIGRID | Property, Rental, Income & Sales Management</p>
                     </div>
 
                     <scr` + `ipt>window.onload = function() { window.print(); }<\/scr` + `ipt>
@@ -13850,7 +13850,7 @@
             };
 
             const dateStr = new Date().toISOString().split('T')[0];
-            const fileName = `CARENT-backup-${dateStr}.json`;
+            const fileName = `PRISM-backup-${dateStr}.json`;
             
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
@@ -14753,7 +14753,7 @@
 
                 contractContent.innerHTML = `
 <h4>RENTAL AGREEMENT</h4>
-<strong>CARENT by OMNIGRID</strong>
+<strong>PRISM by OMNIGRID</strong>
 
 This Rental Agreement is entered into on this date between the Landlord and Tenant.
 
@@ -14813,7 +14813,7 @@ Landlord/Manager
 
                 contractContent.innerHTML = `
 <h4>CREDIT/LOAN AGREEMENT</h4>
-<strong>CARENT by OMNIGRID</strong>
+<strong>PRISM by OMNIGRID</strong>
 
 This Loan Agreement is entered into on this date between the Lender and Borrower.
 
@@ -14873,7 +14873,7 @@ Lender/Manager
             const date = document.getElementById('contract-date').value;
             let text = contractContent.innerText;
             text += `\n\nDate Signed: ${date}`;
-            text += `\n\n---\nGenerated by CARENT by OMNIGRID`;
+            text += `\n\n---\nGenerated by PRISM by OMNIGRID`;
             return text;
         }
 
@@ -15085,8 +15085,8 @@ Lender/Manager
 
             html += `
                 <div style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 0.85rem;">
-                    <strong style="color: var(--primary);">CARENT by OMNIGRID</strong><br>
-                    Rental & Credit Management System
+                    <strong style="color: var(--primary);">PRISM by OMNIGRID</strong><br>
+                    Property • Rental • Income • Sales • Management
                 </div>
             `;
 
@@ -18627,7 +18627,7 @@ Lender/Manager
                 // Update auth UI (Firebase auth state will update this)
                 updateAuthUI();
 
-                PrismGuardian.log('SUCCESS', '🎉 CARENT initialized successfully');
+                PrismGuardian.log('SUCCESS', '🎉 PRISM initialized successfully');
 
             } catch (error) {
                 console.error('Initialization error:', error);
@@ -18661,11 +18661,11 @@ Lender/Manager
                 // Running from local file - show offline notice
                 if (offlineNotice) offlineNotice.style.display = 'block';
                 if (syncStatus) syncStatus.innerHTML = '📱 Local Mode';
-                console.log('[CARENT] Running in offline/local mode (file:// protocol)');
+                console.log('[PRISM] Running in offline/local mode (file:// protocol)');
             } else {
                 // Running from server - hide offline notice
                 if (offlineNotice) offlineNotice.style.display = 'none';
-                console.log('[CARENT] Running in online mode (' + window.location.protocol + ')');
+                console.log('[PRISM] Running in online mode (' + window.location.protocol + ')');
             }
         }
 
@@ -18759,7 +18759,7 @@ Lender/Manager
         // 1. IndexedDB stores all data locally
         // 2. Service Worker caches app files
         // 3. No server required after first load
-        console.log('[CARENT] App loaded - works 100% offline!');
+        console.log('[PRISM] App loaded - works 100% offline!');
 
         // =====================================================
         // FUNCTION AVAILABILITY TEST
