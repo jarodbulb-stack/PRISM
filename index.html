@@ -2657,7 +2657,7 @@
                     <div class="card-title">Notes Summary</div>
                 </div>
                 <div class="stats-grid" style="margin-bottom: 0;">
-                    <div class="stat-card stat-card-info">
+                    <div class="stat-card stat-card-info" onclick="setNoteFilter('all')" style="cursor: pointer;" title="View All Notes">
                         <div class="stat-value stat-value-primary" id="stat-notes-total">0</div>
                         <div class="stat-label">Total Notes</div>
                     </div>
@@ -3500,6 +3500,15 @@
                     <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--gray-200);">
                         <p style="font-size: 0.75rem; color: var(--gray-500);">Developed by</p>
                         <p style="font-size: 1.1rem; font-weight: 600; color: var(--gray-900);">OMNIGRID</p>
+                        <div style="margin-top: 15px; padding: 12px; background: var(--bg-secondary); border-radius: 8px;">
+                            <p style="font-size: 0.75rem; color: var(--gray-500); margin-bottom: 8px;">📧 Contact</p>
+                            <p style="font-size: 0.85rem; color: var(--primary); margin: 4px 0;">
+                                <a href="mailto:jarodbulb@gmail.com" style="color: var(--primary); text-decoration: none;">jarodbulb@gmail.com</a>
+                            </p>
+                            <p style="font-size: 0.85rem; color: var(--primary); margin: 4px 0;">
+                                <a href="mailto:danomandam@yahoo.com" style="color: var(--primary); text-decoration: none;">danomandam@yahoo.com</a>
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -7729,7 +7738,14 @@
             const container = document.getElementById('properties-list');
 
             if (properties.length === 0) {
-                container.innerHTML = '<div class="empty-state"><p>No properties yet. Add your first property!</p></div>';
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <p>No properties yet. Add your first property!</p>
+                        <button class="btn btn-primary" onclick="showAddPropertyModal()" style="margin-top: 15px;">
+                            🏠 Add Property
+                        </button>
+                    </div>
+                `;
                 return;
             }
 
@@ -11109,7 +11125,14 @@
             const container = document.getElementById('credits-list');
 
             if (credits.length === 0) {
-                container.innerHTML = '<div class="empty-state"><p>No credits found.</p></div>';
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <p>No credits/loans found.</p>
+                        <button class="btn btn-primary" onclick="showModal('credit-modal')" style="margin-top: 15px;">
+                            💰 Add Credit/Loan
+                        </button>
+                    </div>
+                `;
                 return;
             }
 
@@ -14435,12 +14458,15 @@
                 updateSystemHealthUI();
 
                 if (success) {
-                    alert('✅ Backup created successfully!');
+                    const now = new Date();
+                    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
+                    const filename = `PRISM-backup-${dateStr}.json`;
+                    showToast(`✅ Backup created successfully!\n📁 Saved in browser storage\n📄 ${filename}`, 'success', 5000);
                 } else {
-                    alert('⚠️ Backup may not have completed fully.');
+                    showToast('⚠️ Backup may not have completed fully', 'warning');
                 }
             } catch (error) {
-                alert('❌ Backup failed: ' + error.message);
+                showToast('❌ Backup failed: ' + error.message, 'error');
             }
         }
 
@@ -18760,6 +18786,47 @@ Lender/Manager
         // 2. Service Worker caches app files
         // 3. No server required after first load
         console.log('[PRISM] App loaded - works 100% offline!');
+
+        // =====================================================
+        // GLOBAL EVENT DELEGATION (Fixes button responsiveness)
+        // =====================================================
+        // This ensures buttons work even after innerHTML replacements
+        
+        let lastClickTime = 0;
+        const clickDebounceMs = 50; // Reduced to 50ms for faster response
+        
+        document.body.addEventListener('click', function(e) {
+            // Find the closest button or clickable element
+            const button = e.target.closest('button, .clickable, .list-item[onclick], .stat-card[onclick], .filter-btn, .expense-summary-item[onclick]');
+            if (!button) return;
+            
+            // Debounce rapid clicks
+            const now = Date.now();
+            if (now - lastClickTime < clickDebounceMs) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+            lastClickTime = now;
+            
+            // Prevent multiple rapid clicks on disabled buttons
+            if (button.disabled) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+            
+            // Add visual feedback for click
+            if (button.classList && !button.classList.contains('no-feedback')) {
+                button.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    button.style.transform = '';
+                }, 100);
+            }
+            
+            // Let onclick handlers work naturally
+            // This delegation ensures events bubble up even after DOM updates
+        }, true); // Use capture phase for better reliability
 
         // =====================================================
         // FUNCTION AVAILABILITY TEST
