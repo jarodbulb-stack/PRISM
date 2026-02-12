@@ -3069,8 +3069,8 @@
                     
                     <div style="text-align: center; color: var(--text-secondary); margin: 10px 0;">or</div>
                     
-                    <input type="email" id="login-email" placeholder="Email (e.g., user@example.com)" class="form-control" style="margin-bottom: 10px;" required pattern="[^\s@]+@[^\s@]+\.[^\s@]+" title="Please enter a valid email address">
-                    <input type="password" id="login-password" placeholder="Password (min 6 characters)" class="form-control" style="margin-bottom: 10px;" required minlength="6">
+                    <input type="email" id="login-email" placeholder="Email (e.g., user@example.com)" class="form-control" style="margin-bottom: 10px;" required pattern="[^\s@]+@[^\s@]+\.[^\s@]+" title="Please enter a valid email address" autocomplete="off" value="">
+                    <input type="password" id="login-password" placeholder="Password (min 6 characters)" class="form-control" style="margin-bottom: 10px;" required minlength="6" autocomplete="new-password" value="">
                     
                     <div style="display: flex; gap: 10px;">
                         <button class="btn btn-primary" onclick="signInWithEmail()" style="flex: 1;">Sign In</button>
@@ -5355,6 +5355,14 @@
             }
         }
 
+        // Clear login fields for security
+        function clearLoginFields() {
+            const emailField = document.getElementById('login-email');
+            const passwordField = document.getElementById('login-password');
+            if (emailField) emailField.value = '';
+            if (passwordField) passwordField.value = '';
+        }
+
         // Email/Password Sign In
         async function signInWithEmail() {
             // Check if running from file:// protocol
@@ -5386,6 +5394,7 @@
 
             try {
                 await auth.signInWithEmailAndPassword(email, password);
+                clearLoginFields(); // Clear for security
                 hideModal('login-modal');
                 showToast('✅ Signed in successfully!', 'success');
             } catch (error) {
@@ -5454,6 +5463,7 @@
 
             try {
                 await auth.createUserWithEmailAndPassword(email, password);
+                clearLoginFields(); // Clear for security
                 hideModal('login-modal');
                 showToast('✅ Account created successfully!', 'success');
             } catch (error) {
@@ -6756,6 +6766,8 @@
             if (sectionId === 'settings') {
                 refreshStats();
                 updateDeleteStats();
+                // Clear login fields for security
+                clearLoginFields();
             }
         }
 
@@ -18786,6 +18798,9 @@ Lender/Manager
         // 2. Service Worker caches app files
         // 3. No server required after first load
         console.log('[PRISM] App loaded - works 100% offline!');
+
+        // Clear login fields on page load for security
+        clearLoginFields();
 
         // =====================================================
         // GLOBAL EVENT DELEGATION (Fixes button responsiveness)
