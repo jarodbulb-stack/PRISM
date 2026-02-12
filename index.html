@@ -3035,8 +3035,7 @@
                     <button class="btn btn-secondary" onclick="changeAdminPasscode()">🔐 Change Admin Passcode</button>
                 </div>
                 <p style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 10px;">
-                    Default login: admin / admin123<br>
-                    Default admin passcode: 123456
+                    Secure your app by setting up user accounts and admin passcode.
                 </p>
             </div>
 
@@ -3070,7 +3069,11 @@
                     <div style="text-align: center; color: var(--text-secondary); margin: 10px 0;">or</div>
                     
                     <input type="email" id="login-email" placeholder="Email (e.g., user@example.com)" class="form-control" style="margin-bottom: 10px;" required pattern="[^\s@]+@[^\s@]+\.[^\s@]+" title="Please enter a valid email address" autocomplete="off" value="">
-                    <input type="password" id="login-password" placeholder="Password (min 6 characters)" class="form-control" style="margin-bottom: 10px;" required minlength="6" autocomplete="new-password" value="">
+                    
+                    <div style="position: relative; margin-bottom: 10px;">
+                        <input type="password" id="login-password" placeholder="Password (min 6 characters)" class="form-control" style="padding-right: 45px;" required minlength="6" autocomplete="new-password" value="">
+                        <button type="button" onclick="togglePasswordVisibility('login-password', 'toggle-login-password')" id="toggle-login-password" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 1.2rem; padding: 5px 8px; color: var(--text-secondary);" title="Show/Hide Password">👁️</button>
+                    </div>
                     
                     <div style="display: flex; gap: 10px;">
                         <button class="btn btn-primary" onclick="signInWithEmail()" style="flex: 1;">Sign In</button>
@@ -4818,14 +4821,6 @@
                 <button class="btn btn-secondary btn-block" onclick="continueAsGuest()" style="padding: 12px;">
                     👁️ Continue as Guest (View Only)
                 </button>
-                
-                <div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px; margin-top: 20px;">
-                    <p style="margin: 0; font-size: 0.85rem; color: var(--text-secondary);">
-                        <strong>Default Credentials:</strong><br>
-                        Username: <code style="background: var(--bg-primary); padding: 2px 6px; border-radius: 4px;">admin</code><br>
-                        Password: <code style="background: var(--bg-primary); padding: 2px 6px; border-radius: 4px;">admin123</code>
-                    </p>
-                </div>
             </div>
         </div>
     </div>
@@ -5363,6 +5358,24 @@
             if (passwordField) passwordField.value = '';
         }
 
+        // Toggle password visibility
+        function togglePasswordVisibility(inputId, buttonId) {
+            const input = document.getElementById(inputId);
+            const button = document.getElementById(buttonId);
+            
+            if (input && button) {
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    button.innerHTML = '🙈'; // Hide icon
+                    button.title = 'Hide Password';
+                } else {
+                    input.type = 'password';
+                    button.innerHTML = '👁️'; // Show icon
+                    button.title = 'Show Password';
+                }
+            }
+        }
+
         // Email/Password Sign In
         async function signInWithEmail() {
             // Check if running from file:// protocol
@@ -5406,6 +5419,9 @@
                     case 'auth/operation-not-supported-in-this-environment':
                         alert('☁️ Cloud Sync Not Available\n\nThis feature requires HTTPS.\n\n✅ The app works fully offline!');
                         return;
+                    case 'auth/invalid-credential':
+                        errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+                        break;
                     case 'auth/user-not-found':
                         errorMessage = 'No account found with this email. Please sign up first.';
                         break;
@@ -5475,6 +5491,9 @@
                     case 'auth/operation-not-supported-in-this-environment':
                         alert('☁️ Cloud Sync Not Available\n\nThis feature requires HTTPS.\n\n✅ The app works fully offline!');
                         return;
+                    case 'auth/invalid-credential':
+                        errorMessage = 'Invalid credentials. Please check your information and try again.';
+                        break;
                     case 'auth/email-already-in-use':
                         errorMessage = 'This email is already registered. Please sign in instead.';
                         break;
@@ -16108,10 +16127,10 @@ Lender/Manager
                 const closeBtn = document.getElementById('login-close-btn');
                 if (closeBtn) closeBtn.style.display = 'block';
             } else {
-                // Better error message
+                // Better error message - no default credentials shown
                 const errorMsg = username === 'admin' 
-                    ? '❌ Invalid password.\n\nDefault password is: admin123\n\nTip: Use the 👁️ button to see what you typed.'
-                    : '❌ Invalid username or password.\n\nDefault credentials:\nUsername: admin\nPassword: admin123';
+                    ? '❌ Invalid password.\n\nPlease check your password and try again.\n\nTip: Use the 👁️ button to see what you typed.'
+                    : '❌ Invalid username or password.\n\nPlease check your credentials and try again.';
                 alert(errorMsg);
             }
         }
