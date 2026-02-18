@@ -23,13 +23,29 @@
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
     
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    
-    <!-- Chart.js for Reports -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <!-- Firebase SDK + Chart.js - loaded with error handling -->
+    <script>
+    // Load external scripts with error handling - gracefully degrade if blocked by CSP
+    (function() {
+        function loadScript(src, onLoad, onError) {
+            var s = document.createElement('script');
+            s.src = src;
+            s.onload = onLoad || function(){};
+            s.onerror = onError || function(){ console.warn('[PRISM] Script blocked/failed:', src); };
+            document.head.appendChild(s);
+        }
+        
+        // Load Firebase scripts sequentially
+        loadScript('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js', function() {
+            loadScript('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js', function() {
+                loadScript('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js');
+            });
+        });
+        
+        // Load Chart.js independently
+        loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js');
+    })();
+    </script>
     
     <title>PRISM - Property, Rental, Income & Sales Manager</title>
     <style>
@@ -1537,6 +1553,102 @@
             background: var(--gray-200);
         }
 
+        /* ============================================================
+           CASHIER ENDORSEMENT / ADMIN NOTIFICATION SYSTEM
+           ============================================================ */
+        .endorse-fab {
+            position: fixed;
+            bottom: 24px; right: 24px;
+            z-index: 8000;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white; border: none;
+            width: 56px; height: 56px; border-radius: 50%;
+            font-size: 1.4rem; cursor: pointer;
+            box-shadow: 0 4px 20px rgba(245,158,11,0.5);
+            display: none; align-items: center; justify-content: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .endorse-fab:hover { transform: scale(1.1); box-shadow: 0 8px 30px rgba(245,158,11,0.6); }
+        .endorse-fab .endorse-badge {
+            position: absolute; top: -4px; right: -4px;
+            background: #ef4444; color: white;
+            width: 20px; height: 20px; border-radius: 50%;
+            font-size: 0.7rem; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .endorse-panel {
+            position: fixed; bottom: 90px; right: 24px;
+            width: 340px; max-height: 70vh; overflow-y: auto;
+            z-index: 8001;
+            background: var(--bg-card);
+            border: 1px solid rgba(245,158,11,0.3);
+            border-radius: 16px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+            display: none;
+        }
+        .endorse-panel.open { display: block; }
+        .endorse-panel-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .endorse-panel-header h4 { margin: 0; font-size: 1rem; color: var(--text-primary); }
+        .endorse-panel-body { padding: 16px; }
+        .endorse-item {
+            background: var(--bg-secondary);
+            border-radius: 10px; padding: 12px 14px;
+            margin-bottom: 10px;
+            border-left: 3px solid #f59e0b;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .endorse-item:hover { border-left-color: #d97706; background: var(--bg-card); }
+        .endorse-item.urgent { border-left-color: #ef4444; }
+        .endorse-item-type {
+            font-size: 0.72rem; font-weight: 700; letter-spacing: 1px;
+            color: #f59e0b; text-transform: uppercase; margin-bottom: 4px;
+        }
+        .endorse-item.urgent .endorse-item-type { color: #ef4444; }
+        .endorse-item-title { font-weight: 600; font-size: 0.9rem; color: var(--text-primary); margin-bottom: 2px; }
+        .endorse-item-desc { font-size: 0.8rem; color: var(--text-secondary); }
+        .endorse-item-meta { font-size: 0.75rem; color: #64748b; margin-top: 6px; }
+        .endorse-compose {
+            background: var(--bg-secondary);
+            border-radius: 12px; padding: 14px;
+            margin-bottom: 12px;
+        }
+        .endorse-compose textarea {
+            width: 100%; background: var(--bg-card);
+            border: 1px solid var(--border-color); border-radius: 8px;
+            color: var(--text-primary); padding: 10px;
+            font-size: 0.85rem; resize: none; font-family: inherit;
+            margin-bottom: 8px;
+        }
+        .endorse-compose textarea:focus { outline: none; border-color: #f59e0b; }
+        .endorse-type-pills {
+            display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px;
+        }
+        .endorse-pill {
+            padding: 4px 12px; border-radius: 20px;
+            border: 1px solid var(--border-color);
+            background: none; color: var(--text-secondary);
+            font-size: 0.78rem; cursor: pointer; transition: all 0.2s;
+        }
+        .endorse-pill.active {
+            background: rgba(245,158,11,0.15);
+            border-color: #f59e0b; color: #f59e0b;
+        }
+        .endorse-pill.urgent-pill.active {
+            background: rgba(239,68,68,0.15);
+            border-color: #ef4444; color: #ef4444;
+        }
+
+        /* Admin Inbox Styles */
+        .admin-inbox-dot {
+            display: inline-block; width: 8px; height: 8px;
+            background: #ef4444; border-radius: 50%;
+            margin-left: 6px; animation: mt-pulse 1.5s infinite;
+        }
+
         /* Notifications */
         .notifications-banner {
             background: var(--bg-card);
@@ -2045,12 +2157,989 @@
         }
     </style>
 </head>
+
 <body>
+<!-- ==================== MULTI-TENANT LAYER START ==================== -->
+<!-- PRISM SaaS - Multi-Tenant Overlay -->
+<!-- All screens before the main app: Landing, Auth, Org Setup, Super Admin -->
+
+<style>
+/* ============================================================
+   MULTI-TENANT LAYER STYLES
+   ============================================================ */
+
+/* Hide main app until org is loaded */
+.prism-app-wrapper { display: none; }
+.prism-app-wrapper.mt-active { display: block; }
+
+/* ---- LANDING PAGE ---- */
+#mt-landing {
+    display: none;
+    min-height: 100vh;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 40%, #0f172a 100%);
+    color: #f8fafc;
+    overflow-x: hidden;
+}
+#mt-landing.active { display: block; }
+
+.mt-landing-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 40px;
+    background: rgba(15,23,42,0.8);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    border-bottom: 1px solid rgba(99,102,241,0.2);
+}
+.mt-logo { display: flex; align-items: center; gap: 10px; }
+.mt-logo-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 1rem; color: white;
+}
+.mt-logo-text { font-size: 1.4rem; font-weight: 800; color: #fff; letter-spacing: 2px; }
+.mt-logo-sub { font-size: 0.6rem; color: #818cf8; letter-spacing: 1px; }
+.mt-nav-links { display: flex; gap: 30px; align-items: center; }
+.mt-nav-links a { color: #cbd5e1; text-decoration: none; font-size: 0.9rem; transition: color 0.2s; }
+.mt-nav-links a:hover { color: #818cf8; }
+.mt-nav-cta {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white; border: none; padding: 10px 24px;
+    border-radius: 8px; cursor: pointer; font-weight: 600;
+    font-size: 0.9rem; transition: transform 0.2s, box-shadow 0.2s;
+}
+.mt-nav-cta:hover { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(99,102,241,0.4); }
+
+.mt-hero {
+    text-align: center;
+    padding: 100px 40px 80px;
+    position: relative;
+    overflow: hidden;
+}
+.mt-hero::before {
+    content: '';
+    position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    width: 800px; height: 800px;
+    background: radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%);
+    pointer-events: none;
+}
+.mt-hero-badge {
+    display: inline-block;
+    background: rgba(99,102,241,0.15);
+    border: 1px solid rgba(99,102,241,0.4);
+    color: #818cf8; padding: 6px 16px;
+    border-radius: 20px; font-size: 0.8rem;
+    margin-bottom: 20px; letter-spacing: 1px;
+}
+.mt-hero h1 {
+    font-size: clamp(2.5rem, 6vw, 5rem);
+    font-weight: 900;
+    line-height: 1.1;
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, #fff 40%, #818cf8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+.mt-hero p {
+    font-size: 1.2rem; color: #94a3b8;
+    max-width: 600px; margin: 0 auto 40px;
+    line-height: 1.7;
+}
+.mt-hero-btns { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+.mt-btn-primary {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white; border: none; padding: 16px 36px;
+    border-radius: 12px; cursor: pointer; font-weight: 700;
+    font-size: 1rem; transition: all 0.3s;
+    box-shadow: 0 4px 20px rgba(99,102,241,0.4);
+}
+.mt-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(99,102,241,0.5); }
+.mt-btn-secondary {
+    background: rgba(255,255,255,0.05);
+    color: white; border: 1px solid rgba(255,255,255,0.15);
+    padding: 16px 36px; border-radius: 12px;
+    cursor: pointer; font-weight: 600; font-size: 1rem;
+    transition: all 0.3s;
+}
+.mt-btn-secondary:hover { background: rgba(255,255,255,0.1); }
+
+.mt-features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px; padding: 60px 40px;
+    max-width: 1200px; margin: 0 auto;
+}
+.mt-feature-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px; padding: 28px;
+    transition: all 0.3s;
+}
+.mt-feature-card:hover {
+    background: rgba(99,102,241,0.08);
+    border-color: rgba(99,102,241,0.3);
+    transform: translateY(-2px);
+}
+.mt-feature-icon { font-size: 2rem; margin-bottom: 12px; }
+.mt-feature-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; color: #f1f5f9; }
+.mt-feature-card p { font-size: 0.9rem; color: #64748b; line-height: 1.6; }
+
+/* Pricing */
+.mt-pricing { padding: 60px 40px; max-width: 1200px; margin: 0 auto; text-align: center; }
+.mt-pricing h2 { font-size: 2.5rem; font-weight: 800; margin-bottom: 12px; }
+.mt-pricing > p { color: #64748b; margin-bottom: 40px; }
+.mt-pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px; max-width: 900px; margin: 0 auto;
+}
+.mt-plan {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px; padding: 36px 30px;
+    position: relative; transition: all 0.3s;
+}
+.mt-plan:hover { transform: translateY(-4px); }
+.mt-plan.featured {
+    background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.1));
+    border-color: rgba(99,102,241,0.5);
+}
+.mt-plan-badge {
+    position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white; font-size: 0.75rem; font-weight: 700;
+    padding: 4px 16px; border-radius: 20px; letter-spacing: 1px;
+}
+.mt-plan-name { font-size: 1.1rem; font-weight: 700; color: #818cf8; margin-bottom: 8px; }
+.mt-plan-price { font-size: 2.5rem; font-weight: 900; margin-bottom: 4px; }
+.mt-plan-price span { font-size: 1rem; font-weight: 400; color: #64748b; }
+.mt-plan-desc { color: #64748b; font-size: 0.85rem; margin-bottom: 24px; }
+.mt-plan-features { list-style: none; text-align: left; margin-bottom: 28px; }
+.mt-plan-features li {
+    padding: 6px 0; font-size: 0.9rem; color: #cbd5e1;
+    display: flex; align-items: center; gap: 8px;
+}
+.mt-plan-features li::before { content: '✓'; color: #818cf8; font-weight: 700; }
+.mt-plan-btn {
+    width: 100%; padding: 14px; border-radius: 10px;
+    border: none; cursor: pointer; font-weight: 700;
+    font-size: 1rem; transition: all 0.3s;
+}
+.mt-plan-btn.primary {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white; box-shadow: 0 4px 15px rgba(99,102,241,0.3);
+}
+.mt-plan-btn.secondary {
+    background: rgba(255,255,255,0.05);
+    color: white; border: 1px solid rgba(255,255,255,0.15);
+}
+.mt-plan-btn:hover { transform: translateY(-1px); }
+
+.mt-footer {
+    text-align: center; padding: 40px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    color: #475569; font-size: 0.85rem;
+}
+.mt-footer a { color: #818cf8; text-decoration: none; }
+
+/* ---- AUTH PAGE ---- */
+#mt-auth {
+    display: none;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+    align-items: center; justify-content: center;
+}
+#mt-auth.active { display: flex; }
+
+.mt-auth-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 24px; padding: 48px 40px;
+    width: 100%; max-width: 420px;
+    backdrop-filter: blur(20px);
+}
+.mt-auth-logo {
+    text-align: center; margin-bottom: 32px;
+}
+.mt-auth-logo .big-icon {
+    width: 60px; height: 60px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.8rem; font-weight: 900; color: white;
+    margin: 0 auto 12px;
+}
+.mt-auth-logo h2 { font-size: 1.8rem; font-weight: 900; color: #f8fafc; margin-bottom: 4px; letter-spacing: 2px; }
+.mt-auth-logo p { color: #64748b; font-size: 0.85rem; }
+
+.mt-auth-tabs {
+    display: flex; gap: 4px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 10px; padding: 4px;
+    margin-bottom: 28px;
+}
+.mt-auth-tab {
+    flex: 1; padding: 10px; text-align: center;
+    border-radius: 8px; cursor: pointer;
+    font-size: 0.9rem; font-weight: 600; color: #64748b;
+    transition: all 0.2s; border: none; background: none;
+}
+.mt-auth-tab.active { background: rgba(99,102,241,0.3); color: #f8fafc; }
+
+.mt-form-group { margin-bottom: 16px; }
+.mt-form-group label {
+    display: block; font-size: 0.85rem;
+    font-weight: 600; color: #94a3b8; margin-bottom: 6px;
+}
+.mt-form-input {
+    width: 100%; padding: 12px 16px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px; color: #f8fafc; font-size: 0.95rem;
+    transition: border-color 0.2s; outline: none;
+    font-family: inherit;
+}
+.mt-form-input:focus { border-color: #6366f1; }
+.mt-form-input::placeholder { color: #475569; }
+.mt-input-wrap { position: relative; }
+.mt-input-wrap .mt-form-input { padding-right: 44px; }
+.mt-eye-btn {
+    position: absolute; right: 12px; top: 50%;
+    transform: translateY(-50%); background: none;
+    border: none; cursor: pointer; font-size: 1.1rem; color: #475569;
+}
+
+.mt-auth-submit {
+    width: 100%; padding: 14px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white; border: none; border-radius: 12px;
+    font-weight: 700; font-size: 1rem; cursor: pointer;
+    margin-top: 8px; transition: all 0.3s;
+    box-shadow: 0 4px 20px rgba(99,102,241,0.3);
+}
+.mt-auth-submit:hover { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(99,102,241,0.4); }
+.mt-auth-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+.mt-auth-divider {
+    text-align: center; margin: 20px 0;
+    position: relative; color: #475569; font-size: 0.85rem;
+}
+.mt-auth-divider::before, .mt-auth-divider::after {
+    content: ''; position: absolute; top: 50%; width: 40%; height: 1px;
+    background: rgba(255,255,255,0.08);
+}
+.mt-auth-divider::before { left: 0; }
+.mt-auth-divider::after { right: 0; }
+
+.mt-google-btn {
+    width: 100%; padding: 12px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #f8fafc; border-radius: 12px;
+    cursor: pointer; font-weight: 600; font-size: 0.95rem;
+    display: flex; align-items: center; justify-content: center;
+    gap: 10px; transition: all 0.2s;
+}
+.mt-google-btn:hover { background: rgba(255,255,255,0.1); }
+.mt-auth-back {
+    text-align: center; margin-top: 20px;
+    font-size: 0.85rem; color: #475569;
+}
+.mt-auth-back a { color: #818cf8; text-decoration: none; cursor: pointer; }
+.mt-auth-error {
+    background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3);
+    color: #fca5a5; padding: 10px 14px; border-radius: 8px;
+    font-size: 0.85rem; margin-bottom: 16px; display: none;
+}
+.mt-auth-error.show { display: block; }
+.mt-auth-success {
+    background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3);
+    color: #6ee7b7; padding: 10px 14px; border-radius: 8px;
+    font-size: 0.85rem; margin-bottom: 16px; display: none;
+}
+.mt-auth-success.show { display: block; }
+
+/* ---- ORG SETUP WIZARD ---- */
+#mt-setup {
+    display: none;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+    align-items: center; justify-content: center;
+    padding: 40px 20px;
+}
+#mt-setup.active { display: flex; }
+
+.mt-setup-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 24px; padding: 48px 40px;
+    width: 100%; max-width: 500px;
+    backdrop-filter: blur(20px);
+}
+.mt-setup-header { text-align: center; margin-bottom: 32px; }
+.mt-setup-header h2 { font-size: 1.6rem; font-weight: 800; color: #f8fafc; margin-bottom: 6px; }
+.mt-setup-header p { color: #64748b; font-size: 0.9rem; }
+.mt-steps { display: flex; justify-content: center; gap: 8px; margin-bottom: 32px; }
+.mt-step-dot {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.8rem; font-weight: 700; transition: all 0.3s;
+    background: rgba(255,255,255,0.05);
+    border: 2px solid rgba(255,255,255,0.1); color: #64748b;
+}
+.mt-step-dot.active { background: #6366f1; border-color: #6366f1; color: white; }
+.mt-step-dot.done { background: #10b981; border-color: #10b981; color: white; }
+.mt-step-line { width: 40px; height: 2px; background: rgba(255,255,255,0.1); align-self: center; }
+
+.mt-step-panel { display: none; }
+.mt-step-panel.active { display: block; }
+
+.mt-biz-types {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px;
+}
+.mt-biz-type {
+    padding: 16px 12px; border-radius: 12px; text-align: center;
+    border: 2px solid rgba(255,255,255,0.08); cursor: pointer;
+    transition: all 0.2s; background: rgba(255,255,255,0.02);
+    color: #cbd5e1; font-size: 0.85rem; font-weight: 600;
+}
+.mt-biz-type .icon { font-size: 1.8rem; display: block; margin-bottom: 6px; }
+.mt-biz-type:hover { border-color: rgba(99,102,241,0.4); background: rgba(99,102,241,0.08); }
+.mt-biz-type.selected { border-color: #6366f1; background: rgba(99,102,241,0.15); color: white; }
+
+.mt-setup-btn {
+    width: 100%; padding: 14px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white; border: none; border-radius: 12px;
+    font-weight: 700; font-size: 1rem; cursor: pointer;
+    transition: all 0.3s;
+}
+.mt-setup-btn:hover { transform: translateY(-1px); }
+.mt-setup-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.mt-setup-back-btn {
+    width: 100%; padding: 12px;
+    background: transparent;
+    color: #64748b; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;
+    font-weight: 600; font-size: 0.95rem; cursor: pointer;
+    transition: all 0.2s; margin-top: 8px;
+}
+.mt-setup-back-btn:hover { border-color: rgba(255,255,255,0.2); color: #94a3b8; }
+
+/* ---- SUPER ADMIN PANEL ---- */
+#mt-superadmin {
+    display: none;
+    min-height: 100vh;
+    background: #0f172a;
+    color: #f8fafc;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
+#mt-superadmin.active { display: block; }
+
+.mt-sa-header {
+    background: rgba(239,68,68,0.1);
+    border-bottom: 1px solid rgba(239,68,68,0.3);
+    padding: 16px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+}
+.mt-sa-header h1 { font-size: 1.2rem; font-weight: 800; color: #fca5a5; }
+.mt-sa-nav {
+    display: flex; gap: 8px; padding: 20px 32px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.mt-sa-nav-btn {
+    padding: 8px 20px; border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.1); background: none;
+    color: #64748b; cursor: pointer; font-size: 0.85rem; font-weight: 600;
+    transition: all 0.2s;
+}
+.mt-sa-nav-btn.active { background: rgba(99,102,241,0.2); color: #818cf8; border-color: rgba(99,102,241,0.4); }
+.mt-sa-content { padding: 32px; }
+.mt-sa-stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px; margin-bottom: 32px;
+}
+.mt-sa-stat {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px; padding: 20px;
+}
+.mt-sa-stat-val { font-size: 2rem; font-weight: 800; color: #818cf8; }
+.mt-sa-stat-label { color: #64748b; font-size: 0.85rem; margin-top: 4px; }
+
+.mt-org-table { width: 100%; border-collapse: collapse; }
+.mt-org-table th {
+    text-align: left; padding: 12px 16px;
+    font-size: 0.8rem; color: #64748b; font-weight: 600; letter-spacing: 1px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.mt-org-table td {
+    padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 0.9rem;
+}
+.mt-org-table tr:hover td { background: rgba(255,255,255,0.02); }
+.mt-badge-plan {
+    padding: 3px 10px; border-radius: 12px;
+    font-size: 0.75rem; font-weight: 700;
+}
+.mt-badge-plan.basic { background: rgba(99,102,241,0.2); color: #818cf8; }
+.mt-badge-plan.standard { background: rgba(245,158,11,0.2); color: #fbbf24; }
+.mt-badge-plan.enterprise { background: rgba(16,185,129,0.2); color: #34d399; }
+.mt-badge-status { padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; }
+.mt-badge-status.active { background: rgba(16,185,129,0.15); color: #34d399; }
+.mt-badge-status.inactive { background: rgba(239,68,68,0.15); color: #f87171; }
+
+/* ---- ORG SWITCHER in app header ---- */
+.mt-org-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(99,102,241,0.15);
+    border: 1px solid rgba(99,102,241,0.3);
+    border-radius: 8px; padding: 4px 12px;
+    font-size: 0.8rem; font-weight: 600; color: #818cf8;
+    cursor: pointer; transition: all 0.2s;
+}
+.mt-org-badge:hover { background: rgba(99,102,241,0.25); }
+.mt-org-badge .mt-org-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: #10b981;
+}
+
+/* ---- LOADING SCREEN ---- */
+#mt-loading {
+    display: none;
+    position: fixed; inset: 0; z-index: 9999;
+    background: #0f172a;
+    align-items: center; justify-content: center; flex-direction: column;
+}
+#mt-loading.active { display: flex; }
+.mt-loading-logo {
+    width: 70px; height: 70px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem; font-weight: 900; color: white;
+    margin-bottom: 20px;
+    animation: mt-pulse 1.5s ease-in-out infinite;
+}
+@keyframes mt-pulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.08);} }
+.mt-loading-text { color: #64748b; font-size: 0.9rem; margin-top: 10px; }
+.mt-loading-bar {
+    width: 200px; height: 3px; background: rgba(255,255,255,0.05);
+    border-radius: 2px; overflow: hidden; margin-top: 20px;
+}
+.mt-loading-fill {
+    height: 100%; width: 30%; background: linear-gradient(90deg, #6366f1, #8b5cf6);
+    border-radius: 2px;
+    animation: mt-load 1.5s ease-in-out infinite;
+}
+@keyframes mt-load { 0%{width:0;margin-left:0;} 50%{width:60%;margin-left:20%;} 100%{width:0;margin-left:100%;} }
+
+/* ---- ORG SWITCH MODAL ---- */
+#mt-switch-modal {
+    display: none; position: fixed; inset: 0; z-index: 9000;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center;
+}
+#mt-switch-modal.active { display: flex; }
+.mt-switch-card {
+    background: #1e293b; border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px; padding: 32px; width: 100%; max-width: 380px;
+    color: #f8fafc;
+}
+.mt-switch-card h3 { font-size: 1.2rem; font-weight: 700; margin-bottom: 20px; }
+.mt-org-list { list-style: none; margin-bottom: 20px; }
+.mt-org-list li {
+    padding: 12px 16px; border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.06); cursor: pointer;
+    margin-bottom: 8px; transition: all 0.2s;
+    display: flex; align-items: center; gap: 12px;
+    font-size: 0.9rem;
+}
+.mt-org-list li:hover { background: rgba(99,102,241,0.1); border-color: rgba(99,102,241,0.3); }
+.mt-org-list li.current { background: rgba(99,102,241,0.15); border-color: rgba(99,102,241,0.4); }
+.mt-org-list li .org-icon {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; flex-shrink: 0;
+}
+
+/* ---- TOAST ---- */
+.mt-toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 99999;
+    background: #1e293b; border: 1px solid rgba(255,255,255,0.1);
+    color: #f8fafc; padding: 12px 20px; border-radius: 12px;
+    font-size: 0.9rem; font-weight: 600;
+    transform: translateY(100px); opacity: 0; transition: all 0.3s;
+    pointer-events: none;
+}
+.mt-toast.show { transform: translateY(0); opacity: 1; }
+.mt-toast.success { border-left: 4px solid #10b981; }
+.mt-toast.error { border-left: 4px solid #ef4444; }
+.mt-toast.info { border-left: 4px solid #6366f1; }
+
+@media (max-width: 600px) {
+    .mt-landing-nav { padding: 16px 20px; }
+    .mt-nav-links { display: none; }
+    .mt-hero { padding: 60px 20px 50px; }
+    .mt-features, .mt-pricing { padding: 40px 20px; }
+    .mt-auth-card, .mt-setup-card { padding: 32px 24px; }
+}
+</style>
+
+<!-- ==================== MULTI-TENANT HTML ==================== -->
+
+<!-- Loading Screen -->
+<div id="mt-loading">
+    <div class="mt-loading-logo">P</div>
+    <div style="color:#f8fafc;font-weight:800;font-size:1.4rem;letter-spacing:3px;">PRISM</div>
+    <div class="mt-loading-text" id="mt-loading-text">Initializing...</div>
+    <div class="mt-loading-bar"><div class="mt-loading-fill"></div></div>
+</div>
+
+<!-- Toast -->
+<div class="mt-toast" id="mt-toast"></div>
+
+<!-- ========== LANDING PAGE ========== -->
+<div id="mt-landing">
+    <nav class="mt-landing-nav">
+        <div class="mt-logo">
+            <div class="mt-logo-icon">P</div>
+            <div>
+                <div class="mt-logo-text">PRISM</div>
+                <div class="mt-logo-sub">Properties • Rental • Income • Sales • Management</div>
+            </div>
+        </div>
+        <div class="mt-nav-links">
+            <a href="#features">Features</a>
+            <a href="#pricing">Pricing</a>
+            <a href="mailto:jarodbulb@gmail.com">Contact</a>
+        </div>
+        <div style="display:flex;gap:10px;">
+            <button class="mt-btn-secondary" style="padding:10px 20px;font-size:0.9rem;" onclick="mtShowAuth('login')">Sign In</button>
+            <button class="mt-nav-cta" onclick="mtShowAuth('register')">Get Started Free</button>
+        </div>
+    </nav>
+
+    <div class="mt-hero">
+        <div class="mt-hero-badge">🚀 Multi-Tenant Business Management Platform</div>
+        <h1>Manage Your Business<br>Like a Pro</h1>
+        <p>PRISM gives your team a complete system for properties, rentals, credits, sales tracking, and more — all in one secure, offline-first platform.</p>
+        <div class="mt-hero-btns">
+            <button class="mt-btn-primary" onclick="mtShowAuth('register')">Start Free Trial →</button>
+            <button class="mt-btn-secondary" onclick="mtShowAuth('login')">Sign In</button>
+            <button class="mt-btn-secondary" onclick="mtLocalLogin()" style="background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.4);color:#34d399;">🔓 Local Login</button>
+        </div>
+    </div>
+
+    <div id="features" class="mt-features">
+        <div class="mt-feature-card">
+            <div class="mt-feature-icon">🏠</div>
+            <h3>Property Management</h3>
+            <p>Track all your properties, occupancy status, and rental income in one organized dashboard.</p>
+        </div>
+        <div class="mt-feature-card">
+            <div class="mt-feature-icon">👥</div>
+            <h3>Tenant Tracking</h3>
+            <p>Complete tenant profiles with payment history, signatures, photo IDs, and due date alerts.</p>
+        </div>
+        <div class="mt-feature-card">
+            <div class="mt-feature-icon">💳</div>
+            <h3>Credits & Loans</h3>
+            <p>Manage lending with interest calculation, payment schedules, and automatic overdue detection.</p>
+        </div>
+        <div class="mt-feature-card">
+            <div class="mt-feature-icon">💧</div>
+            <h3>Water Station Sales</h3>
+            <p>Run your water refilling business with customer accounts, credit sales, and balance tracking.</p>
+        </div>
+        <div class="mt-feature-card">
+            <div class="mt-feature-icon">👷</div>
+            <h3>Staff & Payroll</h3>
+            <p>Manage employees, attendance, cash advances, and process payroll with ease.</p>
+        </div>
+        <div class="mt-feature-card">
+            <div class="mt-feature-icon">📊</div>
+            <h3>Reports & Analytics</h3>
+            <p>AI-powered insights, 6-month trends, income vs expense charts, and CSV/PDF exports.</p>
+        </div>
+        <div class="mt-feature-card">
+            <div class="mt-feature-icon">🔒</div>
+            <h3>Secure & Private</h3>
+            <p>Your organization's data is completely isolated. Multi-user access with role-based permissions.</p>
+        </div>
+        <div class="mt-feature-card">
+            <div class="mt-feature-icon">📱</div>
+            <h3>Offline-First PWA</h3>
+            <p>Works without internet. Install on any device. Your data is always available, cloud sync optional.</p>
+        </div>
+        <div class="mt-feature-card">
+            <div class="mt-feature-icon">🏢</div>
+            <h3>Multi-Organization</h3>
+            <p>Manage multiple businesses under one account. Perfect for business owners with multiple ventures.</p>
+        </div>
+    </div>
+
+    <div id="pricing" class="mt-pricing">
+        <h2>Simple, Transparent Pricing</h2>
+        <p>Choose the plan that fits your business. No hidden fees.</p>
+        <div class="mt-pricing-grid">
+            <div class="mt-plan">
+                <div class="mt-plan-name">BASIC</div>
+                <div class="mt-plan-price">₱299<span>/month</span></div>
+                <div class="mt-plan-desc">For small businesses just getting started</div>
+                <ul class="mt-plan-features">
+                    <li>Up to 3 users</li>
+                    <li>All core modules</li>
+                    <li>Offline capability</li>
+                    <li>CSV export</li>
+                    <li>Email support</li>
+                </ul>
+                <button class="mt-plan-btn secondary" onclick="mtShowAuth('register')">Get Started</button>
+            </div>
+            <div class="mt-plan featured">
+                <div class="mt-plan-badge">MOST POPULAR</div>
+                <div class="mt-plan-name">STANDARD</div>
+                <div class="mt-plan-price">₱599<span>/month</span></div>
+                <div class="mt-plan-desc">For growing businesses with teams</div>
+                <ul class="mt-plan-features">
+                    <li>Up to 10 users</li>
+                    <li>All modules + Reports</li>
+                    <li>Cloud sync (Firebase)</li>
+                    <li>PDF exports</li>
+                    <li>Priority support</li>
+                    <li>Multiple org support</li>
+                </ul>
+                <button class="mt-plan-btn primary" onclick="mtShowAuth('register')">Get Started</button>
+            </div>
+            <div class="mt-plan">
+                <div class="mt-plan-name">ENTERPRISE</div>
+                <div class="mt-plan-price">₱999<span>/month</span></div>
+                <div class="mt-plan-desc">For large operations and franchises</div>
+                <ul class="mt-plan-features">
+                    <li>Unlimited users</li>
+                    <li>All modules + AI insights</li>
+                    <li>Advanced cloud sync</li>
+                    <li>Custom branding</li>
+                    <li>Dedicated support</li>
+                    <li>Multiple organizations</li>
+                    <li>API access</li>
+                </ul>
+                <button class="mt-plan-btn secondary" onclick="mtShowAuth('register')">Contact Us</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-footer">
+        <p>Built by <strong>OMNIGRID ONLINE</strong> &bull; <a href="mailto:jarodbulb@gmail.com">jarodbulb@gmail.com</a> &bull; <a href="mailto:danomandam@yahoo.com">danomandam@yahoo.com</a></p>
+        <p style="margin-top:8px;">© 2025 PRISM - Property • Rental • Income • Sales • Management</p>
+    </div>
+</div>
+
+<!-- ========== AUTH PAGE ========== -->
+<div id="mt-auth">
+    <div class="mt-auth-card">
+        <div class="mt-auth-logo">
+            <div class="big-icon">P</div>
+            <h2>PRISM</h2>
+            <p>Properties · Rental · Income · Sales · Management</p>
+        </div>
+        <div class="mt-auth-tabs">
+            <button class="mt-auth-tab active" id="mt-tab-login" onclick="mtSwitchTab('login')">Sign In</button>
+            <button class="mt-auth-tab" id="mt-tab-register" onclick="mtSwitchTab('register')">Register</button>
+        </div>
+        <div id="mt-auth-error" class="mt-auth-error"></div>
+        <div id="mt-auth-success" class="mt-auth-success"></div>
+
+        <!-- LOGIN FORM -->
+        <div id="mt-login-form">
+            <div class="mt-form-group">
+                <label>Email</label>
+                <input type="email" class="mt-form-input" id="mt-login-email" placeholder="you@example.com">
+            </div>
+            <div class="mt-form-group">
+                <label>Password</label>
+                <div class="mt-input-wrap">
+                    <input type="password" class="mt-form-input" id="mt-login-password" placeholder="Your password">
+                    <button class="mt-eye-btn" onclick="mtTogglePass('mt-login-password', this)">👁️</button>
+                </div>
+            </div>
+            <button class="mt-auth-submit" id="mt-login-btn" onclick="mtLogin()">Sign In</button>
+            <div class="mt-auth-divider">or</div>
+            <button class="mt-google-btn" onclick="mtGoogleLogin()">
+                <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z"/><path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2a4.8 4.8 0 0 1-7.18-2.54H1.83v2.07A8 8 0 0 0 8.98 17z"/><path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 0 1 0-3.04V5.41H1.83a8 8 0 0 0 0 7.18l2.67-2.07z"/><path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 0 0 1.83 5.4L4.5 7.49a4.77 4.77 0 0 1 4.48-3.31z"/></svg>
+                Continue with Google
+            </button>
+        </div>
+
+        <!-- REGISTER FORM -->
+        <div id="mt-register-form" style="display:none;">
+            <div class="mt-form-group">
+                <label>Full Name</label>
+                <input type="text" class="mt-form-input" id="mt-reg-name" placeholder="Juan dela Cruz">
+            </div>
+            <div class="mt-form-group">
+                <label>Email</label>
+                <input type="email" class="mt-form-input" id="mt-reg-email" placeholder="you@example.com">
+            </div>
+            <div class="mt-form-group">
+                <label>Password</label>
+                <div class="mt-input-wrap">
+                    <input type="password" class="mt-form-input" id="mt-reg-password" placeholder="Min. 6 characters">
+                    <button class="mt-eye-btn" onclick="mtTogglePass('mt-reg-password', this)">👁️</button>
+                </div>
+            </div>
+            <div class="mt-form-group">
+                <label>Confirm Password</label>
+                <div class="mt-input-wrap">
+                    <input type="password" class="mt-form-input" id="mt-reg-confirm" placeholder="Repeat password">
+                    <button class="mt-eye-btn" onclick="mtTogglePass('mt-reg-confirm', this)">👁️</button>
+                </div>
+            </div>
+            <button class="mt-auth-submit" id="mt-register-btn" onclick="mtRegister()">Create Account</button>
+        </div>
+
+        <!-- Local/Offline Login -->
+        <div style="margin-top:16px;padding:16px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:12px;text-align:center;">
+            <div style="font-size:0.8rem;color:#64748b;margin-bottom:10px;">No internet or Firebase not configured?</div>
+            <button onclick="mtLocalLogin()" style="width:100%;padding:12px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);color:#34d399;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.95rem;">
+                🔓 Enter as Local Admin
+            </button>
+            <div style="font-size:0.75rem;color:#475569;margin-top:6px;">Full access · Data saved on this device only</div>
+        </div>
+
+        <div class="mt-auth-back">
+            <a onclick="mtShowLanding()">← Back to Home</a>
+        </div>
+    </div>
+</div>
+
+<!-- ========== ORG SETUP WIZARD ========== -->
+<div id="mt-setup">
+    <div class="mt-setup-card">
+        <div class="mt-setup-header">
+            <h2>🏢 Set Up Your Organization</h2>
+            <p>Let's get your business configured in PRISM</p>
+        </div>
+        <div class="mt-steps">
+            <div class="mt-step-dot active" id="mt-dot-1">1</div>
+            <div class="mt-step-line"></div>
+            <div class="mt-step-dot" id="mt-dot-2">2</div>
+            <div class="mt-step-line"></div>
+            <div class="mt-step-dot" id="mt-dot-3">3</div>
+        </div>
+
+        <!-- Step 1: Business Type -->
+        <div class="mt-step-panel active" id="mt-step-1">
+            <p style="color:#94a3b8;margin-bottom:16px;font-size:0.9rem;">What best describes your business?</p>
+            <div class="mt-biz-types">
+                <div class="mt-biz-type" onclick="mtSelectBizType('property', this)">
+                    <span class="icon">🏠</span>Property Rental
+                </div>
+                <div class="mt-biz-type" onclick="mtSelectBizType('lending', this)">
+                    <span class="icon">💳</span>Lending / Credit
+                </div>
+                <div class="mt-biz-type" onclick="mtSelectBizType('water', this)">
+                    <span class="icon">💧</span>Water Station
+                </div>
+                <div class="mt-biz-type" onclick="mtSelectBizType('retail', this)">
+                    <span class="icon">🏪</span>Retail / Store
+                </div>
+                <div class="mt-biz-type" onclick="mtSelectBizType('hardware', this)">
+                    <span class="icon">🔧</span>Hardware Store
+                </div>
+                <div class="mt-biz-type" onclick="mtSelectBizType('mixed', this)">
+                    <span class="icon">🏢</span>Mixed Business
+                </div>
+            </div>
+            <button class="mt-setup-btn" id="mt-step1-next" onclick="mtSetupNext(2)" disabled>Continue →</button>
+        </div>
+
+        <!-- Step 2: Business Details -->
+        <div class="mt-step-panel" id="mt-step-2">
+            <div class="mt-form-group">
+                <label>Organization / Business Name *</label>
+                <input type="text" class="mt-form-input" id="mt-setup-orgname" placeholder="e.g. RLM Hardware Store">
+            </div>
+            <div class="mt-form-group">
+                <label>Address</label>
+                <input type="text" class="mt-form-input" id="mt-setup-address" placeholder="e.g. Matalam, North Cotabato">
+            </div>
+            <div class="mt-form-group">
+                <label>Contact Number</label>
+                <input type="text" class="mt-form-input" id="mt-setup-phone" placeholder="e.g. 09xx-xxx-xxxx">
+            </div>
+            <div class="mt-form-group">
+                <label>Subscription Plan</label>
+                <select class="mt-form-input" id="mt-setup-plan">
+                    <option value="basic">Basic — ₱299/month (Up to 3 users)</option>
+                    <option value="standard" selected>Standard — ₱599/month (Up to 10 users)</option>
+                    <option value="enterprise">Enterprise — ₱999/month (Unlimited)</option>
+                </select>
+            </div>
+            <button class="mt-setup-btn" onclick="mtSetupNext(3)">Continue →</button>
+            <button class="mt-setup-back-btn" onclick="mtSetupNext(1)">← Back</button>
+        </div>
+
+        <!-- Step 3: Confirm & Launch -->
+        <div class="mt-step-panel" id="mt-step-3">
+            <div id="mt-setup-summary" style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:20px;margin-bottom:24px;font-size:0.9rem;color:#cbd5e1;line-height:2;">
+                <!-- Filled by JS -->
+            </div>
+            <button class="mt-setup-btn" id="mt-launch-btn" onclick="mtLaunchOrg()">🚀 Launch PRISM</button>
+            <button class="mt-setup-back-btn" onclick="mtSetupNext(2)">← Back</button>
+        </div>
+    </div>
+</div>
+
+<!-- ========== SUPER ADMIN PANEL ========== -->
+<div id="mt-superadmin">
+    <div class="mt-sa-header">
+        <div>
+            <h1>⚡ SUPER ADMIN PANEL</h1>
+            <div style="font-size:0.8rem;color:#94a3b8;margin-top:2px;">OMNIGRID ONLINE — PRISM Platform Management</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;">
+            <span style="font-size:0.85rem;color:#64748b;" id="mt-sa-user-email"></span>
+            <button onclick="mtSAGoToApp()" style="background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);color:#818cf8;padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;">→ My Org</button>
+            <button onclick="mtSuperAdminLogout()" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;">Logout</button>
+        </div>
+    </div>
+    <div class="mt-sa-nav">
+        <button class="mt-sa-nav-btn active" onclick="mtSATab('overview', this)">Overview</button>
+        <button class="mt-sa-nav-btn" onclick="mtSATab('orgs', this)">Organizations</button>
+        <button class="mt-sa-nav-btn" onclick="mtSATab('users', this)">All Users</button>
+    </div>
+    <div class="mt-sa-content">
+        <!-- Overview Tab -->
+        <div id="mt-sa-overview">
+            <div class="mt-sa-stats" id="mt-sa-stats-grid">
+                <div class="mt-sa-stat"><div class="mt-sa-stat-val" id="sa-total-orgs">0</div><div class="mt-sa-stat-label">Total Organizations</div></div>
+                <div class="mt-sa-stat"><div class="mt-sa-stat-val" id="sa-active-orgs">0</div><div class="mt-sa-stat-label">Active Orgs</div></div>
+                <div class="mt-sa-stat"><div class="mt-sa-stat-val" id="sa-total-users">0</div><div class="mt-sa-stat-label">Total Users</div></div>
+                <div class="mt-sa-stat"><div class="mt-sa-stat-val" id="sa-total-revenue">₱0</div><div class="mt-sa-stat-label">Monthly Revenue</div></div>
+            </div>
+        </div>
+        <!-- Orgs Tab -->
+        <div id="mt-sa-orgs" style="display:none;">
+            <div style="overflow-x:auto;">
+                <table class="mt-org-table">
+                    <thead>
+                        <tr>
+                            <th>Organization</th>
+                            <th>Plan</th>
+                            <th>Owner</th>
+                            <th>Users</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mt-sa-orgs-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+        <!-- Users Tab -->
+        <div id="mt-sa-users" style="display:none;">
+            <table class="mt-org-table">
+                <thead><tr><th>Name</th><th>Email</th><th>Organization</th><th>Role</th><th>Joined</th></tr></thead>
+                <tbody id="mt-sa-users-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     CASHIER ENDORSEMENT FAB + PANEL
+     ============================================================ -->
+
+<!-- Cashier: Floating Endorse Button -->
+<button class="endorse-fab" id="endorse-fab" onclick="toggleEndorsePanel()" title="Endorse to Admin">
+    📋
+    <span class="endorse-badge" id="endorse-count" style="display:none;">0</span>
+</button>
+
+<!-- Cashier: Endorsement Panel -->
+<div class="endorse-panel" id="endorse-panel">
+    <div class="endorse-panel-header">
+        <h4>📋 Endorse to Admin</h4>
+        <button onclick="toggleEndorsePanel()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--text-secondary);">×</button>
+    </div>
+    <div class="endorse-panel-body">
+        <!-- Compose new endorsement -->
+        <div class="endorse-compose">
+            <div style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">New Endorsement</div>
+            <div class="endorse-type-pills">
+                <button class="endorse-pill active" onclick="selectEndorseType(this,'sales')">💰 Sales</button>
+                <button class="endorse-pill" onclick="selectEndorseType(this,'credit')">💳 Credit</button>
+                <button class="endorse-pill" onclick="selectEndorseType(this,'expense')">🧾 Expense</button>
+                <button class="endorse-pill" onclick="selectEndorseType(this,'water')">💧 Water</button>
+                <button class="endorse-pill" onclick="selectEndorseType(this,'attendance')">👷 Staff</button>
+                <button class="endorse-pill urgent-pill" onclick="selectEndorseType(this,'urgent')">🚨 Urgent</button>
+            </div>
+            <textarea id="endorse-message" rows="3" placeholder="Describe what needs admin attention..."></textarea>
+            <div style="display:flex;gap:8px;">
+                <button onclick="submitEndorsement()" style="flex:1;padding:10px;background:linear-gradient(135deg,#f59e0b,#d97706);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.9rem;">Send to Admin</button>
+                <button onclick="autoEndorseReport()" style="padding:10px 14px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:8px;cursor:pointer;font-size:0.8rem;font-weight:600;" title="Auto-generate shift summary">📊 Auto</button>
+            </div>
+        </div>
+        <!-- Sent endorsements log -->
+        <div style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">Sent Today</div>
+        <div id="endorse-sent-list">
+            <div style="text-align:center;color:var(--text-secondary);font-size:0.85rem;padding:20px;">No endorsements sent today</div>
+        </div>
+    </div>
+</div>
+
+<!-- Admin: Inbox Panel -->
+<div class="endorse-panel" id="admin-inbox-panel" style="border-color:rgba(99,102,241,0.3);">
+    <div class="endorse-panel-header" style="background:rgba(99,102,241,0.05);">
+        <h4>📬 Cashier Endorsements</h4>
+        <button onclick="toggleAdminInbox()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--text-secondary);">×</button>
+    </div>
+    <div class="endorse-panel-body">
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+            <button onclick="filterInbox('all',this)" class="endorse-pill active" style="font-size:0.78rem;">All</button>
+            <button onclick="filterInbox('unread',this)" class="endorse-pill" style="font-size:0.78rem;">🔴 Unread</button>
+            <button onclick="filterInbox('urgent',this)" class="endorse-pill urgent-pill" style="font-size:0.78rem;">🚨 Urgent</button>
+        </div>
+        <div id="admin-inbox-list">
+            <div style="text-align:center;color:var(--text-secondary);font-size:0.85rem;padding:20px;">No endorsements received</div>
+        </div>
+        <button onclick="markAllInboxRead()" style="width:100%;padding:8px;background:none;border:1px solid var(--border-color);border-radius:8px;color:var(--text-secondary);cursor:pointer;font-size:0.82rem;margin-top:8px;">✓ Mark All as Read</button>
+    </div>
+</div>
+
+<!-- Admin inbox FAB -->
+<button id="admin-inbox-fab" onclick="toggleAdminInbox()" title="View Endorsements from Cashier"
+    style="position:fixed;bottom:24px;right:90px;z-index:8000;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;border:none;width:50px;height:50px;border-radius:50%;font-size:1.2rem;cursor:pointer;box-shadow:0 4px 20px rgba(99,102,241,0.4);display:none;align-items:center;justify-content:center;transition:transform 0.2s;">
+    📬
+    <span id="admin-inbox-count" style="position:absolute;top:-4px;right:-4px;background:#ef4444;color:white;width:18px;height:18px;border-radius:50%;font-size:0.65rem;font-weight:700;display:none;align-items:center;justify-content:center;">0</span>
+</button>
+
+<!-- Org Switch Modal -->
+<div id="mt-switch-modal">
+    <div class="mt-switch-card">
+        <h3>Switch Organization</h3>
+        <ul class="mt-org-list" id="mt-org-list"></ul>
+        <button onclick="mtShowSetup()" style="width:100%;padding:12px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:10px;cursor:pointer;font-weight:600;">+ Create New Organization</button>
+        <button onclick="document.getElementById('mt-switch-modal').classList.remove('active')" style="width:100%;padding:10px;background:none;border:none;color:#64748b;cursor:pointer;margin-top:8px;">Cancel</button>
+    </div>
+</div>
+
+
+<!-- ==================== ORIGINAL PRISM APP ==================== -->
+<div class="prism-app-wrapper">
     <!-- Header -->
     <div class="header">
         <div class="header-left">
             <h1>PRISM</h1>
-            <div class="header-subtitle">Property • Rental • Income • Sales • Management</div>
+            <div class="header-subtitle" id="mt-app-org-subtitle">Property • Rental • Income • Sales • Management</div>
         </div>
         <div class="header-right" style="display: flex; align-items: center; gap: 10px;">
             <div id="current-user-display" style="display: flex; align-items: center;"></div>
@@ -2079,6 +3168,95 @@
     <!-- Main Content -->
     <div class="main">
         <!-- Dashboard Section -->
+        <!-- ============================================================
+             CASHIER DAILY SUMMARY (only visible when cashier is logged in)
+             ============================================================ -->
+        <div id="cashier-dashboard" class="section" style="display:none;">
+            <div style="padding:0 0 16px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <div>
+                        <h2 style="margin:0;font-size:1.3rem;">📊 My Shift Summary</h2>
+                        <div id="cashier-shift-date" style="font-size:0.85rem;color:var(--text-secondary);margin-top:2px;"></div>
+                    </div>
+                    <button onclick="loadCashierDashboard()" style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#818cf8;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:0.82rem;font-weight:600;">🔄 Refresh</button>
+                </div>
+
+                <!-- Today's Totals -->
+                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px;" id="cashier-stats-grid">
+                    <div class="stat-card" style="background:linear-gradient(135deg,rgba(16,185,129,0.15),rgba(16,185,129,0.05));border:1px solid rgba(16,185,129,0.2);">
+                        <div style="font-size:1.5rem;font-weight:800;color:#10b981;" id="cs-total-collected">₱0</div>
+                        <div style="font-size:0.78rem;color:var(--text-secondary);margin-top:4px;">Total Collected Today</div>
+                    </div>
+                    <div class="stat-card" style="background:linear-gradient(135deg,rgba(239,68,68,0.15),rgba(239,68,68,0.05));border:1px solid rgba(239,68,68,0.2);">
+                        <div style="font-size:1.5rem;font-weight:800;color:#ef4444;" id="cs-total-expenses">₱0</div>
+                        <div style="font-size:0.78rem;color:var(--text-secondary);margin-top:4px;">Expenses Recorded Today</div>
+                    </div>
+                    <div class="stat-card" style="background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(99,102,241,0.05));border:1px solid rgba(99,102,241,0.2);">
+                        <div style="font-size:1.5rem;font-weight:800;color:#818cf8;" id="cs-transactions">0</div>
+                        <div style="font-size:0.78rem;color:var(--text-secondary);margin-top:4px;">Transactions Today</div>
+                    </div>
+                    <div class="stat-card" style="background:linear-gradient(135deg,rgba(245,158,11,0.15),rgba(245,158,11,0.05));border:1px solid rgba(245,158,11,0.2);">
+                        <div style="font-size:1.5rem;font-weight:800;color:#f59e0b;" id="cs-endorsements">0</div>
+                        <div style="font-size:0.78rem;color:var(--text-secondary);margin-top:4px;">Endorsements Sent</div>
+                    </div>
+                </div>
+
+                <!-- Breakdown by category -->
+                <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:12px;padding:16px;margin-bottom:14px;">
+                    <div style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Today's Breakdown</div>
+                    <div id="cashier-breakdown-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        <div style="text-align:center;padding:10px;background:var(--bg-secondary);border-radius:8px;">
+                            <div style="font-size:0.75rem;color:var(--text-secondary);">🏠 Rent</div>
+                            <div style="font-weight:700;color:var(--text-primary);" id="cs-rent">₱0</div>
+                        </div>
+                        <div style="text-align:center;padding:10px;background:var(--bg-secondary);border-radius:8px;">
+                            <div style="font-size:0.75rem;color:var(--text-secondary);">💳 Credit</div>
+                            <div style="font-weight:700;color:var(--text-primary);" id="cs-credit">₱0</div>
+                        </div>
+                        <div style="text-align:center;padding:10px;background:var(--bg-secondary);border-radius:8px;">
+                            <div style="font-size:0.75rem;color:var(--text-secondary);">💧 Water</div>
+                            <div style="font-weight:700;color:var(--text-primary);" id="cs-water">₱0</div>
+                        </div>
+                        <div style="text-align:center;padding:10px;background:var(--bg-secondary);border-radius:8px;">
+                            <div style="font-size:0.75rem;color:var(--text-secondary);">💰 Other Income</div>
+                            <div style="font-weight:700;color:var(--text-primary);" id="cs-other-income">₱0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- My Recent Transactions -->
+                <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:12px;padding:16px;margin-bottom:14px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                        <div style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;">My Transactions Today</div>
+                        <select id="cashier-txn-filter" onchange="loadCashierDashboard()" style="background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-primary);border-radius:6px;padding:4px 8px;font-size:0.78rem;">
+                            <option value="all">All</option>
+                            <option value="rent">🏠 Rent</option>
+                            <option value="credit">💳 Credit</option>
+                            <option value="water">💧 Water</option>
+                            <option value="expense">🧾 Expense</option>
+                            <option value="income">💰 Income</option>
+                        </select>
+                    </div>
+                    <div id="cashier-txn-list" style="max-height:300px;overflow-y:auto;">
+                        <div style="text-align:center;color:var(--text-secondary);padding:20px;font-size:0.85rem;">Loading transactions...</div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions for Cashier -->
+                <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:12px;padding:16px;">
+                    <div style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Quick Actions</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        <button onclick="showSection('tenants')" style="padding:12px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);color:#10b981;border-radius:10px;cursor:pointer;font-size:0.85rem;font-weight:600;">🏠 Record Rent</button>
+                        <button onclick="showSection('credits')" style="padding:12px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.2);color:#818cf8;border-radius:10px;cursor:pointer;font-size:0.85rem;font-weight:600;">💳 Record Credit</button>
+                        <button onclick="showSection('water')" style="padding:12px;background:rgba(14,165,233,0.1);border:1px solid rgba(14,165,233,0.2);color:#38bdf8;border-radius:10px;cursor:pointer;font-size:0.85rem;font-weight:600;">💧 Water Sale</button>
+                        <button onclick="showSection('income')" style="padding:12px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);color:#f59e0b;border-radius:10px;cursor:pointer;font-size:0.85rem;font-weight:600;">💰 Other Income</button>
+                        <button onclick="showSection('expenses')" style="padding:12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#ef4444;border-radius:10px;cursor:pointer;font-size:0.85rem;font-weight:600;">🧾 Expense</button>
+                        <button onclick="toggleEndorsePanel()" style="padding:12px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);color:#f59e0b;border-radius:10px;cursor:pointer;font-size:0.85rem;font-weight:600;">📋 Endorse Admin</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="dashboard" class="section active">
             <!-- Notifications Banner -->
             <div id="notifications-banner" class="hidden">
@@ -2791,6 +3969,9 @@
             <div class="card">
                 <div class="card-header">
                     <div class="card-title">👷 Employee Management</div>
+                    <button id="void-requests-btn" onclick="showVoidRequests()" style="display:none;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#ef4444;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:0.8rem;font-weight:700;">
+                        ⚠️ Void Requests <span id="void-req-count" style="background:#ef4444;color:white;border-radius:10px;padding:1px 7px;margin-left:4px;font-size:0.75rem;">0</span>
+                    </button>
                     <button class="btn btn-sm btn-primary" onclick="showModal('employee-modal')">+ Add Employee</button>
                 </div>
 
@@ -3506,10 +4687,10 @@
                         <div style="margin-top: 15px; padding: 12px; background: var(--bg-secondary); border-radius: 8px;">
                             <p style="font-size: 0.75rem; color: var(--gray-500); margin-bottom: 8px;">📧 Contact</p>
                             <p style="font-size: 0.85rem; color: var(--primary); margin: 4px 0;">
-                                <a href="mailto:jarodbulb@gmail.com" style="color: var(--primary); text-decoration: none;">jarodbulb@gmail.com</a>
+                                <a href="/cdn-cgi/l/email-protection#d8b2b9aab7bcbaadb4ba98bfb5b9b1b4f6bbb7b5" style="color: var(--primary); text-decoration: none;"><span class="__cf_email__" data-cfemail="fb919a89949f998e9799bb9c969a9297d5989496">[email&#160;protected]</span></a>
                             </p>
                             <p style="font-size: 0.85rem; color: var(--primary); margin: 4px 0;">
-                                <a href="mailto:danomandam@yahoo.com" style="color: var(--primary); text-decoration: none;">danomandam@yahoo.com</a>
+                                <a href="/cdn-cgi/l/email-protection#294d4847464448474d4844695048414646074a4644" style="color: var(--primary); text-decoration: none;"><span class="__cf_email__" data-cfemail="1f7b7e7170727e717b7e725f667e777070317c7072">[email&#160;protected]</span></a>
                             </p>
                         </div>
                     </div>
@@ -3938,7 +5119,7 @@
                     
                     <div style="display: flex; gap: 10px;">
                         <button type="submit" class="btn btn-primary" style="flex: 1;">Save Income</button>
-                        <button type="button" class="btn btn-danger" onclick="deleteIncome()" id="income-delete-btn" style="display: none;">Delete</button>
+                        <button type="button" class="btn btn-danger" onclick="deleteIncome()" id="income-delete-btn" style="display: none;"></button>
                     </div>
                 </form>
             </div>
@@ -5203,6 +6384,7 @@
             messagingSenderId: "869655431614",
             appId: "1:869655431614:web:488b396da3aeabec9b91ef"
         };
+        // ✅ Firebase config verified & updated — carent-c4017
 
         // Firebase variables (initialized after SDK loads)
         let auth = null;
@@ -5232,8 +6414,10 @@
                 firebase.initializeApp(firebaseConfig);
                 auth = firebase.auth();
                 firestore = firebase.firestore();
+                window.db = firestore; // expose for MT layer
+                window.auth = auth;    // expose for MT layer
                 firebaseReady = true;
-                console.log('[Firebase] ✅ Initialized successfully');
+                console.log('[Firebase] ✅ Initialized — project: carent-c4017');
 
                 // Enable offline persistence
                 firestore.enablePersistence({ synchronizeTabs: true })
@@ -6462,7 +7646,14 @@
         // =====================
         // DATABASE SETUP
         // =====================
-        const DB_NAME = 'PrismDB';
+        // MULTI-TENANT: Each org gets its own isolated IndexedDB
+        function getMTDbName() {
+            const orgId = (typeof MT !== 'undefined' && MT.currentOrg?.id)
+                ? MT.currentOrg.id
+                : (localStorage.getItem('mt_current_org_id') || 'default');
+            return 'PrismDB_' + orgId;
+        }
+        let DB_NAME = getMTDbName();
         const DB_VERSION = 9;  // v9: Added Task Management System
         let db = null;
         let dbReady = false;
@@ -6770,7 +7961,13 @@
             });
 
             // Refresh data
-            if (sectionId === 'dashboard') loadDashboard();
+            if (sectionId === 'dashboard') {
+                if (currentAppUser && currentAppUser.role === 'cashier') {
+                    mtShowRoleDashboard();
+                } else {
+                    loadDashboard();
+                }
+            }
             if (sectionId === 'properties') loadProperties();
             if (sectionId === 'tenants') loadTenants();
             if (sectionId === 'credits') loadCredits();
@@ -8412,7 +9609,7 @@
                 <div class="card">
                     <div class="card-header">
                         <div class="card-title">Rental Details</div>
-                        <button class="btn btn-sm btn-secondary" onclick="editTenant(${id})">Edit</button>
+                        ${currentAppUser && (currentAppUser.role === 'admin' || currentAppUser.role === 'owner' || currentAppUser.role === 'manager') ? `<button class="btn btn-sm btn-secondary" onclick="editTenant(${id})">Edit</button>` : ''}
                     </div>
                     <p><strong>Move-in Date:</strong> ${tenant.moveIn}</p>
                     <p><strong>Due Day:</strong> Every ${dueDay}${getOrdinalSuffix(dueDay)} of the month
@@ -8480,7 +9677,7 @@
                                         <td class="text-success">₱${p.amount.toLocaleString()}</td>
                                         <td>
                                             <button class="btn btn-sm btn-secondary" onclick="showReceipt(${p.id}, 'rent')" title="View Receipt">📄</button>
-                                            <button class="btn btn-sm btn-danger" onclick="deletePayment(${p.id}, 'rent', ${id})" title="Delete">🗑</button>
+                                            ${currentAppUser && currentAppUser.role !== 'cashier' ? `<button class="btn btn-sm btn-danger" onclick="deletePayment(${p.id}, 'rent', ${id})" title="Delete">🗑</button>` : ''}
                                         </td>
                                     </tr>
                                 `}).join('')}
@@ -8495,8 +9692,12 @@
                 <div class="action-buttons">
                     <button class="btn btn-secondary" onclick="showStatementOfAccount(${id}, 'tenant')">📊 Statement</button>
                     <button class="btn btn-info" onclick="printTenantReport(${id})">🖨️ Print</button>
-                    <button class="btn btn-warning" onclick="addChargeToClient('tenant', ${id})">💵 Add Charge</button>
-                    <button class="btn btn-danger" onclick="deleteTenant(${id})">Delete</button>
+                    ${currentAppUser && currentAppUser.role !== 'cashier' ? `
+                        <button class="btn btn-warning" onclick="addChargeToClient('tenant', ${id})">💵 Add Charge</button>
+                        <button class="btn btn-danger" onclick="deleteTenant(${id})">Delete</button>
+                    ` : `
+                        <button class="btn btn-primary" onclick="quickEndorse('sales', '🏠 Rent payment recorded for tenant. Admin please review.')">📋 Endorse to Admin</button>
+                    `}
                 </div>
             `;
 
@@ -8776,17 +9977,30 @@
                 createdAt: new Date().toISOString()
             };
 
+            payment.recordedBy = currentAppUser?.username || 'unknown';
+            payment.recordedByRole = currentAppUser?.role || 'unknown';
             await dbAdd('payments', payment);
             await viewTenantDetails(tenantId);
             loadTenants();
             loadDashboard();
-            // Sync to Firebase
             if (currentUser) syncToFirebase();
             showToast('Payment recorded successfully!', 'success');
+            if (currentAppUser && currentAppUser.role === 'cashier' && typeof loadCashierDashboard === 'function') {
+                setTimeout(loadCashierDashboard, 400);
+            }
+
+            // Cashier: auto-endorse rent payment to admin
+            if (currentAppUser && currentAppUser.role === 'cashier') {
+                quickEndorse('sales', '🏠 Rent Payment Recorded:\n• Amount: ₱' + amount.toLocaleString() + '\n• Method: ' + paymentMethod + '\n• Type: ' + paymentType + '\n• Date: ' + date + (notes ? '\n• Notes: ' + notes : '') + '\nRecorded by: ' + (currentAppUser?.fullname || 'Cashier'));
+            }
         }
 
         // Delete payment
         async function deletePayment(paymentId, type, parentId) {
+            if (currentAppUser && currentAppUser.role === 'cashier') {
+                showToast('⛔ Cashiers cannot delete payments. Contact admin.', 'error');
+                return;
+            }
             if (!confirm('⚠️ WARNING: Are you sure you want to delete this payment?')) return;
             if (!confirm('⚠️ SECOND CONFIRMATION: This payment record will be permanently removed. Continue?')) return;
             if (!confirm('⚠️ FINAL CONFIRMATION: This action cannot be undone. Type OK to proceed.')) return;
@@ -8805,6 +10019,10 @@
         }
 
         async function deleteTenant(id) {
+            if (currentAppUser && currentAppUser.role === 'cashier') {
+                showToast('⛔ Cashiers cannot delete tenant records. Contact admin.', 'error');
+                return;
+            }
             if (!confirm('⚠️ WARNING: Are you sure you want to delete this tenant?')) return;
             if (!confirm('⚠️ SECOND CONFIRMATION: This will also delete all payment records for this tenant. Continue?')) return;
             if (!confirm('⚠️ FINAL CONFIRMATION: This action cannot be undone. Type OK to proceed.')) return;
@@ -9829,12 +11047,25 @@
             };
             
             try {
+                // Tag who recorded this
+                sale.recordedBy = currentAppUser?.username || 'unknown';
+                sale.recordedByRole = currentAppUser?.role || 'unknown';
                 await dbAdd('waterSales', sale);
                 hideModal('water-sale-modal');
                 document.getElementById('water-sale-form').reset();
                 loadWaterCustomers();
                 if (currentUser) syncToFirebase();
-                alert('Sale recorded successfully!');
+                showToast('Sale recorded successfully!', 'success');
+
+                if (currentAppUser && currentAppUser.role === 'cashier' && typeof loadCashierDashboard === 'function') {
+                    setTimeout(loadCashierDashboard, 400);
+                }
+                // Cashier: offer quick endorsement for credit/partial sales
+                if (currentAppUser && currentAppUser.role === 'cashier' && (sale.status === 'credit' || sale.status === 'partial')) {
+                    if (confirm(`💧 Water sale recorded (${sale.status.toUpperCase()}).\nBalance: ₱${sale.balance.toLocaleString()}\n\nEndorse this credit sale to admin?`)) {
+                        quickEndorse('water', `💧 Water Sale — ${sale.status.toUpperCase()}:\n• Gallons: ${gallons}\n• Total: ₱${total.toLocaleString()}\n• Paid: ₱${paidNow.toLocaleString()}\n• Balance: ₱${sale.balance.toLocaleString()}\n• Date: ${date}\nRecorded by: ${currentAppUser?.fullname || 'Cashier'}`);
+                    }
+                }
             } catch (error) {
                 console.error('Error saving water sale:', error);
                 alert('Error: ' + error.message);
@@ -9911,8 +11142,12 @@
             content += `
                 </div>
                 <div style="margin-top: 20px; display: flex; gap: 10px;">
-                    <button class="btn btn-secondary" onclick="editWaterCustomer(${id})" style="flex: 1;">✏️ Edit</button>
-                    <button class="btn btn-danger" onclick="deleteWaterCustomer(${id})" style="flex: 1;">🗑️ Delete</button>
+                    ${currentAppUser && currentAppUser.role !== 'cashier' ? `
+                        <button class="btn btn-secondary" onclick="editWaterCustomer(${id})" style="flex:1;">✏️ Edit</button>
+                        <button class="btn btn-danger" onclick="deleteWaterCustomer(${id})" style="flex:1;">🗑️ Delete</button>
+                    ` : `
+                        <button class="btn btn-primary btn-block" onclick="quickEndorse('water', '💧 Water customer update needed. Admin please review.')">📋 Endorse to Admin</button>
+                    `}
                 </div>
             `;
             
@@ -9994,6 +11229,10 @@
         }
 
         async function deleteWaterCustomer(id) {
+            if (currentAppUser && currentAppUser.role === 'cashier') {
+                showToast('⛔ Cashiers cannot delete customer records. Contact admin.', 'error');
+                return;
+            }
             if (!confirm('Delete this customer and all their transactions?')) return;
             if (!confirm('This cannot be undone. Continue?')) return;
             
@@ -10017,6 +11256,15 @@
         let allEmployeesData = [];
 
         async function loadEmployees() {
+            // Update void request badge for admin
+            if (currentAppUser && (currentAppUser.role === 'admin' || currentAppUser.role === 'owner')) {
+                const voidRequests = JSON.parse(localStorage.getItem('prism_void_requests') || '[]');
+                const pendingCount = voidRequests.filter(r => r.status === 'pending').length;
+                const btn = document.getElementById('void-requests-btn');
+                const countEl = document.getElementById('void-req-count');
+                if (btn) btn.style.display = pendingCount > 0 ? 'inline-flex' : 'none';
+                if (countEl) countEl.textContent = pendingCount;
+            }
             const employees = await dbGetAll('employees');
             const advances = await dbGetAll('cashAdvances');
             const salaries = await dbGetAll('salaryPayments');
@@ -10073,16 +11321,38 @@
                 container.innerHTML = '<div class="empty-state"><p>No employees found.</p></div>';
                 return;
             }
-            
+
+            const isCashier = currentAppUser && currentAppUser.role === 'cashier';
+
+            // Cashier: only sees quick attendance buttons — no clickable profiles
+            if (isCashier) {
+                container.innerHTML = employees.map(e => `
+                    <div class="list-item" style="cursor: default;">
+                        <div class="list-item-content">
+                            <div class="list-item-title">👷 ${e.name}</div>
+                            <div class="list-item-subtitle">${e.position || 'Staff'}</div>
+                        </div>
+                        <div style="display:flex;gap:6px;align-items:center;">
+                            <button class="btn btn-sm btn-success" onclick="event.stopPropagation(); cashierQuickRecord(${e.id}, '${e.name.replace(/'/g,"\\'")}', 'present')" title="Present">✅</button>
+                            <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); cashierQuickRecord(${e.id}, '${e.name.replace(/'/g,"\\'")}', 'absent')" title="Absent">❌</button>
+                            <button class="btn btn-sm btn-warning" onclick="event.stopPropagation(); cashierQuickRecord(${e.id}, '${e.name.replace(/'/g,"\\'")}', 'halfday')" title="Half Day">🕐</button>
+                            <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); cashierShowAdvance(${e.id}, '${e.name.replace(/'/g,"\\'")}');" title="Cash Advance">💵</button>
+                        </div>
+                    </div>
+                `).join('');
+                return;
+            }
+
+            // Admin/Manager: full list, name + position only (no salary shown)
             container.innerHTML = employees.map(e => `
                 <div class="list-item" onclick="viewEmployeeDetails(${e.id})" style="cursor: pointer;">
                     <div class="list-item-content">
                         <div class="list-item-title">👷 ${e.name}</div>
-                        <div class="list-item-subtitle">${e.position || 'Staff'} • ₱${parseFloat(e.dailyRate).toLocaleString()}/day • ${e.paySchedule || 'weekly'}</div>
+                        <div class="list-item-subtitle">${e.position || 'Staff'}</div>
                     </div>
                     <div style="text-align: right;">
                         ${e.unpaidDays > 0 ? `<div class="badge badge-primary" style="margin-bottom: 4px;">${e.unpaidDays} unpaid days</div>` : ''}
-                        ${e.unpaidAdvances > 0 ? `<div class="badge badge-warning">₱${e.unpaidAdvances.toLocaleString()} advance</div>` : ''}
+                        ${e.unpaidAdvances > 0 ? `<div class="badge badge-warning">Advance pending</div>` : ''}
                     </div>
                 </div>
             `).join('');
@@ -10171,6 +11441,11 @@
         }
 
         async function viewEmployeeDetails(id) {
+            // Cashier cannot view employee profiles
+            if (currentAppUser && currentAppUser.role === 'cashier') {
+                showToast('⛔ Cashiers cannot view employee profiles.', 'error');
+                return;
+            }
             const employee = await dbGet('employees', id);
             if (!employee) return;
             
@@ -10202,7 +11477,7 @@
                 <div style="text-align: center; margin-bottom: 15px;">
                     <div style="font-size: 2.5rem;">👷</div>
                     <h2 style="margin: 5px 0;">${employee.name}</h2>
-                    <p style="color: var(--text-secondary); margin: 0;">${employee.position || 'Staff'} • ₱${dailyRate.toLocaleString()}/day</p>
+                    <p style="color: var(--text-secondary); margin: 0;">${employee.position || 'Staff'}</p>
                 </div>
                 
                 ${unpaidDays > 0 ? `
@@ -10281,13 +11556,22 @@
                 });
             }
             
-            content += `
+            // Role-based action buttons
+            const _isAdmin = currentAppUser && (currentAppUser.role === 'admin' || currentAppUser.role === 'owner');
+            if (_isAdmin) {
+                content += `
                 </div>
                 <div style="display: flex; gap: 10px;">
                     <button class="btn btn-secondary" onclick="editEmployee(${id})" style="flex: 1;">✏️ Edit</button>
                     <button class="btn btn-danger" onclick="deleteEmployee(${id})" style="flex: 1;">🗑️ Delete</button>
                 </div>
             `;
+            } else {
+                content += `
+                </div>
+                <button class="btn btn-secondary btn-block" onclick="hideModal('employee-detail-modal')">Close</button>
+            `;
+            }
             
             document.getElementById('employee-detail-content').innerHTML = content;
             showModal('employee-detail-modal');
@@ -10466,6 +11750,186 @@
             loadQuickAttendance();
             loadEmployees();
             if (currentUser) syncToFirebase();
+        }
+
+        // ============================================================
+        // CASHIER ATTENDANCE & ADVANCE FUNCTIONS
+        // ============================================================
+
+        // Cashier quick attendance record (cannot delete once saved)
+        async function cashierQuickRecord(employeeId, employeeName, status) {
+            const today = new Date().toISOString().split('T')[0];
+            const existing = await dbGetAll('timeRecords');
+            const duplicate = existing.find(r => r.employeeId === employeeId && r.date === today);
+
+            if (duplicate) {
+                // Already recorded today - cashier cannot overwrite, must ask admin
+                showToast(`⚠️ Attendance for ${employeeName} already recorded today. Ask admin to edit.`, 'error', 4000);
+                return;
+            }
+
+            const statusLabels = { present: 'Present ✅', absent: 'Absent ❌', halfday: 'Half Day 🕐' };
+            if (!confirm(`Record ${statusLabels[status]} for ${employeeName} on ${today}?
+
+Note: This cannot be deleted. Contact admin to void.`)) return;
+
+            const record = {
+                employeeId,
+                date: today,
+                status,
+                lateDeduction: 0,
+                otHours: 0,
+                bonus: 0,
+                notes: `Recorded by cashier: ${currentAppUser?.fullname || 'Cashier'}`,
+                paid: false,
+                recordedBy: currentAppUser?.username || 'cashier',
+                recordedByRole: 'cashier',
+                createdAt: new Date().toISOString()
+            };
+
+            await dbAdd('timeRecords', record);
+            loadEmployees();
+            if (currentUser) syncToFirebase();
+            showToast(`✅ Attendance recorded for ${employeeName}`, 'success');
+        }
+
+        // Cashier cash advance modal (record only, cannot delete)
+        function cashierShowAdvance(employeeId, employeeName) {
+            document.getElementById('advance-form').reset();
+            document.getElementById('advance-employee-id').value = employeeId;
+            document.getElementById('advance-employee-name').value = employeeName;
+            document.getElementById('advance-date').value = new Date().toISOString().split('T')[0];
+
+            // Mark that this was opened by cashier — hide delete button
+            const advanceModal = document.getElementById('advance-modal');
+            if (advanceModal) {
+                advanceModal.dataset.openedByCashier = 'true';
+            }
+            showModal('advance-modal');
+        }
+
+        // Override saveCashAdvance to tag cashier-recorded advances
+        const _originalSaveCashAdvance = window.saveCashAdvance;
+
+        // Void request system - cashier submits, admin approves
+        async function requestVoidAttendance(recordId, employeeName, date) {
+            const reason = prompt(`Request to void attendance for ${employeeName} on ${date}.
+
+Enter reason for void request:`);
+            if (!reason) return;
+
+            const voidRequests = JSON.parse(localStorage.getItem('prism_void_requests') || '[]');
+            voidRequests.push({
+                id: 'vr_' + Date.now(),
+                type: 'attendance',
+                recordId,
+                employeeName,
+                date,
+                reason,
+                requestedBy: currentAppUser?.fullname || 'Cashier',
+                requestedAt: new Date().toISOString(),
+                status: 'pending'
+            });
+            localStorage.setItem('prism_void_requests', JSON.stringify(voidRequests));
+            showToast('✅ Void request sent to admin for approval.', 'success', 4000);
+        }
+
+        async function requestVoidAdvance(advanceId, employeeName, amount) {
+            const reason = prompt(`Request to void cash advance of ₱${amount.toLocaleString()} for ${employeeName}.
+
+Enter reason:`);
+            if (!reason) return;
+
+            const voidRequests = JSON.parse(localStorage.getItem('prism_void_requests') || '[]');
+            voidRequests.push({
+                id: 'vr_' + Date.now(),
+                type: 'advance',
+                recordId: advanceId,
+                employeeName,
+                amount,
+                reason,
+                requestedBy: currentAppUser?.fullname || 'Cashier',
+                requestedAt: new Date().toISOString(),
+                status: 'pending'
+            });
+            localStorage.setItem('prism_void_requests', JSON.stringify(voidRequests));
+            showToast('✅ Void request sent to admin for approval.', 'success', 4000);
+        }
+
+        // Admin: view and process void requests
+        async function showVoidRequests() {
+            if (!currentAppUser || (currentAppUser.role !== 'admin' && currentAppUser.role !== 'owner')) {
+                showToast('⛔ Admin access only.', 'error');
+                return;
+            }
+            const voidRequests = JSON.parse(localStorage.getItem('prism_void_requests') || '[]');
+            const pending = voidRequests.filter(r => r.status === 'pending');
+
+            if (pending.length === 0) {
+                showToast('✅ No pending void requests.', 'info');
+                return;
+            }
+
+            let html = `<div style="max-height:70vh;overflow-y:auto;">
+                <h3 style="margin-bottom:16px;">⚠️ Pending Void Requests (${pending.length})</h3>`;
+            pending.forEach(req => {
+                html += `
+                <div style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;padding:14px;margin-bottom:12px;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+                        <div>
+                            <b>${req.type === 'attendance' ? '📅 Attendance' : '💵 Cash Advance'}</b> — ${req.employeeName}
+                            <div style="font-size:0.85rem;color:var(--text-secondary);">${req.date || '₱'+(req.amount||0).toLocaleString()} • Requested by: ${req.requestedBy}</div>
+                            <div style="font-size:0.85rem;color:var(--text-secondary);">Reason: ${req.reason}</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn btn-danger btn-sm" onclick="adminApproveVoid('${req.id}', true)" style="flex:1;">✅ Approve Void</button>
+                        <button class="btn btn-secondary btn-sm" onclick="adminApproveVoid('${req.id}', false)" style="flex:1;">❌ Reject</button>
+                    </div>
+                </div>`;
+            });
+            html += '</div>';
+
+            // Show in a modal
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+            modal.innerHTML = `<div style="background:var(--bg-card);border-radius:16px;padding:24px;width:100%;max-width:500px;color:var(--text-primary);">${html}
+                <button class="btn btn-secondary btn-block" onclick="this.closest('.void-modal-wrap').remove();" style="margin-top:12px;">Close</button>
+            </div>`;
+            modal.className = 'void-modal-wrap';
+            modal.onclick = e => { if(e.target === modal) modal.remove(); };
+            document.body.appendChild(modal);
+        }
+
+        async function adminApproveVoid(requestId, approve) {
+            const voidRequests = JSON.parse(localStorage.getItem('prism_void_requests') || '[]');
+            const req = voidRequests.find(r => r.id === requestId);
+            if (!req) return;
+
+            if (approve) {
+                // Actually delete the record
+                try {
+                    if (req.type === 'attendance') {
+                        await dbDelete('timeRecords', req.recordId);
+                        showToast('✅ Attendance record voided.', 'success');
+                    } else if (req.type === 'advance') {
+                        await dbDelete('cashAdvances', req.recordId);
+                        showToast('✅ Cash advance voided.', 'success');
+                    }
+                    req.status = 'approved';
+                } catch(e) {
+                    showToast('❌ Error voiding record: ' + e.message, 'error');
+                }
+            } else {
+                req.status = 'rejected';
+                showToast('Void request rejected.', 'info');
+            }
+
+            localStorage.setItem('prism_void_requests', JSON.stringify(voidRequests));
+            loadEmployees();
+            // Close modal and refresh
+            document.querySelector('.void-modal-wrap')?.remove();
+            setTimeout(() => showVoidRequests(), 300);
         }
 
         // Payroll Summary
@@ -10808,6 +12272,8 @@
                 date,
                 notes,
                 deducted: false,
+                recordedBy: currentAppUser?.username || 'unknown',
+                recordedByRole: currentAppUser?.role || 'unknown',
                 createdAt: new Date().toISOString()
             };
             
@@ -10817,7 +12283,10 @@
                 loadEmployees();
                 viewEmployeeDetails(employeeId);
                 if (currentUser) syncToFirebase();
-                alert('Cash advance recorded!');
+                showToast('Cash advance recorded!', 'success');
+                if (currentAppUser && currentAppUser.role === 'cashier' && typeof loadCashierDashboard === 'function') {
+                    setTimeout(loadCashierDashboard, 400);
+                }
             } catch (error) {
                 console.error('Error saving advance:', error);
                 alert('Error: ' + error.message);
@@ -11042,6 +12511,11 @@
         }
 
         async function deleteEmployee(id) {
+            // Only admin can delete employees
+            if (!currentAppUser || currentAppUser.role === 'cashier') {
+                showToast('⛔ Only admins can delete employees.', 'error');
+                return;
+            }
             if (!confirm('Delete this employee and all their records?')) return;
             if (!confirm('This cannot be undone. Continue?')) return;
             
@@ -11103,6 +12577,9 @@
             };
 
             try {
+                // Tag who recorded this
+                credit.recordedBy = currentAppUser?.username || 'unknown';
+                credit.recordedByRole = currentAppUser?.role || 'unknown';
                 await dbAdd('credits', credit);
                 hideModal('credit-modal');
                 document.getElementById('credit-form').reset();
@@ -11111,6 +12588,11 @@
                 // Sync to Firebase
                 if (currentUser) syncToFirebase();
                 showToast('Credit/Loan saved successfully!', 'success');
+
+                // Auto-endorse new credits to admin
+                if (currentAppUser && currentAppUser.role === 'cashier') {
+                    quickEndorse('credit', `💳 New Credit/Loan recorded:\n• Debtor: ${debtor}\n• Principal: ₱${principal.toLocaleString()}\n• Interest: ${interestRate}% (${interestType})\n• Due: ${dueDate || 'No due date'}\n• Purpose: ${purpose || 'N/A'}\nFor admin review and approval.\nRecorded by: ${currentAppUser?.fullname || 'Cashier'}`);
+                }
             } catch (error) {
                 console.error('Error saving credit:', error);
                 alert('❌ Error saving credit: ' + error.message);
@@ -11252,7 +12734,7 @@
                 <div class="card">
                     <div class="card-header">
                         <div class="card-title">Loan Details</div>
-                        <button class="btn btn-sm btn-secondary" onclick="editCredit(${id})">Edit</button>
+                        ${currentAppUser && currentAppUser.role !== 'cashier' ? `<button class="btn btn-sm btn-secondary" onclick="editCredit(${id})">Edit</button>` : ''}
                     </div>
                     <p><strong>Date Lent:</strong> ${credit.dateLent}</p>
                     ${credit.dueDate ? `
@@ -11312,7 +12794,7 @@
                                         <td class="text-success">₱${p.amount.toLocaleString()}</td>
                                         <td>
                                             <button class="btn btn-sm btn-secondary" onclick="showReceipt(${p.id}, 'credit')" title="View Receipt">📄</button>
-                                            <button class="btn btn-sm btn-danger" onclick="deletePayment(${p.id}, 'credit', ${id})" title="Delete">🗑</button>
+                                            ${currentAppUser && currentAppUser.role !== 'cashier' ? `<button class="btn btn-sm btn-danger" onclick="deletePayment(${p.id}, 'credit', ${id})" title="Delete">🗑</button>` : ''}
                                         </td>
                                     </tr>
                                 `}).join('')}
@@ -11324,7 +12806,11 @@
                 <div class="action-buttons">
                     <button class="btn btn-secondary" onclick="showStatementOfAccount(${id}, 'credit')">📊 Statement</button>
                     <button class="btn btn-info" onclick="printCreditReport(${id})">🖨️ Print</button>
-                    <button class="btn btn-danger" onclick="deleteCredit(${id})">Delete Credit</button>
+                    ${currentAppUser && currentAppUser.role !== 'cashier' ? `
+                        <button class="btn btn-danger" onclick="deleteCredit(${id})">Delete Credit</button>
+                    ` : `
+                        <button class="btn btn-primary" onclick="quickEndorse('credit', '💳 Credit account needs admin attention: ' + '${credit.debtor}' + ' — Balance: ₱' + balance.toLocaleString())">📋 Endorse to Admin</button>
+                    `}
                 </div>
             `;
 
@@ -11532,9 +13018,19 @@
             loadDashboard();
             // Sync to Firebase
             if (currentUser) syncToFirebase();
+
+            // Cashier: auto-endorse credit payment to admin
+            if (currentAppUser && currentAppUser.role === 'cashier') {
+                quickEndorse('credit', '💳 Credit Payment Collected:\n• Amount: ₱' + amount.toLocaleString() + '\n• Method: ' + paymentMethod + '\n• Date: ' + date + (notes ? '\n• Notes: ' + notes : '') + '\nRecorded by: ' + (currentAppUser?.fullname || 'Cashier'));
+                if (typeof loadCashierDashboard === 'function') setTimeout(loadCashierDashboard, 400);
+            }
         }
 
         async function deleteCredit(id) {
+            if (currentAppUser && currentAppUser.role === 'cashier') {
+                showToast('⛔ Cashiers cannot delete credits. Contact admin.', 'error');
+                return;
+            }
             if (!confirm('⚠️ WARNING: Are you sure you want to delete this credit/loan?')) return;
             if (!confirm('⚠️ SECOND CONFIRMATION: This will also delete all payment records for this credit. Continue?')) return;
             if (!confirm('⚠️ FINAL CONFIRMATION: This action cannot be undone. Type OK to proceed.')) return;
@@ -12479,6 +13975,9 @@
             };
 
             try {
+                // Tag who recorded this
+                expense.recordedBy = currentAppUser?.username || 'unknown';
+                expense.recordedByRole = currentAppUser?.role || 'unknown';
                 await dbAdd('expenses', expense);
                 
                 // Reset form and photo
@@ -12492,6 +13991,16 @@
                 // Sync to Firebase
                 if (currentUser) syncToFirebase();
                 showToast('Expense saved successfully!', 'success');
+
+                if (currentAppUser && currentAppUser.role === 'cashier' && typeof loadCashierDashboard === 'function') {
+                    setTimeout(loadCashierDashboard, 400);
+                }
+                // Cashier: offer quick endorsement
+                if (currentAppUser && currentAppUser.role === 'cashier') {
+                    if (confirm(`Expense of ₱${amount.toLocaleString()} recorded.\n\nEndorse this expense to admin for review?`)) {
+                        quickEndorse('expense', `📋 Expense recorded:\n• Category: ${category}\n• Description: ${description}\n• Amount: ₱${amount.toLocaleString()}\n• Date: ${date}\n${notes ? '• Notes: ' + notes : ''}\nRecorded by: ${currentAppUser?.fullname || 'Cashier'}`);
+                    }
+                }
             } catch (error) {
                 console.error('Error saving expense:', error);
                 alert('❌ Error saving expense: ' + error.message);
@@ -12719,6 +14228,10 @@
         }
 
         async function deleteExpense(id) {
+            if (currentAppUser && currentAppUser.role === 'cashier') {
+                showToast('⛔ Cashiers cannot delete expenses. Contact admin.', 'error');
+                return;
+            }
             if (!confirm('⚠️ WARNING: Are you sure you want to delete this expense?')) return;
             if (!confirm('⚠️ SECOND CONFIRMATION: This expense record will be permanently removed. Continue?')) return;
             if (!confirm('⚠️ FINAL CONFIRMATION: This action cannot be undone. Type OK to proceed.')) return;
@@ -12864,13 +14377,14 @@
                 return;
             }
             
+            const _isCashierView = currentAppUser && currentAppUser.role === 'cashier';
             container.innerHTML = filtered
                 .sort((a, b) => new Date(b.date) - new Date(a.date))
                 .map(income => `
-                    <div class="list-item" onclick="editIncome(${income.id})">
+                    <div class="list-item" ${!_isCashierView ? `onclick="editIncome(${income.id})"` : ''} style="${!_isCashierView ? 'cursor:pointer;' : ''}">
                         <div class="item-info">
                             <h4>💰 ${income.description}</h4>
-                            <p>${income.date} • <strong>${income.category}</strong></p>
+                            <p>${income.date} • <strong>${income.category}</strong>${income.recordedBy ? ' • by ' + income.recordedBy : ''}</p>
                         </div>
                         <div class="item-amount">
                             <div class="amount collected">+₱${income.amount.toLocaleString()}</div>
@@ -12890,6 +14404,11 @@
             document.getElementById('income-date').value = new Date().toISOString().split('T')[0];
             document.getElementById('income-modal-title').textContent = 'Add Other Income Source';
             document.getElementById('income-delete-btn').style.display = 'none';
+            // Always hide delete btn for cashier
+            if (currentAppUser && currentAppUser.role === 'cashier') {
+                const delBtn = document.getElementById('income-delete-btn');
+                if (delBtn) delBtn.style.display = 'none !important';
+            }
             showModal('income-modal');
         }
         
@@ -12925,6 +14444,8 @@
             }
             
             try {
+                income.recordedBy = currentAppUser?.username || 'unknown';
+                income.recordedByRole = currentAppUser?.role || 'unknown';
                 if (id) {
                     income.id = parseInt(id);
                     await dbPut('additionalIncome', income);
@@ -12938,8 +14459,12 @@
                 hideModal('income-modal');
                 await loadIncome();
                 await loadDashboard();
-                
                 if (currentUser) syncToFirebase();
+
+                // Cashier: auto-endorse income entry to admin
+                if (currentAppUser && currentAppUser.role === 'cashier' && !id) {
+                    quickEndorse('sales', '💰 Other Income Recorded:\n• ' + income.description + '\n• Category: ' + income.category + '\n• Amount: ₱' + income.amount.toLocaleString() + '\n• Date: ' + income.date + '\nRecorded by: ' + (currentAppUser?.fullname || 'Cashier'));
+                }
             } catch (error) {
                 console.error('Error saving income:', error);
                 alert('Error saving income: ' + error.message);
@@ -12947,6 +14472,7 @@
         }
         
         async function editIncome(id) {
+            if (currentAppUser && currentAppUser.role === 'cashier') return; // cashier cannot edit
             const income = await dbGet('additionalIncome', id);
             if (!income) return;
             
@@ -12965,6 +14491,10 @@
         }
         
         async function deleteIncome() {
+            if (currentAppUser && currentAppUser.role === 'cashier') {
+                showToast('⛔ Cashiers cannot delete income records. Contact admin.', 'error');
+                return;
+            }
             const id = document.getElementById('income-edit-id').value;
             if (!id) return;
             
@@ -16052,6 +17582,20 @@ Lender/Manager
 
         // Initialize app users in localStorage if not exists
         function initAppUsers() {
+            // MULTI-TENANT: MT layer handles auth. Skip old login modal if MT is active.
+            // MT will have already set carent_current_user before showing the app.
+            if (typeof MT !== 'undefined' && MT.currentOrg) {
+                // Already authenticated via MT - just update display
+                const loggedInUser = localStorage.getItem('carent_current_user');
+                if (loggedInUser) {
+                    currentAppUser = JSON.parse(loggedInUser);
+                    updateUserDisplay();
+                    const mainContent = document.querySelector('.main');
+                    if (mainContent) mainContent.style.display = 'block';
+                }
+                return; // Skip old auth flow entirely
+            }
+
             if (!localStorage.getItem('carent_app_users')) {
                 const defaultUsers = [
                     {
@@ -16081,13 +17625,11 @@ Lender/Manager
                 const mainContent = document.querySelector('.main');
                 if (mainContent) mainContent.style.display = 'block';
             } else {
-                // Hide app content until login
+                // MULTI-TENANT: Hide app content - MT layer controls what shows
                 const mainContent = document.querySelector('.main');
                 if (mainContent) mainContent.style.display = 'none';
-                // Show login modal if not logged in
-                setTimeout(() => {
-                    showAppLogin();
-                }, 500);
+                // Don't show old login - MT layer handles auth
+                // showAppLogin() is suppressed - mtInit() controls navigation
             }
         }
 
@@ -16157,6 +17699,9 @@ Lender/Manager
         // Update user display in header
         function updateUserDisplay() {
             const userDisplay = document.getElementById('current-user-display');
+            // Refresh endorsement FAB + role dashboard whenever user display updates
+            if (typeof mtSetupEndorseFAB === 'function') setTimeout(mtSetupEndorseFAB, 200);
+            if (typeof mtShowRoleDashboard === 'function') setTimeout(mtShowRoleDashboard, 400);
             if (userDisplay) {
                 if (currentAppUser) {
                     userDisplay.innerHTML = `
@@ -16222,6 +17767,15 @@ Lender/Manager
 
         // Show app login modal
         function showAppLogin() {
+            // MULTI-TENANT: If MT layer is active, redirect to MT auth instead
+            if (typeof MT !== 'undefined' && MT.currentOrg) {
+                // Already in MT - ignore old login modal
+                return;
+            }
+            if (typeof mtShowLanding === 'function' && !MT?.currentUser) {
+                mtShowLanding();
+                return;
+            }
             document.getElementById('app-login-form').reset();
             document.getElementById('app-login-modal').style.display = 'flex';
             showModal('app-login-modal');
@@ -16335,7 +17889,7 @@ Lender/Manager
             const permissionSettings = {
                 'admin': ['add-property', 'edit-property', 'delete-property', 'add-tenant', 'edit-tenant', 'delete-tenant', 'record-payment', 'water-sales', 'void-sale', 'manage-staff', 'manage-users', 'view-reports', 'backup-restore'],
                 'owner': ['add-property', 'edit-property', 'add-tenant', 'edit-tenant', 'record-payment', 'water-sales', 'manage-staff', 'view-reports'],
-                'cashier': ['record-payment', 'water-sales'],
+                'cashier': ['record-payment', 'water-sales', 'add-expense', 'add-credit', 'add-income', 'add-tenant-payment', 'record-rent'],
                 'encoder': ['add-property', 'edit-property', 'add-tenant', 'edit-tenant']
             };
             
@@ -16460,7 +18014,7 @@ Lender/Manager
         
         // Show void sale modal
         function showVoidSaleModal(saleId, saleType, saleDetails) {
-            if (!hasPermission('void-sale')) {
+            if (!hasPermission('void-sale') || (currentAppUser && currentAppUser.role === 'cashier')) {
                 showPermissionDenied('void sales');
                 return;
             }
@@ -18653,11 +20207,13 @@ Lender/Manager
                 // Load theme first (no DB needed)
                 loadTheme();
 
-                // Initialize app users
+                // MULTI-TENANT: Wait for MT to set up org context before init
+                // MT layer calls init() after auth is confirmed
+                // Just set up users from whatever MT has configured
                 initAppUsers();
                 updateUserDisplay();
 
-                // Initialize database
+                // Initialize database - uses org-specific name if MT active
                 await initDB();
 
                 // Initialize Guardian system (health check, auto-backup)
@@ -18941,18 +20497,1201 @@ Lender/Manager
             });
             
             console.log('=== Test Complete ===');
-            console.log('💡 To test manually:');
-            console.log('   - Type: loadSampleData()');
-            console.log('   - Or click the "Load Sample Data" button');
+            console.log('💡 To test manually: Open browser console.');
         };
 
-        // Run test automatically
-        setTimeout(() => {
-            console.log('\n🧪 Running automatic function test...\n');
-            window.testSettingsButtons();
-        }, 2000);
+        // =====================
+        // START APP - called by MT layer after auth confirmed
+        // =====================
+        // init() is called by mtInit() after org/auth is set up
+        // Do NOT call init() here directly - MT layer controls startup
 
-        init();
-    </script>
-</body>
-</html>
+        </script>
+</div><!-- /prism-app-wrapper -->
+<script>
+// ================================================================
+// PRISM MULTI-TENANT LAYER
+// ================================================================
+// All org/auth management. Injected before existing app init.
+// ================================================================
+
+const MT = {
+    // Super admin emails - only these see the SA panel
+    SUPER_ADMINS: ['jarodbulb@gmail.com', 'danomandam@yahoo.com'],
+    
+    // Current session state
+    currentUser: null,     // Firebase auth user
+    currentOrg: null,      // { id, name, plan, bizType, address, phone, ownerId, createdAt }
+    currentOrgRole: null,  // 'owner' | 'admin' | 'manager' | 'cashier' | 'viewer'
+    selectedBizType: null,
+    currentSetupStep: 1,
+    
+    // Firestore collections
+    ORGS_COL: 'mt_organizations',
+    ORG_MEMBERS_COL: 'mt_org_members',
+    ORG_INVITES_COL: 'mt_org_invites',
+};
+
+// ---- Toast ----
+function mtToast(msg, type = 'info', duration = 3500) {
+    const t = document.getElementById('mt-toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.className = `mt-toast ${type} show`;
+    setTimeout(() => t.className = 'mt-toast', duration);
+}
+
+// ---- Show/Hide screens ----
+function mtShowScreen(id) {
+    ['mt-landing','mt-auth','mt-setup','mt-superadmin'].forEach(s => {
+        const el = document.getElementById(s);
+        if (el) el.classList.remove('active');
+    });
+    // Also hide/show main app
+    const app = document.querySelector('.prism-app-wrapper');
+    if (app) app.classList.remove('mt-active');
+    
+    const target = document.getElementById(id);
+    if (target) target.classList.add('active');
+}
+
+function mtShowLanding() { mtShowScreen('mt-landing'); }
+function mtShowSetup() { mtShowScreen('mt-setup'); mtResetSetup(); }
+
+function mtShowAuth(tab = 'login') {
+    mtShowScreen('mt-auth');
+    mtSwitchTab(tab);
+}
+
+let _prismAppInitialized = false;
+function mtShowApp() {
+    // Hide all MT screens
+    ['mt-landing','mt-auth','mt-setup','mt-superadmin'].forEach(s => {
+        const el = document.getElementById(s);
+        if (el) el.classList.remove('active');
+    });
+    // Show main app
+    const app = document.querySelector('.prism-app-wrapper');
+    if (app) app.classList.add('mt-active');
+    mtUpdateOrgBadge();
+    
+    // Initialize PRISM app if not done yet
+    if (!_prismAppInitialized) {
+        _prismAppInitialized = true;
+        if (typeof init === 'function') {
+            setTimeout(() => init(), 100);
+        }
+    }
+
+    // Setup endorsement FAB based on role (after init has set currentAppUser)
+    setTimeout(mtSetupEndorseFAB, 800);
+    // Show cashier-specific dashboard if needed
+    setTimeout(mtShowRoleDashboard, 900);
+
+    // Poll for new endorsements every 30s
+    if (!window._endorsePollSet) {
+        window._endorsePollSet = true;
+        setInterval(updateEndorseUnreadBadge, 30000);
+    }
+}
+
+function mtShowSuperAdmin() {
+    mtShowScreen('mt-superadmin');
+    document.getElementById('mt-sa-user-email').textContent = MT.currentUser?.email || '';
+    mtLoadSAData();
+}
+
+// ---- Loading screen ----
+function mtShowLoading(text = 'Loading...') {
+    const el = document.getElementById('mt-loading');
+    if (el) el.classList.add('active');
+    const txt = document.getElementById('mt-loading-text');
+    if (txt) txt.textContent = text;
+}
+function mtHideLoading() {
+    const el = document.getElementById('mt-loading');
+    if (el) el.classList.remove('active');
+}
+
+// ---- Auth tabs ----
+function mtSwitchTab(tab) {
+    const loginForm = document.getElementById('mt-login-form');
+    const registerForm = document.getElementById('mt-register-form');
+    const tabLogin = document.getElementById('mt-tab-login');
+    const tabReg = document.getElementById('mt-tab-register');
+    if (!loginForm) return;
+
+    if (tab === 'login') {
+        loginForm.style.display = 'block';
+        registerForm.style.display = 'none';
+        tabLogin.classList.add('active');
+        tabReg.classList.remove('active');
+    } else {
+        loginForm.style.display = 'none';
+        registerForm.style.display = 'block';
+        tabLogin.classList.remove('active');
+        tabReg.classList.add('active');
+    }
+    mtClearAuthMessages();
+}
+
+function mtShowAuthError(msg) {
+    const el = document.getElementById('mt-auth-error');
+    if (el) { el.textContent = msg; el.classList.add('show'); }
+    const s = document.getElementById('mt-auth-success');
+    if (s) s.classList.remove('show');
+}
+function mtShowAuthSuccess(msg) {
+    const el = document.getElementById('mt-auth-success');
+    if (el) { el.textContent = msg; el.classList.add('show'); }
+    const e = document.getElementById('mt-auth-error');
+    if (e) e.classList.remove('show');
+}
+function mtClearAuthMessages() {
+    document.getElementById('mt-auth-error')?.classList.remove('show');
+    document.getElementById('mt-auth-success')?.classList.remove('show');
+}
+
+function mtTogglePass(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = '🙈';
+    } else {
+        input.type = 'password';
+        btn.textContent = '👁️';
+    }
+}
+
+// ---- Firebase Auth ----
+async function mtLogin() {
+    const email = document.getElementById('mt-login-email')?.value?.trim();
+    const password = document.getElementById('mt-login-password')?.value;
+    if (!email || !password) { mtShowAuthError('Please enter email and password.'); return; }
+    
+    const btn = document.getElementById('mt-login-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Signing in...'; }
+    mtClearAuthMessages();
+
+    try {
+        const userCred = await (window.auth || firebase.auth()).signInWithEmailAndPassword(email, password);
+        // onAuthStateChanged will handle the rest
+    } catch (err) {
+        let msg = 'Login failed. Please try again.';
+        if (err.code === 'auth/user-not-found') msg = 'No account found with this email.';
+        else if (err.code === 'auth/wrong-password') msg = 'Incorrect password.';
+        else if (err.code === 'auth/invalid-email') msg = 'Invalid email address.';
+        else if (err.code === 'auth/too-many-requests') msg = 'Too many failed attempts. Please try again later.';
+        else if (err.code === 'auth/invalid-credential') msg = 'Invalid email or password.';
+        mtShowAuthError(msg);
+        if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
+    }
+}
+
+async function mtRegister() {
+    const name = document.getElementById('mt-reg-name')?.value?.trim();
+    const email = document.getElementById('mt-reg-email')?.value?.trim();
+    const password = document.getElementById('mt-reg-password')?.value;
+    const confirm = document.getElementById('mt-reg-confirm')?.value;
+
+    if (!name || !email || !password) { mtShowAuthError('Please fill in all fields.'); return; }
+    if (password !== confirm) { mtShowAuthError('Passwords do not match.'); return; }
+    if (password.length < 6) { mtShowAuthError('Password must be at least 6 characters.'); return; }
+
+    const btn = document.getElementById('mt-register-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Creating account...'; }
+    mtClearAuthMessages();
+
+    try {
+        const userCred = await (window.auth || firebase.auth()).createUserWithEmailAndPassword(email, password);
+        await userCred.user.updateProfile({ displayName: name });
+        
+        // Save user profile in Firestore
+        if (window.db) {
+            await window.db.collection('mt_users').doc(userCred.user.uid).set({
+                uid: userCred.user.uid,
+                name: name,
+                email: email,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                isSuperAdmin: MT.SUPER_ADMINS.includes(email)
+            });
+        }
+        mtShowAuthSuccess('Account created! Setting up your workspace...');
+        // onAuthStateChanged will handle navigation
+    } catch (err) {
+        let msg = 'Registration failed. Please try again.';
+        if (err.code === 'auth/email-already-in-use') msg = 'An account with this email already exists.';
+        else if (err.code === 'auth/invalid-email') msg = 'Invalid email address.';
+        else if (err.code === 'auth/weak-password') msg = 'Password is too weak. Use at least 6 characters.';
+        mtShowAuthError(msg);
+        if (btn) { btn.disabled = false; btn.textContent = 'Create Account'; }
+    }
+}
+
+async function mtGoogleLogin() {
+    try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        await (window.auth || firebase.auth()).signInWithPopup(provider);
+        // onAuthStateChanged handles the rest
+    } catch (err) {
+        if (err.code !== 'auth/popup-closed-by-user') {
+            mtShowAuthError('Google sign-in failed. Please try again.');
+        }
+    }
+}
+
+// ---- Local Admin Login (no Firebase needed) ----
+function mtLocalLogin() {
+    const orgId = localStorage.getItem('mt_current_org_id') || 'local_org_' + Date.now();
+    const orgName = (() => {
+        try { return JSON.parse(localStorage.getItem('mt_current_org') || '{}').name || 'My Business'; } catch(e) { return 'My Business'; }
+    })();
+
+    MT.currentUser = { uid: 'local_' + Date.now(), email: 'local@prism.app', displayName: 'Local Admin' };
+    MT.currentOrg = {
+        id: orgId, name: orgName, bizType: 'mixed', plan: 'standard',
+        address: '', phone: '', ownerId: 'local', createdAt: new Date().toISOString(), status: 'active'
+    };
+    MT.currentOrgRole = 'owner';
+
+    const adminUser = {
+        id: 1, username: 'admin', fullname: 'Local Admin',
+        role: 'admin', email: 'local@prism.app',
+        permissions: { 'add-property':true,'edit-property':true,'delete-property':true,
+            'add-tenant':true,'edit-tenant':true,'delete-tenant':true,
+            'record-payment':true,'water-sales':true,'void-sale':true,
+            'manage-staff':true,'manage-users':true,'view-reports':true,'backup-restore':true }
+    };
+    localStorage.setItem('carent_current_user', JSON.stringify(adminUser));
+    localStorage.setItem('mt_current_org', JSON.stringify(MT.currentOrg));
+    localStorage.setItem('mt_current_org_id', orgId);
+
+    // Check if org already has a name - if not, show setup wizard
+    const existingOrg = localStorage.getItem('mt_current_org');
+    const parsedOrg = existingOrg ? JSON.parse(existingOrg) : null;
+    
+    if (!parsedOrg || parsedOrg.name === 'My Business' || !parsedOrg.name) {
+        // First time - go through setup to name the org
+        MT.currentUser = { uid: 'local_admin', email: 'local@prism.app', displayName: 'Admin' };
+        mtShowSetup();
+        mtToast('Welcome! Please set up your organization first.', 'info', 5000);
+    } else {
+        mtToast('✅ Logged in as Local Admin', 'success');
+        setTimeout(() => {
+            mtShowApp();
+            mtUpdateOrgBadge();
+            if (typeof updateUserDisplay === 'function') updateUserDisplay();
+            if (typeof loadDashboard === 'function') loadDashboard();
+        }, 300);
+    }
+}
+
+// ---- Demo Login (no Firebase) ----
+function mtDemoLogin() {
+    MT.currentUser = { uid: 'demo_user', email: 'demo@prism.app', displayName: 'Demo User' };
+    MT.currentOrg = {
+        id: 'demo_org',
+        name: 'Demo Business',
+        bizType: 'mixed',
+        plan: 'standard',
+        address: 'Matalam, North Cotabato',
+        phone: '09xx-xxx-xxxx',
+        ownerId: 'demo_user',
+        createdAt: new Date().toISOString()
+    };
+    MT.currentOrgRole = 'admin';
+    
+    // Update app's local auth to match
+    const demoAppUser = {
+        id: 1, username: 'demo', fullname: 'Demo Admin',
+        role: 'admin', email: 'demo@prism.app',
+        permissions: { 'add-property':true,'edit-property':true,'delete-property':true,
+            'add-tenant':true,'edit-tenant':true,'delete-tenant':true,
+            'record-payment':true,'water-sales':true,'void-sale':true,
+            'manage-staff':true,'manage-users':true,'view-reports':true,'backup-restore':true }
+    };
+    localStorage.setItem('carent_current_user', JSON.stringify(demoAppUser));
+    
+    mtToast('🎉 Demo mode activated!', 'success');
+    mtShowApp();
+    mtUpdateOrgBadge();
+    // Trigger existing app login state
+    setTimeout(() => {
+        if (typeof updateUserDisplay === 'function') updateUserDisplay();
+        if (typeof loadDashboard === 'function') loadDashboard();
+    }, 300);
+}
+
+// ---- Org Setup Wizard ----
+function mtSelectBizType(type, el) {
+    MT.selectedBizType = type;
+    document.querySelectorAll('.mt-biz-type').forEach(b => b.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('mt-step1-next').disabled = false;
+}
+
+function mtResetSetup() {
+    MT.currentSetupStep = 1;
+    MT.selectedBizType = null;
+    ['mt-step-1','mt-step-2','mt-step-3'].forEach((s,i) => {
+        const el = document.getElementById(s);
+        if (el) { el.classList.remove('active'); if (i===0) el.classList.add('active'); }
+    });
+    ['mt-dot-1','mt-dot-2','mt-dot-3'].forEach((d,i) => {
+        const el = document.getElementById(d);
+        if (el) { el.classList.remove('active','done'); if(i===0) el.classList.add('active'); }
+    });
+    document.querySelectorAll('.mt-biz-type').forEach(b => b.classList.remove('selected'));
+    const nextBtn = document.getElementById('mt-step1-next');
+    if (nextBtn) nextBtn.disabled = true;
+}
+
+function mtSetupNext(step) {
+    if (step === 2 && !MT.selectedBizType) {
+        mtToast('Please select a business type', 'error');
+        return;
+    }
+    if (step === 3) {
+        const orgName = document.getElementById('mt-setup-orgname')?.value?.trim();
+        if (!orgName) { mtToast('Please enter your organization name', 'error'); return; }
+        // Fill summary
+        const plan = document.getElementById('mt-setup-plan')?.value || 'standard';
+        const address = document.getElementById('mt-setup-address')?.value || '-';
+        const phone = document.getElementById('mt-setup-phone')?.value || '-';
+        const planNames = { basic:'Basic (₱299/mo)', standard:'Standard (₱599/mo)', enterprise:'Enterprise (₱999/mo)' };
+        const bizNames = { property:'Property Rental', lending:'Lending/Credit', water:'Water Station', retail:'Retail Store', hardware:'Hardware Store', mixed:'Mixed Business' };
+        document.getElementById('mt-setup-summary').innerHTML = `
+            <div><b>🏢 Business:</b> ${orgName}</div>
+            <div><b>🏭 Type:</b> ${bizNames[MT.selectedBizType] || MT.selectedBizType}</div>
+            <div><b>📍 Address:</b> ${address}</div>
+            <div><b>📞 Phone:</b> ${phone}</div>
+            <div><b>📦 Plan:</b> ${planNames[plan] || plan}</div>
+        `;
+    }
+    
+    // Update UI
+    for (let i = 1; i <= 3; i++) {
+        const panel = document.getElementById(`mt-step-${i}`);
+        const dot = document.getElementById(`mt-dot-${i}`);
+        if (panel) panel.classList.toggle('active', i === step);
+        if (dot) {
+            dot.classList.toggle('active', i === step);
+            dot.classList.toggle('done', i < step);
+        }
+    }
+    MT.currentSetupStep = step;
+}
+
+async function mtLaunchOrg() {
+    const orgName = document.getElementById('mt-setup-orgname')?.value?.trim();
+    const plan = document.getElementById('mt-setup-plan')?.value || 'standard';
+    const address = document.getElementById('mt-setup-address')?.value?.trim() || '';
+    const phone = document.getElementById('mt-setup-phone')?.value?.trim() || '';
+    
+    if (!orgName) { mtToast('Organization name is required', 'error'); return; }
+    
+    const btn = document.getElementById('mt-launch-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Creating...'; }
+
+    const orgId = 'org_' + Date.now() + '_' + Math.random().toString(36).substr(2,6);
+    const orgData = {
+        id: orgId,
+        name: orgName,
+        bizType: MT.selectedBizType || 'mixed',
+        plan: plan,
+        address: address,
+        phone: phone,
+        ownerId: MT.currentUser?.uid || 'local',
+        ownerEmail: MT.currentUser?.email || '',
+        ownerName: MT.currentUser?.displayName || '',
+        status: 'active',
+        createdAt: new Date().toISOString(),
+        memberCount: 1
+    };
+
+    // Save to Firestore if available
+    if (window.db && MT.currentUser) {
+        try {
+            await window.db.collection(MT.ORGS_COL).doc(orgId).set(orgData);
+            await window.db.collection(MT.ORG_MEMBERS_COL).add({
+                orgId: orgId,
+                orgName: orgName,
+                userId: MT.currentUser.uid,
+                userEmail: MT.currentUser.email,
+                userName: MT.currentUser.displayName || '',
+                role: 'owner',
+                joinedAt: new Date().toISOString()
+            });
+        } catch (e) {
+            console.warn('Firestore save failed, using local:', e);
+        }
+    }
+
+    // Always save locally
+    const localOrgs = JSON.parse(localStorage.getItem('mt_user_orgs') || '[]');
+    localOrgs.push(orgData);
+    localStorage.setItem('mt_user_orgs', JSON.stringify(localOrgs));
+    localStorage.setItem('mt_current_org_id', orgId);
+    localStorage.setItem('mt_current_org', JSON.stringify(orgData));
+    localStorage.setItem('mt_current_org_role', 'owner');
+
+    MT.currentOrg = orgData;
+    MT.currentOrgRole = 'owner';
+
+    // Set up local app user
+    const ownerUser = {
+        id: 1, username: MT.currentUser?.email?.split('@')[0] || 'admin',
+        fullname: MT.currentUser?.displayName || 'Owner',
+        role: 'admin', email: MT.currentUser?.email || '',
+        orgId: orgId,
+        permissions: { 'add-property':true,'edit-property':true,'delete-property':true,
+            'add-tenant':true,'edit-tenant':true,'delete-tenant':true,
+            'record-payment':true,'water-sales':true,'void-sale':true,
+            'manage-staff':true,'manage-users':true,'view-reports':true,'backup-restore':true }
+    };
+    
+    // Update org user list
+    const orgUsersKey = `carent_app_users_${orgId}`;
+    localStorage.setItem(orgUsersKey, JSON.stringify([ownerUser]));
+    localStorage.setItem('carent_current_user', JSON.stringify(ownerUser));
+
+    mtToast(`🎉 ${orgName} is ready!`, 'success');
+    setTimeout(() => {
+        mtShowApp();
+        mtUpdateOrgBadge();
+        if (typeof updateUserDisplay === 'function') updateUserDisplay();
+        if (typeof loadDashboard === 'function') loadDashboard();
+    }, 800);
+}
+
+// ---- Org Badge in App Header ----
+function mtUpdateOrgBadge() {
+    const org = MT.currentOrg;
+    if (!org) return;
+
+    // Update subtitle with org name
+    const subtitle = document.getElementById('mt-app-org-subtitle');
+    if (subtitle) subtitle.textContent = org.name + ' — ' + (org.plan||'basic').toUpperCase();
+
+    // Inject org badge into the app header
+    let badge = document.getElementById('mt-org-badge-el');
+    if (!badge) {
+        badge = document.createElement('div');
+        badge.id = 'mt-org-badge-el';
+        const headerRight = document.querySelector('.header-right');
+        if (headerRight) headerRight.prepend(badge);
+    }
+    const planColors = { basic:'#6366f1', standard:'#f59e0b', enterprise:'#10b981' };
+    badge.innerHTML = `
+        <div class="mt-org-badge" onclick="mtOpenOrgSwitcher()" title="Click to switch organization" style="border-color:rgba(${planColors[org.plan]||'99,102,241'},0.5);">
+            <div class="mt-org-dot"></div>
+            <span>${org.name}</span>
+            <span style="opacity:0.5;font-size:0.7rem;">▼</span>
+        </div>
+    `;
+}
+
+function mtOpenOrgSwitcher() {
+    const modal = document.getElementById('mt-switch-modal');
+    if (!modal) return;
+    const list = document.getElementById('mt-org-list');
+    
+    const orgs = JSON.parse(localStorage.getItem('mt_user_orgs') || '[]');
+    list.innerHTML = orgs.map(org => `
+        <li class="${org.id === MT.currentOrg?.id ? 'current' : ''}" onclick="mtSwitchOrg('${org.id}')">
+            <div class="org-icon">${org.bizType === 'hardware' ? '🔧' : org.bizType === 'water' ? '💧' : org.bizType === 'property' ? '🏠' : '🏢'}</div>
+            <div>
+                <div style="font-weight:600;">${org.name}</div>
+                <div style="font-size:0.75rem;color:#64748b;text-transform:uppercase;">${org.plan} plan</div>
+            </div>
+            ${org.id === MT.currentOrg?.id ? '<span style="color:#10b981;margin-left:auto;">✓</span>' : ''}
+        </li>
+    `).join('') || '<li style="color:#64748b;padding:12px;">No organizations found</li>';
+    
+    modal.classList.add('active');
+}
+
+function mtSwitchOrg(orgId) {
+    const orgs = JSON.parse(localStorage.getItem('mt_user_orgs') || '[]');
+    const org = orgs.find(o => o.id === orgId);
+    if (!org) return;
+
+    MT.currentOrg = org;
+    localStorage.setItem('mt_current_org_id', orgId);
+    localStorage.setItem('mt_current_org', JSON.stringify(org));
+    
+    // Reload app data for this org
+    document.getElementById('mt-switch-modal')?.classList.remove('active');
+    mtUpdateOrgBadge();
+    mtToast(`Switched to ${org.name}`, 'success');
+    
+    // Reload data
+    setTimeout(() => {
+        if (typeof loadDashboard === 'function') loadDashboard();
+    }, 300);
+}
+
+// ---- Super Admin ----
+function mtSATab(tab, btn) {
+    ['mt-sa-overview','mt-sa-orgs','mt-sa-users'].forEach(t => {
+        const el = document.getElementById(t);
+        if (el) el.style.display = 'none';
+    });
+    document.querySelectorAll('.mt-sa-nav-btn').forEach(b => b.classList.remove('active'));
+    
+    const target = document.getElementById(`mt-sa-${tab}`);
+    if (target) target.style.display = 'block';
+    if (btn) btn.classList.add('active');
+}
+
+async function mtLoadSAData() {
+    if (!window.db) {
+        // Load from localStorage
+        const orgs = JSON.parse(localStorage.getItem('mt_user_orgs') || '[]');
+        mtRenderSAOrgs(orgs);
+        document.getElementById('sa-total-orgs').textContent = orgs.length;
+        document.getElementById('sa-active-orgs').textContent = orgs.filter(o => o.status === 'active').length;
+        document.getElementById('sa-total-users').textContent = orgs.length;
+        const planPrices = { basic: 299, standard: 599, enterprise: 999 };
+        const revenue = orgs.reduce((sum, o) => sum + (planPrices[o.plan] || 299), 0);
+        document.getElementById('sa-total-revenue').textContent = '₱' + revenue.toLocaleString();
+        return;
+    }
+    try {
+        const orgsSnap = await window.db.collection(MT.ORGS_COL).get();
+        const orgs = orgsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        mtRenderSAOrgs(orgs);
+        document.getElementById('sa-total-orgs').textContent = orgs.length;
+        document.getElementById('sa-active-orgs').textContent = orgs.filter(o => o.status === 'active').length;
+        
+        const usersSnap = await window.db.collection(MT.ORG_MEMBERS_COL).get();
+        document.getElementById('sa-total-users').textContent = usersSnap.size;
+        
+        const planPrices = { basic: 299, standard: 599, enterprise: 999 };
+        const revenue = orgs.reduce((sum, o) => sum + (planPrices[o.plan] || 299), 0);
+        document.getElementById('sa-total-revenue').textContent = '₱' + revenue.toLocaleString();
+    } catch (e) {
+        console.warn('SA data load error:', e);
+    }
+}
+
+function mtRenderSAOrgs(orgs) {
+    const tbody = document.getElementById('mt-sa-orgs-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = orgs.map(org => `
+        <tr>
+            <td><b>${org.name}</b><br><span style="font-size:0.78rem;color:#64748b;">${org.bizType || '-'}</span></td>
+            <td><span class="mt-badge-plan ${org.plan || 'basic'}">${(org.plan||'basic').toUpperCase()}</span></td>
+            <td style="font-size:0.85rem;">${org.ownerEmail || org.ownerName || '-'}</td>
+            <td>${org.memberCount || 1}</td>
+            <td><span class="mt-badge-status ${org.status || 'active'}">${(org.status||'active').toUpperCase()}</span></td>
+            <td style="font-size:0.82rem;color:#64748b;">${org.createdAt ? new Date(org.createdAt).toLocaleDateString() : '-'}</td>
+            <td>
+                <button onclick="mtSAToggleOrgStatus('${org.id}','${org.status}')" style="background:none;border:1px solid rgba(255,255,255,0.1);color:#94a3b8;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:0.78rem;">
+                    ${org.status === 'active' ? 'Suspend' : 'Activate'}
+                </button>
+            </td>
+        </tr>
+    `).join('') || '<tr><td colspan="7" style="text-align:center;color:#64748b;padding:30px;">No organizations yet</td></tr>';
+}
+
+async function mtSAToggleOrgStatus(orgId, currentStatus) {
+    const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
+    try {
+        if (window.db) await window.db.collection(MT.ORGS_COL).doc(orgId).update({ status: newStatus });
+        const orgs = JSON.parse(localStorage.getItem('mt_user_orgs') || '[]');
+        const org = orgs.find(o => o.id === orgId);
+        if (org) { org.status = newStatus; localStorage.setItem('mt_user_orgs', JSON.stringify(orgs)); }
+        mtToast(`Organization ${newStatus}`, 'success');
+        mtLoadSAData();
+    } catch (e) {
+        mtToast('Failed to update status', 'error');
+    }
+}
+
+function mtSAGoToApp() {
+    if (MT.currentOrg) {
+        mtShowApp();
+    } else {
+        const orgs = JSON.parse(localStorage.getItem('mt_user_orgs') || '[]');
+        if (orgs.length > 0) {
+            MT.currentOrg = orgs[0];
+            mtShowApp();
+        } else {
+            mtShowSetup();
+        }
+    }
+}
+
+function mtSuperAdminLogout() {
+    (window.auth || firebase.auth()).signOut().then(() => {
+        MT.currentUser = null;
+        MT.currentOrg = null;
+        localStorage.removeItem('carent_current_user');
+        mtShowLanding();
+    }).catch(() => {
+        MT.currentUser = null;
+        MT.currentOrg = null;
+        localStorage.removeItem('carent_current_user');
+        mtShowLanding();
+    });
+}
+
+// ---- App-level logout hook ----
+function mtLogout() {
+    if (firebase.auth && firebase.auth().currentUser) {
+        (window.auth || firebase.auth()).signOut().then(() => {
+            MT.currentUser = null;
+            MT.currentOrg = null;
+            localStorage.removeItem('carent_current_user');
+            mtShowLanding();
+        });
+    } else {
+        MT.currentUser = null;
+        MT.currentOrg = null;
+        localStorage.removeItem('carent_current_user');
+        mtShowLanding();
+    }
+}
+
+// ---- Data Isolation ----
+// Wraps data keys with orgId so each org has isolated IndexedDB
+function mtGetOrgDbName() {
+    const orgId = MT.currentOrg?.id || localStorage.getItem('mt_current_org_id') || 'default';
+    return `PRISM_${orgId}`;
+}
+
+// ================================================================
+// CASHIER ENDORSEMENT & ADMIN NOTIFICATION SYSTEM
+// ================================================================
+
+const ENDORSE_KEY = 'prism_endorsements';
+let endorseType = 'sales';
+let inboxFilter = 'all';
+
+function getEndorsements() {
+    try { return JSON.parse(localStorage.getItem(ENDORSE_KEY) || '[]'); } catch(e) { return []; }
+}
+function saveEndorsements(list) {
+    localStorage.setItem(ENDORSE_KEY, JSON.stringify(list));
+}
+
+// Show/hide FABs based on role
+function mtSetupEndorseFAB() {
+    const isCashier = currentAppUser && currentAppUser.role === 'cashier';
+    const isAdmin   = currentAppUser && (currentAppUser.role === 'admin' || currentAppUser.role === 'owner' || currentAppUser.role === 'manager');
+
+    const fab   = document.getElementById('endorse-fab');
+    const aFab  = document.getElementById('admin-inbox-fab');
+
+    if (fab)  fab.style.display  = isCashier ? 'flex' : 'none';
+    if (aFab) aFab.style.display = isAdmin   ? 'flex' : 'none';
+
+    if (isCashier) renderSentEndorsements();
+    if (isAdmin)   renderAdminInbox();
+    updateEndorseUnreadBadge();
+}
+
+function toggleEndorsePanel() {
+    const panel = document.getElementById('endorse-panel');
+    panel.classList.toggle('open');
+    document.getElementById('admin-inbox-panel')?.classList.remove('open');
+    if (panel.classList.contains('open')) renderSentEndorsements();
+}
+
+function toggleAdminInbox() {
+    const panel = document.getElementById('admin-inbox-panel');
+    panel.classList.toggle('open');
+    document.getElementById('endorse-panel')?.classList.remove('open');
+    if (panel.classList.contains('open')) renderAdminInbox();
+}
+
+function selectEndorseType(btn, type) {
+    endorseType = type;
+    document.querySelectorAll('.endorse-type-pills .endorse-pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+}
+
+function submitEndorsement(prefillMsg, prefillType) {
+    const msg = prefillMsg || document.getElementById('endorse-message')?.value?.trim();
+    const type = prefillType || endorseType;
+    if (!msg) { mtToast('Please enter a message.', 'error'); return; }
+
+    const list = getEndorsements();
+    list.push({
+        id: 'e_' + Date.now(),
+        type,
+        message: msg,
+        sentBy: currentAppUser?.fullname || currentAppUser?.username || 'Cashier',
+        sentByRole: currentAppUser?.role || 'cashier',
+        sentAt: new Date().toISOString(),
+        read: false,
+        orgId: MT.currentOrg?.id || 'local'
+    });
+    saveEndorsements(list);
+
+    if (document.getElementById('endorse-message')) document.getElementById('endorse-message').value = '';
+    mtToast('📋 Endorsement sent to admin!', 'success');
+    renderSentEndorsements();
+    updateEndorseUnreadBadge();
+}
+
+// Auto-generate shift summary from today's data
+async function autoEndorseReport() {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const [expenses, credits, creditPayments, waterSales, advances, timeRecords] = await Promise.all([
+            dbGetAll('expenses'), dbGetAll('credits'), dbGetAll('creditPayments'),
+            dbGetAll('waterSales'), dbGetAll('cashAdvances'), dbGetAll('timeRecords')
+        ]);
+
+        const todayExpenses   = expenses.filter(e => e.date === today);
+        const todayCreditPay  = creditPayments.filter(p => p.date === today);
+        const todayWater      = waterSales.filter(s => s.date === today && !s.voided);
+        const todayAdvances   = advances.filter(a => a.date === today);
+        const todayAttend     = timeRecords.filter(r => r.date === today);
+        const overdueCredits  = credits.filter(c => c.status === 'active' && c.dueDate && new Date(c.dueDate) < new Date());
+
+        const totalExpenses        = todayExpenses.reduce((s,e) => s + e.amount, 0);
+        const totalCreditCollected = todayCreditPay.reduce((s,p) => s + p.amount, 0);
+        const totalWaterSales      = todayWater.reduce((s,w) => s + w.total, 0);
+        const totalAdvances        = todayAdvances.reduce((s,a) => s + a.amount, 0);
+        const presentCount  = todayAttend.filter(r => r.status === 'present').length;
+        const absentCount   = todayAttend.filter(r => r.status === 'absent').length;
+
+        const lines = ['📊 SHIFT SUMMARY — ' + today, '━━━━━━━━━━━━━━━━━━━━━━━━'];
+        if (totalWaterSales > 0)      lines.push('💧 Water Sales: ₱' + totalWaterSales.toLocaleString() + ' (' + todayWater.length + ' transactions)');
+        if (totalCreditCollected > 0) lines.push('💳 Credit Collections: ₱' + totalCreditCollected.toLocaleString() + ' (' + todayCreditPay.length + ' payments)');
+        if (totalExpenses > 0)        lines.push('🧾 Expenses: ₱' + totalExpenses.toLocaleString() + ' (' + todayExpenses.length + ' items)');
+        if (totalAdvances > 0)        lines.push('💵 Cash Advances: ₱' + totalAdvances.toLocaleString() + ' (' + todayAdvances.length + ' given)');
+        if (todayAttend.length > 0)   lines.push('👷 Attendance: ' + presentCount + ' present, ' + absentCount + ' absent');
+        if (overdueCredits.length > 0) lines.push('⚠️ Overdue Credits: ' + overdueCredits.length + ' account(s) need follow-up');
+        if (lines.length <= 2)        lines.push('No transactions recorded today yet.');
+        lines.push('━━━━━━━━━━━━━━━━━━━━━━━━');
+        lines.push('Endorsed by: ' + (currentAppUser?.fullname || 'Cashier'));
+
+        const summary = lines.join('\n');
+        const msgField = document.getElementById('endorse-message');
+        if (msgField) {
+            msgField.value = summary;
+            mtToast('📊 Report auto-generated. Review and send!', 'info');
+        } else {
+            submitEndorsement(summary, 'sales');
+        }
+    } catch(e) {
+        mtToast('Error generating report: ' + e.message, 'error');
+    }
+}
+
+function renderSentEndorsements() {
+    const list = getEndorsements();
+    const today = new Date().toISOString().split('T')[0];
+    const todaySent = list.filter(e =>
+        e.sentAt?.startsWith(today) &&
+        e.sentByRole === 'cashier' &&
+        (e.orgId === (MT.currentOrg?.id || 'local') || !e.orgId)
+    );
+
+    const container = document.getElementById('endorse-sent-list');
+    if (!container) return;
+
+    if (todaySent.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:0.85rem;padding:20px;">No endorsements sent today</div>';
+        return;
+    }
+
+    const typeIcons = { sales:'💰', credit:'💳', expense:'🧾', water:'💧', attendance:'👷', urgent:'🚨' };
+    container.innerHTML = [...todaySent].reverse().map(e => `
+        <div class="endorse-item ${e.type === 'urgent' ? 'urgent' : ''}">
+            <div class="endorse-item-type">${typeIcons[e.type] || '📋'} ${e.type.toUpperCase()}</div>
+            <div class="endorse-item-desc" style="font-size:0.82rem;white-space:pre-line;">${e.message.substring(0,120)}${e.message.length>120?'...':''}</div>
+            <div class="endorse-item-meta">${new Date(e.sentAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} · ${e.read ? '✅ Seen by admin' : '⏳ Pending'}</div>
+        </div>
+    `).join('');
+}
+
+function renderAdminInbox() {
+    const list = getEndorsements();
+    let filtered = list.filter(e =>
+        e.orgId === (MT.currentOrg?.id || 'local') || !e.orgId
+    );
+
+    if (inboxFilter === 'unread') filtered = filtered.filter(e => !e.read);
+    if (inboxFilter === 'urgent') filtered = filtered.filter(e => e.type === 'urgent');
+
+    filtered = [...filtered].reverse();
+
+    const container = document.getElementById('admin-inbox-list');
+    if (!container) return;
+
+    if (filtered.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:0.85rem;padding:20px;">No endorsements found</div>';
+        return;
+    }
+
+    const typeIcons = { sales:'💰', credit:'💳', expense:'🧾', water:'💧', attendance:'👷', urgent:'🚨' };
+    container.innerHTML = filtered.map(e => `
+        <div class="endorse-item ${e.type === 'urgent' ? 'urgent' : ''} ${!e.read ? 'endorse-unread' : ''}"
+             onclick="markEndorseRead('${e.id}')"
+             style="${!e.read ? 'border-left-width:4px;' : 'opacity:0.75;'}">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div class="endorse-item-type">${typeIcons[e.type] || '📋'} ${e.type.toUpperCase()}</div>
+                ${!e.read ? '<span style="background:#ef4444;color:white;font-size:0.65rem;padding:2px 7px;border-radius:10px;font-weight:700;">NEW</span>' : ''}
+            </div>
+            <div class="endorse-item-desc" style="font-size:0.83rem;white-space:pre-line;margin:4px 0;">${e.message.substring(0,200)}${e.message.length>200?'...':''}</div>
+            <div class="endorse-item-meta">
+                From: <b>${e.sentBy}</b> · ${new Date(e.sentAt).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}
+            </div>
+        </div>
+    `).join('');
+
+    updateEndorseUnreadBadge();
+}
+
+function markEndorseRead(id) {
+    const list = getEndorsements();
+    const item = list.find(e => e.id === id);
+    if (item) { item.read = true; saveEndorsements(list); }
+    renderAdminInbox();
+    renderSentEndorsements();
+    updateEndorseUnreadBadge();
+}
+
+function markAllInboxRead() {
+    const list = getEndorsements();
+    list.forEach(e => e.read = true);
+    saveEndorsements(list);
+    renderAdminInbox();
+    updateEndorseUnreadBadge();
+    mtToast('All endorsements marked as read.', 'success');
+}
+
+function filterInbox(filter, btn) {
+    inboxFilter = filter;
+    document.querySelectorAll('#admin-inbox-panel .endorse-pill').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    renderAdminInbox();
+}
+
+function updateEndorseUnreadBadge() {
+    const list = getEndorsements();
+    const unread = list.filter(e =>
+        !e.read &&
+        (e.orgId === (MT.currentOrg?.id || 'local') || !e.orgId)
+    ).length;
+
+    // Admin inbox FAB badge
+    const aCount = document.getElementById('admin-inbox-count');
+    const aFab   = document.getElementById('admin-inbox-fab');
+    if (aCount) {
+        aCount.textContent = unread;
+        aCount.style.display = unread > 0 ? 'flex' : 'none';
+    }
+    if (aFab && unread > 0) {
+        aFab.style.animation = 'mt-pulse 2s infinite';
+    }
+
+    // Update header notification dot
+    const headerDot = document.getElementById('admin-inbox-dot');
+    if (headerDot) headerDot.style.display = unread > 0 ? 'inline-block' : 'none';
+}
+
+// Quick endorse buttons - called from within the app modules
+function quickEndorse(type, message) {
+    submitEndorsement(message, type);
+}
+
+// ================================================================
+// CASHIER DAILY SUMMARY DASHBOARD
+// ================================================================
+
+async function loadCashierDashboard() {
+    const today = new Date().toISOString().split('T')[0];
+    const cashierName = currentAppUser?.fullname || currentAppUser?.username || 'Cashier';
+    const filterType = document.getElementById('cashier-txn-filter')?.value || 'all';
+
+    // Update date header
+    const dateEl = document.getElementById('cashier-shift-date');
+    if (dateEl) {
+        const d = new Date();
+        dateEl.textContent = d.toLocaleDateString('en-PH', { weekday:'long', year:'numeric', month:'long', day:'numeric' }) + ' · ' + cashierName;
+    }
+
+    try {
+        // Fetch all today's data
+        const [payments, creditPayments, waterSales, expenses, additionalIncome, advances] = await Promise.all([
+            dbGetAll('payments'),
+            dbGetAll('creditPayments'),
+            dbGetAll('waterSales'),
+            dbGetAll('expenses'),
+            dbGetAll('additionalIncome'),
+            dbGetAll('cashAdvances')
+        ]);
+
+        // Filter today only
+        const todayRent    = payments.filter(p => p.date === today && p.type === 'rent');
+        const todayCredit  = creditPayments.filter(p => p.date === today);
+        const todayWater   = waterSales.filter(s => s.date === today && !s.voided);
+        const todayExp     = expenses.filter(e => e.date === today);
+        const todayIncome  = additionalIncome.filter(i => i.date === today);
+        const todayAdvance = advances.filter(a => a.date === today);
+
+        // Totals
+        const rentTotal    = todayRent.reduce((s,p) => s + p.amount, 0);
+        const creditTotal  = todayCredit.reduce((s,p) => s + p.amount, 0);
+        const waterTotal   = todayWater.reduce((s,w) => s + w.amountPaid, 0);
+        const incomeTotal  = todayIncome.reduce((s,i) => s + i.amount, 0);
+        const expTotal     = todayExp.reduce((s,e) => s + e.amount, 0);
+        const advTotal     = todayAdvance.reduce((s,a) => s + a.amount, 0);
+        const totalCollected = rentTotal + creditTotal + waterTotal + incomeTotal;
+        const txnCount     = todayRent.length + todayCredit.length + todayWater.length + todayIncome.length + todayExp.length;
+
+        // Endorsements sent today
+        const allEndorse = JSON.parse(localStorage.getItem('prism_endorsements') || '[]');
+        const todayEndorse = allEndorse.filter(e => e.sentAt?.startsWith(today) && e.sentByRole === 'cashier');
+
+        // Update stat cards
+        const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+        set('cs-total-collected', '₱' + totalCollected.toLocaleString());
+        set('cs-total-expenses',  '₱' + expTotal.toLocaleString());
+        set('cs-transactions',    txnCount);
+        set('cs-endorsements',    todayEndorse.length);
+        set('cs-rent',            '₱' + rentTotal.toLocaleString());
+        set('cs-credit',          '₱' + creditTotal.toLocaleString());
+        set('cs-water',           '₱' + waterTotal.toLocaleString());
+        set('cs-other-income',    '₱' + incomeTotal.toLocaleString());
+
+        // Build transaction list
+        const txnList = document.getElementById('cashier-txn-list');
+        if (!txnList) return;
+
+        // Combine all transactions with type labels
+        let allTxns = [];
+
+        if (filterType === 'all' || filterType === 'rent') {
+            todayRent.forEach(p => allTxns.push({ type:'rent', icon:'🏠', label:'Rent Payment', amount:'+₱'+p.amount.toLocaleString(), amountClass:'text-success', sub: p.paymentMethod || 'cash', date: p.date, time: p.createdAt }));
+        }
+        if (filterType === 'all' || filterType === 'credit') {
+            todayCredit.forEach(p => allTxns.push({ type:'credit', icon:'💳', label:'Credit Collection', amount:'+₱'+p.amount.toLocaleString(), amountClass:'text-success', sub: p.paymentMethod || 'cash', date: p.date, time: p.createdAt }));
+        }
+        if (filterType === 'all' || filterType === 'water') {
+            todayWater.forEach(s => allTxns.push({ type:'water', icon:'💧', label:'Water Sale ('+s.gallons+'gal)', amount:'+₱'+s.amountPaid.toLocaleString(), amountClass:'text-success', sub: s.status, date: s.date, time: s.createdAt }));
+        }
+        if (filterType === 'all' || filterType === 'income') {
+            todayIncome.forEach(i => allTxns.push({ type:'income', icon:'💰', label:i.description, amount:'+₱'+i.amount.toLocaleString(), amountClass:'text-success', sub: i.category, date: i.date, time: i.createdAt }));
+        }
+        if (filterType === 'all' || filterType === 'expense') {
+            todayExp.forEach(e => allTxns.push({ type:'expense', icon:'🧾', label:e.description, amount:'-₱'+e.amount.toLocaleString(), amountClass:'text-danger', sub: e.category, date: e.date, time: e.createdAt }));
+        }
+
+        // Sort by time desc
+        allTxns.sort((a,b) => new Date(b.time || b.date) - new Date(a.time || a.date));
+
+        if (allTxns.length === 0) {
+            txnList.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:30px;font-size:0.85rem;">No transactions recorded today yet.<br><span style="font-size:0.78rem;">Use the Quick Actions below to start recording.</span></div>';
+            return;
+        }
+
+        txnList.innerHTML = allTxns.map(t => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border-color);">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="font-size:1.3rem;">${t.icon}</span>
+                    <div>
+                        <div style="font-weight:600;font-size:0.88rem;color:var(--text-primary);">${t.label}</div>
+                        <div style="font-size:0.75rem;color:var(--text-secondary);">${t.sub} · ${t.time ? new Date(t.time).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : t.date}</div>
+                    </div>
+                </div>
+                <div style="font-weight:700;font-size:0.95rem;" class="${t.amountClass}">${t.amount}</div>
+            </div>
+        `).join('');
+
+    } catch(e) {
+        console.error('Cashier dashboard error:', e);
+        const txnList = document.getElementById('cashier-txn-list');
+        if (txnList) txnList.innerHTML = '<div style="color:var(--text-secondary);padding:20px;text-align:center;">Error loading data: ' + e.message + '</div>';
+    }
+}
+
+// Show cashier dashboard vs admin dashboard based on role
+function mtShowRoleDashboard() {
+    const isCashier = currentAppUser && currentAppUser.role === 'cashier';
+    const cashierDash = document.getElementById('cashier-dashboard');
+    const adminDash   = document.getElementById('dashboard');
+
+    if (isCashier && cashierDash) {
+        cashierDash.style.display = 'block';
+        if (adminDash) adminDash.classList.remove('active');
+        loadCashierDashboard();
+    } else {
+        if (cashierDash) cashierDash.style.display = 'none';
+        if (adminDash) adminDash.classList.add('active');
+    }
+}
+
+// ---- Main Init ----
+async function mtInit() {
+    mtShowLoading('Starting PRISM...');
+    
+    // Wait for Firebase to be ready
+    await new Promise(resolve => {
+        const check = setInterval(() => {
+            if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0) {
+                clearInterval(check); resolve();
+            }
+        }, 100);
+        setTimeout(() => { clearInterval(check); resolve(); }, 3000);
+    });
+
+    // Listen to Firebase auth state
+    if (typeof firebase !== 'undefined' && firebase.auth) {
+        (window.auth || firebase.auth()).onAuthStateChanged(async (user) => {
+            MT.currentUser = user;
+            
+            if (user) {
+                // Check if super admin
+                if (MT.SUPER_ADMINS.includes(user.email)) {
+                    // Super admins can go to SA panel OR their own org
+                    const savedOrg = localStorage.getItem('mt_current_org');
+                    if (savedOrg) {
+                        MT.currentOrg = JSON.parse(savedOrg);
+                        MT.currentOrgRole = localStorage.getItem('mt_current_org_role') || 'owner';
+                        mtHideLoading();
+                        // Show SA panel but also allow app access
+                        mtShowSuperAdmin();
+                    } else {
+                        mtHideLoading();
+                        mtShowSuperAdmin();
+                    }
+                    return;
+                }
+                
+                // Regular user - check for saved org
+                const savedOrgId = localStorage.getItem('mt_current_org_id');
+                const savedOrg = localStorage.getItem('mt_current_org');
+                
+                if (savedOrgId && savedOrg) {
+                    MT.currentOrg = JSON.parse(savedOrg);
+                    MT.currentOrgRole = localStorage.getItem('mt_current_org_role') || 'owner';
+                    
+                    // Try to load orgs from Firestore
+                    if (window.db) {
+                        try {
+                            const memberSnap = await window.db.collection(MT.ORG_MEMBERS_COL)
+                                .where('userId', '==', user.uid).get();
+                            const orgIds = memberSnap.docs.map(d => d.data().orgId);
+                            const orgs = [];
+                            for (const oid of orgIds) {
+                                const orgDoc = await window.db.collection(MT.ORGS_COL).doc(oid).get();
+                                if (orgDoc.exists) orgs.push({ id: orgDoc.id, ...orgDoc.data() });
+                            }
+                            if (orgs.length > 0) {
+                                localStorage.setItem('mt_user_orgs', JSON.stringify(orgs));
+                                const current = orgs.find(o => o.id === savedOrgId) || orgs[0];
+                                MT.currentOrg = current;
+                                localStorage.setItem('mt_current_org', JSON.stringify(current));
+                            }
+                        } catch (e) { console.warn('Org load from Firestore failed:', e); }
+                    }
+                    
+                    mtHideLoading();
+                    mtShowApp();
+                    mtUpdateOrgBadge();
+                    // Set up local app user
+                    const savedAppUser = localStorage.getItem('carent_current_user');
+                    if (!savedAppUser) {
+                        const orgUser = {
+                            id: 1, username: user.email?.split('@')[0] || 'user',
+                            fullname: user.displayName || user.email,
+                            role: MT.currentOrgRole === 'owner' ? 'admin' : MT.currentOrgRole,
+                            email: user.email,
+                            orgId: MT.currentOrg.id,
+                            permissions: { 'add-property':true,'edit-property':true,'delete-property':true,
+                                'add-tenant':true,'edit-tenant':true,'delete-tenant':true,
+                                'record-payment':true,'water-sales':true,'void-sale':true,
+                                'manage-staff':true,'manage-users':true,'view-reports':true,'backup-restore':true }
+                        };
+                        localStorage.setItem('carent_current_user', JSON.stringify(orgUser));
+                    }
+                    setTimeout(() => {
+                        if (typeof updateUserDisplay === 'function') updateUserDisplay();
+                        if (typeof loadDashboard === 'function') loadDashboard();
+                    }, 500);
+                } else {
+                    // New user - show org setup
+                    mtHideLoading();
+                    mtShowSetup();
+                }
+            } else {
+                // No user - check demo/local mode
+                const localUser = localStorage.getItem('carent_current_user');
+                const localOrg = localStorage.getItem('mt_current_org');
+                
+                if (localUser && localOrg) {
+                    MT.currentUser = { uid: 'local', email: 'local@prism', displayName: 'Local User' };
+                    MT.currentOrg = JSON.parse(localOrg);
+                    mtHideLoading();
+                    mtShowApp();
+                    mtUpdateOrgBadge();
+                } else if (localUser) {
+                    // Legacy single-tenant local user
+                    MT.currentUser = { uid: 'local', email: 'local@prism', displayName: 'Local User' };
+                    MT.currentOrg = {
+                        id: 'local_org',
+                        name: 'My Business',
+                        plan: 'basic',
+                        bizType: 'mixed',
+                        status: 'active',
+                        ownerId: 'local',
+                        createdAt: new Date().toISOString()
+                    };
+                    localStorage.setItem('mt_current_org', JSON.stringify(MT.currentOrg));
+                    localStorage.setItem('mt_current_org_id', 'local_org');
+                    mtHideLoading();
+                    mtShowApp();
+                    mtUpdateOrgBadge();
+                } else {
+                    mtHideLoading();
+                    mtShowLanding();
+                }
+            }
+        });
+    } else {
+        // Firebase not available - try local
+        const localUser = localStorage.getItem('carent_current_user');
+        const localOrg = localStorage.getItem('mt_current_org');
+        
+        if (localUser) {
+            MT.currentUser = { uid: 'local', email: 'local@prism', displayName: 'Local User' };
+            MT.currentOrg = localOrg ? JSON.parse(localOrg) : {
+                id: 'local_org', name: 'My Business', plan: 'basic',
+                bizType: 'mixed', status: 'active', ownerId: 'local',
+                createdAt: new Date().toISOString()
+            };
+            localStorage.setItem('mt_current_org', JSON.stringify(MT.currentOrg));
+            localStorage.setItem('mt_current_org_id', MT.currentOrg.id);
+            mtHideLoading();
+            mtShowApp();
+            mtUpdateOrgBadge();
+        } else {
+            mtHideLoading();
+            mtShowLanding();
+        }
+    }
+}
+
+// ---- Intercept existing appLogout to use MT logout ----
+window.addEventListener('DOMContentLoaded', () => {
+    // Patch original appLogout
+    const originalAppLogout = window.appLogout;
+    window.appLogout = function() {
+        if (confirm('Are you sure you want to logout?')) {
+            mtLogout();
+        }
+    };
+    
+    // Start MT init
+    mtInit();
+});
+
+</script>
