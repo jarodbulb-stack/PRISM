@@ -2505,6 +2505,7 @@
     display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px;
 }
 .mt-biz-type {
+    position: relative;
     padding: 16px 12px; border-radius: 12px; text-align: center;
     border: 2px solid rgba(255,255,255,0.08); cursor: pointer;
     transition: all 0.2s; background: rgba(255,255,255,0.02);
@@ -2934,30 +2935,38 @@
             <div class="mt-step-dot" id="mt-dot-3">3</div>
         </div>
 
-        <!-- Step 1: Business Type -->
+        <!-- Step 1: Business Modules -->
         <div class="mt-step-panel active" id="mt-step-1">
-            <p style="color:#94a3b8;margin-bottom:16px;font-size:0.9rem;">What best describes your business?</p>
+            <p style="color:#94a3b8;margin-bottom:6px;font-size:0.9rem;">Select the modules your business needs.</p>
+            <p style="color:#6366f1;margin-bottom:16px;font-size:0.82rem;font-weight:600;">All modules are active by default — you can use everything! ✅</p>
             <div class="mt-biz-types">
-                <div class="mt-biz-type" onclick="mtSelectBizType('property', this)">
+                <div class="mt-biz-type selected" onclick="mtToggleBizModule('property', this)">
                     <span class="icon">🏠</span>Property Rental
+                    <span style="position:absolute;top:8px;right:8px;font-size:0.7rem;">✅</span>
                 </div>
-                <div class="mt-biz-type" onclick="mtSelectBizType('lending', this)">
+                <div class="mt-biz-type selected" onclick="mtToggleBizModule('lending', this)">
                     <span class="icon">💳</span>Lending / Credit
+                    <span style="position:absolute;top:8px;right:8px;font-size:0.7rem;">✅</span>
                 </div>
-                <div class="mt-biz-type" onclick="mtSelectBizType('water', this)">
+                <div class="mt-biz-type selected" onclick="mtToggleBizModule('water', this)">
                     <span class="icon">💧</span>Water Station
+                    <span style="position:absolute;top:8px;right:8px;font-size:0.7rem;">✅</span>
                 </div>
-                <div class="mt-biz-type" onclick="mtSelectBizType('retail', this)">
+                <div class="mt-biz-type selected" onclick="mtToggleBizModule('retail', this)">
                     <span class="icon">🏪</span>Retail / Store
+                    <span style="position:absolute;top:8px;right:8px;font-size:0.7rem;">✅</span>
                 </div>
-                <div class="mt-biz-type" onclick="mtSelectBizType('hardware', this)">
+                <div class="mt-biz-type selected" onclick="mtToggleBizModule('hardware', this)">
                     <span class="icon">🔧</span>Hardware Store
+                    <span style="position:absolute;top:8px;right:8px;font-size:0.7rem;">✅</span>
                 </div>
-                <div class="mt-biz-type" onclick="mtSelectBizType('mixed', this)">
-                    <span class="icon">🏢</span>Mixed Business
+                <div class="mt-biz-type selected" onclick="mtToggleBizModule('employees', this)">
+                    <span class="icon">👷</span>Staff / Payroll
+                    <span style="position:absolute;top:8px;right:8px;font-size:0.7rem;">✅</span>
                 </div>
             </div>
-            <button class="mt-setup-btn" id="mt-step1-next" onclick="mtSetupNext(2)" disabled>Continue →</button>
+            <p style="color:#64748b;font-size:0.78rem;text-align:center;margin-top:10px;">Tap a module to toggle it on/off</p>
+            <button class="mt-setup-btn" id="mt-step1-next" onclick="mtSetupNext(2)">Continue →</button>
         </div>
 
         <!-- Step 2: Business Details -->
@@ -7991,7 +8000,11 @@
         // MODAL FUNCTIONS
         // =====================
         function showModal(modalId) {
-            document.getElementById(modalId).classList.add('show');
+            const _m = document.getElementById(modalId);
+            if (!_m) return;
+            _m.style.display = ''; // reset any inline display:none
+            _m.style.pointerEvents = '';
+            _m.classList.add('show');
             document.getElementById('fab-menu').classList.remove('show');
 
             // Pre-populate dropdowns
@@ -8158,7 +8171,8 @@
             const modal = document.getElementById(modalId);
             if (modal) {
                 modal.classList.remove('show');
-                modal.style.display = 'none';
+                modal.style.display = ''; // clear inline style — let CSS take over
+                modal.style.pointerEvents = '';
                 // Reset forms
                 const form = modal.querySelector('form');
                 if (form) form.reset();
@@ -8187,8 +8201,17 @@
             overlay.addEventListener('click', (e) => {
                 if (e.target === overlay) {
                     overlay.classList.remove('show');
+                    overlay.style.display = ''; // clear inline style
                 }
             });
+        });
+
+        // Also use event delegation for dynamically added modals
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-overlay') && e.target.classList.contains('show')) {
+                e.target.classList.remove('show');
+                e.target.style.display = '';
+            }
         });
 
         // =====================
@@ -17652,8 +17675,7 @@ Lender/Manager
                 currentAppUser = user;
                 localStorage.setItem('carent_current_user', JSON.stringify(user));
                 hideModal('app-login-modal');
-                document.getElementById('app-login-modal').style.display = 'none';
-                
+                hideModal('app-login-modal');
                 // Show app content
                 const mainContent = document.querySelector('.main');
                 if (mainContent) mainContent.style.display = 'block';
@@ -17814,7 +17836,7 @@ Lender/Manager
             };
             localStorage.setItem('carent_current_user', JSON.stringify(currentAppUser));
             hideModal('app-login-modal');
-            document.getElementById('app-login-modal').style.display = 'none';
+            hideModal('app-login-modal');
             
             // Show app content
             const mainContent = document.querySelector('.main');
@@ -20831,6 +20853,19 @@ function mtSelectBizType(type, el) {
     document.getElementById('mt-step1-next').disabled = false;
 }
 
+// New: toggle individual modules on/off
+function mtToggleBizModule(type, el) {
+    el.classList.toggle('selected');
+    const checkmark = el.querySelector('span:last-child');
+    if (el.classList.contains('selected')) {
+        if (checkmark) checkmark.textContent = '✅';
+    } else {
+        if (checkmark) checkmark.textContent = '○';
+    }
+    // Always mixed since multiple can be selected
+    MT.selectedBizType = 'mixed';
+}
+
 function mtResetSetup() {
     MT.currentSetupStep = 1;
     MT.selectedBizType = null;
@@ -20844,13 +20879,14 @@ function mtResetSetup() {
     });
     document.querySelectorAll('.mt-biz-type').forEach(b => b.classList.remove('selected'));
     const nextBtn = document.getElementById('mt-step1-next');
-    if (nextBtn) nextBtn.disabled = true;
+    if (nextBtn) nextBtn.disabled = false; // always enabled
+    MT.selectedBizType = 'mixed'; // default to mixed
 }
 
 function mtSetupNext(step) {
+    // Default to mixed if none selected — all modules always available
     if (step === 2 && !MT.selectedBizType) {
-        mtToast('Please select a business type', 'error');
-        return;
+        MT.selectedBizType = 'mixed';
     }
     if (step === 3) {
         const orgName = document.getElementById('mt-setup-orgname')?.value?.trim();
