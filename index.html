@@ -4255,6 +4255,7 @@
                     <button id="login-btn" class="btn btn-primary" onclick="signInWithGoogle()" style="width: 100%; margin-bottom: 10px;">
                         <span style="margin-right: 8px;">G</span> Sign in with Google
                     </button>
+                    <div id="firebase-status-msg" style="font-size:0.8rem;color:#64748b;text-align:center;margin-top:6px;"></div>
                     
                     <div style="text-align: center; color: var(--text-secondary); margin: 10px 0;">or</div>
                     
@@ -6412,6 +6413,8 @@
                 if (firebaseInitAttempts >= FIREBASE_MAX_ATTEMPTS) {
                     console.log('[Firebase] SDK not available - Running in OFFLINE MODE (IndexedDB only)');
                     console.log('[App] ✅ App fully functional without Firebase');
+                    const fsMsgFail = document.getElementById('firebase-status-msg');
+                    if (fsMsgFail) { fsMsgFail.textContent = '⚠️ Firebase unavailable. Check internet connection.'; fsMsgFail.style.color = '#f59e0b'; }
                     return;
                 }
                 console.log(`[Firebase] SDK not loaded yet, retry ${firebaseInitAttempts}/${FIREBASE_MAX_ATTEMPTS}...`);
@@ -6427,6 +6430,9 @@
                 window.auth = auth;    // expose for MT layer
                 firebaseReady = true;
                 console.log('[Firebase] ✅ Initialized — project: carent-c4017');
+                // Update status message in Cloud Sync section
+                const fsMsg = document.getElementById('firebase-status-msg');
+                if (fsMsg) { fsMsg.textContent = '✅ Firebase connected. Ready to sign in.'; fsMsg.style.color = '#10b981'; }
 
                 // Enable offline persistence
                 firestore.enablePersistence({ synchronizeTabs: true })
@@ -6517,31 +6523,18 @@
         }
 
         // Google Sign In
-        // Retry counter to prevent infinite loop
-        let _googleSignInRetries = 0;
-
         async function signInWithGoogle() {
-            // Check if running from file:// protocol
+            // Block if local file
             if (window.location.protocol === 'file:') {
                 alert('☁️ Google Sign-in requires HTTPS.\n\nYou are running from a local file.\nUpload to GitHub Pages to use Google Sign-in.\n\n✅ The app works fully offline!');
                 return;
             }
 
-            // If Firebase not ready yet — wait max 5 seconds (10 retries x 500ms)
+            // Firebase not ready — show single message, do NOT loop
             if (!firebaseReady || !auth) {
-                _googleSignInRetries++;
-                if (_googleSignInRetries > 10) {
-                    _googleSignInRetries = 0;
-                    try { showToast('❌ Firebase not available. Check your internet connection.', 'error'); } catch(e) {}
-                    return;
-                }
-                try { showToast('⏳ Connecting to Firebase... (' + _googleSignInRetries + '/10)', 'info'); } catch(e) {}
-                setTimeout(signInWithGoogle, 500);
+                try { showToast('⏳ Firebase is still loading. Please try again in a few seconds.', 'info'); } catch(e) {}
                 return;
             }
-
-            // Reset counter on success path
-            _googleSignInRetries = 0;
 
             try {
                 const provider = new firebase.auth.GoogleAuthProvider();
@@ -6553,11 +6546,11 @@
                 if (error.code === 'auth/popup-closed-by-user') {
                     try { showToast('ℹ️ Sign-in cancelled.', 'info'); } catch(e) {}
                 } else if (error.code === 'auth/popup-blocked') {
-                    alert('🚫 Popup blocked!\n\nPlease allow popups for this site:\nClick the popup blocked icon in your browser address bar → Allow.');
+                    alert('🚫 Popup blocked!\n\nAllow popups for this site:\nClick the blocked popup icon in your address bar → Always allow.');
+                } else if (error.code === 'auth/unauthorized-domain') {
+                    alert('🚫 Domain not authorized.\n\nAdd this to Firebase Authorized Domains:\n' + window.location.hostname + '\n\nFirebase Console → Authentication → Settings → Authorized Domains');
                 } else if (error.code === 'auth/operation-not-supported-in-this-environment') {
                     alert('☁️ Google Sign-in requires HTTPS.\n\n✅ The app works fully offline!');
-                } else if (error.code === 'auth/unauthorized-domain') {
-                    alert('🚫 This domain is not authorized in Firebase.\n\nGo to Firebase Console → Authentication → Settings → Authorized Domains → Add this domain:\n' + window.location.hostname);
                 } else {
                     try { showToast('❌ Sign-in failed: ' + (error.message || error.code), 'error'); } catch(e) {}
                 }
