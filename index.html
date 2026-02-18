@@ -6517,28 +6517,49 @@
         }
 
         // Google Sign In
+        // Retry counter to prevent infinite loop
+        let _googleSignInRetries = 0;
+
         async function signInWithGoogle() {
             // Check if running from file:// protocol
             if (window.location.protocol === 'file:') {
-                alert('☁️ Cloud Sync Not Available\n\nCloud sync requires HTTPS. You are currently running the app from a local file.\n\nTo enable cloud sync:\n• Upload to GitHub Pages, or\n• Use a local web server\n\n✅ The app works fully offline!\nAll your data is saved locally on this device.');
+                alert('☁️ Google Sign-in requires HTTPS.\n\nYou are running from a local file.\nUpload to GitHub Pages to use Google Sign-in.\n\n✅ The app works fully offline!');
                 return;
             }
-            
+
+            // If Firebase not ready yet — wait max 5 seconds (10 retries x 500ms)
             if (!firebaseReady || !auth) {
-                try { showToast('⏳ Please wait, loading...', 'info'); } catch(e) {}
+                _googleSignInRetries++;
+                if (_googleSignInRetries > 10) {
+                    _googleSignInRetries = 0;
+                    try { showToast('❌ Firebase not available. Check your internet connection.', 'error'); } catch(e) {}
+                    return;
+                }
+                try { showToast('⏳ Connecting to Firebase... (' + _googleSignInRetries + '/10)', 'info'); } catch(e) {}
                 setTimeout(signInWithGoogle, 500);
                 return;
             }
+
+            // Reset counter on success path
+            _googleSignInRetries = 0;
+
             try {
                 const provider = new firebase.auth.GoogleAuthProvider();
+                provider.setCustomParameters({ prompt: 'select_account' });
                 await auth.signInWithPopup(provider);
-                try { showToast('✅ Signed in successfully!', 'success'); } catch(e) {}
+                try { showToast('✅ Signed in with Google!', 'success'); } catch(e) {}
             } catch (error) {
-                console.error('[Auth] Sign in error:', error);
-                if (error.code === 'auth/operation-not-supported-in-this-environment') {
-                    alert('☁️ Cloud Sync Not Available\n\nThis feature requires HTTPS.\n\n✅ The app works fully offline!\nAll your data is saved locally.');
+                console.error('[Auth] Google sign-in error:', error);
+                if (error.code === 'auth/popup-closed-by-user') {
+                    try { showToast('ℹ️ Sign-in cancelled.', 'info'); } catch(e) {}
+                } else if (error.code === 'auth/popup-blocked') {
+                    alert('🚫 Popup blocked!\n\nPlease allow popups for this site:\nClick the popup blocked icon in your browser address bar → Allow.');
+                } else if (error.code === 'auth/operation-not-supported-in-this-environment') {
+                    alert('☁️ Google Sign-in requires HTTPS.\n\n✅ The app works fully offline!');
+                } else if (error.code === 'auth/unauthorized-domain') {
+                    alert('🚫 This domain is not authorized in Firebase.\n\nGo to Firebase Console → Authentication → Settings → Authorized Domains → Add this domain:\n' + window.location.hostname);
                 } else {
-                    try { showToast('❌ Sign in failed: ' + error.message, 'error'); } catch(e) {}
+                    try { showToast('❌ Sign-in failed: ' + (error.message || error.code), 'error'); } catch(e) {}
                 }
             }
         }
@@ -20752,8 +20773,13 @@ async function mtRegister() {
 }
 
 async function mtGoogleLogin() {
+    if (!window.auth && (!window.firebase || !firebase.auth)) {
+        mtToast('❌ Firebase not ready. Please wait a moment and try again.', 'error');
+        return;
+    }
     try {
         const provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
         await (window.auth || firebase.auth()).signInWithPopup(provider);
         // onAuthStateChanged handles the rest
     } catch (err) {
