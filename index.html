@@ -20734,14 +20734,31 @@ async function mtRegister() {
 }
 
 async function mtGoogleLogin() {
-    if (!window.auth && (!window.firebase || !firebase.auth)) {
-        mtToast('❌ Firebase not ready. Please wait a moment and try again.', 'error');
+    if (!firebaseReady || !window.auth) {
+        mtToast('⏳ Firebase is still connecting. Please wait a few seconds and try again.', 'info');
         return;
     }
     try {
         const provider = new firebase.auth.GoogleAuthProvider();
         provider.setCustomParameters({ prompt: 'select_account' });
-        await (window.auth || firebase.auth()).signInWithPopup(provider);
+        const result = await (window.auth || firebase.auth()).signInWithPopup(provider);
+        // Force navigation if onAuthStateChanged doesn't fire fast enough
+        if (result && result.user) {
+            setTimeout(() => {
+                if (document.getElementById('mt-landing')?.classList.contains('active') ||
+                    document.getElementById('mt-auth')?.classList.contains('active')) {
+                    console.log('[MT] Forcing navigation after Google login');
+                    MT.currentUser = result.user;
+                    if (MT.SUPER_ADMINS.includes(result.user.email)) {
+                        mtShowSuperAdmin();
+                    } else {
+                        const savedOrg = localStorage.getItem('mt_current_org');
+                        if (savedOrg) { MT.currentOrg = JSON.parse(savedOrg); mtShowApp(); }
+                        else { mtShowSetup(); }
+                    }
+                }
+            }, 2000);
+        }
         // onAuthStateChanged handles the rest
     } catch (err) {
         if (err.code !== 'auth/popup-closed-by-user') {
@@ -21646,21 +21663,37 @@ function mtAppLogout() {
 
 // ---- Main Init ----
 async function mtInit() {
-    mtShowLoading('Starting PRISM...');
+    // Show landing immediately — don't wait for Firebase
+    mtHideLoading();
     
-    // Wait for Firebase to be ready
-    await new Promise(resolve => {
-        const check = setInterval(() => {
-            if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0) {
-                clearInterval(check); resolve();
+    // Check if user was previously logged in locally
+    const savedUser = localStorage.getItem('carent_current_user');
+    const savedOrg = localStorage.getItem('mt_current_org');
+    if (savedUser && savedOrg) {
+        try {
+            const u = JSON.parse(savedUser);
+            const o = JSON.parse(savedOrg);
+            if (u && o && o.name) {
+                // Restore local session directly
+                currentAppUser = u;
+                MT.currentUser = { uid: 'local_' + (u.id||1), email: u.email||'local@prism.app', displayName: u.fullname };
+                MT.currentOrg = o;
+                MT.currentOrgRole = u.role || 'admin';
+                mtShowApp();
+                mtUpdateOrgBadge();
+                if (typeof updateUserDisplay === 'function') updateUserDisplay();
+                if (typeof loadDashboard === 'function') setTimeout(loadDashboard, 300);
+                // Still set up Firebase auth in background
             }
-        }, 100);
-        setTimeout(() => { clearInterval(check); resolve(); }, 3000);
-    });
+        } catch(e) {}
+    } else {
+        mtShowLanding();
+    }
 
-    // Listen to Firebase auth state
-    if (typeof firebase !== 'undefined' && firebase.auth) {
-        (window.auth || firebase.auth()).onAuthStateChanged(async (user) => {
+    // Set up Firebase auth listener in background (no waiting)
+    const setupFirebaseAuth = () => {
+        if (typeof firebase !== 'undefined' && firebase.auth && window.auth) {
+            (window.auth || firebase.auth()).onAuthStateChanged(async (user) => {
             MT.currentUser = user;
             
             if (user) {
@@ -21772,27 +21805,12 @@ async function mtInit() {
             }
         });
     } else {
-        // Firebase not available - try local
-        const localUser = localStorage.getItem('carent_current_user');
-        const localOrg = localStorage.getItem('mt_current_org');
-        
-        if (localUser) {
-            MT.currentUser = { uid: 'local', email: 'local@prism', displayName: 'Local User' };
-            MT.currentOrg = localOrg ? JSON.parse(localOrg) : {
-                id: 'local_org', name: 'My Business', plan: 'basic',
-                bizType: 'mixed', status: 'active', ownerId: 'local',
-                createdAt: new Date().toISOString()
-            };
-            localStorage.setItem('mt_current_org', JSON.stringify(MT.currentOrg));
-            localStorage.setItem('mt_current_org_id', MT.currentOrg.id);
-            mtHideLoading();
-            mtShowApp();
-            mtUpdateOrgBadge();
-        } else {
-            mtHideLoading();
-            mtShowLanding();
-        }
+        // Firebase not ready yet, retry in 1s
+        setTimeout(setupFirebaseAuth, 1000);
     }
+    };
+    // Try immediately, keep retrying until Firebase is ready
+    setupFirebaseAuth();
 }
 
 // ---- Intercept existing appLogout to use MT logout ----
