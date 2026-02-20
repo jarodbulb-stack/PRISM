@@ -2,6 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <!-- Firebase Performance: DNS prefetch + preconnect -->
+    <link rel="dns-prefetch" href="//www.gstatic.com">
+    <link rel="dns-prefetch" href="//firestore.googleapis.com">
+    <link rel="dns-prefetch" href="//identitytoolkit.googleapis.com">
+    <link rel="dns-prefetch" href="//securetoken.googleapis.com">
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
+    <!-- Preload Firebase scripts to start download ASAP -->
+    <link rel="preload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js" as="script" crossorigin>
+    <link rel="preload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js" as="script" crossorigin>
+    <link rel="preload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js" as="script" crossorigin>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -25,25 +37,45 @@
     
     <!-- Firebase SDK + Chart.js - loaded with error handling -->
     <script>
-    // Load external scripts with error handling - gracefully degrade if blocked by CSP
+    // OPTIMIZED Firebase loading - preload all 3 scripts in parallel, then init in order
     (function() {
-        function loadScript(src, onLoad, onError) {
+        var FIREBASE_VER = '10.7.1';
+        var BASE = 'https://www.gstatic.com/firebasejs/' + FIREBASE_VER + '/';
+        
+        // Track loading state
+        var loaded = { app: false, auth: false, firestore: false };
+        var scriptErrors = {};
+        
+        function loadScript(src, key, onLoad, onError) {
             var s = document.createElement('script');
             s.src = src;
-            s.onload = onLoad || function(){};
-            s.onerror = onError || function(){ console.warn('[PRISM] Script blocked/failed:', src); };
+            s.async = true; // non-blocking
+            s.crossOrigin = 'anonymous';
+            s.onload = function() {
+                if (key) loaded[key] = true;
+                if (onLoad) onLoad();
+            };
+            s.onerror = function() {
+                if (key) scriptErrors[key] = true;
+                console.warn('[PRISM] Firebase script failed:', src);
+                if (onError) onError();
+            };
             document.head.appendChild(s);
+            return s;
         }
         
-        // Load Firebase scripts sequentially
-        loadScript('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js', function() {
-            loadScript('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js', function() {
-                loadScript('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js');
-            });
+        // Step 1: Load firebase-app first (required base)
+        loadScript(BASE + 'firebase-app-compat.js', 'app', function() {
+            // Step 2: Load auth + firestore IN PARALLEL once app is ready
+            loadScript(BASE + 'firebase-auth-compat.js', 'auth');
+            loadScript(BASE + 'firebase-firestore-compat.js', 'firestore');
         });
         
-        // Load Chart.js independently
-        loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js');
+        // Load Chart.js in parallel (independent)
+        loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js', null);
+        
+        // Expose load status for diagnostics
+        window._firebaseLoadStatus = loaded;
     })();
     </script>
     
@@ -74,6 +106,14 @@
             --text-secondary: #6b7280;
             --border-color: #e5e7eb;
             
+            /* Safe text on colored backgrounds */
+            --text-on-primary: #ffffff;
+            --text-on-success: #ffffff;
+            --text-on-danger: #ffffff;
+            --text-on-warning: #000000;
+            --input-bg: #ffffff;
+            --input-text: #111827;
+            --input-border: #d1d5db;
             /* JAROD Analysis Box Colors - Light Mode */
             --jarod-income-bg: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
             --jarod-income-text: #1e3a8a;
@@ -100,11 +140,63 @@
             --text-secondary: #9ca3af;
             --border-color: #374151;
             
+            /* Safe text on colored backgrounds - dark mode same (colored bg = white text) */
+            --text-on-primary: #ffffff;
+            --text-on-success: #ffffff;
+            --text-on-danger: #ffffff;
+            --text-on-warning: #000000;
+            --input-bg: #1f2937;
+            --input-text: #f9fafb;
+            --input-border: #374151;
             /* JAROD Analysis Box Colors - Dark Mode */
             --jarod-income-bg: linear-gradient(135deg, #1e3a8a 0%, #312e81 100%);
             --jarod-income-text: #bfdbfe;
             --jarod-expense-bg: linear-gradient(135deg, #92400e 0%, #78350f 100%);
             --jarod-expense-text: #fef3c7;
+        }
+
+        /* ============================================
+           UNIVERSAL CONTRAST FIX - All modes
+           ============================================ */
+        
+        /* All form inputs always use theme variables */
+        input, textarea, select {
+            background-color: var(--bg-card) !important;
+            color: var(--text-primary) !important;
+            border-color: var(--border-color) !important;
+        }
+        input::placeholder, textarea::placeholder {
+            color: var(--text-secondary) !important;
+            opacity: 0.7;
+        }
+        
+        /* Fix autocomplete/autofill which overrides colors */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus {
+            -webkit-text-fill-color: var(--text-primary) !important;
+            -webkit-box-shadow: 0 0 0px 1000px var(--bg-card) inset !important;
+            transition: background-color 5000s ease-in-out 0s;
+        }
+        
+        /* All modals use theme variables */
+        .modal {
+            background: var(--bg-card) !important;
+            color: var(--text-primary) !important;
+        }
+        .modal-header {
+            border-bottom-color: var(--border-color) !important;
+        }
+        
+        /* Datalist options */
+        datalist option {
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+        
+        /* Labels always readable */
+        label {
+            color: var(--text-secondary);
         }
 
         /* Dark Mode - Contrast Fixes */
@@ -190,6 +282,73 @@
             color: #dbeafe;
         }
 
+        /* Fix JS-generated elements in dark mode */
+        [data-theme="dark"] .list-item {
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+        [data-theme="dark"] .card {
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+        [data-theme="dark"] .form-group label {
+            color: var(--text-secondary);
+        }
+        [data-theme="dark"] .form-control,
+        [data-theme="dark"] .form-select {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border-color: var(--border-color);
+        }
+        /* Fix dynamically created modals in dark mode */
+        [data-theme="dark"] [style*="background:white"],
+        [data-theme="dark"] [style*="background: white"],
+        [data-theme="dark"] [style*="background:#ffffff"],
+        [data-theme="dark"] [style*="background: #ffffff"] {
+            background: var(--bg-card) !important;
+        }
+        [data-theme="dark"] [style*="color:#000"],
+        [data-theme="dark"] [style*="color: #000"],
+        [data-theme="dark"] [style*="color:#111827"],
+        [data-theme="dark"] [style*="color:#1e293b"],
+        [data-theme="dark"] [style*="color:#374151"] {
+            color: var(--text-primary) !important;
+        }
+        /* Fix hardcoded light backgrounds in dark mode */
+        [data-theme="dark"] [style*="background:#f"],
+        [data-theme="dark"] [style*="background: #f"] {
+            /* Only override truly light colors, not colored ones */
+        }
+        [data-theme="dark"] [style*="background:#f3f4f6"],
+        [data-theme="dark"] [style*="background:#f9fafb"],
+        [data-theme="dark"] [style*="background:#f1f5f9"],
+        [data-theme="dark"] [style*="background:#e2e8f0"] {
+            background: var(--bg-primary) !important;
+            color: var(--text-primary) !important;
+        }
+        /* Fix card header backgrounds */
+        [data-theme="dark"] [style*="background:rgba(0,0,0,0.04)"],
+        [data-theme="dark"] [style*="background: rgba(0,0,0,0.04)"] {
+            background: rgba(255,255,255,0.05) !important;
+        }
+        /* Ensure all text in dark mode is readable */
+        [data-theme="dark"] p,
+        [data-theme="dark"] span:not([class*="badge"]):not([style*="color:#"]):not([style*="color: #"]),
+        [data-theme="dark"] div:not([style*="background:rgba"]):not([style*="color:#"]) > p {
+            color: var(--text-primary);
+        }
+        /* Fix toast/notification text */
+        [data-theme="dark"] .toast {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border-color: var(--border-color);
+        }
+        /* Notes summary modal in dark mode */
+        [data-theme="dark"] #notes-summary-modal .modal,
+        [data-theme="dark"] #flashcard-detail-modal .modal {
+            background: var(--bg-card);
+        }
+
         [data-theme="dark"] .schedule-item.debtor-item {
             background: #78350f;
             color: #fef3c7;
@@ -269,7 +428,7 @@
         .header {
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
-            padding: 20px;
+            padding: 8px 16px;
             position: sticky;
             top: 0;
             z-index: 1000;
@@ -277,16 +436,17 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            min-height: 48px;
         }
 
         .header-left h1 {
-            font-size: 1.5rem;
+            font-size: 1.1rem;
             font-weight: 700;
             letter-spacing: 2px;
         }
 
         .header-left .header-subtitle {
-            font-size: 0.75rem;
+            font-size: 0.65rem;
             opacity: 0.9;
             margin-top: 2px;
         }
@@ -331,19 +491,25 @@
         .nav {
             display: flex;
             gap: 5px;
-            padding: 10px 20px;
+            padding: 6px 12px;
             background: var(--bg-card);
             border-bottom: 1px solid var(--border-color);
             overflow-x: auto;
+            position: sticky;
+            top: 48px;
+            z-index: 900;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
         }
+        .nav::-webkit-scrollbar { display: none; }
 
         .nav-btn {
-            padding: 8px 16px;
+            padding: 5px 12px;
             border: none;
             background: var(--gray-100);
             color: var(--text-primary);
             border-radius: 20px;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             cursor: pointer;
             white-space: nowrap;
             transition: all 0.2s;
@@ -356,13 +522,14 @@
 
         /* Main Content */
         .main {
-            padding: 20px;
+            padding: 16px;
             max-width: 800px;
             margin: 0 auto;
         }
 
         .section {
             display: none;
+            padding-bottom: 40px;
         }
 
         .section.active {
@@ -751,8 +918,10 @@
             background: rgba(0,0,0,0.5);
             display: none;
             justify-content: center;
-            align-items: center;
-            z-index: 200;
+            align-items: flex-start;
+            padding-top: 56px;
+            overflow-y: auto;
+            z-index: 1100;
             padding: 20px;
             overflow-y: auto;
         }
@@ -765,10 +934,10 @@
             background: var(--bg-card);
             width: 100%;
             max-width: 500px;
-            max-height: 85vh;
+            max-height: calc(100vh - 90px);
             border-radius: 16px;
             overflow-y: auto;
-            margin: auto;
+            margin: 0 auto 20px auto;
             position: relative;
         }
 
@@ -805,7 +974,7 @@
 
         .modal-body {
             padding: 20px;
-            padding-bottom: 30px;
+            padding-bottom: 80px; /* Extra space for bottom nav */
         }
 
         /* Bottom Nav */
@@ -2850,72 +3019,62 @@
             <h2>PRISM</h2>
             <p>Properties · Rental · Income · Sales · Management</p>
         </div>
-        <div class="mt-auth-tabs">
-            <button class="mt-auth-tab active" id="mt-tab-login" onclick="mtSwitchTab('login')">Sign In</button>
-            <button class="mt-auth-tab" id="mt-tab-register" onclick="mtSwitchTab('register')">Register</button>
-        </div>
-        <div id="mt-auth-error" class="mt-auth-error"></div>
-        <div id="mt-auth-success" class="mt-auth-success"></div>
 
-        <!-- LOGIN FORM -->
-        <div id="mt-login-form">
-            <div class="mt-form-group">
-                <label>Email</label>
-                <input type="email" class="mt-form-input" id="mt-login-email" placeholder="you@example.com">
-            </div>
-            <div class="mt-form-group">
-                <label>Password</label>
-                <div class="mt-input-wrap">
-                    <input type="password" class="mt-form-input" id="mt-login-password" placeholder="Your password">
-                    <button class="mt-eye-btn" onclick="mtTogglePass('mt-login-password', this)">👁️</button>
-                </div>
-            </div>
-            <button class="mt-auth-submit" id="mt-login-btn" onclick="mtLogin()">Sign In</button>
-            <div class="mt-auth-divider">or</div>
-            <button class="mt-google-btn" onclick="mtGoogleLogin()">
+        <!-- GOOGLE SIGN IN - Admin/Owner -->
+        <div style="margin-bottom:16px;">
+            <div style="font-size:0.8rem;color:#94a3b8;text-align:center;margin-bottom:10px;font-weight:600;">🛡️ FOR ADMIN / OWNER</div>
+            <button class="mt-google-btn" onclick="mtGoogleLogin()" style="width:100%;">
                 <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z"/><path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2a4.8 4.8 0 0 1-7.18-2.54H1.83v2.07A8 8 0 0 0 8.98 17z"/><path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 0 1 0-3.04V5.41H1.83a8 8 0 0 0 0 7.18l2.67-2.07z"/><path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 0 0 1.83 5.4L4.5 7.49a4.77 4.77 0 0 1 4.48-3.31z"/></svg>
                 Continue with Google
             </button>
+            <div id="firebase-status-msg-auth" style="font-size:0.72rem;color:#64748b;text-align:center;margin-top:6px;">⏳ Connecting to Firebase...</div>
         </div>
 
-        <!-- REGISTER FORM -->
-        <div id="mt-register-form" style="display:none;">
-            <div class="mt-form-group">
-                <label>Full Name</label>
-                <input type="text" class="mt-form-input" id="mt-reg-name" placeholder="Juan dela Cruz">
+        <!-- EMAIL/PASSWORD LOGIN FORM -->
+        <div id="mt-login-form" style="margin-bottom:12px;">
+            <div style="font-size:0.8rem;color:#94a3b8;text-align:center;margin-bottom:10px;font-weight:600;">📧 OR SIGN IN WITH EMAIL</div>
+            <div id="mt-auth-error" class="mt-auth-error" style="margin-bottom:8px;"></div>
+            <div id="mt-auth-success" class="mt-auth-success" style="display:none;margin-bottom:8px;"></div>
+            <input type="email" id="mt-login-email" class="mt-form-input" placeholder="Email address" style="margin-bottom:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);color:#f8fafc;">
+            <div style="position:relative;margin-bottom:8px;">
+                <input type="password" id="mt-login-password" class="mt-form-input" placeholder="Password" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);color:#f8fafc;padding-right:44px;">
+                <button type="button" onclick="mtTogglePass('mt-login-password',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1.1rem;">👁️</button>
             </div>
-            <div class="mt-form-group">
-                <label>Email</label>
-                <input type="email" class="mt-form-input" id="mt-reg-email" placeholder="you@example.com">
+            <div style="display:flex;gap:8px;">
+                <button id="mt-login-btn" class="mt-auth-submit" onclick="mtLogin()" style="flex:1;padding:12px;">Sign In</button>
+                <button id="mt-register-btn" class="mt-auth-submit" onclick="mtShowRegister()" style="flex:1;padding:12px;background:rgba(99,102,241,0.3);">Register</button>
             </div>
-            <div class="mt-form-group">
-                <label>Password</label>
-                <div class="mt-input-wrap">
-                    <input type="password" class="mt-form-input" id="mt-reg-password" placeholder="Min. 6 characters">
-                    <button class="mt-eye-btn" onclick="mtTogglePass('mt-reg-password', this)">👁️</button>
-                </div>
-            </div>
-            <div class="mt-form-group">
-                <label>Confirm Password</label>
-                <div class="mt-input-wrap">
-                    <input type="password" class="mt-form-input" id="mt-reg-confirm" placeholder="Repeat password">
-                    <button class="mt-eye-btn" onclick="mtTogglePass('mt-reg-confirm', this)">👁️</button>
-                </div>
-            </div>
-            <button class="mt-auth-submit" id="mt-register-btn" onclick="mtRegister()">Create Account</button>
         </div>
 
-        <!-- Local/Offline Login -->
-        <div style="margin-top:16px;padding:16px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:12px;text-align:center;">
-            <div style="font-size:0.8rem;color:#64748b;margin-bottom:10px;">No internet or Firebase not configured?</div>
-            <button onclick="mtLocalLogin()" style="width:100%;padding:12px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);color:#34d399;border-radius:10px;cursor:pointer;font-weight:700;font-size:0.95rem;">
-                🔓 Enter as Local Admin
+        <!-- REGISTER FORM (hidden by default) -->
+        <div id="mt-register-form" style="display:none;margin-bottom:12px;">
+            <div style="font-size:0.8rem;color:#94a3b8;text-align:center;margin-bottom:10px;font-weight:600;">📝 CREATE ACCOUNT</div>
+            <input type="text" id="mt-reg-name" class="mt-form-input" placeholder="Full Name / Business Name" style="margin-bottom:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);color:#f8fafc;">
+            <input type="email" id="mt-reg-email" class="mt-form-input" placeholder="Email address" style="margin-bottom:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);color:#f8fafc;">
+            <div style="position:relative;margin-bottom:8px;">
+                <input type="password" id="mt-reg-password" class="mt-form-input" placeholder="Password (min 6 chars)" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);color:#f8fafc;padding-right:44px;">
+                <button type="button" onclick="mtTogglePass('mt-reg-password',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1.1rem;">👁️</button>
+            </div>
+            <input type="password" id="mt-reg-confirm" class="mt-form-input" placeholder="Confirm password" style="margin-bottom:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);color:#f8fafc;">
+            <div style="display:flex;gap:8px;">
+                <button class="mt-auth-submit" onclick="mtRegister()" style="flex:1;padding:12px;">Create Account</button>
+                <button class="mt-auth-submit" onclick="mtShowLogin()" style="flex:1;padding:12px;background:rgba(99,102,241,0.3);">← Back</button>
+            </div>
+        </div>
+
+        <div class="mt-auth-divider">or</div>
+
+        <!-- LOCAL LOGIN - Cashiers -->
+        <div style="margin-top:16px;">
+            <div style="font-size:0.8rem;color:#94a3b8;text-align:center;margin-bottom:10px;font-weight:600;">🧾 FOR CASHIER / STAFF</div>
+            <button onclick="mtLocalLogin()" style="width:100%;padding:14px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);color:#34d399;border-radius:12px;cursor:pointer;font-weight:700;font-size:1rem;">
+                🔓 Local Login
             </button>
-            <div style="font-size:0.75rem;color:#475569;margin-top:6px;">Full access · Data saved on this device only</div>
+            <div style="font-size:0.72rem;color:#64748b;text-align:center;margin-top:6px;">Username & password provided by Admin</div>
         </div>
 
-        <div class="mt-auth-back">
-            <a onclick="mtShowLanding()">← Back to Home</a>
+        <div class="mt-auth-back" style="margin-top:20px;text-align:center;">
+            <a onclick="mtShowLanding()" style="color:#64748b;font-size:0.82rem;cursor:pointer;">← Back to Home</a>
         </div>
     </div>
 </div>
@@ -3151,11 +3310,12 @@
             <div class="header-subtitle" id="mt-app-org-subtitle">Property • Rental • Income • Sales • Management</div>
         </div>
         <div class="header-right" style="display: flex; align-items: center; gap: 10px; position: relative; z-index: 9999;">
+            <span id="firebase-header-dot" title="Firebase: Connecting..." onclick="checkFirebaseStatus()" style="width:8px;height:8px;border-radius:50%;background:#f59e0b;display:inline-block;flex-shrink:0;cursor:pointer;transition:background 0.5s;"></span>
             <div id="current-user-display" style="display: flex; align-items: center;"></div>
             <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
                 🌙
             </button>
-            <button onclick="mtAppLogout()" title="Logout" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:6px 14px;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.82rem;white-space:nowrap;position:relative;z-index:9999;pointer-events:all;">
+            <button onclick="mtAppLogout()" title="Logout" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:4px 10px;border-radius:6px;cursor:pointer;font-weight:600;font-size:0.75rem;white-space:nowrap;position:relative;z-index:9999;pointer-events:all;">
                 🚪 Logout
             </button>
         </div>
@@ -3195,19 +3355,19 @@
 
                 <!-- Today's Totals -->
                 <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px;" id="cashier-stats-grid">
-                    <div class="stat-card" style="background:linear-gradient(135deg,rgba(16,185,129,0.15),rgba(16,185,129,0.05));border:1px solid rgba(16,185,129,0.2);">
+                    <div class="stat-card" onclick="showSection('income')" style="background:linear-gradient(135deg,rgba(16,185,129,0.15),rgba(16,185,129,0.05));border:1px solid rgba(16,185,129,0.2);cursor:pointer;" title="View today's collections">
                         <div style="font-size:1.5rem;font-weight:800;color:#10b981;" id="cs-total-collected">₱0</div>
                         <div style="font-size:0.78rem;color:var(--text-secondary);margin-top:4px;">Total Collected Today</div>
                     </div>
-                    <div class="stat-card" style="background:linear-gradient(135deg,rgba(239,68,68,0.15),rgba(239,68,68,0.05));border:1px solid rgba(239,68,68,0.2);">
+                    <div class="stat-card" onclick="showSection('expenses')" style="background:linear-gradient(135deg,rgba(239,68,68,0.15),rgba(239,68,68,0.05));border:1px solid rgba(239,68,68,0.2);cursor:pointer;" title="View expenses">
                         <div style="font-size:1.5rem;font-weight:800;color:#ef4444;" id="cs-total-expenses">₱0</div>
                         <div style="font-size:0.78rem;color:var(--text-secondary);margin-top:4px;">Expenses Recorded Today</div>
                     </div>
-                    <div class="stat-card" style="background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(99,102,241,0.05));border:1px solid rgba(99,102,241,0.2);">
+                    <div class="stat-card" onclick="showCashierTxnDetail()" style="background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(99,102,241,0.05));border:1px solid rgba(99,102,241,0.2);cursor:pointer;" title="View all transactions">
                         <div style="font-size:1.5rem;font-weight:800;color:#818cf8;" id="cs-transactions">0</div>
                         <div style="font-size:0.78rem;color:var(--text-secondary);margin-top:4px;">Transactions Today</div>
                     </div>
-                    <div class="stat-card" style="background:linear-gradient(135deg,rgba(245,158,11,0.15),rgba(245,158,11,0.05));border:1px solid rgba(245,158,11,0.2);">
+                    <div class="stat-card" onclick="toggleAdminInbox()" style="background:linear-gradient(135deg,rgba(245,158,11,0.15),rgba(245,158,11,0.05));border:1px solid rgba(245,158,11,0.2);cursor:pointer;" title="View endorsements">
                         <div style="font-size:1.5rem;font-weight:800;color:#f59e0b;" id="cs-endorsements">0</div>
                         <div style="font-size:0.78rem;color:var(--text-secondary);margin-top:4px;">Endorsements Sent</div>
                     </div>
@@ -3524,6 +3684,12 @@
                     </div>
                 </div>
             </div>
+        
+            <!-- nav-bottom-properties -->
+            <div style="display:flex;gap:10px;margin-top:24px;padding:14px 0 4px;border-top:1px solid var(--border-color);">
+                <button class="btn btn-secondary" style="flex:1;font-size:0.82rem;" onclick="showSection('dashboard')">← Dashboard</button>
+                <button class="btn btn-primary" style="flex:1;font-size:0.82rem;" onclick="showSection('tenants')">👥 Tenants →</button>
+            </div>
         </div>
 
         <!-- Tenants Section -->
@@ -3577,6 +3743,12 @@
                     </div>
                 </div>
             </div>
+        
+            <!-- nav-bottom-tenants -->
+            <div style="display:flex;gap:10px;margin-top:24px;padding:14px 0 4px;border-top:1px solid var(--border-color);">
+                <button class="btn btn-secondary" style="flex:1;font-size:0.82rem;" onclick="showSection('properties')">← Properties</button>
+                <button class="btn btn-primary" style="flex:1;font-size:0.82rem;" onclick="showSection('credits')">💳 Credits →</button>
+            </div>
         </div>
 
         <!-- Credits Section -->
@@ -3612,6 +3784,12 @@
                         <p>No active credits. Add a new credit/loan!</p>
                     </div>
                 </div>
+            </div>
+        
+            <!-- nav-bottom-credits -->
+            <div style="display:flex;gap:10px;margin-top:24px;padding:14px 0 4px;border-top:1px solid var(--border-color);">
+                <button class="btn btn-secondary" style="flex:1;font-size:0.82rem;" onclick="showSection('tenants')">← Tenants</button>
+                <button class="btn btn-primary" style="flex:1;font-size:0.82rem;" onclick="showSection('water')">💧 Water →</button>
             </div>
         </div>
 
@@ -3785,6 +3963,12 @@
                     </div>
                 </div>
             </div>
+        
+            <!-- nav-bottom-expenses -->
+            <div style="display:flex;gap:10px;margin-top:24px;padding:14px 0 4px;border-top:1px solid var(--border-color);">
+                <button class="btn btn-secondary" style="flex:1;font-size:0.82rem;" onclick="showSection('employees')">← Staff</button>
+                <button class="btn btn-primary" style="flex:1;font-size:0.82rem;" onclick="showSection('tasks')">✅ Tasks →</button>
+            </div>
         </div>
 
         <!-- Notes Section -->
@@ -3847,15 +4031,21 @@
                     <div class="card-title">Notes Summary</div>
                 </div>
                 <div class="stats-grid" style="margin-bottom: 0;">
-                    <div class="stat-card stat-card-info" onclick="setNoteFilter('all')" style="cursor: pointer;" title="View All Notes">
+                    <div class="stat-card stat-card-info" onclick="showNotesSummaryModal('all')" style="cursor: pointer;" title="View All Notes">
                         <div class="stat-value stat-value-primary" id="stat-notes-total">0</div>
                         <div class="stat-label">Total Notes</div>
                     </div>
-                    <div class="stat-card stat-card-warning" onclick="setNoteFilter('reminder')" style="cursor: pointer;" title="View Reminders">
+                    <div class="stat-card stat-card-warning" onclick="showNotesSummaryModal('reminder')" style="cursor: pointer;" title="View Reminders">
                         <div class="stat-value text-warning" id="stat-notes-reminders">0</div>
                         <div class="stat-label">⏰ Reminders</div>
                     </div>
                 </div>
+            </div>
+        
+            <!-- nav-bottom-notes -->
+            <div style="display:flex;gap:10px;margin-top:24px;padding:14px 0 4px;border-top:1px solid var(--border-color);">
+                <button class="btn btn-secondary" style="flex:1;font-size:0.82rem;" onclick="showSection('tasks')">← Tasks</button>
+                <button class="btn btn-primary" style="flex:1;font-size:0.82rem;" onclick="showSection('reports')">📊 Reports →</button>
             </div>
         </div>
 
@@ -3901,6 +4091,12 @@
                 <div id="water-customers-list">
                     <div class="empty-state"><p>No water customers yet. Add your first customer!</p></div>
                 </div>
+            </div>
+        
+            <!-- nav-bottom-water -->
+            <div style="display:flex;gap:10px;margin-top:24px;padding:14px 0 4px;border-top:1px solid var(--border-color);">
+                <button class="btn btn-secondary" style="flex:1;font-size:0.82rem;" onclick="showSection('credits')">← Credits</button>
+                <button class="btn btn-primary" style="flex:1;font-size:0.82rem;" onclick="showSection('income')">💰 Income →</button>
             </div>
         </div>
 
@@ -3955,6 +4151,12 @@
                     </div>
                 </div>
             </div>
+        
+            <!-- nav-bottom-income -->
+            <div style="display:flex;gap:10px;margin-top:24px;padding:14px 0 4px;border-top:1px solid var(--border-color);">
+                <button class="btn btn-secondary" style="flex:1;font-size:0.82rem;" onclick="showSection('water')">← Water</button>
+                <button class="btn btn-primary" style="flex:1;font-size:0.82rem;" onclick="showSection('employees')">👷 Staff →</button>
+            </div>
         </div>
 
         <!-- Employees Section -->
@@ -3999,6 +4201,12 @@
                     <div class="empty-state"><p>No employees yet. Add your first employee!</p></div>
                 </div>
             </div>
+        
+            <!-- nav-bottom-employees -->
+            <div style="display:flex;gap:10px;margin-top:24px;padding:14px 0 4px;border-top:1px solid var(--border-color);">
+                <button class="btn btn-secondary" style="flex:1;font-size:0.82rem;" onclick="showSection('income')">← Income</button>
+                <button class="btn btn-primary" style="flex:1;font-size:0.82rem;" onclick="showSection('expenses')">💸 Expenses →</button>
+            </div>
         </div>
 
         <!-- Reports & Analytics Section -->
@@ -4010,30 +4218,42 @@
                 </div>
                 
                 <!-- Report Period Selector -->
-                <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;">
-                    <select id="report-month" class="form-control" style="width: auto;" onchange="generateReports()">
-                        <option value="0">January</option>
-                        <option value="1">February</option>
-                        <option value="2">March</option>
-                        <option value="3">April</option>
-                        <option value="4">May</option>
-                        <option value="5">June</option>
-                        <option value="6">July</option>
-                        <option value="7">August</option>
-                        <option value="8">September</option>
-                        <option value="9">October</option>
-                        <option value="10">November</option>
-                        <option value="11">December</option>
-                    </select>
-                    <select id="report-year" class="form-control" style="width: auto;" onchange="generateReports()">
-                        <option value="2024">2024</option>
-                        <option value="2025">2025</option>
-                        <option value="2026">2026</option>
-                    </select>
+                <!-- Quick Preset Buttons -->
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
+                    <button class="report-preset-btn active" onclick="setReportPreset('this-month',this)">📅 This Month</button>
+                    <button class="report-preset-btn" onclick="setReportPreset('last-month',this)">⬅ Last Month</button>
+                    <button class="report-preset-btn" onclick="setReportPreset('this-quarter',this)">📊 This Quarter</button>
+                    <button class="report-preset-btn" onclick="setReportPreset('last-quarter',this)">📊 Last Quarter</button>
+                    <button class="report-preset-btn" onclick="setReportPreset('this-year',this)">📆 This Year</button>
+                    <button class="report-preset-btn" onclick="setReportPreset('last-7',this)">7 Days</button>
+                    <button class="report-preset-btn" onclick="setReportPreset('last-30',this)">30 Days</button>
+                    <button class="report-preset-btn" onclick="setReportPreset('last-90',this)">90 Days</button>
+                    <button class="report-preset-btn" onclick="setReportPreset('custom',this)">✏️ Custom</button>
+                </div>
+                <!-- Date Range Inputs -->
+                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <label style="font-size:0.82rem;font-weight:600;color:var(--text-secondary);white-space:nowrap;">From:</label>
+                        <input type="date" id="report-date-from" class="form-control" style="width:150px;" onchange="onReportDateChange()">
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <label style="font-size:0.82rem;font-weight:600;color:var(--text-secondary);white-space:nowrap;">To:</label>
+                        <input type="date" id="report-date-to" class="form-control" style="width:150px;" onchange="onReportDateChange()">
+                    </div>
+                    <span id="report-range-label" style="font-size:0.8rem;color:var(--text-secondary);font-style:italic;"></span>
+                </div>
+                <!-- Action Buttons -->
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
                     <button class="btn btn-primary" onclick="generateReports()">🔄 Generate Report</button>
                     <button class="btn btn-success" onclick="exportReportPDF()">📥 Export PDF</button>
                 </div>
+                <!-- Hidden legacy inputs for backward compat -->
+                <input type="hidden" id="report-month" value="">
+                <input type="hidden" id="report-year" value="">
             </div>
+
+            <!-- Gain/Loss Verdict Banner -->
+            <div id="report-verdict-banner" style="display:none;margin-bottom:10px;"></div>
 
             <!-- Financial Summary Cards -->
             <div class="stats-grid">
@@ -4099,18 +4319,19 @@
                 </div>
             </div>
 
-            <!-- 6-Month Trend Chart -->
+            <!-- Date Range Trend Chart -->
             <div class="card">
                 <div class="card-header">
-                    <div class="card-title">📈 6-Month Financial Trend</div>
+                    <div class="card-title">📈 Income vs Expenses Trend</div>
+                    <div class="card-subtitle" id="trend-range-subtitle">Select a date range to view</div>
                 </div>
-                <div id="trend-chart-container">
-                    <canvas id="trend-line-chart" style="max-height: 300px;"></canvas>
+                <div id="six-month-trend">
+                    <div class="empty-state"><p>Generate a report to see the trend chart.</p></div>
                 </div>
             </div>
 
             <!-- AI Analysis - Overall -->
-            <div class="card" id="ai-overall-analysis" style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-left: 4px solid var(--success);">
+            <div class="card" id="ai-overall-analysis" style="background: var(--jarod-income-bg); border-left: 4px solid var(--success);">
                 <div class="card-header">
                     <div class="card-title">🤖 JAROD's Overall Analysis & Tips</div>
                 </div>
@@ -4198,6 +4419,12 @@
                     </div>
                 </div>
             </div>
+        
+            <!-- nav-bottom-tasks -->
+            <div style="display:flex;gap:10px;margin-top:24px;padding:14px 0 4px;border-top:1px solid var(--border-color);">
+                <button class="btn btn-secondary" style="flex:1;font-size:0.82rem;" onclick="showSection('expenses')">← Expenses</button>
+                <button class="btn btn-primary" style="flex:1;font-size:0.82rem;" onclick="showSection('notes')">📝 Notes →</button>
+            </div>
         </div>
 
         <!-- Settings Section -->
@@ -4226,6 +4453,7 @@
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                     <button class="btn btn-primary" onclick="showUserManagement()">👥 Manage Users</button>
                     <button class="btn btn-secondary" onclick="changeAdminPasscode()">🔐 Change Admin Passcode</button>
+                    <button class="btn btn-secondary" onclick="showCashierReports()" style="background:rgba(99,102,241,0.15);border-color:#6366f1;color:#6366f1;">📋 Cashier Reports</button>
                 </div>
                 <p style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 10px;">
                     Secure your app by setting up user accounts and admin passcode.
@@ -4258,7 +4486,7 @@
                     <button id="login-btn" class="btn btn-primary" onclick="signInWithGoogle()" style="width: 100%; margin-bottom: 10px;">
                         <span style="margin-right: 8px;">G</span> Sign in with Google
                     </button>
-                    <div id="firebase-status-msg" style="font-size:0.8rem;color:#64748b;text-align:center;margin-top:6px;"></div>
+                    <div id="firebase-status-msg" style="font-size:0.8rem;color:#64748b;text-align:center;margin-top:6px;">⏳ Connecting to Firebase...</div>
                     
                     <div style="text-align: center; color: var(--text-secondary); margin: 10px 0;">or</div>
                     
@@ -4293,6 +4521,17 @@
                     <p style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 10px; text-align: center;">
                         Data syncs automatically when online
                     </p>
+                </div>
+            </div>
+
+            <!-- Admin: Cashier Activity Summary -->
+            <div class="card" id="admin-cashier-activity-card">
+                <div class="card-header">
+                    <div class="card-title">📬 Today's Cashier Activity</div>
+                    <button class="btn btn-sm btn-secondary" onclick="loadAdminCashierSummary()">🔄 Refresh</button>
+                </div>
+                <div id="admin-cashier-summary">
+                    <div style="color:var(--text-secondary);text-align:center;padding:20px;">Loading...</div>
                 </div>
             </div>
 
@@ -4697,14 +4936,18 @@
                     <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--gray-200);">
                         <p style="font-size: 0.75rem; color: var(--gray-500);">Developed by</p>
                         <p style="font-size: 1.1rem; font-weight: 600; color: var(--gray-900);">OMNIGRID</p>
-                        <div style="margin-top: 15px; padding: 12px; background: var(--bg-secondary); border-radius: 8px;">
-                            <p style="font-size: 0.75rem; color: var(--gray-500); margin-bottom: 8px;">📧 Contact</p>
-                            <p style="font-size: 0.85rem; color: var(--primary); margin: 4px 0;">
-                                <a href="/cdn-cgi/l/email-protection#d8b2b9aab7bcbaadb4ba98bfb5b9b1b4f6bbb7b5" style="color: var(--primary); text-decoration: none;"><span class="__cf_email__" data-cfemail="fb919a89949f998e9799bb9c969a9297d5989496">[email&#160;protected]</span></a>
-                            </p>
-                            <p style="font-size: 0.85rem; color: var(--primary); margin: 4px 0;">
-                                <a href="/cdn-cgi/l/email-protection#294d4847464448474d4844695048414646074a4644" style="color: var(--primary); text-decoration: none;"><span class="__cf_email__" data-cfemail="1f7b7e7170727e717b7e725f667e777070317c7072">[email&#160;protected]</span></a>
-                            </p>
+                        <div style="margin-top:15px;padding:14px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;">
+                            <p style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:10px;font-weight:600;">📧 Contact Us</p>
+                            <a href="mailto:jarodbulb@gmail.com" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;margin-bottom:6px;font-weight:500;">
+                                ✉️ jarodbulb@gmail.com
+                            </a>
+                            <a href="mailto:danomandam@yahoo.com" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;font-weight:500;">
+                                ✉️ danomandam@yahoo.com
+                            </a>
+                            <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-color);">
+                                <p style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:6px;font-weight:600;">🌐 For licensing & inquiries:</p>
+                                <p style="font-size:0.78rem;color:var(--text-secondary);">PRISM is available for other rental businesses, hardware stores, and water stations. Contact us to get your own copy.</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -5105,6 +5348,21 @@
                             <option value="Cleaning Fee">
                             <option value="Key Replacement">
                             <option value="Printing/Photocopy">
+                            <option value="Hardware Store Sales">
+                            <option value="Hardware Store - Cement">
+                            <option value="Hardware Store - Nails/Screws">
+                            <option value="Hardware Store - Electrical">
+                            <option value="Hardware Store - Plumbing">
+                            <option value="Hardware Store - Paint">
+                            <option value="Hardware Store - Tools">
+                            <option value="Hardware Store - GI Sheets">
+                            <option value="Hardware Store - Lumber">
+                            <option value="Delivery Fee">
+                            <option value="Loan Interest">
+                            <option value="Contract Payment">
+                            <option value="Referral Fee">
+                            <option value="Deposit Forfeiture">
+                            <option value="Sale of Scrap/Materials">
                             <option value="Other Income">
                         </datalist>
                         <small style="color: var(--text-secondary); font-size: 0.75rem;">💡 Type your own category or select from suggestions</small>
@@ -5739,7 +5997,23 @@
                                 <option value="capital_reserve">🏠 Capital Reserve</option>
                                 <option value="owners_draw">👤 Owner's Draw</option>
                             </optgroup>
+                            <optgroup label="🏪 Hardware Store">
+                                <option value="hw_inventory">📦 Inventory Restocking</option>
+                                <option value="hw_cement">🧱 Cement & Construction</option>
+                                <option value="hw_electrical">⚡ Electrical Supplies</option>
+                                <option value="hw_plumbing">🔧 Plumbing Materials</option>
+                                <option value="hw_tools">🛠️ Tools & Equipment</option>
+                                <option value="hw_paint">🎨 Paint & Finishing</option>
+                                <option value="hw_delivery">🚚 Delivery Costs</option>
+                            </optgroup>
+                            <optgroup label="💧 Water Station">
+                                <option value="ws_filter">🔵 Filter Replacement</option>
+                                <option value="ws_bottles">🫙 Containers/Bottles</option>
+                                <option value="ws_chemicals">🧪 Treatment Chemicals</option>
+                                <option value="ws_maintenance">🔧 Equipment Maintenance</option>
+                            </optgroup>
                             <optgroup label="📁 Other">
+                                <option value="payroll">👷 Payroll/Salaries</option>
                                 <option value="other">📝 Other</option>
                             </optgroup>
                         </select>
@@ -6112,7 +6386,9 @@
                             </label>
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-primary btn-block">Save User</button>
+                    <div style="position:sticky;bottom:0;background:var(--bg-card);padding:12px 0 4px;margin-top:16px;border-top:1px solid var(--border-color);">
+                        <button type="submit" class="btn btn-primary btn-block" style="margin:0;">💾 Save User</button>
+                    </div>
                 </form>
             </div>
         </div>
@@ -6406,7 +6682,7 @@
         let isOnline = navigator.onLine;
         let firebaseReady = false;
         let firebaseInitAttempts = 0;
-        const FIREBASE_MAX_ATTEMPTS = 10; // Stop after 10 attempts (1 second)
+        const FIREBASE_MAX_ATTEMPTS = 200; // Up to 200 x 50ms = 10 seconds (handles slow networks)
 
         // Initialize Firebase when SDK is ready
         function initFirebase() {
@@ -6414,19 +6690,31 @@
             
             if (typeof firebase === 'undefined') {
                 if (firebaseInitAttempts >= FIREBASE_MAX_ATTEMPTS) {
+                    // If online but still failing, keep trying (don't give up)
+                    if (navigator.onLine && firebaseInitAttempts < 600) { // up to 30 seconds if online
+                        setTimeout(initFirebase, 50);
+                        return;
+                    }
                     console.log('[Firebase] SDK not available - Running in OFFLINE MODE (IndexedDB only)');
                     console.log('[App] ✅ App fully functional without Firebase');
                     const fsMsgFail = document.getElementById('firebase-status-msg');
-                    if (fsMsgFail) { fsMsgFail.textContent = '⚠️ Firebase unavailable. Check internet connection.'; fsMsgFail.style.color = '#f59e0b'; }
+                    if (fsMsgFail) { fsMsgFail.textContent = '⚠️ Firebase SDK could not load. Try refreshing the page.'; fsMsgFail.style.color = '#f59e0b'; }
+                    const dotFail = document.getElementById('firebase-header-dot');
+                    if (dotFail) { dotFail.style.background = '#ef4444'; dotFail.title = 'Firebase: SDK load failed — try refreshing'; }
                     return;
                 }
                 console.log(`[Firebase] SDK not loaded yet, retry ${firebaseInitAttempts}/${FIREBASE_MAX_ATTEMPTS}...`);
-                setTimeout(initFirebase, 100);
+                setTimeout(initFirebase, 50);
                 return;
             }
             
             try {
-                firebase.initializeApp(firebaseConfig);
+                // Prevent duplicate app error on page reload
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
+                } else {
+                    firebase.app(); // use existing app
+                }
                 auth = firebase.auth();
                 firestore = firebase.firestore();
                 window.db = firestore; // expose for MT layer
@@ -6436,6 +6724,11 @@
                 // Update status message in Cloud Sync section
                 const fsMsg = document.getElementById('firebase-status-msg');
                 if (fsMsg) { fsMsg.textContent = '✅ Firebase connected. Ready to sign in.'; fsMsg.style.color = '#10b981'; }
+                const fsMsgAuth = document.getElementById('firebase-status-msg-auth');
+                if (fsMsgAuth) { fsMsgAuth.textContent = '✅ Ready — click to sign in'; fsMsgAuth.style.color = '#10b981'; }
+                // Update header dot to green
+                const dot = document.getElementById('firebase-header-dot');
+                if (dot) { dot.style.background = '#10b981'; dot.title = 'Firebase: Connected ✅'; }
 
                 // Enable offline persistence
                 firestore.enablePersistence({ synchronizeTabs: true })
@@ -6533,10 +6826,21 @@
                 return;
             }
 
-            // Firebase not ready — show single message, do NOT loop
+            // Firebase not ready — wait for it automatically (up to 5 seconds)
             if (!firebaseReady || !auth) {
-                try { showToast('⏳ Firebase is still loading. Please try again in a few seconds.', 'info'); } catch(e) {}
-                return;
+                try { showToast('⏳ Connecting to Firebase...', 'info'); } catch(e) {}
+                let waited = 0;
+                const maxWait = navigator.onLine ? 15000 : 3000; // wait longer if online
+                await new Promise(resolve => {
+                    const check = setInterval(() => {
+                        waited += 200;
+                        if ((firebaseReady && auth) || waited >= maxWait) { clearInterval(check); resolve(); }
+                    }, 200);
+                });
+                if (!firebaseReady || !auth) {
+                    try { showToast('❌ Firebase unavailable. Try refreshing the page.', 'error'); } catch(e) {}
+                    return;
+                }
             }
 
             try {
@@ -6864,6 +7168,9 @@
             await loadExpenses();
             await loadIncome();
             await loadNotes();
+            await loadWaterCustomers();
+            await loadEmployees();
+            await loadTasks();
             await loadDashboard();
         }
 
@@ -7473,7 +7780,7 @@
                             <strong>⚠️ SAFE MODE ACTIVE</strong><br>
                             <span style="font-size: 0.85rem;">${reason}. Write operations are disabled to prevent data loss.</span>
                         </div>
-                        <button onclick="PrismGuardian.showRecoveryOptions()" style="background: white; color: #ef4444; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                        <button onclick="PrismGuardian.showRecoveryOptions()" style="background: var(--bg-card); color: #ef4444; border: 1px solid #ef4444; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer;">
                             Recovery Options
                         </button>
                     </div>
@@ -7973,6 +8280,8 @@
         }
 
         function showSection(sectionId) {
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
             // Update nav buttons
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.section === sectionId);
@@ -7998,8 +8307,10 @@
             if (sectionId === 'tenants') loadTenants();
             if (sectionId === 'credits') loadCredits();
             if (sectionId === 'water') loadWaterCustomers();
+            if (sectionId === 'income') loadIncome();
             if (sectionId === 'employees') loadEmployees();
             if (sectionId === 'expenses') loadExpenses();
+            if (sectionId === 'tasks') loadTasks();
             if (sectionId === 'notes') loadNotes();
             if (sectionId === 'reports') {
                 initReportsPage();
@@ -8480,7 +8791,7 @@
                         ${record.signature ? `
                             <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color);">
                                 <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px;">Current Signature:</p>
-                                <img src="${record.signature}" style="max-width: 100%; max-height: 80px; border: 1px solid var(--border-color); border-radius: 4px; background: white;">
+                                <img src="${record.signature}" style="max-width: 100%; max-height: 80px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card);">
                             </div>
                         ` : ''}
                     </div>
@@ -8788,7 +9099,7 @@
                 <div style="display: flex; align-items: center; justify-content: center; height: 100%; padding: 20px;">
                     <img src="${photoSrc}" style="max-width: 90%; max-height: 90%; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
                 </div>
-                <button style="position: absolute; top: 20px; right: 20px; background: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 20px; cursor: pointer;" onclick="this.parentElement.remove()">✕</button>
+                <button style="position: absolute; top: 20px; right: 20px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 50%; width: 40px; height: 40px; font-size: 20px; cursor: pointer;" onclick="this.parentElement.remove()">✕</button>
             `;
             
             document.body.appendChild(modal);
@@ -9930,7 +10241,8 @@
         }
 
         // Record payment for specific tenant
-        async function recordTenantPayment(tenantId) {
+        async function recordPayment(tenantId) { return recordTenantPayment(tenantId); }
+async function recordTenantPayment(tenantId) {
             const tenant = await dbGet('tenants', tenantId);
             if (!tenant) return;
 
@@ -10826,7 +11138,127 @@
                         .overdue-badge { background: #dc2626; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; }
                         .footer { text-align: center; margin-top: 40px; color: #9ca3af; font-size: 0.8rem; }
                         @media print { body { padding: 0; } }
-                    </style>
+                    
+        /* Report Preset Buttons */
+        .report-preset-btn {
+            padding: 5px 12px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            border-radius: 20px;
+            font-size: 0.78rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .report-preset-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        .report-preset-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* Gain/Loss indicator */
+        .gain-loss-card {
+            border-radius: 14px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 6px;
+        }
+        .gain-loss-card.gaining {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+        .gain-loss-card.losing {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+        }
+        .gain-loss-card.breakeven {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+        }
+
+        /* =====================================================
+           THEME-AWARE DYNAMIC CONTENT PATCH        /* =====================================================
+           THEME-AWARE DYNAMIC CONTENT PATCH
+           ===================================================== */
+        
+        /* Ensure all dynamic modals/cards adapt to theme */
+        .modal-overlay .modal,
+        #notes-summary-modal > div,
+        #flashcard-detail-modal .modal {
+            background: var(--bg-card) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        /* Fix list items in generated content */
+        .list-item {
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+        .list-item-title {
+            color: var(--text-primary) !important;
+        }
+        .list-item-subtitle {
+            color: var(--text-secondary) !important;
+        }
+        
+        /* Fix stat cards */
+        .stat-card {
+            background: var(--bg-card);
+        }
+        .stat-value {
+            color: var(--text-primary);
+        }
+        .stat-label {
+            color: var(--text-secondary);
+        }
+
+        /* Fix empty states */
+        .empty-state {
+            color: var(--text-secondary);
+        }
+        
+        /* Fix card titles and subtitles */
+        .card-title {
+            color: var(--text-primary) !important;
+        }
+        .card-subtitle {
+            color: var(--text-secondary) !important;
+        }
+
+        /* Fix all h1-h6 inside cards */
+        .card h1, .card h2, .card h3, .card h4, .card h5, .card h6 {
+            color: var(--text-primary);
+        }
+        .card p {
+            color: var(--text-secondary);
+        }
+
+        /* Fix dynamically added elements - override hardcoded inline dark text */
+        [data-theme="dark"] * {
+            --local-text: var(--text-primary);
+        }
+        
+        /* Input fix - override any inline background:white */
+        [data-theme="dark"] input[style],
+        [data-theme="dark"] select[style],
+        [data-theme="dark"] textarea[style] {
+            background-color: var(--bg-primary) !important;
+            color: var(--text-primary) !important;
+            border-color: var(--border-color) !important;
+        }
+        
+        /* Fix water sale delete button (dynamically generated) */
+        [data-theme="dark"] .list-item > div[style] {
+            color: var(--text-primary);
+        }
+
+    </style>
                 </head>
                 <body>
                     <h1>💰 PRISM - Credit/Loan Report</h1>
@@ -10886,7 +11318,14 @@
         let allWaterCustomersData = [];
         let waterFilter = 'all';
 
-        async function loadWaterCustomers() {
+        async function deleteWaterSale(id) {
+    if (!confirm('Delete this water sale?')) return;
+    await dbDelete('waterSales', id);
+    loadWaterCustomers();
+    showToast('Water sale deleted', 'success');
+}
+
+async function loadWaterCustomers() {
             const customers = await dbGetAll('waterCustomers');
             const sales = await dbGetAll('waterSales');
             
@@ -11132,13 +11571,13 @@
                 </div>
                 
                 <div class="stats-grid" style="margin-bottom: 20px;">
-                    <div class="stat-card">
+                    <div class="stat-card" onclick="showWaterCustomerSalesHistory(${id})" style="cursor:pointer;" title="View all sales">
                         <div class="stat-value">${totalGallons}</div>
-                        <div class="stat-label">Total Gallons</div>
+                        <div class="stat-label">Total Gallons 👆</div>
                     </div>
-                    <div class="stat-card">
+                    <div class="stat-card ${balance > 0 ? 'stat-card-warning' : 'stat-card-success'}" ${balance > 0 ? `onclick="showWaterPaymentModal(${id}, '${customer.name}', ${balance})" style="cursor:pointer;" title="Record payment"` : 'style="cursor:default;"'}>
                         <div class="stat-value ${balance > 0 ? 'text-warning' : 'text-success'}">₱${balance.toLocaleString()}</div>
-                        <div class="stat-label">${balance > 0 ? 'Credit Balance' : 'Paid Up'}</div>
+                        <div class="stat-label">${balance > 0 ? '💵 Tap to Pay' : '✅ Paid Up'}</div>
                     </div>
                 </div>
                 
@@ -11166,13 +11605,14 @@
                                        '<span class="badge badge-danger">Credit</span>';
                     content += `
                         <div class="list-item">
-                            <div class="list-item-content">
+                            <div class="list-item-content" style="flex:1;">
                                 <div class="list-item-title">${s.gallons} gallons @ ₱${s.pricePerGallon}</div>
                                 <div class="list-item-subtitle">${s.date} ${statusBadge}</div>
                             </div>
-                            <div style="text-align: right;">
-                                <div>₱${s.total.toLocaleString()}</div>
+                            <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+                                <div style="font-weight:600;">₱${s.total.toLocaleString()}</div>
                                 ${s.balance > 0 ? `<small class="text-warning">Bal: ₱${s.balance.toLocaleString()}</small>` : ''}
+                                ${(window.currentAppUser && window.currentAppUser.role !== 'cashier') ? `<button class="btn btn-sm btn-danger" onclick="deleteWaterSale(${s.id}); viewWaterCustomerDetails(${id});" style="padding:2px 8px;font-size:0.7rem;">🗑️</button>` : ''}
                             </div>
                         </div>
                     `;
@@ -11717,7 +12157,8 @@
         }
 
         // Quick Attendance for all employees
-        async function showQuickAttendance() {
+        async function saveAttendance() { return showQuickAttendance(); }
+async function showQuickAttendance() {
             document.getElementById('attendance-date').value = new Date().toISOString().split('T')[0];
             showModal('quick-attendance-modal');
             loadQuickAttendance();
@@ -11973,7 +12414,8 @@ Enter reason:`);
         }
 
         // Payroll Summary
-        async function showPayrollSummary() {
+        async function processPayroll() { return showPayrollSummary(); }
+async function showPayrollSummary() {
             const today = new Date();
             const startOfWeek = new Date(today);
             startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Monday
@@ -12731,6 +13173,70 @@ Enter reason:`);
             }).join('');
         }
 
+        function showCreditDetails(id) { viewCreditDetails(id); }
+
+        function showCashierTxnDetail() {
+            // Scroll to the transaction list in cashier dashboard
+            const txnEl = document.getElementById('cashier-txn-list');
+            if (txnEl) txnEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            else showToast('📋 View your transactions list below', 'info');
+        }
+
+        async function showWaterCustomerSalesHistory(customerId) {
+            const sales = (await dbGetAll('waterSales')).filter(s => s.customerId === customerId && !s.voided);
+            const customer = (await dbGetAll('waterCustomers')).find(c => c.id === customerId);
+            if (!sales.length) { showToast('No sales history yet.', 'info'); return; }
+
+            sales.sort((a,b) => new Date(b.date) - new Date(a.date));
+            const totalGal = sales.reduce((s,x) => s + (x.gallons||0), 0);
+            const totalAmt = sales.reduce((s,x) => s + (x.totalPrice||0), 0);
+            const totalPaid = sales.reduce((s,x) => s + (x.amountPaid||0), 0);
+
+            const existing = document.getElementById('water-history-modal');
+            if (existing) existing.remove();
+            const modal = document.createElement('div');
+            modal.id = 'water-history-modal';
+            modal.className = 'modal-overlay show';
+            modal.onclick = e => { if (e.target === modal) modal.remove(); };
+            modal.innerHTML = `
+                <div class="modal" style="max-width:460px;">
+                    <div class="modal-header">
+                        <h3 class="modal-title">💧 ${customer?.name || 'Customer'} — Sales History</h3>
+                        <button class="modal-close" onclick="document.getElementById('water-history-modal').remove()">×</button>
+                    </div>
+                    <div class="modal-body" style="max-height:60vh;overflow-y:auto;">
+                        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">
+                            <div style="background:rgba(6,182,212,0.1);border-radius:8px;padding:10px;text-align:center;">
+                                <div style="font-weight:800;color:#06b6d4;">${totalGal}</div>
+                                <div style="font-size:0.72rem;color:var(--text-secondary);">Total Gallons</div>
+                            </div>
+                            <div style="background:rgba(16,185,129,0.1);border-radius:8px;padding:10px;text-align:center;">
+                                <div style="font-weight:800;color:#10b981;">₱${totalPaid.toLocaleString()}</div>
+                                <div style="font-size:0.72rem;color:var(--text-secondary);">Total Paid</div>
+                            </div>
+                            <div style="background:rgba(99,102,241,0.1);border-radius:8px;padding:10px;text-align:center;">
+                                <div style="font-weight:800;color:#6366f1;">${sales.length}</div>
+                                <div style="font-size:0.72rem;color:var(--text-secondary);">Transactions</div>
+                            </div>
+                        </div>
+                        ${sales.map(s => `
+                            <div style="background:var(--bg-primary);border:1px solid var(--border-color);border-radius:8px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+                                <div>
+                                    <div style="font-weight:600;color:var(--text-primary);">${s.gallons || 0} gal × ₱${s.pricePerGallon || 0}</div>
+                                    <div style="font-size:0.75rem;color:var(--text-secondary);">${s.date} · ${s.status || 'paid'}</div>
+                                </div>
+                                <div style="text-align:right;">
+                                    <div style="font-weight:700;color:#10b981;">₱${(s.amountPaid||0).toLocaleString()}</div>
+                                    ${(s.totalPrice||0) > (s.amountPaid||0) ? `<div style="font-size:0.72rem;color:#ef4444;">Bal: ₱${((s.totalPrice||0)-(s.amountPaid||0)).toLocaleString()}</div>` : ''}
+                                </div>
+                            </div>`).join('')}
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" style="flex:1;" onclick="document.getElementById('water-history-modal').remove()">Close</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
+        }
         async function viewCreditDetails(id) {
             // Validate ID
             if (!id || isNaN(id)) {
@@ -13434,6 +13940,88 @@ Enter reason:`);
             }
         }
 
+        async function showNotesSummaryModal(filter) {
+            const allNotes = await dbGetAll('customNotes');
+            
+            const categoryInfo = {
+                'all':      { label: 'All Notes',   emoji: '📝', color: '#6366f1', bg: 'rgba(99,102,241,0.1)' },
+                'reminder': { label: 'Reminders',   emoji: '⏰', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
+                'client':   { label: 'Client Notes', emoji: '👤', color: '#10b981', bg: 'rgba(16,185,129,0.1)' },
+                'area':     { label: 'Area Notes',  emoji: '📍', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
+                'general':  { label: 'General Notes','emoji': '📋', color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)' },
+            };
+            const info = categoryInfo[filter] || categoryInfo['all'];
+            
+            const filtered = filter === 'all' ? allNotes : allNotes.filter(n => n.category === filter);
+            const today = new Date().toISOString().split('T')[0];
+            
+            // Build modal
+            const existing = document.getElementById('notes-summary-modal');
+            if (existing) existing.remove();
+            
+            const modal = document.createElement('div');
+            modal.id = 'notes-summary-modal';
+            modal.className = 'modal-overlay show';
+            modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+            
+            const categoryBadgeColors = {
+                'reminder': '#f59e0b', 'client': '#10b981',
+                'area': '#3b82f6', 'general': '#8b5cf6', 'all': '#6366f1'
+            };
+
+            const noteRows = filtered.length === 0
+                ? `<div style="text-align:center;padding:30px;color:var(--text-secondary);">
+                     <div style="font-size:2rem;margin-bottom:8px;">${info.emoji}</div>
+                     <div>No ${info.label.toLowerCase()} yet.</div>
+                   </div>`
+                : filtered.map(n => {
+                    const isOverdue = n.category === 'reminder' && n.reminderDate && n.reminderDate < today;
+                    const catColor = categoryBadgeColors[n.category] || '#6366f1';
+                    return `
+                    <div style="background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;padding:14px;margin-bottom:10px;cursor:pointer;${isOverdue ? 'border-left:4px solid #ef4444;' : ''}"
+                         onclick="document.getElementById('notes-summary-modal').remove(); viewNoteDetails(${n.id});">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+                            <div style="flex:1;">
+                                <div style="font-weight:700;color:var(--text-primary);margin-bottom:4px;">
+                                    ${isOverdue ? '🚨 ' : ''}${n.title || 'Untitled'}
+                                </div>
+                                ${n.content ? `<div style="font-size:0.82rem;color:var(--text-secondary);line-height:1.4;">${(n.content||'').substring(0,80)}${(n.content||'').length > 80 ? '...' : ''}</div>` : ''}
+                                ${n.reminderDate ? `<div style="font-size:0.78rem;color:${isOverdue ? '#ef4444' : '#f59e0b'};margin-top:4px;">⏰ ${n.reminderDate}</div>` : ''}
+                            </div>
+                            <span style="font-size:0.72rem;background:${catColor}22;color:${catColor};padding:2px 8px;border-radius:20px;white-space:nowrap;font-weight:600;">${n.category||'general'}</span>
+                        </div>
+                    </div>`;
+                }).join('');
+            
+            modal.innerHTML = `
+                <div class="modal" style="max-width:480px;">
+                    <div class="modal-header" style="background:${info.bg};border-bottom:1px solid var(--border-color);">
+                        <h3 class="modal-title" style="color:${info.color};">${info.emoji} ${info.label} <span style="font-size:1rem;font-weight:400;">(${filtered.length})</span></h3>
+                        <button class="modal-close" onclick="document.getElementById('notes-summary-modal').remove()">×</button>
+                    </div>
+                    <div class="modal-body" style="max-height:65vh;overflow-y:auto;padding:16px;">
+                        ${filter !== 'all' ? '' : `
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+                            ${Object.entries(categoryInfo).filter(([k])=>k!=='all').map(([k,v])=>{
+                                const cnt = allNotes.filter(n=>n.category===k).length;
+                                return `<button onclick="document.getElementById('notes-summary-modal').remove();showNotesSummaryModal('${k}');" 
+                                    style="padding:4px 12px;border-radius:20px;border:1px solid ${v.color}33;background:${v.bg};color:${v.color};font-size:0.78rem;cursor:pointer;font-weight:600;">
+                                    ${v.emoji} ${v.label} (${cnt})</button>`;
+                            }).join('')}
+                        </div>`}
+                        ${noteRows}
+                    </div>
+                    <div class="modal-footer" style="display:flex;gap:10px;">
+                        <button class="btn btn-secondary" style="flex:1;" onclick="document.getElementById('notes-summary-modal').remove();">Close</button>
+                        <button class="btn btn-primary" style="flex:1;" onclick="document.getElementById('notes-summary-modal').remove(); setNoteFilter('${filter}'); showSection('notes');">
+                            📋 View & Filter List
+                        </button>
+                    </div>
+                </div>`;
+            
+            document.body.appendChild(modal);
+        }
+
         function filterNotes() {
             const searchTerm = document.getElementById('note-search').value.toLowerCase();
 
@@ -13569,6 +14157,9 @@ Enter reason:`);
         }
 
         async function deleteNote(id) {
+            if (currentAppUser && currentAppUser.role === 'cashier') {
+                showToast('⚠️ Cashiers cannot delete notes. Ask Admin.', 'warning'); return;
+            }
             if (!confirm('Are you sure you want to delete this note?')) return;
 
             await ensureNotesStore();
@@ -15758,6 +16349,10 @@ Enter reason:`);
             
             // Also refresh financial overview
             refreshFinancialOverview();
+            // Load admin cashier activity summary
+            if (typeof loadAdminCashierSummary === 'function' && (!window.currentAppUser || window.currentAppUser.role !== 'cashier')) {
+                setTimeout(loadAdminCashierSummary, 500);
+            }
         }
 
         // Financial Overview
@@ -17275,6 +17870,83 @@ Lender/Manager
                     `;
                     break;
                     
+                case 'tasks':
+                    titleText = '✅ Pending Tasks';
+                    sectionName = 'tasks';
+                    const allTasks = await dbGetAll('tasks');
+                    const pendingTasks = allTasks.filter(t => t.status !== 'completed');
+                    const overdueTasks = pendingTasks.filter(t => t.dueDate && t.dueDate < new Date().toISOString().split('T')[0]);
+                    html = `
+                        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">
+                            <div style="background:rgba(99,102,241,0.15);border-radius:8px;padding:10px;text-align:center;">
+                                <div style="font-size:1.3rem;font-weight:700;color:#6366f1;">${allTasks.length}</div><div style="font-size:0.75rem;">Total</div>
+                            </div>
+                            <div style="background:rgba(239,68,68,0.15);border-radius:8px;padding:10px;text-align:center;">
+                                <div style="font-size:1.3rem;font-weight:700;color:#ef4444;">${overdueTasks.length}</div><div style="font-size:0.75rem;">Overdue</div>
+                            </div>
+                            <div style="background:rgba(16,185,129,0.15);border-radius:8px;padding:10px;text-align:center;">
+                                <div style="font-size:1.3rem;font-weight:700;color:#10b981;">${allTasks.filter(t=>t.status==='completed').length}</div><div style="font-size:0.75rem;">Done</div>
+                            </div>
+                        </div>
+                        ${pendingTasks.slice(0,8).map(t=>`
+                        <div class="list-item" style="cursor:pointer;" onclick="hideModal('flashcard-detail-modal');showSection('tasks');">
+                            <div class="item-info">
+                                <strong>${t.title}</strong>
+                                <div style="font-size:0.8rem;color:var(--text-secondary);">${t.category||''} • Due: ${t.dueDate||'N/A'}</div>
+                            </div>
+                            <span class="badge ${t.priority==='high'?'badge-danger':t.priority==='medium'?'badge-warning':'badge-success'}">${t.priority||'normal'}</span>
+                        </div>`).join('')}
+                    `;
+                    break;
+
+                case 'notes':
+                    titleText = '📝 Notes & Reminders';
+                    sectionName = 'notes';
+                    const allNotes = await dbGetAll('customNotes');
+                    const remNotes = allNotes.filter(n => n.category === 'reminder');
+                    html = `
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+                            <div style="background:rgba(99,102,241,0.15);border-radius:8px;padding:10px;text-align:center;">
+                                <div style="font-size:1.3rem;font-weight:700;color:#6366f1;">${allNotes.length}</div><div style="font-size:0.75rem;">Total Notes</div>
+                            </div>
+                            <div style="background:rgba(239,68,68,0.15);border-radius:8px;padding:10px;text-align:center;">
+                                <div style="font-size:1.3rem;font-weight:700;color:#ef4444;">${remNotes.length}</div><div style="font-size:0.75rem;">⏰ Reminders</div>
+                            </div>
+                        </div>
+                        ${allNotes.slice(0,6).map(n=>`
+                        <div class="list-item" style="cursor:pointer;" onclick="hideModal('flashcard-detail-modal');showSection('notes');">
+                            <div class="item-info">
+                                <strong>${n.title||'Untitled'}</strong>
+                                <div style="font-size:0.8rem;color:var(--text-secondary);">${(n.content||'').substring(0,60)}...</div>
+                            </div>
+                            <span class="badge badge-info">${n.category||'general'}</span>
+                        </div>`).join('')}
+                    `;
+                    break;
+
+                case 'income':
+                    titleText = '💰 Additional Income';
+                    sectionName = 'income';
+                    const incList = await dbGetAll('additionalIncome');
+                    const nowInc = new Date();
+                    const mthInc = `${nowInc.getFullYear()}-${String(nowInc.getMonth()+1).padStart(2,'0')}`;
+                    const mthTotal = incList.filter(i=>i.date&&i.date.startsWith(mthInc)).reduce((s,i)=>s+(i.amount||0),0);
+                    html = `
+                        <div style="background:rgba(16,185,129,0.15);border-radius:10px;padding:14px;text-align:center;margin-bottom:14px;">
+                            <div style="font-size:1.5rem;font-weight:700;color:#10b981;">₱${mthTotal.toLocaleString()}</div>
+                            <div style="font-size:0.8rem;color:var(--text-secondary);">This Month's Other Income</div>
+                        </div>
+                        ${incList.slice(0,8).map(i=>`
+                        <div class="list-item">
+                            <div class="item-info">
+                                <strong>${i.description||'Income'}</strong>
+                                <div style="font-size:0.8rem;color:var(--text-secondary);">${i.category||''} • ${i.date||''}</div>
+                            </div>
+                            <span style="font-weight:700;color:#10b981;">₱${(i.amount||0).toLocaleString()}</span>
+                        </div>`).join('')}
+                    `;
+                    break;
+
                 default:
                     html = '<p>No data available</p>';
             }
@@ -17636,7 +18308,7 @@ Lender/Manager
                 return; // Skip old auth flow entirely
             }
 
-            if (!localStorage.getItem('carent_app_users')) {
+            if (!localStorage.getItem('prism_app_users')) {
                 const defaultUsers = [
                     {
                         id: 1,
@@ -17653,7 +18325,7 @@ Lender/Manager
                         }
                     }
                 ];
-                localStorage.setItem('carent_app_users', JSON.stringify(defaultUsers));
+                localStorage.setItem('prism_app_users', JSON.stringify(defaultUsers));
             }
             
             // Check if user is logged in
@@ -17683,7 +18355,7 @@ Lender/Manager
             // Show what was entered for debugging (remove in production)
             console.log('Login attempt with username:', username);
             
-            const users = JSON.parse(localStorage.getItem('carent_app_users') || '[]');
+            const users = JSON.parse(localStorage.getItem('prism_app_users') || '[]');
             console.log('Available users:', users.length);
             
             const user = users.find(u => u.username === username && u.password === password);
@@ -17852,7 +18524,7 @@ Lender/Manager
                 return;
             }
             
-            const users = JSON.parse(localStorage.getItem('carent_app_users') || '[]');
+            const users = JSON.parse(localStorage.getItem('prism_app_users') || '[]');
             const container = document.getElementById('user-list');
             
             if (users.length === 0) {
@@ -17929,7 +18601,7 @@ Lender/Manager
                 permissions[permName] = cb.checked;
             });
             
-            const users = JSON.parse(localStorage.getItem('carent_app_users') || '[]');
+            const users = JSON.parse(localStorage.getItem('prism_app_users') || '[]');
             
             // Check for duplicate username
             const duplicate = users.find(u => u.username === username && (!editId || u.id !== parseInt(editId)));
@@ -17966,16 +18638,20 @@ Lender/Manager
                 users.push(newUser);
             }
             
-            localStorage.setItem('carent_app_users', JSON.stringify(users));
-            
-            hideModal('add-user-modal');
-            alert('✅ User saved successfully!');
-            showUserManagement();
+            try {
+                localStorage.setItem('prism_app_users', JSON.stringify(users));
+                hideModal('add-user-modal');
+                showToast('✅ User saved: ' + fullname, 'success');
+                showUserManagement();
+            } catch(e) {
+                console.error('Save user error:', e);
+                showToast('❌ Error saving user: ' + e.message, 'error');
+            }
         }
 
         // Edit App User
         function editAppUser(id) {
-            const users = JSON.parse(localStorage.getItem('carent_app_users') || '[]');
+            const users = JSON.parse(localStorage.getItem('prism_app_users') || '[]');
             const user = users.find(u => u.id === id);
             
             if (!user) return;
@@ -18004,9 +18680,9 @@ Lender/Manager
         function deleteAppUser(id) {
             if (!confirm('Are you sure you want to delete this user?')) return;
             
-            let users = JSON.parse(localStorage.getItem('carent_app_users') || '[]');
+            let users = JSON.parse(localStorage.getItem('prism_app_users') || '[]');
             users = users.filter(u => u.id !== id);
-            localStorage.setItem('carent_app_users', JSON.stringify(users));
+            localStorage.setItem('prism_app_users', JSON.stringify(users));
             
             alert('✅ User deleted successfully!');
             showUserManagement();
@@ -18117,28 +18793,318 @@ Lender/Manager
 
         // Change admin passcode
         function changeAdminPasscode() {
-            const currentPasscode = prompt('Enter current passcode:');
-            const storedPasscode = localStorage.getItem('carent_admin_passcode') || '123456';
-            
-            if (currentPasscode !== storedPasscode) {
-                alert('❌ Current passcode is incorrect.');
+            // Remove existing modal
+            const ex = document.getElementById('change-passcode-modal');
+            if (ex) ex.remove();
+
+            const modal = document.createElement('div');
+            modal.id = 'change-passcode-modal';
+            modal.className = 'modal-overlay show';
+            modal.onclick = e => { if (e.target === modal) modal.remove(); };
+            modal.innerHTML = `
+                <div class="modal" style="max-width:360px;">
+                    <div class="modal-header">
+                        <h3 class="modal-title">🔐 Change Admin Passcode</h3>
+                        <button class="modal-close" onclick="document.getElementById('change-passcode-modal').remove()">×</button>
+                    </div>
+                    <div class="modal-body" style="padding-bottom:20px;">
+                        <div id="passcode-error" style="display:none;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444;padding:10px;border-radius:8px;margin-bottom:14px;font-size:0.85rem;"></div>
+                        <div class="form-group">
+                            <label>Current Passcode</label>
+                            <input type="password" id="pc-current" class="form-control" placeholder="Enter current passcode" maxlength="6" inputmode="numeric">
+                        </div>
+                        <div class="form-group">
+                            <label>New Passcode <small style="color:var(--text-secondary);">(4–6 digits)</small></label>
+                            <input type="password" id="pc-new" class="form-control" placeholder="Enter new passcode" maxlength="6" inputmode="numeric">
+                        </div>
+                        <div class="form-group">
+                            <label>Confirm New Passcode</label>
+                            <input type="password" id="pc-confirm" class="form-control" placeholder="Repeat new passcode" maxlength="6" inputmode="numeric">
+                        </div>
+                        <button class="btn btn-primary btn-block" onclick="submitPasscodeChange()" style="margin-top:8px;">💾 Update Passcode</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
+            setTimeout(() => document.getElementById('pc-current')?.focus(), 100);
+        }
+
+        function submitPasscodeChange() {
+            const current = document.getElementById('pc-current')?.value.trim();
+            const newPc   = document.getElementById('pc-new')?.value.trim();
+            const confirm = document.getElementById('pc-confirm')?.value.trim();
+            const errEl   = document.getElementById('passcode-error');
+            const stored  = localStorage.getItem('carent_admin_passcode') || '123456';
+
+            const showErr = msg => { errEl.textContent = msg; errEl.style.display = 'block'; };
+            errEl.style.display = 'none';
+
+            if (!current) return showErr('Please enter your current passcode.');
+            if (current !== stored) return showErr('❌ Current passcode is incorrect.');
+            if (!newPc || newPc.length < 4 || newPc.length > 6 || !/^\d+$/.test(newPc))
+                return showErr('❌ New passcode must be 4–6 digits (numbers only).');
+            if (newPc !== confirm) return showErr('❌ Passcodes do not match.');
+
+            localStorage.setItem('carent_admin_passcode', newPc);
+            document.getElementById('change-passcode-modal').remove();
+            showToast('✅ Admin passcode updated successfully!', 'success');
+        }
+
+        // =====================
+        // CASHIER REPORTS
+        // =====================
+        async function showCashierReports() {
+            const users = JSON.parse(localStorage.getItem('prism_app_users') || '[]');
+            const cashiers = users.filter(u => u.role === 'cashier' || u.role === 'encoder');
+
+            const ex = document.getElementById('cashier-reports-modal');
+            if (ex) ex.remove();
+
+            const modal = document.createElement('div');
+            modal.id = 'cashier-reports-modal';
+            modal.className = 'modal-overlay show';
+            modal.onclick = e => { if (e.target === modal) modal.remove(); };
+
+            const now = new Date();
+            const thisMonth = now.toISOString().substring(0,7);
+            const today = now.toISOString().split('T')[0];
+
+            // Load all transaction data
+            const [payments, creditPayments, waterSales, expenses, additionalIncome] = await Promise.all([
+                dbGetAll('payments'), dbGetAll('creditPayments'), dbGetAll('waterSales'),
+                dbGetAll('expenses'), dbGetAll('additionalIncome')
+            ]);
+
+            // Group all transactions by recordedBy (cashier username)
+            const allTxns = [
+                ...payments.map(p => ({ ...p, txnType: 'Rent Payment', amount: p.amount||0, credit: true })),
+                ...creditPayments.map(p => ({ ...p, txnType: 'Credit Repayment', amount: p.amount||0, credit: true })),
+                ...waterSales.filter(s=>!s.voided).map(s => ({ ...s, txnType: 'Water Sale', amount: s.amountPaid||0, credit: true })),
+                ...expenses.map(e => ({ ...e, txnType: 'Expense', amount: e.amount||0, credit: false })),
+                ...additionalIncome.map(i => ({ ...i, txnType: 'Other Income', amount: i.amount||0, credit: true })),
+            ];
+
+            // Build cashier rows
+            const cashierRows = cashiers.length === 0
+                ? '<div style="text-align:center;padding:30px;color:var(--text-secondary);">No cashier accounts found. Add cashiers in Manage Users.</div>'
+                : cashiers.map(c => {
+                    const myTxns = allTxns.filter(t => t.recordedBy === c.username || t.cashier === c.username);
+                    const todayTxns = myTxns.filter(t => t.date === today);
+                    const monthTxns = myTxns.filter(t => t.date && t.date.startsWith(thisMonth));
+                    const todayIn = todayTxns.filter(t=>t.credit).reduce((s,t)=>s+t.amount,0);
+                    const todayOut = todayTxns.filter(t=>!t.credit).reduce((s,t)=>s+t.amount,0);
+                    const monthIn = monthTxns.filter(t=>t.credit).reduce((s,t)=>s+t.amount,0);
+                    const monthOut = monthTxns.filter(t=>!t.credit).reduce((s,t)=>s+t.amount,0);
+                    return `
+                    <div style="background:var(--bg-primary);border:1px solid var(--border-color);border-radius:12px;padding:14px;margin-bottom:10px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                            <div>
+                                <div style="font-weight:700;color:var(--text-primary);">👤 ${c.fullname}</div>
+                                <div style="font-size:0.75rem;color:var(--text-secondary);">@${c.username} · ${c.role}</div>
+                            </div>
+                            <button onclick="showCashierDetailReport('${c.username}','${c.fullname}')" 
+                                style="padding:5px 12px;background:rgba(99,102,241,0.15);border:1px solid #6366f1;color:#6366f1;border-radius:8px;cursor:pointer;font-size:0.78rem;font-weight:600;">
+                                📋 Full Report
+                            </button>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                            <div style="background:var(--bg-card);border-radius:8px;padding:10px;">
+                                <div style="font-size:0.7rem;color:var(--text-secondary);font-weight:600;text-transform:uppercase;margin-bottom:6px;">📅 Today</div>
+                                <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
+                                    <span>Collected:</span><span style="color:#10b981;font-weight:700;">₱${todayIn.toLocaleString()}</span>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
+                                    <span>Expenses:</span><span style="color:#ef4444;font-weight:700;">₱${todayOut.toLocaleString()}</span>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;font-size:0.82rem;border-top:1px solid var(--border-color);margin-top:4px;padding-top:4px;">
+                                    <span>Txns:</span><span style="color:var(--primary);font-weight:700;">${todayTxns.length}</span>
+                                </div>
+                            </div>
+                            <div style="background:var(--bg-card);border-radius:8px;padding:10px;">
+                                <div style="font-size:0.7rem;color:var(--text-secondary);font-weight:600;text-transform:uppercase;margin-bottom:6px;">📆 This Month</div>
+                                <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
+                                    <span>Collected:</span><span style="color:#10b981;font-weight:700;">₱${monthIn.toLocaleString()}</span>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
+                                    <span>Expenses:</span><span style="color:#ef4444;font-weight:700;">₱${monthOut.toLocaleString()}</span>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;font-size:0.82rem;border-top:1px solid var(--border-color);margin-top:4px;padding-top:4px;">
+                                    <span>Txns:</span><span style="color:var(--primary);font-weight:700;">${monthTxns.length}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('');
+
+            modal.innerHTML = `
+                <div class="modal" style="max-width:500px;">
+                    <div class="modal-header">
+                        <h3 class="modal-title">📋 Cashier Reports</h3>
+                        <button class="modal-close" onclick="document.getElementById('cashier-reports-modal').remove()">×</button>
+                    </div>
+                    <div class="modal-body" style="max-height:70vh;overflow-y:auto;padding-bottom:20px;">
+                        <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:12px;">
+                            📅 Today: ${today} &nbsp;|&nbsp; 📆 Month: ${new Date().toLocaleDateString('en-PH',{month:'long',year:'numeric'})}
+                        </div>
+                        ${cashierRows}
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" style="flex:1;" onclick="document.getElementById('cashier-reports-modal').remove()">Close</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
+        }
+
+        async function showCashierDetailReport(username, fullname) {
+            const [payments, creditPayments, waterSales, expenses, additionalIncome] = await Promise.all([
+                dbGetAll('payments'), dbGetAll('creditPayments'), dbGetAll('waterSales'),
+                dbGetAll('expenses'), dbGetAll('additionalIncome')
+            ]);
+
+            // Date range filter
+            const ex = document.getElementById('cashier-detail-modal');
+            if (ex) ex.remove();
+
+            const now = new Date();
+            const thisMonth = now.toISOString().substring(0,7);
+            const today = now.toISOString().split('T')[0];
+            const firstOfMonth = thisMonth + '-01';
+
+            function buildReport(fromDate, toDate) {
+                const allTxns = [
+                    ...payments.filter(p=>p.recordedBy===username||p.cashier===username).map(p=>({date:p.date,type:'🏠 Rent',name:p.tenantName||'Tenant',amount:p.amount||0,in:true,method:p.method||'Cash'})),
+                    ...creditPayments.filter(p=>p.recordedBy===username||p.cashier===username).map(p=>({date:p.date,type:'💳 Credit',name:p.debtorName||'Debtor',amount:p.amount||0,in:true,method:'Cash'})),
+                    ...waterSales.filter(s=>!s.voided&&(s.recordedBy===username||s.cashier===username)).map(s=>({date:s.date,type:'💧 Water',name:s.customerName||'Customer',amount:s.amountPaid||0,in:true,method:'Cash'})),
+                    ...expenses.filter(e=>e.recordedBy===username||e.cashier===username).map(e=>({date:e.date,type:'💸 Expense',name:e.category||'Expense',amount:e.amount||0,in:false,method:'-'})),
+                    ...additionalIncome.filter(i=>i.recordedBy===username||i.cashier===username).map(i=>({date:i.date,type:'💰 Income',name:i.source||'Income',amount:i.amount||0,in:true,method:'Cash'})),
+                ].filter(t => t.date >= fromDate && t.date <= toDate).sort((a,b) => b.date.localeCompare(a.date));
+
+                const totalIn = allTxns.filter(t=>t.in).reduce((s,t)=>s+t.amount,0);
+                const totalOut = allTxns.filter(t=>!t.in).reduce((s,t)=>s+t.amount,0);
+
+                return { txns: allTxns, totalIn, totalOut };
+            }
+
+            function renderReport(fromDate, toDate) {
+                const { txns, totalIn, totalOut } = buildReport(fromDate, toDate);
+                const net = totalIn - totalOut;
+                const container = document.getElementById('cashier-detail-content');
+                if (!container) return;
+
+                // Group by date
+                const byDate = {};
+                txns.forEach(t => { if (!byDate[t.date]) byDate[t.date] = []; byDate[t.date].push(t); });
+                const dates = Object.keys(byDate).sort((a,b) => b.localeCompare(a));
+
+                container.innerHTML = `
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">
+                        <div style="background:rgba(16,185,129,0.1);border-radius:10px;padding:12px;text-align:center;">
+                            <div style="font-weight:800;color:#10b981;font-size:1.1rem;">₱${totalIn.toLocaleString()}</div>
+                            <div style="font-size:0.72rem;color:var(--text-secondary);">💰 Collected</div>
+                        </div>
+                        <div style="background:rgba(239,68,68,0.1);border-radius:10px;padding:12px;text-align:center;">
+                            <div style="font-weight:800;color:#ef4444;font-size:1.1rem;">₱${totalOut.toLocaleString()}</div>
+                            <div style="font-size:0.72rem;color:var(--text-secondary);">💸 Expenses</div>
+                        </div>
+                        <div style="background:rgba(${net>=0?'16,185,129':'239,68,68'},0.1);border-radius:10px;padding:12px;text-align:center;">
+                            <div style="font-weight:800;color:${net>=0?'#10b981':'#ef4444'};font-size:1.1rem;">${net>=0?'+':'-'}₱${Math.abs(net).toLocaleString()}</div>
+                            <div style="font-size:0.72rem;color:var(--text-secondary);">${net>=0?'📈 Net Gain':'📉 Net Loss'}</div>
+                        </div>
+                    </div>
+                    <div style="font-weight:700;color:var(--text-secondary);font-size:0.75rem;text-transform:uppercase;margin-bottom:8px;">${txns.length} transactions</div>
+                    ${dates.length === 0 ? '<div style="text-align:center;padding:30px;color:var(--text-secondary);">No transactions in this period.</div>' :
+                        dates.map(date => `
+                        <div style="margin-bottom:14px;">
+                            <div style="font-size:0.78rem;font-weight:700;color:var(--text-secondary);background:var(--bg-primary);padding:5px 10px;border-radius:6px;margin-bottom:6px;">
+                                📅 ${new Date(date+'T00:00:00').toLocaleDateString('en-PH',{weekday:'short',month:'short',day:'numeric',year:'numeric'})}
+                                <span style="float:right;color:${byDate[date].filter(t=>t.in).reduce((s,t)=>s+t.amount,0) >= byDate[date].filter(t=>!t.in).reduce((s,t)=>s+t.amount,0)?'#10b981':'#ef4444'};">
+                                    Net: ₱${(byDate[date].filter(t=>t.in).reduce((s,t)=>s+t.amount,0) - byDate[date].filter(t=>!t.in).reduce((s,t)=>s+t.amount,0)).toLocaleString()}
+                                </span>
+                            </div>
+                            ${byDate[date].map(t => `
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg-card);border-radius:8px;margin-bottom:4px;border-left:3px solid ${t.in?'#10b981':'#ef4444'};">
+                                <div>
+                                    <span style="font-size:0.78rem;font-weight:600;color:var(--text-primary);">${t.type}</span>
+                                    <span style="font-size:0.72rem;color:var(--text-secondary);display:block;">${t.name}</span>
+                                </div>
+                                <div style="text-align:right;">
+                                    <span style="font-weight:700;color:${t.in?'#10b981':'#ef4444'};">${t.in?'+':'-'}₱${t.amount.toLocaleString()}</span>
+                                </div>
+                            </div>`).join('')}
+                        </div>`).join('')}`;
+            }
+
+            const modal = document.createElement('div');
+            modal.id = 'cashier-detail-modal';
+            modal.className = 'modal-overlay show';
+            modal.onclick = e => { if (e.target === modal) modal.remove(); };
+            modal.innerHTML = `
+                <div class="modal" style="max-width:500px;">
+                    <div class="modal-header">
+                        <h3 class="modal-title">📋 ${fullname}'s Report</h3>
+                        <button class="modal-close" onclick="document.getElementById('cashier-detail-modal').remove()">×</button>
+                    </div>
+                    <div class="modal-body" style="padding-bottom:20px;">
+                        <!-- Period Selector -->
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
+                            <button class="report-preset-btn active" id="cr-today-btn" onclick="setCashierPeriod('today',this,'${username}')">Today</button>
+                            <button class="report-preset-btn" id="cr-week-btn" onclick="setCashierPeriod('week',this,'${username}')">This Week</button>
+                            <button class="report-preset-btn" id="cr-month-btn" onclick="setCashierPeriod('month',this,'${username}')">This Month</button>
+                            <button class="report-preset-btn" id="cr-custom-btn" onclick="setCashierPeriod('custom',this,'${username}')">Custom</button>
+                        </div>
+                        <div id="cr-date-range" style="display:none;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
+                            <input type="date" id="cr-from" class="form-control" style="width:auto;" value="${firstOfMonth}">
+                            <span style="color:var(--text-secondary);">to</span>
+                            <input type="date" id="cr-to" class="form-control" style="width:auto;" value="${today}">
+                            <button class="btn btn-sm btn-primary" onclick="applyCashierCustomRange('${username}')">Apply</button>
+                        </div>
+                        <div id="cashier-detail-content" style="max-height:55vh;overflow-y:auto;"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" style="flex:1;" onclick="document.getElementById('cashier-detail-modal').remove()">Close</button>
+                        <button class="btn btn-primary" style="flex:1;" onclick="exportCashierReport('${username}','${fullname}')">📥 Export PDF</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
+
+            // Store for use in nested functions
+            window._cashierReportData = { payments, creditPayments, waterSales, expenses, additionalIncome };
+            window._cashierRenderFn = renderReport;
+            renderReport(today, today); // default: today
+        }
+
+        function setCashierPeriod(period, btn, username) {
+            document.querySelectorAll('#cashier-detail-modal .report-preset-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const now = new Date();
+            const today = now.toISOString().split('T')[0];
+            const dateRangeEl = document.getElementById('cr-date-range');
+            let from, to = today;
+
+            if (period === 'custom') {
+                dateRangeEl.style.display = 'flex';
                 return;
             }
-            
-            const newPasscode = prompt('Enter new passcode (4-6 digits):');
-            if (!newPasscode || newPasscode.length < 4 || newPasscode.length > 6 || !/^\d+$/.test(newPasscode)) {
-                alert('❌ Passcode must be 4-6 digits (numbers only).');
-                return;
+            dateRangeEl.style.display = 'none';
+
+            if (period === 'today') { from = today; }
+            else if (period === 'week') {
+                const d = new Date(now); d.setDate(d.getDate() - d.getDay());
+                from = d.toISOString().split('T')[0];
+            } else if (period === 'month') {
+                from = now.toISOString().substring(0,7) + '-01';
             }
-            
-            const confirmPasscode = prompt('Confirm new passcode:');
-            if (newPasscode !== confirmPasscode) {
-                alert('❌ Passcodes do not match.');
-                return;
-            }
-            
-            localStorage.setItem('carent_admin_passcode', newPasscode);
-            alert('✅ Admin passcode changed successfully!');
+            if (window._cashierRenderFn) window._cashierRenderFn(from, to);
+        }
+
+        function applyCashierCustomRange(username) {
+            const from = document.getElementById('cr-from')?.value;
+            const to = document.getElementById('cr-to')?.value;
+            if (!from || !to) return showToast('Select both dates', 'warning');
+            if (window._cashierRenderFn) window._cashierRenderFn(from, to);
+        }
+
+        async function exportCashierReport(username, fullname) {
+            showToast('📥 Export coming soon — use Print (Ctrl+P) for now.', 'info');
         }
 
         // =====================
@@ -18148,17 +19114,124 @@ Lender/Manager
         let expensePieChart = null;
         let trendLineChart = null;
 
-        function initReportsPage() {
+        function loadReports() { initReportsPage(); setTimeout(generateReports, 200); }
+function initReportsPage() {
+            // Set default to "this month" on first load
+            if (!document.getElementById('report-date-from').value) {
+                setReportPreset('this-month', document.querySelector('.report-preset-btn'));
+            }
+        }
+
+        function setReportPreset(preset, btn) {
+            // Update active button
+            document.querySelectorAll('.report-preset-btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+
             const now = new Date();
-            document.getElementById('report-month').value = now.getMonth();
-            document.getElementById('report-year').value = now.getFullYear();
+            const today = now.toISOString().split('T')[0];
+            let from, to;
+
+            switch(preset) {
+                case 'this-month':
+                    from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+                    to = today;
+                    break;
+                case 'last-month': {
+                    const lm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                    from = lm.toISOString().split('T')[0];
+                    to = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0];
+                    break;
+                }
+                case 'this-quarter': {
+                    const q = Math.floor(now.getMonth() / 3);
+                    from = new Date(now.getFullYear(), q * 3, 1).toISOString().split('T')[0];
+                    to = today;
+                    break;
+                }
+                case 'last-quarter': {
+                    const q = Math.floor(now.getMonth() / 3);
+                    const lqs = q === 0 ? new Date(now.getFullYear()-1, 9, 1) : new Date(now.getFullYear(), (q-1)*3, 1);
+                    const lqe = q === 0 ? new Date(now.getFullYear()-1, 12, 0) : new Date(now.getFullYear(), q*3, 0);
+                    from = lqs.toISOString().split('T')[0];
+                    to = lqe.toISOString().split('T')[0];
+                    break;
+                }
+                case 'this-year':
+                    from = new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0];
+                    to = today;
+                    break;
+                case 'last-7': {
+                    const d = new Date(now); d.setDate(d.getDate() - 7);
+                    from = d.toISOString().split('T')[0]; to = today;
+                    break;
+                }
+                case 'last-30': {
+                    const d = new Date(now); d.setDate(d.getDate() - 30);
+                    from = d.toISOString().split('T')[0]; to = today;
+                    break;
+                }
+                case 'last-90': {
+                    const d = new Date(now); d.setDate(d.getDate() - 90);
+                    from = d.toISOString().split('T')[0]; to = today;
+                    break;
+                }
+                case 'custom':
+                    // Just allow editing — don't auto-set dates
+                    return;
+            }
+
+            document.getElementById('report-date-from').value = from;
+            document.getElementById('report-date-to').value = to;
+            updateRangeLabel();
+            generateReports();
+        }
+
+        function onReportDateChange() {
+            // Mark all preset btns as inactive when user manually edits dates
+            document.querySelectorAll('.report-preset-btn').forEach(b => {
+                if (b.textContent.includes('Custom')) b.classList.add('active');
+                else b.classList.remove('active');
+            });
+            updateRangeLabel();
+            generateReports();
+        }
+
+        function updateRangeLabel() {
+            const from = document.getElementById('report-date-from').value;
+            const to = document.getElementById('report-date-to').value;
+            const lbl = document.getElementById('report-range-label');
+            if (!lbl) return;
+            if (from && to) {
+                const f = new Date(from), t = new Date(to);
+                const diffDays = Math.round((t - f) / 86400000) + 1;
+                lbl.textContent = `${diffDays} day${diffDays !== 1 ? 's' : ''} selected`;
+            } else {
+                lbl.textContent = '';
+            }
         }
 
         async function generateReports() {
-            const month = parseInt(document.getElementById('report-month').value);
-            const year = parseInt(document.getElementById('report-year').value);
-            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            const fromStr = document.getElementById('report-date-from').value;
+            const toStr = document.getElementById('report-date-to').value;
             
+            if (!fromStr || !toStr) {
+                showToast('Please select a date range first.', 'warning');
+                return;
+            }
+            
+            const fromDate = new Date(fromStr + 'T00:00:00');
+            const toDate = new Date(toStr + 'T23:59:59');
+            
+            if (fromDate > toDate) {
+                showToast('⚠️ "From" date must be before "To" date.', 'warning');
+                return;
+            }
+            
+            // Format range label
+            const diffDays = Math.round((toDate - fromDate) / 86400000) + 1;
+            const fmt = d => d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+            const rangeLabel = `${fmt(fromDate)} — ${fmt(toDate)} (${diffDays} days)`;
+
             // Get all data
             const payments = await dbGetAll('payments');
             const creditPayments = await dbGetAll('creditPayments');
@@ -18167,67 +19240,205 @@ Lender/Manager
             const additionalIncome = await dbGetAll('additionalIncome');
             const tenants = await dbGetAll('tenants');
             const credits = await dbGetAll('credits');
-            
-            // Filter by selected month/year
-            const filterByMonth = (items, dateField = 'date') => {
+
+            // Filter by date range
+            const filterByRange = (items, dateField = 'date') => {
                 return items.filter(item => {
                     if (!item[dateField]) return false;
-                    const d = new Date(item[dateField]);
-                    return d.getMonth() === month && d.getFullYear() === year;
+                    const d = new Date(item[dateField] + (item[dateField].length === 10 ? 'T00:00:00' : ''));
+                    return d >= fromDate && d <= toDate;
                 });
             };
-            
-            const monthPayments = filterByMonth(payments);
-            const monthCreditPayments = filterByMonth(creditPayments);
-            const monthWaterSales = filterByMonth(waterSales).filter(s => !s.voided);
-            const monthExpenses = filterByMonth(expenses);
-            const monthAdditionalIncome = filterByMonth(additionalIncome);
-            
+
+            const rangePayments = filterByRange(payments);
+            const rangeCreditPayments = filterByRange(creditPayments);
+            const rangeWaterSales = filterByRange(waterSales).filter(s => !s.voided);
+            const rangeExpenses = filterByRange(expenses);
+            const rangeAdditionalIncome = filterByRange(additionalIncome);
+
             // Calculate totals
-            const rentIncome = monthPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-            const creditIncome = monthCreditPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-            const waterIncome = monthWaterSales.reduce((sum, s) => sum + (s.amountPaid || 0), 0);
-            const otherIncome = monthAdditionalIncome.reduce((sum, i) => sum + (i.amount || 0), 0);
+            const rentIncome = rangePayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+            const creditIncome = rangeCreditPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+            const waterIncome = rangeWaterSales.reduce((sum, s) => sum + (s.amountPaid || 0), 0);
+            const otherIncome = rangeAdditionalIncome.reduce((sum, i) => sum + (i.amount || 0), 0);
             const totalIncome = rentIncome + creditIncome + waterIncome + otherIncome;
-            
-            const totalExpenses = monthExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+            const totalExpenses = rangeExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
             const netProfit = totalIncome - totalExpenses;
             const profitMargin = totalIncome > 0 ? Math.round((netProfit / totalIncome) * 100) : 0;
-            
+
             // Update summary cards
             document.getElementById('report-total-income').textContent = '₱' + totalIncome.toLocaleString();
             document.getElementById('report-total-expenses').textContent = '₱' + totalExpenses.toLocaleString();
-            document.getElementById('report-net-profit').textContent = '₱' + netProfit.toLocaleString();
+            document.getElementById('report-net-profit').textContent = (netProfit >= 0 ? '₱' : '-₱') + Math.abs(netProfit).toLocaleString();
             document.getElementById('report-profit-margin').textContent = profitMargin + '%';
-            
-            // Generate Income Breakdown
+
+            // Update net profit card color based on gain/loss
+            const netCard = document.getElementById('report-net-profit').closest('.stat-card');
+            if (netCard) {
+                if (netProfit > 0) {
+                    netCard.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                } else if (netProfit < 0) {
+                    netCard.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+                } else {
+                    netCard.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+                }
+            }
+
+            // Show Gain/Loss Verdict Banner
+            const banner = document.getElementById('report-verdict-banner');
+            if (banner) {
+                const isGain = netProfit > 0;
+                const isBreak = netProfit === 0;
+                const statusClass = isBreak ? 'breakeven' : isGain ? 'gaining' : 'losing';
+                const statusEmoji = isBreak ? '⚖️' : isGain ? '📈' : '📉';
+                const statusLabel = isBreak ? 'BREAK EVEN' : isGain ? 'GAINING' : 'LOSING';
+                const statusMsg = isBreak 
+                    ? 'Income and expenses are exactly balanced.'
+                    : isGain 
+                    ? `The organization gained ₱${netProfit.toLocaleString()} in this period.`
+                    : `The organization lost ₱${Math.abs(netProfit).toLocaleString()} in this period.`;
+
+                banner.style.display = 'block';
+                banner.innerHTML = `
+                    <div class="gain-loss-card ${statusClass}">
+                        <div style="font-size:2.2rem;margin-bottom:6px;">${statusEmoji}</div>
+                        <div style="font-size:1.4rem;font-weight:800;letter-spacing:1px;margin-bottom:4px;">${statusLabel}</div>
+                        <div style="font-size:0.9rem;opacity:0.9;margin-bottom:10px;">${statusMsg}</div>
+                        <div style="font-size:0.78rem;opacity:0.75;">${rangeLabel}</div>
+                        <div style="display:flex;justify-content:center;gap:20px;margin-top:14px;flex-wrap:wrap;">
+                            <div style="text-align:center;">
+                                <div style="font-size:1.1rem;font-weight:700;">₱${totalIncome.toLocaleString()}</div>
+                                <div style="font-size:0.72rem;opacity:0.85;">Total Income</div>
+                            </div>
+                            <div style="text-align:center;font-size:1.3rem;opacity:0.7;">vs</div>
+                            <div style="text-align:center;">
+                                <div style="font-size:1.1rem;font-weight:700;">₱${totalExpenses.toLocaleString()}</div>
+                                <div style="font-size:0.72rem;opacity:0.85;">Total Expenses</div>
+                            </div>
+                            <div style="text-align:center;">
+                                <div style="font-size:1.1rem;font-weight:700;">${profitMargin}%</div>
+                                <div style="font-size:0.72rem;opacity:0.85;">Profit Margin</div>
+                            </div>
+                        </div>
+                    </div>`;
+            }
+
+            // Generate breakdowns and analysis
             generateIncomeBreakdown(rentIncome, creditIncome, waterIncome, otherIncome, totalIncome);
-            
-            // Generate Expense Breakdown
-            generateExpenseBreakdown(monthExpenses, totalExpenses);
-            
-            // Generate 6-Month Trend
-            await generate6MonthTrend(month, year);
-            
-            // Generate AI Analysis
+            generateExpenseBreakdown(rangeExpenses, totalExpenses);
+            await generateDateRangeTrend(fromDate, toDate, diffDays);
             generateAIAnalysis({
-                month: monthNames[month],
-                year,
-                rentIncome,
-                creditIncome,
-                waterIncome,
-                otherIncome,
-                totalIncome,
-                totalExpenses,
-                netProfit,
-                profitMargin,
-                expenses: monthExpenses,
+                month: rangeLabel,
+                year: '',
+                rentIncome, creditIncome, waterIncome, otherIncome,
+                totalIncome, totalExpenses, netProfit, profitMargin,
+                expenses: rangeExpenses,
                 tenantCount: tenants.filter(t => t.status === 'active').length,
                 debtorCount: credits.length
             });
+            generateTransactionDetails(rangePayments, rangeCreditPayments, rangeWaterSales, rangeExpenses, rangeAdditionalIncome);
+        }
+
+        async function generateDateRangeTrend(fromDate, toDate, diffDays) {
+            // If range > 60 days: show monthly bars. If <= 60: show weekly. If <= 14: daily.
+            const payments = await dbGetAll('payments');
+            const creditPayments = await dbGetAll('creditPayments');
+            const waterSales = await dbGetAll('waterSales');
+            const expenses = await dbGetAll('expenses');
+            const additionalIncome = await dbGetAll('additionalIncome');
             
-            // Generate Transaction Details
-            generateTransactionDetails(monthPayments, monthCreditPayments, monthWaterSales, monthExpenses, monthAdditionalIncome);
+            const allIncome = [
+                ...payments.map(p => ({ date: p.date, amount: p.amount || 0 })),
+                ...creditPayments.map(p => ({ date: p.date, amount: p.amount || 0 })),
+                ...waterSales.filter(s => !s.voided).map(s => ({ date: s.date, amount: s.amountPaid || 0 })),
+                ...additionalIncome.map(i => ({ date: i.date, amount: i.amount || 0 })),
+            ];
+            const allExpenses = expenses.map(e => ({ date: e.date, amount: e.amount || 0 }));
+
+            let buckets = [];
+            let getKey, getLabel;
+
+            if (diffDays <= 14) {
+                // Daily
+                for (let d = new Date(fromDate); d <= toDate; d.setDate(d.getDate()+1)) {
+                    buckets.push(d.toISOString().split('T')[0]);
+                }
+                getKey = date => date;
+                getLabel = key => { const d = new Date(key+'T00:00:00'); return d.toLocaleDateString('en-PH',{month:'short',day:'numeric'}); };
+            } else if (diffDays <= 90) {
+                // Weekly buckets
+                const start = new Date(fromDate);
+                while (start <= toDate) {
+                    buckets.push(start.toISOString().split('T')[0]);
+                    start.setDate(start.getDate() + 7);
+                }
+                getKey = date => {
+                    const d = new Date(date+'T00:00:00');
+                    const bucket = buckets.find((b,i) => {
+                        const bDate = new Date(b+'T00:00:00');
+                        const nextDate = buckets[i+1] ? new Date(buckets[i+1]+'T00:00:00') : new Date(toDate.getTime()+86400000);
+                        return d >= bDate && d < nextDate;
+                    });
+                    return bucket || buckets[0];
+                };
+                getLabel = key => { const d = new Date(key+'T00:00:00'); return 'Wk '+d.toLocaleDateString('en-PH',{month:'short',day:'numeric'}); };
+            } else {
+                // Monthly
+                const start = new Date(fromDate.getFullYear(), fromDate.getMonth(), 1);
+                while (start <= toDate) {
+                    buckets.push(`${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}`);
+                    start.setMonth(start.getMonth()+1);
+                }
+                getKey = date => date ? date.substring(0,7) : null;
+                getLabel = key => { const [y,m] = key.split('-'); return new Date(y,m-1,1).toLocaleDateString('en-PH',{month:'short',year:'numeric'}); };
+            }
+
+            // Aggregate into buckets
+            const incomeMap = {}, expenseMap = {};
+            buckets.forEach(b => { incomeMap[b] = 0; expenseMap[b] = 0; });
+
+            allIncome.forEach(item => {
+                if (!item.date) return;
+                const d = new Date(item.date+(item.date.length===10?'T00:00:00':''));
+                if (d < fromDate || d > toDate) return;
+                const key = getKey(item.date);
+                if (key && incomeMap[key] !== undefined) incomeMap[key] += item.amount;
+            });
+            allExpenses.forEach(item => {
+                if (!item.date) return;
+                const d = new Date(item.date+(item.date.length===10?'T00:00:00':''));
+                if (d < fromDate || d > toDate) return;
+                const key = getKey(item.date);
+                if (key && expenseMap[key] !== undefined) expenseMap[key] += item.amount;
+            });
+
+            // Render bar chart
+            const trendEl = document.getElementById('trend-chart-content') || document.getElementById('six-month-trend');
+            if (!trendEl) return;
+            
+            const maxVal = Math.max(...buckets.map(b => Math.max(incomeMap[b]||0, expenseMap[b]||0)), 1);
+            trendEl.innerHTML = `
+                <div style="overflow-x:auto;">
+                <div style="display:flex;gap:6px;align-items:flex-end;min-width:${Math.max(buckets.length*60,300)}px;height:160px;padding:0 4px;">
+                    ${buckets.map(b => {
+                        const inc = incomeMap[b]||0, exp = expenseMap[b]||0;
+                        const incH = Math.round((inc/maxVal)*130), expH = Math.round((exp/maxVal)*130);
+                        const profit = inc - exp;
+                        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;" title="${getLabel(b)}&#10;Income: ₱${inc.toLocaleString()}&#10;Expense: ₱${exp.toLocaleString()}&#10;Profit: ₱${profit.toLocaleString()}">
+                            <div style="display:flex;gap:2px;align-items:flex-end;height:140px;">
+                                <div style="width:14px;height:${incH}px;background:#10b981;border-radius:3px 3px 0 0;min-height:2px;" title="Income ₱${inc.toLocaleString()}"></div>
+                                <div style="width:14px;height:${expH}px;background:#ef4444;border-radius:3px 3px 0 0;min-height:2px;" title="Expense ₱${exp.toLocaleString()}"></div>
+                            </div>
+                            <div style="font-size:0.6rem;color:var(--text-secondary);text-align:center;white-space:nowrap;overflow:hidden;max-width:50px;">${getLabel(b)}</div>
+                            <div style="font-size:0.6rem;font-weight:600;color:${profit>=0?'#10b981':'#ef4444'};">${profit>=0?'+':'-'}₱${Math.abs(profit).toLocaleString()}</div>
+                        </div>`;
+                    }).join('')}
+                </div>
+                </div>
+                <div style="display:flex;gap:16px;justify-content:center;margin-top:8px;font-size:0.75rem;">
+                    <span><span style="display:inline-block;width:12px;height:10px;background:#10b981;border-radius:2px;"></span> Income</span>
+                    <span><span style="display:inline-block;width:12px;height:10px;background:#ef4444;border-radius:2px;"></span> Expenses</span>
+                </div>`;
         }
 
         function generateIncomeBreakdown(rent, credit, water, other, total) {
@@ -18765,45 +19976,109 @@ Lender/Manager
         // =====================================================
         async function showLentOutDetails() {
             const credits = await dbGetAll('credits');
-            const totalLent = credits.reduce((sum, c) => sum + (c.principal || 0), 0);
-            const activeCredits = credits.filter(c => {
-                const payments = allCreditPayments.filter(p => p.creditId === c.id);
-                const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+            const creditPayments = await dbGetAll('creditPayments');
+            const today = new Date().toISOString().split('T')[0];
+
+            // Compute per-debtor summary
+            const debtorRows = credits.map(c => {
+                const payments = creditPayments.filter(p => p.creditId === c.id);
+                const totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
                 const totalDue = (c.principal || 0) + (c.interest || 0);
-                return totalPaid < totalDue;
+                const balance = Math.max(0, totalDue - totalPaid);
+                const isPaid = balance <= 0;
+                const isOverdue = !isPaid && c.dueDate && c.dueDate < today;
+                const pct = totalDue > 0 ? Math.round((totalPaid / totalDue) * 100) : 0;
+                return { ...c, totalPaid, totalDue, balance, isPaid, isOverdue, pct, paymentCount: payments.length };
             });
-            
-            let content = `
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <div style="font-size: 2.5rem;">💳</div>
-                    <h2 style="margin: 10px 0; color: var(--primary);">₱${totalLent.toLocaleString()}</h2>
-                    <p style="color: var(--text-secondary);">Total Lent Out</p>
-                </div>
-                
-                <div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                    <h4 style="margin-bottom: 10px;">Loan Summary:</h4>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span>Total Credits:</span>
-                        <strong>${credits.length}</strong>
+
+            const totalLent     = credits.reduce((sum, c) => sum + (c.principal || 0), 0);
+            const totalDueAll   = debtorRows.reduce((sum, r) => sum + r.totalDue, 0);
+            const totalPaidAll  = debtorRows.reduce((sum, r) => sum + r.totalPaid, 0);
+            const totalBalance  = debtorRows.reduce((sum, r) => sum + r.balance, 0);
+            const activeCount   = debtorRows.filter(r => !r.isPaid && !r.isOverdue).length;
+            const overdueCount  = debtorRows.filter(r => r.isOverdue).length;
+            const paidCount     = debtorRows.filter(r => r.isPaid).length;
+
+            // Sort: overdue first, then active, then paid
+            debtorRows.sort((a,b) => {
+                if (a.isOverdue && !b.isOverdue) return -1;
+                if (!a.isOverdue && b.isOverdue) return 1;
+                if (!a.isPaid && b.isPaid) return -1;
+                if (a.isPaid && !b.isPaid) return 1;
+                return b.balance - a.balance;
+            });
+
+            const statusBadge = (row) => {
+                if (row.isPaid) return '<span style="background:#d1fae5;color:#065f46;font-size:0.7rem;padding:2px 8px;border-radius:20px;font-weight:700;">✅ PAID</span>';
+                if (row.isOverdue) return '<span style="background:#fee2e2;color:#991b1b;font-size:0.7rem;padding:2px 8px;border-radius:20px;font-weight:700;">🚨 OVERDUE</span>';
+                return '<span style="background:#dbeafe;color:#1e40af;font-size:0.7rem;padding:2px 8px;border-radius:20px;font-weight:700;">⏳ ACTIVE</span>';
+            };
+
+            const rows = debtorRows.length === 0
+                ? '<div style="text-align:center;padding:30px;color:var(--text-secondary);">No credit records yet.</div>'
+                : debtorRows.map(row => `
+                    <div onclick="showCreditDetails(${row.id})" style="background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;padding:14px;margin-bottom:8px;cursor:pointer;${row.isOverdue?'border-left:4px solid #ef4444;':row.isPaid?'border-left:4px solid #10b981;':'border-left:4px solid #3b82f6;'}">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+                            <div>
+                                <div style="font-weight:700;color:var(--text-primary);font-size:0.95rem;">${row.debtor || 'Unknown'}</div>
+                                <div style="font-size:0.75rem;color:var(--text-secondary);">${row.purpose || 'No purpose stated'}</div>
+                            </div>
+                            ${statusBadge(row)}
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px;font-size:0.78rem;">
+                            <div style="text-align:center;background:var(--bg-card);border-radius:6px;padding:6px;">
+                                <div style="color:var(--text-secondary);">Principal</div>
+                                <div style="font-weight:700;color:var(--primary);">₱${(row.principal||0).toLocaleString()}</div>
+                            </div>
+                            <div style="text-align:center;background:var(--bg-card);border-radius:6px;padding:6px;">
+                                <div style="color:var(--text-secondary);">Paid</div>
+                                <div style="font-weight:700;color:#10b981;">₱${row.totalPaid.toLocaleString()}</div>
+                            </div>
+                            <div style="text-align:center;background:var(--bg-card);border-radius:6px;padding:6px;">
+                                <div style="color:var(--text-secondary);">Balance</div>
+                                <div style="font-weight:700;color:${row.balance>0?'#ef4444':'#10b981'};">₱${row.balance.toLocaleString()}</div>
+                            </div>
+                        </div>
+                        <div style="background:var(--bg-card);border-radius:4px;height:6px;overflow:hidden;">
+                            <div style="height:100%;width:${row.pct}%;background:${row.isPaid?'#10b981':row.isOverdue?'#ef4444':'#3b82f6'};border-radius:4px;transition:width 0.4s;"></div>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:0.7rem;color:var(--text-secondary);">
+                            <span>${row.pct}% repaid · ${row.paymentCount} payment${row.paymentCount!==1?'s':''}</span>
+                            <span>${row.dueDate ? '📅 Due: '+row.dueDate : ''}</span>
+                        </div>
+                    </div>`).join('');
+
+            const content = `
+                <!-- Summary Header -->
+                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px;">
+                    <div style="background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.2);border-radius:10px;padding:12px;text-align:center;">
+                        <div style="font-size:1.3rem;font-weight:800;color:var(--primary);">₱${totalLent.toLocaleString()}</div>
+                        <div style="font-size:0.72rem;color:var(--text-secondary);">Total Principal Lent</div>
                     </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span>Active Loans:</span>
-                        <strong>${activeCredits.length}</strong>
+                    <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:12px;text-align:center;">
+                        <div style="font-size:1.3rem;font-weight:800;color:#ef4444;">₱${totalBalance.toLocaleString()}</div>
+                        <div style="font-size:0.72rem;color:var(--text-secondary);">Outstanding Balance</div>
                     </div>
-                    <div style="display: flex; justify-content: space-between;">
-                        <span>Average Loan:</span>
-                        <strong>₱${credits.length > 0 ? Math.round(totalLent / credits.length).toLocaleString() : '0'}</strong>
+                    <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:10px;padding:12px;text-align:center;">
+                        <div style="font-size:1.3rem;font-weight:800;color:#10b981;">₱${totalPaidAll.toLocaleString()}</div>
+                        <div style="font-size:0.72rem;color:var(--text-secondary);">Total Collected</div>
+                    </div>
+                    <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:12px;text-align:center;">
+                        <div style="font-size:1.3rem;font-weight:800;color:#f59e0b;">${credits.length}</div>
+                        <div style="font-size:0.72rem;color:var(--text-secondary);">Total Debtors</div>
                     </div>
                 </div>
-                
-                <div style="padding: 12px; background: rgba(37, 99, 235, 0.1); border-radius: 8px; border-left: 4px solid #2563eb;">
-                    <p style="margin: 0; font-size: 0.9rem;">
-                        <strong>💡 Tip:</strong> ${activeCredits.length > 0 ? `You have ${activeCredits.length} active loans. Monitor repayment schedules to maintain healthy cash flow.` : 'All loans are fully paid! Great collection rate.'}
-                    </p>
+                <!-- Status badges -->
+                <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+                    ${overdueCount>0?`<span style="background:#fee2e2;color:#991b1b;padding:4px 12px;border-radius:20px;font-size:0.78rem;font-weight:700;">🚨 ${overdueCount} Overdue</span>`:''}
+                    <span style="background:#dbeafe;color:#1e40af;padding:4px 12px;border-radius:20px;font-size:0.78rem;font-weight:700;">⏳ ${activeCount} Active</span>
+                    <span style="background:#d1fae5;color:#065f46;padding:4px 12px;border-radius:20px;font-size:0.78rem;font-weight:700;">✅ ${paidCount} Paid</span>
                 </div>
-            `;
-            
-            document.getElementById('financial-details-title').textContent = '💳 Total Lent Out';
+                <!-- Debtor List -->
+                <div style="font-weight:700;color:var(--text-primary);margin-bottom:8px;font-size:0.85rem;">📋 Debtor List</div>
+                ${rows}`;
+
+            document.getElementById('financial-details-title').textContent = '💳 Total Lent Out — All Debtors';
             document.getElementById('financial-details-content').innerHTML = content;
             createCreditsChart(credits);
             showModal('financial-details-modal');
@@ -19617,6 +20892,9 @@ Lender/Manager
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <div style="width: 12px; height: 12px; border-radius: 50%; background: ${priorityColor};" title="${task.priority} priority"></div>
+                            <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); toggleTaskStatus(${task.id})" title="Toggle status" style="padding: 4px 8px; font-size: 0.75rem;">
+                                ${task.status === 'completed' ? '↩️' : task.status === 'in-progress' ? '✅' : '▶️'}
+                            </button>
                             <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); deleteTask(${task.id})" title="Delete task" style="padding: 4px 8px; font-size: 0.75rem;">
                                 🗑️
                             </button>
@@ -19642,7 +20920,18 @@ Lender/Manager
             showModal('task-modal');
         }
 
-        async function editTask(id) {
+        async function toggleTaskStatus(id) {
+    const task = await dbGet('tasks', id);
+    if (!task) return;
+    const cycle = { 'pending': 'in-progress', 'in-progress': 'completed', 'completed': 'pending' };
+    task.status = cycle[task.status] || 'pending';
+    task.updatedAt = new Date().toISOString();
+    await dbUpdate('tasks', task);
+    loadTasks();
+    showToast(`Task marked as ${task.status}`, 'success');
+}
+
+async function editTask(id) {
             const task = await dbGet('tasks', id);
             if (!task) return;
             
@@ -19695,6 +20984,9 @@ Lender/Manager
         }
 
         async function deleteTask(id) {
+            if (currentAppUser && currentAppUser.role === 'cashier') {
+                showToast('⚠️ Cashiers cannot delete tasks. Ask Admin.', 'warning'); return;
+            }
             if (!confirm('🗑️ Delete this task permanently?')) return;
             
             try {
@@ -20163,6 +21455,61 @@ Lender/Manager
                 
                 console.log('✅ Additional income added');
                 
+                // ===== SAMPLE APP USERS (for Manage Users demo) =====
+                const existingUsers = JSON.parse(localStorage.getItem('prism_app_users') || '[]');
+                if (existingUsers.length === 0) {
+                    const sampleUsers = [
+                        { id: 1, username: 'admin', fullname: 'Administrator', role: 'admin', password: 'admin123', email: 'admin@rlm.com', phone: '09171234567', createdAt: new Date().toISOString() },
+                        { id: 2, username: 'cashier1', fullname: 'Cenia Ellioso', role: 'cashier', password: 'cashier123', email: 'cenia@rlm.com', phone: '09182345678', createdAt: new Date().toISOString() },
+                        { id: 3, username: 'cashier2', fullname: 'Roger Ellioso', role: 'cashier', password: 'cashier123', email: 'roger@rlm.com', phone: '09181234567', createdAt: new Date().toISOString() },
+                        { id: 4, username: 'manager1', fullname: 'Maria Santos', role: 'manager', password: 'manager123', email: 'maria@rlm.com', phone: '09189876543', createdAt: new Date().toISOString() },
+                    ];
+                    localStorage.setItem('prism_app_users', JSON.stringify(sampleUsers));
+                }
+
+                // ===== SAMPLE ENDORSEMENTS (Cashier → Admin inbox demo) =====
+                const existingEndorse = JSON.parse(localStorage.getItem('prism_endorsements') || '[]');
+                if (existingEndorse.length === 0) {
+                    const todayStr2 = today.toISOString().split('T')[0];
+                    const sampleEndorse = [
+                        { id: 'end_1', type: 'sales', message: '🏠 Rent Payment Recorded:\n• Tenant: Juan Dela Cruz\n• Amount: ₱3,000\n• Method: Cash\n• Date: ' + todayStr2 + '\nRecorded by: Cenia Ellioso', from: 'cashier1', fromName: 'Cenia Ellioso', timestamp: new Date(today.getTime() - 2*60*60*1000).toISOString(), read: false },
+                        { id: 'end_2', type: 'water', message: '💧 Water Sale — CASH:\n• Customer: Aling Nena Store\n• Gallons: 5\n• Total: ₱125\n• Date: ' + todayStr2 + '\nRecorded by: Cenia Ellioso', from: 'cashier1', fromName: 'Cenia Ellioso', timestamp: new Date(today.getTime() - 1*60*60*1000).toISOString(), read: false },
+                        { id: 'end_3', type: 'credit', message: '💳 Loan Payment Recorded:\n• Borrower: Roberto Fernandez\n• Amount: ₱2,000\n• Date: ' + todayStr2 + '\nRecorded by: Roger Ellioso', from: 'cashier2', fromName: 'Roger Ellioso', timestamp: new Date(today.getTime() - 30*60*1000).toISOString(), read: false },
+                        { id: 'end_4', type: 'expense', message: '💸 Expense Recorded:\n• Description: Office Supplies\n• Amount: ₱350\n• Date: ' + todayStr2 + '\nRecorded by: Cenia Ellioso', from: 'cashier1', fromName: 'Cenia Ellioso', timestamp: new Date(today.getTime() - 3*60*60*1000).toISOString(), read: true },
+                        { id: 'end_5', type: 'income', message: '💰 Income Recorded:\n• Source: Parking Fee\n• Amount: ₱500\n• Date: ' + todayStr2 + '\nRecorded by: Roger Ellioso', from: 'cashier2', fromName: 'Roger Ellioso', timestamp: new Date(today.getTime() - 4*60*60*1000).toISOString(), read: true },
+                    ];
+                    localStorage.setItem('prism_endorsements', JSON.stringify(sampleEndorse));
+                }
+
+                // ===== MORE INCOME for this month (so income section shows data) =====
+                const existingIncome = await dbGetAll('additionalIncome');
+                if (existingIncome.length < 5) {
+                    const moreIncome = [
+                        { description: 'Hardware Store Sales - Week 1', category: 'store', amount: 12500, date: dateStr(3), notes: 'Cement, nails, paints', createdAt: new Date().toISOString() },
+                        { description: 'Hardware Store Sales - Week 2', category: 'store', amount: 9800, date: dateStr(10), notes: 'Tools and electrical', createdAt: new Date().toISOString() },
+                        { description: 'Interest Income - Loans', category: 'interest', amount: 3750, date: dateStr(1), notes: 'Monthly interest collection', createdAt: new Date().toISOString() },
+                        { description: 'Water Station Sales - Week 1', category: 'water', amount: 4200, date: dateStr(5), notes: '168 gallons @ ₱25', createdAt: new Date().toISOString() },
+                        { description: 'Parking Fee - Monthly', category: 'parking', amount: 1500, date: dateStr(1), notes: '3 vehicles @ ₱500', createdAt: new Date().toISOString() },
+                    ];
+                    for (const inc of moreIncome) {
+                        await dbAdd('additionalIncome', inc);
+                    }
+                }
+
+                // ===== MORE EXPENSES this month =====
+                const existingExp = await dbGetAll('expenses');
+                if (existingExp.length < 6) {
+                    const moreExp = [
+                        { description: 'Hardware Store Restocking', category: 'inventory', amount: 15000, date: dateStr(2), notes: 'Cement bags, GI sheets', createdAt: new Date().toISOString() },
+                        { description: 'Employee Salaries', category: 'payroll', amount: 8400, date: dateStr(7), notes: 'Weekly payroll 3 staff', createdAt: new Date().toISOString() },
+                        { description: 'Vehicle Fuel', category: 'transport', amount: 1200, date: dateStr(4), notes: 'Delivery truck', createdAt: new Date().toISOString() },
+                        { description: 'Water Station Filter Replacement', category: 'maintenance', amount: 2800, date: dateStr(6), notes: 'UV filter + carbon filter', createdAt: new Date().toISOString() },
+                    ];
+                    for (const exp of moreExp) {
+                        await dbAdd('expenses', exp);
+                    }
+                }
+
                 // ===== RELOAD ALL SECTIONS =====
                 console.log('Reloading all sections...');
                 await loadDashboard();
@@ -20174,10 +21521,12 @@ Lender/Manager
                 await loadEmployees();
                 await loadTasks();
                 await loadNotes();
+                if (typeof loadIncome === 'function') await loadIncome();
+                if (typeof updateEndorseUnreadBadge === 'function') updateEndorseUnreadBadge();
                 
                 if (currentUser) syncToFirebase();
                 
-                alert('✅ Sample Data Loaded Successfully!\n\n📦 COMPLETE DATASET FOR ALL FEATURES:\n\n🏠 Properties: 7 (3 occupied, 4 vacant)\n👥 Tenants: 4 (3 active, 1 inactive)\n💳 Credits/Loans: 3 debtors with payments\n👷 Employees: 3 with attendance records\n💧 Water: 5 customers with sales\n💸 Expenses: 4 transactions\n✅ Tasks: 8 (pending/in-progress/completed/overdue)\n📝 Notes: 5 (all categories)\n💰 Additional Income: 3 entries\n📋 Client Charges: 2 (pending & paid)\n\n🎯 ALL FEATURES NOW POPULATED!\n\n✨ You can now:\n✅ Test CRUD (Create/Read/Update/Delete)\n✅ Click all stat cards for details\n✅ View charts and analytics\n✅ Generate reports\n✅ Test filters and search\n✅ Try all buttons and features\n\n💡 Explore every section!\n🗑️ Delete this data anytime from Settings');
+                alert('✅ Sample Data Loaded Successfully!\n\n📦 COMPLETE DATASET FOR ALL FEATURES:\n\n🏠 Properties: 7 (3 occupied, 4 vacant)\n👥 Tenants: 4 (3 active, 1 inactive)\n💳 Credits/Loans: 3 debtors with payments\n👷 Employees: 3 with attendance & payroll\n💧 Water: 5 customers with sales\n💸 Expenses: 8 transactions\n✅ Tasks: 8 (pending/in-progress/completed/overdue)\n📝 Notes: 5 (all categories)\n💰 Income: 8 entries (store/water/parking/interest)\n📋 Client Charges: 2 (pending & paid)\n👤 App Users: 4 (admin + 2 cashiers + manager)\n📬 Endorsements: 5 cashier→admin messages\n\n🎯 ALL FEATURES NOW POPULATED!\n\n✨ Cashier Login Demo:\nUsername: cashier1 / Password: cashier123\nUsername: cashier2 / Password: cashier123\n\n💡 Explore every section!\n🗑️ Delete this data anytime from Settings');
                 
                 
                 
@@ -20618,6 +21967,16 @@ function mtHideLoading() {
 }
 
 // ---- Auth tabs ----
+function mtShowLogin() {
+    document.getElementById('mt-login-form').style.display = 'block';
+    document.getElementById('mt-register-form').style.display = 'none';
+    mtClearAuthMessages();
+}
+function mtShowRegister() {
+    document.getElementById('mt-login-form').style.display = 'none';
+    document.getElementById('mt-register-form').style.display = 'block';
+    mtClearAuthMessages();
+}
 function mtSwitchTab(tab) {
     const loginForm = document.getElementById('mt-login-form');
     const registerForm = document.getElementById('mt-register-form');
@@ -20734,9 +22093,31 @@ async function mtRegister() {
 }
 
 async function mtGoogleLogin() {
+    // If Firebase not ready yet, wait for it (up to 5 seconds) then proceed
     if (!firebaseReady || !window.auth) {
-        mtToast('⏳ Firebase is still connecting. Please wait a few seconds and try again.', 'info');
-        return;
+        // Update button to show waiting state
+        const googleBtn = document.querySelector('.mt-google-btn');
+        const originalText = googleBtn ? googleBtn.innerHTML : '';
+        if (googleBtn) googleBtn.innerHTML = '<span style="animation:spin 1s linear infinite;display:inline-block;">⏳</span> Connecting to Firebase...';
+        
+        // Wait for Firebase - check every 200ms, max 5 seconds
+        let waited = 0;
+        const mtMaxWait = navigator.onLine ? 15000 : 3000;
+        await new Promise(resolve => {
+            const check = setInterval(() => {
+                waited += 200;
+                if (firebaseReady && window.auth) { clearInterval(check); resolve(); }
+                else if (waited >= mtMaxWait) { clearInterval(check); resolve(); }
+            }, 200);
+        });
+        
+        // Restore button
+        if (googleBtn) googleBtn.innerHTML = originalText;
+        
+        if (!firebaseReady || !window.auth) {
+            mtShowAuthError('❌ Cannot connect to Google Sign-In. Check your internet connection and try again.');
+            return;
+        }
     }
     try {
         const provider = new firebase.auth.GoogleAuthProvider();
@@ -20777,25 +22158,25 @@ function mtLocalLogin() {
     modal.id = 'mt-local-login-modal';
     modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
     modal.innerHTML = `
-        <div style="background:var(--bg-card,#1e293b);border:1px solid rgba(99,102,241,0.3);border-radius:16px;padding:28px;width:100%;max-width:380px;">
-            <h3 style="margin:0 0 6px;color:white;font-size:1.1rem;">🔐 Local Login</h3>
-            <p style="color:#94a3b8;font-size:0.82rem;margin:0 0 20px;">Sign in with your account credentials</p>
+        <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:16px;padding:28px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+            <h3 style="margin:0 0 6px;color:var(--text-primary);font-size:1.1rem;">🔐 Local Login</h3>
+            <p style="color:var(--text-secondary);font-size:0.82rem;margin:0 0 20px;">Sign in with your account credentials</p>
             <div id="mt-local-error" style="display:none;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:10px;border-radius:8px;margin-bottom:14px;font-size:0.85rem;"></div>
             <div style="margin-bottom:14px;">
-                <label style="display:block;color:#94a3b8;font-size:0.82rem;margin-bottom:6px;">Username</label>
+                <label style="display:block;color:var(--text-secondary);font-size:0.82rem;margin-bottom:6px;">Username</label>
                 <input id="mt-local-username" type="text" placeholder="Enter username" autocomplete="username"
-                    style="width:100%;padding:10px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:white;font-size:0.9rem;box-sizing:border-box;">
+                    style="width:100%;padding:10px 14px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);font-size:0.9rem;box-sizing:border-box;">
             </div>
             <div style="margin-bottom:20px;">
-                <label style="display:block;color:#94a3b8;font-size:0.82rem;margin-bottom:6px;">Password</label>
+                <label style="display:block;color:var(--text-secondary);font-size:0.82rem;margin-bottom:6px;">Password</label>
                 <input id="mt-local-password" type="password" placeholder="Enter password" autocomplete="current-password"
-                    style="width:100%;padding:10px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:white;font-size:0.9rem;box-sizing:border-box;">
+                    style="width:100%;padding:10px 14px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);font-size:0.9rem;box-sizing:border-box;">
             </div>
             <button onclick="mtLocalLoginSubmit()" style="width:100%;padding:12px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;border-radius:10px;color:white;font-weight:700;font-size:0.95rem;cursor:pointer;margin-bottom:10px;">
                 Sign In
             </button>
-            <button onclick="document.getElementById('mt-local-login-modal').remove()" style="width:100%;padding:10px;background:transparent;border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:#94a3b8;font-size:0.85rem;cursor:pointer;">
-                Cancel
+            <button onclick="document.getElementById('mt-local-login-modal').remove()" style="width:100%;padding:10px;background:transparent;border:1px solid rgba(255,255,255,0.15);border-radius:10px;color:#94a3b8;font-size:0.9rem;cursor:pointer;">
+                ← Cancel
             </button>
         </div>
     `;
@@ -20845,6 +22226,13 @@ function mtLocalLoginSubmit() {
         localStorage.setItem('prism_app_user', JSON.stringify(matched));
 
         mtToast('✅ Welcome, ' + matched.fullname + '!', 'success');
+        // Save org so Firebase onAuthStateChanged won't redirect to setup
+        const existingOrg = localStorage.getItem('mt_current_org');
+        if (!existingOrg || existingOrg === '{}') {
+            const fallbackOrg = { id: 'local_org', name: 'My Business', plan: 'standard', bizType: 'mixed', ownerId: 'local', status: 'active' };
+            localStorage.setItem('mt_current_org', JSON.stringify(fallbackOrg));
+            localStorage.setItem('mt_current_org_id', 'local_org');
+        }
         setTimeout(() => {
             mtShowApp();
             mtUpdateOrgBadge();
@@ -20884,7 +22272,8 @@ function _doLocalAdminLogin() {
     localStorage.setItem('mt_current_org_id', orgId);
 
     const parsedOrg = (() => { try { return JSON.parse(localStorage.getItem('mt_current_org') || '{}'); } catch(e) { return null; } })();
-    if (!parsedOrg || !parsedOrg.name || parsedOrg.name === 'My Business') {
+    // Only show setup if truly no org exists at all
+    if (!parsedOrg || !parsedOrg.id) {
         mtShowSetup();
         mtToast('Welcome! Please set up your organization first.', 'info', 5000);
     } else {
@@ -21072,7 +22461,7 @@ async function mtLaunchOrg() {
     };
     
     // Update org user list
-    const orgUsersKey = `carent_app_users_${orgId}`;
+    const orgUsersKey = `prism_app_users_${orgId}`;
     localStorage.setItem(orgUsersKey, JSON.stringify([ownerUser]));
     localStorage.setItem('carent_current_user', JSON.stringify(ownerUser));
 
@@ -21087,6 +22476,10 @@ async function mtLaunchOrg() {
 
 // ---- Org Badge in App Header ----
 function mtUpdateOrgBadge() {
+    // Update page title
+    if (MT.currentOrg && MT.currentOrg.name) {
+        document.title = MT.currentOrg.name + ' — PRISM';
+    }
     const org = MT.currentOrg;
     if (!org) return;
 
@@ -21326,6 +22719,15 @@ function toggleEndorsePanel() {
     if (panel.classList.contains('open')) renderSentEndorsements();
 }
 
+function showAddPropertyModal() { showModal('property-modal'); }
+function checkFirebaseStatus() {
+    if (firebaseReady) {
+        showToast('✅ Firebase connected — real-time sync active', 'success');
+    } else {
+        showToast('⚠️ Firebase offline — using local storage only', 'warning');
+    }
+}
+function openAdminInbox() { toggleAdminInbox(); }
 function toggleAdminInbox() {
     const panel = document.getElementById('admin-inbox-panel');
     panel.classList.toggle('open');
@@ -21639,6 +23041,102 @@ async function loadCashierDashboard() {
     }
 }
 
+// ================================================================
+// ADMIN: CASHIER ACTIVITY SUMMARY
+// ================================================================
+async function loadAdminCashierSummary() {
+    const container = document.getElementById('admin-cashier-summary');
+    if (!container) return;
+
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const endorsements = JSON.parse(localStorage.getItem('prism_endorsements') || '[]');
+        const todayEndorse = endorsements.filter(e => e.timestamp && e.timestamp.startsWith(today));
+        const unreadCount = endorsements.filter(e => !e.read).length;
+
+        // Get today's transactions from all stores
+        const [payments, waterSales, credits, expenses, income] = await Promise.all([
+            dbGetAll('payments'),
+            dbGetAll('waterSales'),
+            dbGetAll('creditPayments'),
+            dbGetAll('expenses'),
+            dbGetAll('additionalIncome')
+        ]);
+
+        const todayPay = payments.filter(p => p.date === today);
+        const todayWater = waterSales.filter(w => w.date === today);
+        const todayCredit = credits.filter(c => c.date === today);
+        const todayExp = expenses.filter(e => e.date === today);
+        const todayInc = income.filter(i => i.date === today);
+
+        const totalIn = 
+            todayPay.reduce((s,p) => s + (p.amount||0), 0) +
+            todayWater.reduce((s,w) => s + (w.amountPaid||0), 0) +
+            todayCredit.reduce((s,c) => s + (c.amount||0), 0) +
+            todayInc.reduce((s,i) => s + (i.amount||0), 0);
+        const totalOut = todayExp.reduce((s,e) => s + (e.amount||0), 0);
+        const txnCount = todayPay.length + todayWater.length + todayCredit.length + todayExp.length + todayInc.length;
+
+        container.innerHTML = `
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
+                <div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:10px;padding:12px;text-align:center;">
+                    <div style="font-size:1.2rem;font-weight:700;color:#10b981;">₱${totalIn.toLocaleString()}</div>
+                    <div style="font-size:0.75rem;color:var(--text-secondary);">💰 Collected</div>
+                </div>
+                <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:12px;text-align:center;">
+                    <div style="font-size:1.2rem;font-weight:700;color:#ef4444;">₱${totalOut.toLocaleString()}</div>
+                    <div style="font-size:0.75rem;color:var(--text-secondary);">💸 Expenses</div>
+                </div>
+                <div style="background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:10px;padding:12px;text-align:center;">
+                    <div style="font-size:1.2rem;font-weight:700;color:#6366f1;">${txnCount}</div>
+                    <div style="font-size:0.75rem;color:var(--text-secondary);">📋 Transactions</div>
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;">
+                <div style="background:var(--bg-primary);border-radius:8px;padding:8px;text-align:center;cursor:pointer;" onclick="showSection('tenants')" title="View rent payments">
+                    <div style="font-weight:700;color:#f59e0b;">₱${todayPay.reduce((s,p)=>s+(p.amount||0),0).toLocaleString()}</div>
+                    <div style="font-size:0.7rem;color:var(--text-secondary);">🏠 Rent</div>
+                </div>
+                <div style="background:var(--bg-primary);border-radius:8px;padding:8px;text-align:center;cursor:pointer;" onclick="showSection('water')" title="View water sales">
+                    <div style="font-weight:700;color:#06b6d4;">₱${todayWater.reduce((s,w)=>s+(w.amountPaid||0),0).toLocaleString()}</div>
+                    <div style="font-size:0.7rem;color:var(--text-secondary);">💧 Water</div>
+                </div>
+                <div style="background:var(--bg-primary);border-radius:8px;padding:8px;text-align:center;cursor:pointer;" onclick="showSection('credits')" title="View credit payments">
+                    <div style="font-weight:700;color:#8b5cf6;">₱${todayCredit.reduce((s,c)=>s+(c.amount||0),0).toLocaleString()}</div>
+                    <div style="font-size:0.7rem;color:var(--text-secondary);">💳 Credits</div>
+                </div>
+                <div style="background:var(--bg-primary);border-radius:8px;padding:8px;text-align:center;cursor:pointer;" onclick="showSection('income')" title="View other income">
+                    <div style="font-weight:700;color:#10b981;">₱${todayInc.reduce((s,i)=>s+(i.amount||0),0).toLocaleString()}</div>
+                    <div style="font-size:0.7rem;color:var(--text-secondary);">💰 Income</div>
+                </div>
+            </div>
+            ${unreadCount > 0 ? `
+            <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:10px;margin-bottom:10px;cursor:pointer;" onclick="openAdminInbox()">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span style="color:#f87171;font-weight:600;font-size:0.85rem;">📬 ${unreadCount} Unread Endorsement${unreadCount>1?'s':''} from Cashier</span>
+                    <span style="color:#f87171;font-size:0.8rem;">→ View</span>
+                </div>
+            </div>` : `<div style="color:var(--text-secondary);font-size:0.8rem;text-align:center;">✅ No pending endorsements</div>`}
+            ${todayEndorse.length > 0 ? `
+            <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:8px;">
+                <strong style="color:var(--text-primary);">Recent Activity:</strong>
+                ${todayEndorse.slice(0,3).map(e => `
+                <div style="padding:6px 0;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;">
+                    <span>${e.fromName||'Cashier'} — ${e.type}</span>
+                    <span style="color:var(--text-secondary);">${new Date(e.timestamp).toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'})}</span>
+                </div>`).join('')}
+                ${todayEndorse.length > 3 ? `<div style="text-align:center;padding-top:6px;"><button class="btn btn-sm btn-secondary" onclick="openAdminInbox()">View All ${todayEndorse.length} activities</button></div>` : ''}
+            </div>` : ''}
+            <div style="display:flex;gap:8px;margin-top:12px;">
+                <button class="btn btn-sm btn-secondary" style="flex:1;" onclick="showSection('reports')">📊 Full Reports</button>
+                <button class="btn btn-sm btn-primary" style="flex:1;" onclick="openAdminInbox()">📬 Admin Inbox</button>
+            </div>
+        `;
+    } catch(e) {
+        container.innerHTML = '<div style="color:var(--text-secondary);text-align:center;padding:20px;">No cashier activity yet today.</div>';
+    }
+}
+
 // Show cashier dashboard vs admin dashboard based on role
 function mtShowRoleDashboard() {
     const isCashier = currentAppUser && currentAppUser.role === 'cashier';
@@ -21695,6 +23193,15 @@ async function mtInit() {
         if (typeof firebase !== 'undefined' && firebase.auth && window.auth) {
             (window.auth || firebase.auth()).onAuthStateChanged(async (user) => {
             MT.currentUser = user;
+            
+            // If user is already in the app via local login, don't interfere
+            const appWrapper = document.querySelector('.prism-app-wrapper');
+            const appActive = appWrapper && appWrapper.classList.contains('mt-active');
+            if (appActive && currentAppUser) {
+                console.log('[MT] App already active via local login, skipping auth redirect');
+                if (user) MT.currentUser = user; // update MT user silently
+                return;
+            }
             
             if (user) {
                 // Check if super admin
@@ -21805,8 +23312,8 @@ async function mtInit() {
             }
         });
     } else {
-        // Firebase not ready yet, retry in 1s
-        setTimeout(setupFirebaseAuth, 1000);
+        // Firebase not ready yet, keep retrying
+        setTimeout(setupFirebaseAuth, navigator.onLine ? 200 : 500);
     }
     };
     // Try immediately, keep retrying until Firebase is ready
