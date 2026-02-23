@@ -23613,8 +23613,10 @@ function mtShowRoleDashboard() {
 
 // App-level logout — works for both Google and local users
 async function mtAppLogout() {
-    if (!await showConfirm('Are you sure you want to logout?', 'warning', '👋 Logout', 'Yes, Logout')) return;
-    // Stop real-time sync listener before logout
+    let confirmed = false;
+    try { confirmed = await showConfirm('Are you sure you want to logout?', 'warning', '👋 Logout', 'Yes, Logout'); } 
+    catch(e) { confirmed = window.confirm('Are you sure you want to logout?'); }
+    if (!confirmed) return;
     try { mtStopRealtimeSync(); } catch(e) {}
     try { showToast('👋 Logged out successfully', 'success'); } catch(e) {}
     setTimeout(() => mtLogout(), 800);
@@ -23838,13 +23840,13 @@ window.addEventListener('DOMContentLoaded', () => {
 
 
         // ========== CUSTOM CONFIRM MODAL SYSTEM ==========
-        let prismConfirmResolve = null;
+        window.prismConfirmResolve = null;
 
         function showConfirm(message, type = 'danger', title = null, okLabel = null, cancelLabel = 'Cancel') {
             return new Promise(resolve => {
-                prismConfirmResolve = (result) => {
+                window.prismConfirmResolve = (result) => {
                     document.getElementById('prism-confirm-overlay').classList.remove('show');
-                    prismConfirmResolve = null;
+                    window.prismConfirmResolve = null;
                     resolve(result);
                 };
 
@@ -23865,7 +23867,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 // Close on overlay click
                 document.getElementById('prism-confirm-overlay').onclick = (e) => {
                     if (e.target === document.getElementById('prism-confirm-overlay')) {
-                        prismConfirmResolve(false);
+                        if (window.prismConfirmResolve) window.prismConfirmResolve(false);
                     }
                 };
 
@@ -23873,7 +23875,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 const escHandler = (e) => {
                     if (e.key === 'Escape') {
                         document.removeEventListener('keydown', escHandler);
-                        if (prismConfirmResolve) prismConfirmResolve(false);
+                        if (window.prismConfirmResolve) window.prismConfirmResolve(false);
                     }
                 };
                 document.addEventListener('keydown', escHandler);
