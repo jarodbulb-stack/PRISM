@@ -7159,14 +7159,24 @@
                     // Restore app users (admin/cashier accounts) to localStorage
                     if (data.appUsers && Array.isArray(data.appUsers) && data.appUsers.length > 0) {
                         const localUsers = JSON.parse(localStorage.getItem('prism_app_users') || '[]');
-                        const merged = [...data.appUsers];
-                        localUsers.forEach(lu => {
-                            if (!merged.find(u => u.id === lu.id || u.username === lu.username)) {
-                                merged.push(lu);
-                            }
-                        });
+                        const allDefault = localUsers.every(u => u._isDefault);
+                        let merged;
+                        if (allDefault) {
+                            // Local only has defaults — fully replace with cloud users
+                            merged = data.appUsers;
+                        } else {
+                            // Merge: cloud users win for same ID/username, keep local-only users
+                            merged = [...data.appUsers];
+                            localUsers.forEach(lu => {
+                                if (!merged.find(u => u.id === lu.id || u.username === lu.username)) {
+                                    merged.push(lu);
+                                }
+                            });
+                        }
                         localStorage.setItem('prism_app_users', JSON.stringify(merged));
                         console.log('[Sync] App users synced from cloud:', merged.length);
+                        // Refresh users UI if currently visible
+                        try { if (typeof showUserManagement === 'function') showUserManagement(); } catch(e) {}
                     }
 
                     // Refresh UI
@@ -18484,6 +18494,7 @@ Lender/Manager
             }
 
             if (!localStorage.getItem('prism_app_users')) {
+                // Create temporary default — will be replaced by cloud sync if online
                 const defaultUsers = [
                     {
                         id: 1,
@@ -18491,6 +18502,7 @@ Lender/Manager
                         password: 'admin123',
                         fullname: 'Administrator',
                         role: 'admin',
+                        _isDefault: true, // flag so sync knows to replace this
                         permissions: {
                             'add-property': true, 'edit-property': true, 'delete-property': true,
                             'add-tenant': true, 'edit-tenant': true, 'delete-tenant': true,
