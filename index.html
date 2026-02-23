@@ -7076,17 +7076,28 @@
                 let orgId = (() => {
                     try { return (MT && MT.currentOrg && MT.currentOrg.id) || localStorage.getItem('mt_current_org_id') || null; } catch(e) { return null; }
                 })();
-                // If orgId is local_org, try to resolve real orgId from Firestore
-                if (!orgId || orgId === 'local_org') {
-                    try {
-                        const memberSnap = await db.collection('mt_org_members').where('userId', '==', cu.uid).limit(1).get();
-                        if (!memberSnap.empty) {
-                            orgId = memberSnap.docs[0].data().orgId;
-                            localStorage.setItem('mt_current_org_id', orgId);
-                        }
-                    } catch(e) {}
-                }
+                // Always find PRIMARY org (oldest where user is owner)
+                try {
+                    const memberSnap2 = await db.collection('mt_org_members')
+                        .where('userId', '==', cu.uid)
+                        .where('role', '==', 'owner')
+                        .get();
+                    if (!memberSnap2.empty) {
+                        let primaryOrgId = null;
+                        let oldestNum = Infinity;
+                        memberSnap2.docs.forEach(doc => {
+                            const d = doc.data();
+                            const num = parseInt((d.orgId || '').replace('org_', '')) || 0;
+                            if (num > 0 && num < oldestNum) { oldestNum = num; primaryOrgId = d.orgId; }
+                        });
+                        if (primaryOrgId) orgId = primaryOrgId;
+                    }
+                } catch(e) {}
                 if (!orgId || orgId === 'local_org') orgId = cu.uid;
+                if (orgId && orgId !== 'local_org') {
+                    localStorage.setItem('mt_current_org_id', orgId);
+                    try { if (MT && MT.currentOrg) MT.currentOrg.id = orgId; } catch(e) {}
+                }
                 const dataRef = db.collection('prism_data').doc(orgId);
 
                 // Get all data from IndexedDB
@@ -7141,19 +7152,35 @@
                     if (orgId && orgId !== 'local_org') break;
                     await new Promise(r => setTimeout(r, 200));
                 }
-                // If orgId is still 'local_org' or null, look up real org from Firestore using Firebase UID
-                if (!orgId || orgId === 'local_org') {
-                    try {
-                        const dbRef2 = window.db || firestore;
-                        const memberSnap = await dbRef2.collection('mt_org_members').where('userId', '==', cu.uid).limit(1).get();
-                        if (!memberSnap.empty) {
-                            orgId = memberSnap.docs[0].data().orgId;
-                            localStorage.setItem('mt_current_org_id', orgId);
-                            console.log('[Sync] Resolved real orgId from Firestore:', orgId);
+                // Always find PRIMARY org from Firestore (oldest org where user is owner)
+                // This prevents multi-org confusion when device created a different org
+                try {
+                    const dbRef2 = window.db || firestore;
+                    const memberSnap = await dbRef2.collection('mt_org_members')
+                        .where('userId', '==', cu.uid)
+                        .where('role', '==', 'owner')
+                        .get();
+                    if (!memberSnap.empty) {
+                        // Pick oldest org (lowest timestamp in orgId = first created)
+                        let primaryOrgId = null;
+                        let oldestNum = Infinity;
+                        memberSnap.docs.forEach(doc => {
+                            const d = doc.data();
+                            const num = parseInt((d.orgId || '').replace('org_', '')) || 0;
+                            if (num > 0 && num < oldestNum) { oldestNum = num; primaryOrgId = d.orgId; }
+                        });
+                        if (primaryOrgId && primaryOrgId !== orgId) {
+                            console.log('[Sync] Using primary orgId:', primaryOrgId, '(was:', orgId + ')');
+                            orgId = primaryOrgId;
                         }
-                    } catch(e) { console.warn('[Sync] Could not resolve orgId from Firestore:', e); }
+                    }
+                } catch(e) { console.warn('[Sync] Could not resolve primary orgId:', e); }
+                if (!orgId || orgId === 'local_org') orgId = cu.uid;
+                // Always save the resolved orgId
+                if (orgId && orgId !== 'local_org') {
+                    localStorage.setItem('mt_current_org_id', orgId);
+                    try { if (MT && MT.currentOrg) MT.currentOrg.id = orgId; } catch(e) {}
                 }
-                if (!orgId || orgId === 'local_org') orgId = cu.uid; // last resort fallback
 
                 console.log('[Sync] Pulling from org:', orgId);
                 // DEBUG: show orgId visibly on screen
