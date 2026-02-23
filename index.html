@@ -7071,9 +7071,20 @@
             try {
                 // Use orgId for multi-tenant data isolation
                 const db = window.db || firestore;
-                const orgId = (() => {
-                    try { return (MT && MT.currentOrg && MT.currentOrg.id) || localStorage.getItem('mt_current_org_id') || (currentUser && currentUser.uid) || 'local'; } catch(e) { return currentUser && currentUser.uid || 'local'; }
+                let orgId = (() => {
+                    try { return (MT && MT.currentOrg && MT.currentOrg.id) || localStorage.getItem('mt_current_org_id') || null; } catch(e) { return null; }
                 })();
+                // If orgId is local_org, try to resolve real orgId from Firestore
+                if (!orgId || orgId === 'local_org') {
+                    try {
+                        const memberSnap = await db.collection('mt_org_members').where('userId', '==', cu.uid).limit(1).get();
+                        if (!memberSnap.empty) {
+                            orgId = memberSnap.docs[0].data().orgId;
+                            localStorage.setItem('mt_current_org_id', orgId);
+                        }
+                    } catch(e) {}
+                }
+                if (!orgId || orgId === 'local_org') orgId = cu.uid;
                 const dataRef = db.collection('prism_data').doc(orgId);
 
                 // Get all data from IndexedDB
@@ -7125,10 +7136,23 @@
                 let orgId = null;
                 for (let i = 0; i < 15; i++) {
                     try { orgId = (MT && MT.currentOrg && MT.currentOrg.id) || localStorage.getItem('mt_current_org_id'); } catch(e) {}
-                    if (orgId) break;
+                    if (orgId && orgId !== 'local_org') break;
                     await new Promise(r => setTimeout(r, 200));
                 }
-                if (!orgId) orgId = cu.uid; // fallback to uid if org never found
+                // If orgId is still 'local_org' or null, look up real org from Firestore using Firebase UID
+                if (!orgId || orgId === 'local_org') {
+                    try {
+                        const dbRef2 = window.db || firestore;
+                        const memberSnap = await dbRef2.collection('mt_org_members').where('userId', '==', cu.uid).limit(1).get();
+                        if (!memberSnap.empty) {
+                            orgId = memberSnap.docs[0].data().orgId;
+                            // Save for future use
+                            localStorage.setItem('mt_current_org_id', orgId);
+                            console.log('[Sync] Resolved real orgId from Firestore:', orgId);
+                        }
+                    } catch(e) { console.warn('[Sync] Could not resolve orgId from Firestore:', e); }
+                }
+                if (!orgId || orgId === 'local_org') orgId = cu.uid; // last resort fallback
 
                 console.log('[Sync] Pulling from org:', orgId);
                 const dataRef = dbRef.collection('prism_data').doc(orgId);
@@ -7244,11 +7268,15 @@
 
         // Manual sync button
         async function manualSync() {
-            if (!currentUser) {
+            const cu = currentUser || (typeof MT !== 'undefined' && MT.currentUser);
+            if (!cu || (cu.uid && cu.uid.startsWith('local_'))) {
                 try { showToast('❌ Please sign in to sync', 'error'); } catch(e) {}
                 return;
             }
+            try { showToast('⏳ Syncing...', 'info'); } catch(e) {}
             await syncToFirebase();
+            await syncFromFirebase();
+            try { showToast('✅ Sync complete!', 'success'); } catch(e) {}
         }
 
         // =====================================================
@@ -23682,11 +23710,17 @@ async function mtInit() {
                     setTimeout(() => {
                         if (typeof updateUserDisplay === 'function') updateUserDisplay();
                         if (typeof loadDashboard === 'function') loadDashboard();
+                        // Push current data first (ensures cloud has latest appUsers)
+                        if (typeof syncToFirebase === 'function') {
+                            syncToFirebase().catch(e => {});
+                        }
                         // Pull from cloud on load (catches up mobile/fresh device)
                         if (typeof syncFromFirebase === 'function') {
-                            syncFromFirebase().then(() => {
-                                if (typeof loadDashboard === 'function') loadDashboard();
-                            }).catch(e => console.warn('[MT] Sync on load failed:', e));
+                            setTimeout(() => {
+                                syncFromFirebase().then(() => {
+                                    if (typeof loadDashboard === 'function') loadDashboard();
+                                }).catch(e => console.warn('[MT] Sync on load failed:', e));
+                            }, 1500); // wait 1.5s after push before pulling
                         }
                         // Start real-time listener for live cross-device sync
                         mtStartRealtimeSync();
