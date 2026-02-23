@@ -6778,7 +6778,7 @@
         window.addEventListener('online', () => {
             isOnline = true;
             updateSyncStatus('online');
-            if (currentUser) syncToFirebase();
+            debouncedSync();
         });
 
         window.addEventListener('offline', () => {
@@ -7052,15 +7052,30 @@
         // =====================================================
         // FIREBASE SYNC FUNCTIONS
         // =====================================================
+        // Debounce timer for sync
+        let _syncDebounceTimer = null;
+        function debouncedSync() {
+            if (_syncDebounceTimer) clearTimeout(_syncDebounceTimer);
+            _syncDebounceTimer = setTimeout(() => syncToFirebase(), 2000);
+        }
+
         async function syncToFirebase() {
-            if (!firebaseReady || !firestore || !currentUser || !isOnline) return;
+            const db = window.db || firestore;
+            const cu = currentUser || MT.currentUser;
+            if (!db || !cu || !isOnline) return;
+            if (cu.uid && cu.uid.startsWith('local_')) return; // skip for local-only users
 
             updateSyncStatus('syncing');
             console.log('[Sync] Starting sync to Firebase...');
 
             try {
-                const userDocRef = firestore.collection('users').doc(currentUser.uid);
-                
+                // Use orgId for multi-tenant data isolation
+                const db = window.db || firestore;
+                const orgId = (() => {
+                    try { return (MT && MT.currentOrg && MT.currentOrg.id) || localStorage.getItem('mt_current_org_id') || (currentUser && currentUser.uid) || 'local'; } catch(e) { return currentUser && currentUser.uid || 'local'; }
+                })();
+                const dataRef = db.collection('prism_data').doc(orgId);
+
                 // Get all data from IndexedDB
                 const data = {
                     properties: await getAllFromStore('properties'),
@@ -7079,13 +7094,15 @@
                     salaryPayments: await getAllFromStore('salaryPayments'),
                     timeRecords: await getAllFromStore('timeRecords'),
                     tasks: await getAllFromStore('tasks'),
-                    lastSync: new Date().toISOString()
+                    lastSync: new Date().toISOString(),
+                    orgId: orgId
                 };
 
-                await userDocRef.set(data, { merge: true });
-                console.log('[Sync] Data synced to Firebase successfully');
+                _lastSyncTimestamp = data.lastSync;
+                await dataRef.set(data, { merge: true });
+                console.log('[Sync] Data synced to Firestore — org:', orgId);
                 updateSyncStatus('online');
-                try { showToast('☁️ Data synced to cloud', 'success'); } catch(e) {}
+                try { showToast('☁️ Synced to cloud', 'success'); } catch(e) {}
             } catch (error) {
                 console.error('[Sync] Error syncing to Firebase:', error);
                 updateSyncStatus('offline');
@@ -7093,14 +7110,27 @@
         }
 
         async function syncFromFirebase() {
-            if (!firebaseReady || !firestore || !currentUser) return;
+            const cu = currentUser || (typeof MT !== 'undefined' && MT.currentUser);
+            const dbRef = window.db || firestore;
+            if (!dbRef || !cu) return;
+            if (cu.uid && cu.uid.startsWith('local_')) return;
 
             updateSyncStatus('syncing');
             console.log('[Sync] Starting sync from Firebase...');
 
             try {
-                const userDocRef = firestore.collection('users').doc(currentUser.uid);
-                const doc = await userDocRef.get();
+                // Wait up to 3s for MT.currentOrg to be set (MT login timing)
+                let orgId = null;
+                for (let i = 0; i < 15; i++) {
+                    try { orgId = (MT && MT.currentOrg && MT.currentOrg.id) || localStorage.getItem('mt_current_org_id'); } catch(e) {}
+                    if (orgId) break;
+                    await new Promise(r => setTimeout(r, 200));
+                }
+                if (!orgId) orgId = cu.uid; // fallback to uid if org never found
+
+                console.log('[Sync] Pulling from org:', orgId);
+                const dataRef = dbRef.collection('prism_data').doc(orgId);
+                const doc = await dataRef.get();
 
                 if (doc.exists) {
                     const data = doc.data();
@@ -7143,15 +7173,17 @@
                 const transaction = db.transaction([storeName], 'readwrite');
                 const store = transaction.objectStore(storeName);
 
-                // Clear existing data
-                store.clear();
+                // Use put() instead of clear+add to merge by key (avoids data loss)
+                // Cloud record wins for existing IDs; local-only records are preserved
+                let pending = data.length;
+                if (pending === 0) { resolve(); return; }
 
-                // Add new data
                 data.forEach(item => {
-                    store.add(item);
+                    const req = store.put(item);
+                    req.onsuccess = () => { pending--; if (pending === 0) resolve(); };
+                    req.onerror = () => { pending--; if (pending === 0) resolve(); };
                 });
 
-                transaction.oncomplete = () => resolve();
                 transaction.onerror = () => reject(transaction.error);
             });
         }
@@ -9264,7 +9296,7 @@
                 loadDashboard();
                 loadTenants();
                 // Sync to Firebase
-                if (currentUser) syncToFirebase();
+                debouncedSync();
             } catch (error) {
                 console.error('Error saving property:', error);
                 showToast('❌ Error saving property: ' + error.message, 'error');
@@ -9477,7 +9509,7 @@
             hideModal('expense-detail-modal');
             loadProperties();
             loadDashboard();
-            if (currentUser) syncToFirebase();
+            debouncedSync();
         }
 
         async function populatePropertyDropdown() {
@@ -9645,7 +9677,7 @@
                 loadProperties();
                 loadDashboard();
                 // Sync to Firebase
-                if (currentUser) syncToFirebase();
+                debouncedSync();
                 showToast('Tenant saved successfully! Property is now occupied.', 'success');
             } catch (error) {
                 console.error('Error saving tenant:', error);
@@ -10109,7 +10141,7 @@
             tenant.depositPaidDate = new Date().toISOString().split('T')[0];
             await dbUpdate('tenants', tenant);
             await viewTenantDetails(tenantId);
-            if (currentUser) syncToFirebase();
+            debouncedSync();
         }
 
         // Edit Tenant
@@ -10206,7 +10238,7 @@
             await viewTenantDetails(id);
             loadTenants();
             loadDashboard();
-            if (currentUser) syncToFirebase();
+            debouncedSync();
         }
 
         // Record payment for specific tenant
@@ -10304,7 +10336,7 @@ async function recordTenantPayment(tenantId) {
             await viewTenantDetails(tenantId);
             loadTenants();
             loadDashboard();
-            if (currentUser) syncToFirebase();
+            debouncedSync();
             showToast('Payment recorded successfully!', 'success');
             if (currentAppUser && currentAppUser.role === 'cashier' && typeof loadCashierDashboard === 'function') {
                 setTimeout(loadCashierDashboard, 400);
@@ -10334,7 +10366,7 @@ async function recordTenantPayment(tenantId) {
                 loadCredits();
             }
             loadDashboard();
-            if (currentUser) syncToFirebase();
+            debouncedSync();
         }
 
         async function deleteTenant(id) {
@@ -10356,7 +10388,7 @@ async function recordTenantPayment(tenantId) {
             hideModal('tenant-detail-modal');
             loadTenants();
             loadDashboard();
-            if (currentUser) syncToFirebase();
+            debouncedSync();
         }
 
         async function populateTenantDropdown() {
@@ -10467,7 +10499,7 @@ async function recordTenantPayment(tenantId) {
                 loadTenants();
                 loadCredits();
                 // Sync to Firebase
-                if (currentUser) syncToFirebase();
+                debouncedSync();
 
             } catch (error) {
                 PrismGuardian.log('ERROR', 'Payment save failed', error);
@@ -11508,7 +11540,7 @@ async function loadWaterCustomers() {
                 document.getElementById('water-customer-form').reset();
                 document.getElementById('water-customer-edit-id').value = '';
                 loadWaterCustomers();
-                if (currentUser) syncToFirebase();
+                debouncedSync();
             } catch (error) {
                 console.error('Error saving water customer:', error);
                 showToast('❌ Error: ' + error.message, 'error');
@@ -11594,7 +11626,7 @@ async function loadWaterCustomers() {
                 hideModal('water-sale-modal');
                 document.getElementById('water-sale-form').reset();
                 loadWaterCustomers();
-                if (currentUser) syncToFirebase();
+                debouncedSync();
                 showToast('Sale recorded successfully!', 'success');
 
                 if (currentAppUser && currentAppUser.role === 'cashier' && typeof loadCashierDashboard === 'function') {
@@ -11734,7 +11766,7 @@ async function loadWaterCustomers() {
             
             loadWaterCustomers();
             viewWaterCustomerDetails(customerId);
-            if (currentUser) syncToFirebase();
+            debouncedSync();
             
             if (remaining > 0) {
                 showToast(`✅ Payment of ₱${paymentAmount.toLocaleString()} recorded! — ₱${(paymentAmount - remaining).toLocaleString()} applied to ${appliedCount} transaction(s). ₱${remaining.toLocaleString()} is overpayment/advance.`, 'success');
@@ -11787,7 +11819,7 @@ async function loadWaterCustomers() {
             await dbDelete('waterCustomers', id);
             hideModal('water-customer-detail-modal');
             loadWaterCustomers();
-            if (currentUser) syncToFirebase();
+            debouncedSync();
         }
 
         // =====================
@@ -11973,7 +12005,7 @@ async function loadWaterCustomers() {
                 ['mon','tue','wed','thu','fri','sat'].forEach(d => document.getElementById('work-'+d).checked = true);
                 document.getElementById('work-sun').checked = false;
                 loadEmployees();
-                if (currentUser) syncToFirebase();
+                debouncedSync();
             } catch (error) {
                 console.error('Error saving employee:', error);
                 showToast('❌ Error: ' + error.message, 'error');
@@ -12197,7 +12229,7 @@ async function loadWaterCustomers() {
                 hideModal('time-record-modal');
                 loadEmployees();
                 viewEmployeeDetails(employeeId);
-                if (currentUser) syncToFirebase();
+                debouncedSync();
                 showToast('Attendance recorded!', 'success');
             } catch (error) {
                 console.error('Error saving time record:', error);
@@ -12300,7 +12332,7 @@ async function showQuickAttendance() {
             
             loadQuickAttendance();
             loadEmployees();
-            if (currentUser) syncToFirebase();
+            debouncedSync();
         }
 
         // ============================================================
@@ -12338,7 +12370,7 @@ async function showQuickAttendance() {
 
             await dbAdd('timeRecords', record);
             loadEmployees();
-            if (currentUser) syncToFirebase();
+            debouncedSync();
             showToast(`✅ Attendance recorded for ${employeeName}`, 'success');
         }
 
@@ -12780,7 +12812,7 @@ async function showPayrollSummary() {
                 
                 hideModal('give-salary-modal');
                 loadEmployees();
-                if (currentUser) syncToFirebase();
+                debouncedSync();
                 
                 showToast(`✅ Salary of ₱${netPay.toLocaleString()} paid to ${employee.name}! — Records reset for next pay period.`, 'success');
                 
@@ -12832,7 +12864,7 @@ async function showPayrollSummary() {
                 hideModal('advance-modal');
                 loadEmployees();
                 viewEmployeeDetails(employeeId);
-                if (currentUser) syncToFirebase();
+                debouncedSync();
                 showToast('Cash advance recorded!', 'success');
                 if (currentAppUser && currentAppUser.role === 'cashier' && typeof loadCashierDashboard === 'function') {
                     setTimeout(loadCashierDashboard, 400);
@@ -13023,7 +13055,7 @@ async function showPayrollSummary() {
                 hideModal('salary-modal');
                 loadEmployees();
                 viewEmployeeDetails(employeeId);
-                if (currentUser) syncToFirebase();
+                debouncedSync();
                 showToast(`✅ Salary paid! ${unpaidRecords.length} days marked as paid`, 'success');
             } catch (error) {
                 console.error('Error paying salary:', error);
@@ -13086,7 +13118,7 @@ async function showPayrollSummary() {
             await dbDelete('employees', id);
             hideModal('employee-detail-modal');
             loadEmployees();
-            if (currentUser) syncToFirebase();
+            debouncedSync();
             showToast('Employee deleted successfully!', 'success');
         }
 
@@ -13135,7 +13167,7 @@ async function showPayrollSummary() {
                 loadCredits();
                 loadDashboard();
                 // Sync to Firebase
-                if (currentUser) syncToFirebase();
+                debouncedSync();
                 showToast('Credit/Loan saved successfully!', 'success');
 
                 // Auto-endorse new credits to admin
@@ -13713,7 +13745,7 @@ async function showPayrollSummary() {
             await viewCreditDetails(id);
             loadCredits();
             loadDashboard();
-            if (currentUser) syncToFirebase();
+            debouncedSync();
         }
 
         // Record payment for specific credit
@@ -13822,7 +13854,7 @@ async function showPayrollSummary() {
             loadCredits();
             loadDashboard();
             // Sync to Firebase
-            if (currentUser) syncToFirebase();
+            debouncedSync();
 
             // Cashier: auto-endorse credit payment to admin
             if (currentAppUser && currentAppUser.role === 'cashier') {
@@ -13850,7 +13882,7 @@ async function showPayrollSummary() {
             hideModal('credit-detail-modal');
             loadCredits();
             loadDashboard();
-            if (currentUser) syncToFirebase();
+            debouncedSync();
         }
 
         async function populateCreditDropdown() {
@@ -14084,7 +14116,7 @@ async function showPayrollSummary() {
                 hideModal('note-modal');
                 loadNotes();
                 // Sync to Firebase
-                if (currentUser) syncToFirebase();
+                debouncedSync();
             } catch (error) {
                 console.error('Error saving note:', error);
                 showToast('❌ Error saving note: ' + error.message, 'error');
@@ -14423,7 +14455,7 @@ async function showPayrollSummary() {
             await dbDelete('customNotes', id);
             hideModal('note-detail-modal');
             loadNotes();
-            if (currentUser) syncToFirebase();
+            debouncedSync();
         }
 
         // =====================
@@ -14597,7 +14629,7 @@ async function showPayrollSummary() {
             }
 
             // Sync to Firebase
-            if (currentUser) syncToFirebase();
+            debouncedSync();
             showToast('ℹ️ Action completed.', 'info');
         }
 
@@ -14657,7 +14689,7 @@ async function showPayrollSummary() {
             } else {
                 await viewCreditDetails(clientId);
             }
-            if (currentUser) syncToFirebase();
+            debouncedSync();
         }
 
         // Add notes to client
@@ -14681,7 +14713,7 @@ async function showPayrollSummary() {
                 await dbUpdate('credits', client);
                 await viewCreditDetails(id);
             }
-            if (currentUser) syncToFirebase();
+            debouncedSync();
         }
 
         async function deleteClientNote(type, id, noteIndex) {
@@ -14697,7 +14729,7 @@ async function showPayrollSummary() {
                 await dbUpdate('credits', client);
                 await viewCreditDetails(id);
             }
-            if (currentUser) syncToFirebase();
+            debouncedSync();
         }
 
         // =====================
@@ -14808,7 +14840,7 @@ async function showPayrollSummary() {
                 loadExpenses();
                 loadDashboard();
                 // Sync to Firebase
-                if (currentUser) syncToFirebase();
+                debouncedSync();
                 showToast('Expense saved successfully!', 'success');
 
                 if (currentAppUser && currentAppUser.role === 'cashier' && typeof loadCashierDashboard === 'function') {
@@ -15057,7 +15089,7 @@ async function showPayrollSummary() {
             hideModal('expense-detail-modal');
             loadExpenses();
             loadDashboard();
-            if (currentUser) syncToFirebase();
+            debouncedSync();
         }
 
         async function populateExpensePropertyDropdown() {
@@ -15278,7 +15310,7 @@ async function showPayrollSummary() {
                 hideModal('income-modal');
                 await loadIncome();
                 await loadDashboard();
-                if (currentUser) syncToFirebase();
+                debouncedSync();
 
                 // Cashier: auto-endorse income entry to admin
                 if (currentAppUser && currentAppUser.role === 'cashier' && !id) {
@@ -15326,7 +15358,7 @@ async function showPayrollSummary() {
                 await loadDashboard();
                 showToast('Income deleted', 'success');
                 
-                if (currentUser) syncToFirebase();
+                debouncedSync();
             } catch (error) {
                 console.error('Error deleting income:', error);
                 showToast('❌ Error deleting income: ' + error.message, 'error');
@@ -16339,7 +16371,7 @@ async function showPayrollSummary() {
                 }
 
                 // Sync to Firebase after restore
-                if (currentUser) syncToFirebase();
+                debouncedSync();
 
                 showToast('ℹ️ Action completed.', 'info');
                 loadDashboard();
@@ -16381,9 +16413,11 @@ async function showPayrollSummary() {
                 try { await dbClear('tasks'); } catch (e) {}
 
                 // Clear Firebase cloud data (so it doesn't come back)
-                if (firebaseReady && firestore && currentUser) {
+                if (firebaseReady && (window.db || firestore) && (currentUser || MT.currentUser)) {
                     console.log('[Clear] Deleting cloud data...');
-                    const userDocRef = firestore.collection('users').doc(currentUser.uid);
+                    const _db = window.db || firestore;
+                    const _orgId = (MT && MT.currentOrg && MT.currentOrg.id) || localStorage.getItem('mt_current_org_id') || (currentUser && currentUser.uid);
+                    const userDocRef = _db.collection('prism_data').doc(_orgId);
                     await userDocRef.set({
                         properties: [],
                         tenants: [],
@@ -16453,8 +16487,10 @@ async function showPayrollSummary() {
                 console.log(`[Clear] Local ${storeName} cleared`);
 
                 // Clear from Firebase
-                if (firebaseReady && firestore && currentUser) {
-                    const userDocRef = firestore.collection('users').doc(currentUser.uid);
+                if (firebaseReady && (window.db || firestore) && (currentUser || MT.currentUser)) {
+                    const _db = window.db || firestore;
+                    const _orgId = (MT && MT.currentOrg && MT.currentOrg.id) || localStorage.getItem('mt_current_org_id') || (currentUser && currentUser.uid);
+                    const userDocRef = _db.collection('prism_data').doc(_orgId);
                     const updateData = {};
                     updateData[storeName] = [];
                     updateData.lastSync = new Date().toISOString();
@@ -18901,7 +18937,7 @@ Lender/Manager
                     }
                 }
                 
-                if (currentUser) syncToFirebase();
+                debouncedSync();
                 loadWaterCustomers();
                 
                 showToast('⚠️ Please enter a reason for voiding this sale.', 'warning');
@@ -21097,7 +21133,7 @@ async function editTask(id) {
                 
                 hideModal('task-modal');
                 await loadTasks();
-                if (currentUser) syncToFirebase();
+                debouncedSync();
             } catch (error) {
                 console.error('Error saving task:', error);
                 showToast('❌ Error: ' + error.message, 'error');
@@ -21113,7 +21149,7 @@ async function editTask(id) {
             try {
                 await dbDelete('tasks', id);
                 await loadTasks();
-                if (currentUser) syncToFirebase();
+                debouncedSync();
                 showToast('Task deleted successfully', 'success');
             } catch (error) {
                 console.error('Error deleting task:', error);
@@ -21645,7 +21681,7 @@ async function editTask(id) {
                 if (typeof loadIncome === 'function') await loadIncome();
                 if (typeof updateEndorseUnreadBadge === 'function') updateEndorseUnreadBadge();
                 
-                if (currentUser) syncToFirebase();
+                debouncedSync();
                 
                 showToast('s', 'info');
                 
@@ -23618,7 +23654,15 @@ async function mtInit() {
                     setTimeout(() => {
                         if (typeof updateUserDisplay === 'function') updateUserDisplay();
                         if (typeof loadDashboard === 'function') loadDashboard();
-                    }, 300);
+                        // Pull from cloud on load (catches up mobile/fresh device)
+                        if (typeof syncFromFirebase === 'function') {
+                            syncFromFirebase().then(() => {
+                                if (typeof loadDashboard === 'function') loadDashboard();
+                            }).catch(e => console.warn('[MT] Sync on load failed:', e));
+                        }
+                        // Start real-time listener for live cross-device sync
+                        mtStartRealtimeSync();
+                    }, 500);
 
                 } else {
                     // New user — no org found anywhere — show setup wizard
@@ -23713,3 +23757,57 @@ window.addEventListener('DOMContentLoaded', () => {
         // ========== END CONFIRM MODAL SYSTEM ==========
 
         </script>
+        // ========== REAL-TIME CROSS-DEVICE SYNC ==========
+        let _realtimeSyncUnsubscribe = null;
+        let _lastSyncTimestamp = null;
+
+        function mtStartRealtimeSync() {
+            const dbRef = window.db || (typeof firestore !== 'undefined' ? firestore : null);
+            if (!dbRef) return;
+
+            const orgId = (() => {
+                try { return (MT && MT.currentOrg && MT.currentOrg.id) || localStorage.getItem('mt_current_org_id'); } catch(e) { return null; }
+            })();
+            if (!orgId) return;
+
+            if (_realtimeSyncUnsubscribe) { _realtimeSyncUnsubscribe(); _realtimeSyncUnsubscribe = null; }
+
+            console.log('[RealtimeSync] Starting listener for org:', orgId);
+
+            _realtimeSyncUnsubscribe = dbRef.collection('prism_data').doc(orgId)
+                .onSnapshot(async (doc) => {
+                    if (!doc.exists) return;
+                    const data = doc.data();
+                    if (!data || !data.lastSync) return;
+                    if (_lastSyncTimestamp && data.lastSync === _lastSyncTimestamp) return;
+
+                    console.log('[RealtimeSync] Remote change detected — updating local data...');
+
+                    const tables = ['properties','tenants','payments','credits','creditPayments',
+                        'expenses','customNotes','additionalIncome','clientCharges',
+                        'waterCustomers','waterSales','employees','cashAdvances',
+                        'salaryPayments','timeRecords','tasks'];
+
+                    for (const t of tables) {
+                        if (data[t] && Array.isArray(data[t])) {
+                            try { await syncCollectionToLocal(t, data[t]); } catch(e) {}
+                        }
+                    }
+
+                    try {
+                        if (typeof loadDashboard === 'function') loadDashboard();
+                        if (typeof refreshFinancialOverview === 'function') refreshFinancialOverview();
+                    } catch(e) {}
+
+                    try { showToast('🔄 Data updated from another device', 'info', 2500); } catch(e) {}
+                }, (err) => {
+                    console.warn('[RealtimeSync] Listener error:', err);
+                });
+        }
+
+        function mtStopRealtimeSync() {
+            if (_realtimeSyncUnsubscribe) { _realtimeSyncUnsubscribe(); _realtimeSyncUnsubscribe = null; }
+        }
+        // ========== END REAL-TIME SYNC ==========
+
+
