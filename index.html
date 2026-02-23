@@ -23023,24 +23023,36 @@ async function mtSAGoToApp() {
     // Already have org loaded
     if (MT.currentOrg) { mtShowApp(); return; }
 
-    // Try localStorage first
+    // Try localStorage first — but verify against Firestore if online
+    // (in case device has wrong/old org cached)
     const localOrgs = JSON.parse(localStorage.getItem('mt_user_orgs') || '[]');
-    if (localOrgs.length > 0) {
+    if (localOrgs.length > 0 && !window.db) {
+        // Offline: use cached org
         MT.currentOrg = localOrgs[0];
         localStorage.setItem('mt_current_org', JSON.stringify(localOrgs[0]));
         localStorage.setItem('mt_current_org_id', localOrgs[0].id);
         mtShowApp();
         return;
     }
+    // Online: always verify with Firestore to get correct primary org
 
     // Try Firestore (fresh device — no local data)
     if (window.db && MT.currentUser) {
         mtToast('⏳ Loading your organization...', 'info');
         try {
             const snap = await window.db.collection(MT.ORG_MEMBERS_COL)
-                .where('userId', '==', MT.currentUser.uid).get();
+                .where('userId', '==', MT.currentUser.uid)
+                .where('role', '==', 'owner')
+                .get();
             if (!snap.empty) {
-                const orgId = snap.docs[0].data().orgId;
+                // Pick oldest org (lowest timestamp in orgId)
+                let oldestDoc = snap.docs[0];
+                let oldestNum = Infinity;
+                snap.docs.forEach(doc => {
+                    const num = parseInt((doc.data().orgId || '').replace('org_', '')) || 0;
+                    if (num > 0 && num < oldestNum) { oldestNum = num; oldestDoc = doc; }
+                });
+                const orgId = oldestDoc.data().orgId;
                 const doc = await window.db.collection(MT.ORGS_COL).doc(orgId).get();
                 if (doc.exists) {
                     const org = { id: doc.id, ...doc.data() };
