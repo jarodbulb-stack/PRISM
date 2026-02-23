@@ -23614,8 +23614,10 @@ function mtShowRoleDashboard() {
 // App-level logout — works for both Google and local users
 async function mtAppLogout() {
     if (!await showConfirm('Are you sure you want to logout?', 'warning', '👋 Logout', 'Yes, Logout')) return;
-    showToast('👋 Logged out successfully', 'success');
-    setTimeout(() => mtLogout(), 800); // delegate to the full MT logout
+    // Stop real-time sync listener before logout
+    try { mtStopRealtimeSync(); } catch(e) {}
+    try { showToast('👋 Logged out successfully', 'success'); } catch(e) {}
+    setTimeout(() => mtLogout(), 800);
 }
 
 // ---- Main Init ----
