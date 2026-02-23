@@ -6688,7 +6688,7 @@
         let auth = null;
         let firestore = null;
         let currentUser = null;
-        let isOnline = navigator.onLine;
+        let isOnline = true; // let Firebase SDK handle connectivity — navigator.onLine is unreliable on mobile
         let firebaseReady = false;
         let firebaseInitAttempts = 0;
         const FIREBASE_MAX_ATTEMPTS = 200; // Up to 200 x 50ms = 10 seconds (handles slow networks)
@@ -6757,8 +6757,10 @@
                     if (user) {
                         console.log('[Auth] User signed in:', user.email);
                         updateSyncStatus('syncing');
+                        // Push local data first, then pull from cloud
+                        try { await syncToFirebase(); } catch(e) {}
                         await syncFromFirebase();
-                        updateSyncStatus('online');
+                        updateSyncStatus('synced');
                     } else {
                         console.log('[Auth] User signed out');
                         updateSyncStatus('offline');
@@ -7061,8 +7063,8 @@
 
         async function syncToFirebase() {
             const db = window.db || firestore;
-            const cu = currentUser || MT.currentUser;
-            if (!db || !cu || !isOnline) return;
+            const cu = currentUser || (typeof MT !== 'undefined' ? MT.currentUser : null);
+            if (!db || !cu) return;
             if (cu.uid && cu.uid.startsWith('local_')) return; // skip for local-only users
 
             updateSyncStatus('syncing');
@@ -7114,8 +7116,8 @@
                 _lastSyncTimestamp = data.lastSync;
                 await dataRef.set(data, { merge: true });
                 console.log('[Sync] Data synced to Firestore — org:', orgId);
-                updateSyncStatus('online');
-                try { showToast('☁️ Synced to cloud', 'success'); } catch(e) {}
+                updateSyncStatus('synced');
+                try { showToast('☁️ Synced to: ' + orgId.substring(0,12) + '...', 'success', 4000); } catch(e) {}
             } catch (error) {
                 console.error('[Sync] Error syncing to Firebase:', error);
                 updateSyncStatus('offline');
@@ -7146,7 +7148,6 @@
                         const memberSnap = await dbRef2.collection('mt_org_members').where('userId', '==', cu.uid).limit(1).get();
                         if (!memberSnap.empty) {
                             orgId = memberSnap.docs[0].data().orgId;
-                            // Save for future use
                             localStorage.setItem('mt_current_org_id', orgId);
                             console.log('[Sync] Resolved real orgId from Firestore:', orgId);
                         }
@@ -7155,8 +7156,13 @@
                 if (!orgId || orgId === 'local_org') orgId = cu.uid; // last resort fallback
 
                 console.log('[Sync] Pulling from org:', orgId);
+                // DEBUG: show orgId visibly on screen
+                try { showToast('🔍 Syncing org: ' + orgId.substring(0,12) + '...', 'info', 4000); } catch(e) {}
+
                 const dataRef = dbRef.collection('prism_data').doc(orgId);
                 const doc = await dataRef.get();
+                // DEBUG: show what was found
+                try { showToast(doc.exists ? '📦 Cloud data found! appUsers: ' + (doc.data().appUsers ? doc.data().appUsers.length : 0) : '❌ No cloud data at this path!', doc.exists ? 'success' : 'error', 5000); } catch(e) {}
 
                 if (doc.exists) {
                     const data = doc.data();
@@ -7211,7 +7217,7 @@
                     await syncToFirebase();
                 }
 
-                updateSyncStatus('online');
+                updateSyncStatus('synced');
             } catch (error) {
                 console.error('[Sync] Error syncing from Firebase:', error);
                 updateSyncStatus('offline');
@@ -7268,15 +7274,23 @@
 
         // Manual sync button
         async function manualSync() {
-            const cu = currentUser || (typeof MT !== 'undefined' && MT.currentUser);
+            const cu = currentUser || (typeof MT !== 'undefined' ? MT.currentUser : null);
             if (!cu || (cu.uid && cu.uid.startsWith('local_'))) {
-                try { showToast('❌ Please sign in to sync', 'error'); } catch(e) {}
+                try { showToast('❌ Not signed in to Firebase. Use Google Sign-In in Cloud Sync settings.', 'error'); } catch(e) {}
                 return;
             }
+            updateSyncStatus('syncing');
             try { showToast('⏳ Syncing...', 'info'); } catch(e) {}
-            await syncToFirebase();
-            await syncFromFirebase();
-            try { showToast('✅ Sync complete!', 'success'); } catch(e) {}
+            try {
+                await syncToFirebase();
+                await syncFromFirebase();
+                updateSyncStatus('synced');
+                try { showToast('✅ Sync complete!', 'success'); } catch(e) {}
+            } catch(e) {
+                console.error('[ManualSync] Error:', e);
+                try { showToast('❌ Sync failed. Check your connection.', 'error'); } catch(e2) {}
+                updateSyncStatus('offline');
+            }
         }
 
         // =====================================================
