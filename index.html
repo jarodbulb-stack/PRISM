@@ -7869,9 +7869,7 @@
 
                 const confirmMsg = `Are you sure you want to restore from backup?\n\nBackup Date: ${new Date(backup.timestamp).toLocaleString()}\n\nThis will replace all current data.`;
                 
-                if (!confirm(confirmMsg)) return;
-                if (!confirm('⚠️ SECOND CONFIRMATION: This action cannot be undone. Continue?')) return;
-                if (!confirm('⚠️ FINAL CONFIRMATION: All current data will be replaced. Proceed?')) return;
+                if (!await showConfirm(confirmMsg + '\n\nThis action cannot be undone.', 'danger', '⚠️ Final Confirmation', 'Yes, Proceed')) return;
 
                 try {
                     await this.restoreFromBackup(backup);
@@ -9021,7 +9019,7 @@
         }
 
         async function removeClientPhoto(type, id) {
-            if (!confirm('Remove this ID photo?')) return;
+            if (!await showConfirm('Remove this ID photo?', 'warning', '🖼️ Remove Photo', 'Yes, Remove')) return;
 
             try {
                 const record = type === 'tenant' 
@@ -9473,8 +9471,7 @@
                 return;
             }
 
-            if (!confirm('Are you sure you want to delete this property?')) return;
-            if (!confirm('This action cannot be undone. Continue?')) return;
+            if (!await showConfirm('This will permanently delete this property. This action cannot be undone.', 'danger', '🗑️ Delete Property', 'Yes, Delete')) return;
 
             await dbDelete('properties', id);
             hideModal('expense-detail-modal');
@@ -10106,7 +10103,7 @@
 
         // Mark deposit as paid
         async function markDepositPaid(tenantId) {
-            if (!confirm('Mark security deposit as paid?')) return;
+            if (!await showConfirm('Mark this security deposit as paid?', 'success', '💰 Security Deposit', 'Yes, Mark Paid')) return;
             const tenant = await dbGet('tenants', tenantId);
             tenant.depositPaid = true;
             tenant.depositPaidDate = new Date().toISOString().split('T')[0];
@@ -10325,9 +10322,7 @@ async function recordTenantPayment(tenantId) {
                 showToast('⛔ Cashiers cannot delete payments. Contact admin.', 'error');
                 return;
             }
-            if (!confirm('⚠️ WARNING: Are you sure you want to delete this payment?')) return;
-            if (!confirm('⚠️ SECOND CONFIRMATION: This payment record will be permanently removed. Continue?')) return;
-            if (!confirm('⚠️ FINAL CONFIRMATION: This action cannot be undone. Type OK to proceed.')) return;
+            if (!await showConfirm('This payment record will be permanently removed. This action cannot be undone.', 'danger', '🗑️ Delete Payment', 'Yes, Delete')) return;
 
             if (type === 'rent') {
                 await dbDelete('payments', paymentId);
@@ -10347,9 +10342,7 @@ async function recordTenantPayment(tenantId) {
                 showToast('⛔ Cashiers cannot delete tenant records. Contact admin.', 'error');
                 return;
             }
-            if (!confirm('⚠️ WARNING: Are you sure you want to delete this tenant?')) return;
-            if (!confirm('⚠️ SECOND CONFIRMATION: This will also delete all payment records for this tenant. Continue?')) return;
-            if (!confirm('⚠️ FINAL CONFIRMATION: This action cannot be undone. Type OK to proceed.')) return;
+            if (!await showConfirm('This will also delete all payment records for this tenant. This action cannot be undone.', 'danger', '🗑️ Delete Tenant', 'Yes, Delete')) return;
 
             // Delete tenant payments
             const payments = await dbGetAll('payments');
@@ -11230,7 +11223,89 @@ async function recordTenantPayment(tenantId) {
             color: var(--text-primary);
         }
 
-    </style>
+    
+        /* ========== CUSTOM CONFIRM MODAL ========== */
+        #prism-confirm-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.65);
+            z-index: 999999;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            backdrop-filter: blur(2px);
+        }
+        #prism-confirm-overlay.show {
+            display: flex;
+        }
+        #prism-confirm-box {
+            background: #1e293b;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 28px 24px 20px;
+            width: 100%;
+            max-width: 380px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+            animation: confirmSlideIn 0.18s ease;
+        }
+        @keyframes confirmSlideIn {
+            from { transform: scale(0.92) translateY(10px); opacity: 0; }
+            to   { transform: scale(1) translateY(0); opacity: 1; }
+        }
+        #prism-confirm-icon {
+            font-size: 2.2rem;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+        #prism-confirm-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #f8fafc;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        #prism-confirm-message {
+            font-size: 0.875rem;
+            color: #94a3b8;
+            text-align: center;
+            line-height: 1.5;
+            margin-bottom: 22px;
+        }
+        #prism-confirm-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        #prism-confirm-cancel {
+            flex: 1;
+            padding: 11px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            color: #94a3b8;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        #prism-confirm-cancel:hover { background: rgba(255,255,255,0.1); }
+        #prism-confirm-ok {
+            flex: 1;
+            padding: 11px;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.15s;
+        }
+        #prism-confirm-ok:hover { opacity: 0.88; }
+        #prism-confirm-ok.danger  { background: linear-gradient(135deg,#ef4444,#dc2626); color: #fff; }
+        #prism-confirm-ok.warning { background: linear-gradient(135deg,#f59e0b,#d97706); color: #fff; }
+        #prism-confirm-ok.success { background: linear-gradient(135deg,#10b981,#059669); color: #fff; }
+        #prism-confirm-ok.info    { background: linear-gradient(135deg,#6366f1,#4f46e5); color: #fff; }
+
+        </style>
                 </head>
                 <body>
                     <h1>💰 PRISM - Credit/Loan Report</h1>
@@ -11278,7 +11353,21 @@ async function recordTenantPayment(tenantId) {
                     </div>
 
                     <scr` + `ipt>window.onload = function() { window.print(); }<\/scr` + `ipt>
-                </body>
+                
+    <!-- ========== CUSTOM CONFIRM MODAL ========== -->
+    <div id="prism-confirm-overlay">
+        <div id="prism-confirm-box">
+            <div id="prism-confirm-icon">❓</div>
+            <div id="prism-confirm-title">Confirm</div>
+            <div id="prism-confirm-message"></div>
+            <div id="prism-confirm-buttons">
+                <button id="prism-confirm-cancel" onclick="prismConfirmResolve(false)">Cancel</button>
+                <button id="prism-confirm-ok" class="danger" onclick="prismConfirmResolve(true)">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+</body>
                 </html>
             `);
             printWindow.document.close();
@@ -11291,7 +11380,7 @@ async function recordTenantPayment(tenantId) {
         let waterFilter = 'all';
 
         async function deleteWaterSale(id) {
-    if (!confirm('Delete this water sale?')) return;
+    if (!await showConfirm('This water sale record will be permanently deleted.', 'danger', '🗑️ Delete Water Sale', 'Yes, Delete')) return;
     await dbDelete('waterSales', id);
     loadWaterCustomers();
     showToast('Water sale deleted', 'success');
@@ -11513,7 +11602,7 @@ async function loadWaterCustomers() {
                 }
                 // Cashier: offer quick endorsement for credit/partial sales
                 if (currentAppUser && currentAppUser.role === 'cashier' && (sale.status === 'credit' || sale.status === 'partial')) {
-                    if (confirm(`💧 Water sale recorded (${sale.status.toUpperCase()}).\nBalance: ₱${sale.balance.toLocaleString()}\n\nEndorse this credit sale to admin?`)) {
+                    if (await showConfirm(`Balance: ₱${sale.balance.toLocaleString()}. Endorse this credit water sale to admin?`, 'info', '💧 Water Sale Recorded', 'Yes, Endorse', 'No Thanks')) {
                         quickEndorse('water', `💧 Water Sale — ${sale.status.toUpperCase()}:\n• Gallons: ${gallons}\n• Total: ₱${total.toLocaleString()}\n• Paid: ₱${paidNow.toLocaleString()}\n• Balance: ₱${sale.balance.toLocaleString()}\n• Date: ${date}\nRecorded by: ${currentAppUser?.fullname || 'Cashier'}`);
                     }
                 }
@@ -11685,8 +11774,7 @@ async function loadWaterCustomers() {
                 showToast('⛔ Cashiers cannot delete customer records. Contact admin.', 'error');
                 return;
             }
-            if (!confirm('Delete this customer and all their transactions?')) return;
-            if (!confirm('This cannot be undone. Continue?')) return;
+            if (!await showConfirm('This will delete this customer and all their transaction history. This cannot be undone.', 'danger', '🗑️ Delete Customer', 'Yes, Delete')) return;
             
             // Delete customer sales
             const sales = await dbGetAll('waterSales');
@@ -12082,7 +12170,7 @@ async function loadWaterCustomers() {
             const existing = await dbGetAll('timeRecords');
             const duplicate = existing.find(r => r.employeeId === employeeId && r.date === date && (!editId || r.id !== parseInt(editId)));
             if (duplicate) {
-                if (!confirm('A record already exists for this date. Replace it?')) return;
+                if (!await showConfirm('An attendance record already exists for this date. Do you want to replace it?', 'warning', '📅 Replace Record', 'Yes, Replace')) return;
                 await dbDelete('timeRecords', duplicate.id);
             }
             
@@ -12232,9 +12320,7 @@ async function showQuickAttendance() {
             }
 
             const statusLabels = { present: 'Present ✅', absent: 'Absent ❌', halfday: 'Half Day 🕐' };
-            if (!confirm(`Record ${statusLabels[status]} for ${employeeName} on ${today}?
-
-Note: This cannot be deleted. Contact admin to void.`)) return;
+            if (!await showConfirm(`Record ${statusLabels[status]} for ${employeeName} today?\n\nNote: Cannot be deleted. Contact admin to void.`, 'info', '📅 Record Attendance', 'Yes, Record')) return;
 
             const record = {
                 employeeId,
@@ -12635,7 +12721,7 @@ async function showPayrollSummary() {
         }
 
         async function confirmGiveSalary(employeeId, netPay, dateFrom, dateTo, daysWorked, halfDays, otHours, bonus, lates, advances) {
-            if (!confirm(`Confirm payment of ₱${netPay.toLocaleString()} to employee?`)) return;
+            if (!await showConfirm(`Pay ₱${netPay.toLocaleString()} to this employee?`, 'success', '💵 Confirm Salary Payment', 'Yes, Pay')) return;
             
             const employee = await dbGet('employees', employeeId);
             const paymentDate = new Date().toISOString().split('T')[0];
@@ -12980,8 +13066,7 @@ async function showPayrollSummary() {
                 showToast('⛔ Only admins can delete employees.', 'error');
                 return;
             }
-            if (!confirm('Delete this employee and all their records?')) return;
-            if (!confirm('This cannot be undone. Continue?')) return;
+            if (!await showConfirm('This will delete this employee and all their attendance, payroll, and advance records. This cannot be undone.', 'danger', '🗑️ Delete Employee', 'Yes, Delete')) return;
             
             // Delete advances, salaries, and time records
             const advances = await dbGetAll('cashAdvances');
@@ -13751,9 +13836,7 @@ async function showPayrollSummary() {
                 showToast('⛔ Cashiers cannot delete credits. Contact admin.', 'error');
                 return;
             }
-            if (!confirm('⚠️ WARNING: Are you sure you want to delete this credit/loan?')) return;
-            if (!confirm('⚠️ SECOND CONFIRMATION: This will also delete all payment records for this credit. Continue?')) return;
-            if (!confirm('⚠️ FINAL CONFIRMATION: This action cannot be undone. Type OK to proceed.')) return;
+            if (!await showConfirm('This will also delete all payment records for this credit/loan. This action cannot be undone.', 'danger', '🗑️ Delete Credit/Loan', 'Yes, Delete')) return;
 
             // Delete credit payments
             const creditPayments = await dbGetAll('creditPayments');
@@ -14334,7 +14417,7 @@ async function showPayrollSummary() {
             if (currentAppUser && currentAppUser.role === 'cashier') {
                 showToast('⚠️ Cashiers cannot delete notes. Ask Admin.', 'warning'); return;
             }
-            if (!confirm('Are you sure you want to delete this note?')) return;
+            if (!await showConfirm('This note will be permanently deleted.', 'danger', '🗑️ Delete Note', 'Yes, Delete')) return;
 
             await ensureNotesStore();
             await dbDelete('customNotes', id);
@@ -14565,7 +14648,7 @@ async function showPayrollSummary() {
         }
 
         async function deleteCharge(chargeId, clientType, clientId) {
-            if (!confirm('Delete this charge?')) return;
+            if (!await showConfirm('This charge will be permanently deleted.', 'danger', '🗑️ Delete Charge', 'Yes, Delete')) return;
             
             await dbDelete('clientCharges', chargeId);
             
@@ -14733,7 +14816,7 @@ async function showPayrollSummary() {
                 }
                 // Cashier: offer quick endorsement
                 if (currentAppUser && currentAppUser.role === 'cashier') {
-                    if (confirm(`Expense of ₱${amount.toLocaleString()} recorded.\n\nEndorse this expense to admin for review?`)) {
+                    if (await showConfirm(`Expense of ₱${amount.toLocaleString()} recorded.\n\nEndorse this expense to admin for review?`, 'info', '🧾 Expense Recorded', 'Yes, Endorse', 'No Thanks')) {
                         quickEndorse('expense', `📋 Expense recorded:\n• Category: ${category}\n• Description: ${description}\n• Amount: ₱${amount.toLocaleString()}\n• Date: ${date}\n${notes ? '• Notes: ' + notes : ''}\nRecorded by: ${currentAppUser?.fullname || 'Cashier'}`);
                     }
                 }
@@ -14968,9 +15051,7 @@ async function showPayrollSummary() {
                 showToast('⛔ Cashiers cannot delete expenses. Contact admin.', 'error');
                 return;
             }
-            if (!confirm('⚠️ WARNING: Are you sure you want to delete this expense?')) return;
-            if (!confirm('⚠️ SECOND CONFIRMATION: This expense record will be permanently removed. Continue?')) return;
-            if (!confirm('⚠️ FINAL CONFIRMATION: This action cannot be undone. Type OK to proceed.')) return;
+            if (!await showConfirm('This expense record will be permanently removed. This action cannot be undone.', 'danger', '🗑️ Delete Expense', 'Yes, Delete')) return;
 
             await dbDelete('expenses', id);
             hideModal('expense-detail-modal');
@@ -15236,7 +15317,7 @@ async function showPayrollSummary() {
             const id = document.getElementById('income-edit-id').value;
             if (!id) return;
             
-            if (!confirm('Delete this income record?')) return;
+            if (!await showConfirm('This income record will be permanently deleted.', 'danger', '🗑️ Delete Income', 'Yes, Delete')) return;
             
             try {
                 await dbDelete('additionalIncome', parseInt(id));
@@ -16192,7 +16273,7 @@ async function showPayrollSummary() {
             const file = event.target.files[0];
             if (!file) return;
 
-            if (!confirm('This will replace all existing data. Are you sure you want to continue?')) {
+            if (!await showConfirm('This will replace ALL existing data with the backup file. Your current data will be lost. Are you sure?', 'warning', '📥 Restore Backup', 'Yes, Restore')) {
                 event.target.value = '';
                 return;
             }
@@ -16278,9 +16359,7 @@ async function showPayrollSummary() {
         }
 
         async function clearAllData() {
-            if (!confirm('⚠️ WARNING: Are you sure you want to delete ALL data?')) return;
-            if (!confirm('⚠️ SECOND CONFIRMATION: All properties, tenants, payments, credits, expenses, notes, water customers, and employee data will be permanently deleted from THIS DEVICE and THE CLOUD. Continue?')) return;
-            if (!confirm('⚠️ FINAL CONFIRMATION: This is your LAST CHANCE. This action CANNOT be undone and will delete data from ALL your devices. Proceed?')) return;
+            if (!await showConfirm('ALL data will be permanently deleted from this device and the cloud — properties, tenants, payments, credits, expenses, notes, water records, and employees. This CANNOT be undone.', 'danger', '☢️ Delete ALL Data', 'Yes, Delete Everything')) return;
 
             try {
                 // Clear local IndexedDB
@@ -16366,8 +16445,7 @@ async function showPayrollSummary() {
 
             const label = labels[storeName] || storeName;
             
-            if (!confirm(`⚠️ Delete all ${label}? This will delete from THIS device and ALL synced devices.`)) return;
-            if (!confirm(`⚠️ FINAL: Are you sure? This cannot be undone.`)) return;
+            if (!await showConfirm(`Delete all ${label}? This will delete from this device and all synced devices. This cannot be undone.`, 'danger', `🗑️ Delete All ${label}`, 'Yes, Delete All')) return;
 
             try {
                 // Clear local
@@ -18434,8 +18512,8 @@ Lender/Manager
         }
 
         // App Logout
-        function appLogout() {
-            if (confirm('Are you sure you want to logout?')) {
+        async function appLogout() {
+            if (await showConfirm('Are you sure you want to logout?', 'warning', '👋 Logout', 'Yes, Logout')) {
                 currentAppUser = null;
                 localStorage.removeItem('carent_current_user');
                 
@@ -18722,8 +18800,8 @@ Lender/Manager
         }
 
         // Delete App User
-        function deleteAppUser(id) {
-            if (!confirm('Are you sure you want to delete this user?')) return;
+        async function deleteAppUser(id) {
+            if (!await showConfirm('This user account will be permanently removed and they will no longer be able to log in.', 'danger', '🗑️ Delete User', 'Yes, Delete')) return;
             
             let users = JSON.parse(localStorage.getItem('prism_app_users') || '[]');
             users = users.filter(u => u.id !== id);
@@ -18761,9 +18839,7 @@ Lender/Manager
                 return;
             }
             
-            if (!confirm('⚠️ SECOND CONFIRMATION\n\nThis action cannot be undone.\n\nAre you absolutely sure?')) {
-                return;
-            }
+            
             
             // Show admin passcode modal
             document.getElementById('admin-passcode-message').textContent = 'Enter admin passcode to void this sale:';
@@ -21032,7 +21108,7 @@ async function editTask(id) {
             if (currentAppUser && currentAppUser.role === 'cashier') {
                 showToast('⚠️ Cashiers cannot delete tasks. Ask Admin.', 'warning'); return;
             }
-            if (!confirm('🗑️ Delete this task permanently?')) return;
+            if (!await showConfirm('This task will be permanently deleted.', 'danger', '🗑️ Delete Task', 'Yes, Delete')) return;
             
             try {
                 await dbDelete('tasks', id);
@@ -21111,7 +21187,7 @@ async function editTask(id) {
         async function loadSampleData() {
             console.log('🎯 loadSampleData() called');
             
-            if (!confirm('⚠️ Load Sample Data?\n\nThis will add example properties, tenants, employees, credits, and water customers.\n\nThis will NOT delete your existing data.\n\nContinue?')) {
+            if (!await showConfirm('This will add sample properties, tenants, employees, credits, and water customers. Your existing data will NOT be deleted.', 'info', '📦 Load Sample Data', 'Yes, Load Samples')) {
                 console.log('User cancelled sample data load');
                 return;
             }
@@ -21753,9 +21829,9 @@ async function editTask(id) {
                             newWorker.addEventListener('statechange', () => {
                                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                                     // New version available
-                                    if (confirm('New version available! Reload to update?')) {
-                                        window.location.reload();
-                                    }
+                                    showConfirm('A new version of PRISM is available. Reload now to update?', 'info', '🔄 Update Available', 'Reload Now', 'Later').then(ok => {
+                                        if (ok) window.location.reload();
+                                    });
                                 }
                             });
                         });
@@ -22106,6 +22182,24 @@ async function mtLogin() {
         if (isSA) {
             MT.currentUser = loginCred.user;
             setBusy(false);
+            // Pre-load org from Firestore so "My Org" works on fresh device
+            if (window.db) {
+                window.db.collection(MT.ORG_MEMBERS_COL)
+                    .where('userId', '==', loginCred.user.uid).get()
+                    .then(async snap => {
+                        if (!snap.empty) {
+                            const orgId = snap.docs[0].data().orgId;
+                            const doc = await window.db.collection(MT.ORGS_COL).doc(orgId).get();
+                            if (doc.exists) {
+                                const org = { id: doc.id, ...doc.data() };
+                                MT.currentOrg = org;
+                                localStorage.setItem('mt_current_org', JSON.stringify(org));
+                                localStorage.setItem('mt_current_org_id', org.id);
+                                localStorage.setItem('mt_current_org_role', 'owner');
+                            }
+                        }
+                    }).catch(() => {});
+            }
             setTimeout(() => mtShowSuperAdmin(), 400);
         } else {
             // onAuthStateChanged handles navigation — button stays busy until redirect
@@ -22220,6 +22314,24 @@ async function mtGoogleLogin() {
             const isSA = MT.SUPER_ADMINS.map(e=>e.toLowerCase()).includes((googleCred.user.email||'').toLowerCase());
             if (isSA) {
                 MT.currentUser = googleCred.user;
+                // Pre-load org from Firestore so "My Org" works on fresh device
+                if (window.db) {
+                    window.db.collection(MT.ORG_MEMBERS_COL)
+                        .where('userId', '==', googleCred.user.uid).get()
+                        .then(async snap => {
+                            if (!snap.empty) {
+                                const orgId = snap.docs[0].data().orgId;
+                                const doc = await window.db.collection(MT.ORGS_COL).doc(orgId).get();
+                                if (doc.exists) {
+                                    const org = { id: doc.id, ...doc.data() };
+                                    MT.currentOrg = org;
+                                    localStorage.setItem('mt_current_org', JSON.stringify(org));
+                                    localStorage.setItem('mt_current_org_id', org.id);
+                                    localStorage.setItem('mt_current_org_role', 'owner');
+                                }
+                            }
+                        }).catch(() => {});
+                }
                 setTimeout(() => mtShowSuperAdmin(), 400);
                 return;
             }
@@ -22739,9 +22851,7 @@ function mtRenderSAOrgs(orgs) {
 }
 
 async function mtSADeleteOrg(orgId, orgName) {
-    if (!confirm(`⚠️ Delete organization "${orgName}"?
-
-This cannot be undone.`)) return;
+    if (!await showConfirm(`Delete organization "${orgName}"? All their data will be permanently removed. This cannot be undone.`, 'danger', '🗑️ Delete Organization', 'Yes, Delete')) return;
     try {
         if (window.db) await window.db.collection(MT.ORGS_COL).doc(orgId).delete();
         // Also remove from member list
@@ -22776,18 +22886,53 @@ async function mtSAToggleOrgStatus(orgId, currentStatus) {
     }
 }
 
-function mtSAGoToApp() {
-    if (MT.currentOrg) {
+async function mtSAGoToApp() {
+    // Already have org loaded
+    if (MT.currentOrg) { mtShowApp(); return; }
+
+    // Try localStorage first
+    const localOrgs = JSON.parse(localStorage.getItem('mt_user_orgs') || '[]');
+    if (localOrgs.length > 0) {
+        MT.currentOrg = localOrgs[0];
+        localStorage.setItem('mt_current_org', JSON.stringify(localOrgs[0]));
+        localStorage.setItem('mt_current_org_id', localOrgs[0].id);
         mtShowApp();
-    } else {
-        const orgs = JSON.parse(localStorage.getItem('mt_user_orgs') || '[]');
-        if (orgs.length > 0) {
-            MT.currentOrg = orgs[0];
-            mtShowApp();
-        } else {
-            mtShowSetup();
+        return;
+    }
+
+    // Try Firestore (fresh device — no local data)
+    if (window.db && MT.currentUser) {
+        mtToast('⏳ Loading your organization...', 'info');
+        try {
+            const snap = await window.db.collection(MT.ORG_MEMBERS_COL)
+                .where('userId', '==', MT.currentUser.uid).get();
+            if (!snap.empty) {
+                const orgId = snap.docs[0].data().orgId;
+                const doc = await window.db.collection(MT.ORGS_COL).doc(orgId).get();
+                if (doc.exists) {
+                    const org = { id: doc.id, ...doc.data() };
+                    MT.currentOrg = org;
+                    // Save locally for future use
+                    localStorage.setItem('mt_current_org', JSON.stringify(org));
+                    localStorage.setItem('mt_current_org_id', org.id);
+                    localStorage.setItem('mt_current_org_role', 'owner');
+                    const saved = JSON.parse(localStorage.getItem('mt_user_orgs') || '[]');
+                    if (!saved.find(o => o.id === org.id)) {
+                        saved.push(org);
+                        localStorage.setItem('mt_user_orgs', JSON.stringify(saved));
+                    }
+                    mtShowApp();
+                    return;
+                }
+            }
+        } catch(e) {
+            console.warn('[SA] Firestore org lookup failed:', e);
         }
     }
+
+    // No org found anywhere — fresh SA with no org yet
+    mtToast('ℹ️ No organization found. Setting one up now.', 'info');
+    mtShowSetup();
 }
 
 function mtSuperAdminLogout() {
@@ -23314,8 +23459,8 @@ function mtShowRoleDashboard() {
 }
 
 // App-level logout — works for both Google and local users
-function mtAppLogout() {
-    if (!confirm('Are you sure you want to logout?')) return;
+async function mtAppLogout() {
+    if (!await showConfirm('Are you sure you want to logout?', 'warning', '👋 Logout', 'Yes, Logout')) return;
     showToast('👋 Logged out successfully', 'success');
     setTimeout(() => mtLogout(), 800); // delegate to the full MT logout
 }
@@ -23512,8 +23657,8 @@ async function mtInit() {
 window.addEventListener('DOMContentLoaded', () => {
     // Patch original appLogout
     const originalAppLogout = window.appLogout;
-    window.appLogout = function() {
-        if (confirm('Are you sure you want to logout?')) {
+    window.appLogout = async function() {
+        if (await showConfirm('Are you sure you want to logout?', 'warning', '👋 Logout', 'Yes, Logout')) {
             mtLogout();
         }
     };
@@ -23522,4 +23667,49 @@ window.addEventListener('DOMContentLoaded', () => {
     mtInit();
 });
 
-</script>
+
+        // ========== CUSTOM CONFIRM MODAL SYSTEM ==========
+        let prismConfirmResolve = null;
+
+        function showConfirm(message, type = 'danger', title = null, okLabel = null, cancelLabel = 'Cancel') {
+            return new Promise(resolve => {
+                prismConfirmResolve = (result) => {
+                    document.getElementById('prism-confirm-overlay').classList.remove('show');
+                    prismConfirmResolve = null;
+                    resolve(result);
+                };
+
+                // Icons per type
+                const icons = { danger:'🗑️', warning:'⚠️', success:'✅', info:'ℹ️' };
+                const titles = { danger:'Are you sure?', warning:'Warning', success:'Confirm', info:'Confirm' };
+                const okLabels = { danger:'Delete', warning:'Proceed', success:'Confirm', info:'OK' };
+
+                document.getElementById('prism-confirm-icon').textContent = icons[type] || '❓';
+                document.getElementById('prism-confirm-title').textContent = title || titles[type] || 'Confirm';
+                document.getElementById('prism-confirm-message').textContent = message;
+                document.getElementById('prism-confirm-cancel').textContent = cancelLabel;
+                document.getElementById('prism-confirm-ok').textContent = okLabel || okLabels[type] || 'OK';
+                document.getElementById('prism-confirm-ok').className = type;
+
+                document.getElementById('prism-confirm-overlay').classList.add('show');
+
+                // Close on overlay click
+                document.getElementById('prism-confirm-overlay').onclick = (e) => {
+                    if (e.target === document.getElementById('prism-confirm-overlay')) {
+                        prismConfirmResolve(false);
+                    }
+                };
+
+                // ESC key
+                const escHandler = (e) => {
+                    if (e.key === 'Escape') {
+                        document.removeEventListener('keydown', escHandler);
+                        if (prismConfirmResolve) prismConfirmResolve(false);
+                    }
+                };
+                document.addEventListener('keydown', escHandler);
+            });
+        }
+        // ========== END CONFIRM MODAL SYSTEM ==========
+
+        </script>
