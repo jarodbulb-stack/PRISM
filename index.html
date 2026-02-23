@@ -7129,7 +7129,7 @@
                 console.log('[Sync] Data synced to Firestore — org:', orgId);
                 updateSyncStatus('synced');
                 const _pushedUsers = data.appUsers ? data.appUsers.length : 0;
-                try { showToast('☁️ Pushed to: ' + orgId.substring(0,12) + ' | users=' + _pushedUsers, 'success', 5000); } catch(e) {}
+                console.log('[Sync] Pushed appUsers:', data.appUsers);
             } catch (error) {
                 console.error('[Sync] Error syncing to Firebase:', error);
                 updateSyncStatus('offline');
@@ -7184,20 +7184,12 @@
                 }
 
                 console.log('[Sync] Pulling from org:', orgId);
-                // DEBUG: show orgId visibly on screen
-                try { showToast('🔍 Syncing org: ' + orgId.substring(0,12) + '...', 'info', 4000); } catch(e) {}
+                console.log('[Sync] Using orgId:', orgId);
 
                 const dataRef = dbRef.collection('prism_data').doc(orgId);
                 const doc = await dataRef.get();
                 // DEBUG: show what was found
-                if (doc.exists) {
-                    const _d = doc.data();
-                    const _users = _d.appUsers ? _d.appUsers.length : 0;
-                    const _tenants = _d.tenants ? _d.tenants.length : 0;
-                    try { showToast('📦 Found: appUsers=' + _users + ' tenants=' + _tenants, 'success', 6000); } catch(e) {}
-                } else {
-                    try { showToast('❌ No data at org_17715650! Push from PC first.', 'error', 6000); } catch(e) {}
-                }
+                console.log('[Sync] Doc exists:', doc.exists, doc.exists ? 'appUsers:' + (doc.data().appUsers||[]).length : '');
 
                 if (doc.exists) {
                     const data = doc.data();
@@ -18787,6 +18779,11 @@ Lender/Manager
                 showPermissionDenied('manage users');
                 return;
             }
+
+            // Force a fresh pull from cloud before showing users
+            if (currentUser && !(currentUser.uid || '').startsWith('local_')) {
+                try { await syncFromFirebase(); } catch(e) {}
+            }
             
             const users = JSON.parse(localStorage.getItem('prism_app_users') || '[]');
             const container = document.getElementById('user-list');
@@ -18950,6 +18947,8 @@ Lender/Manager
             
             showToast('✅ User deleted successfully!', 'success');
             showUserManagement();
+            // Sync deletion to cloud
+            try { debouncedSync(); } catch(e) {}
         }
 
         // =====================
