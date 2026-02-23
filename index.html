@@ -22100,10 +22100,18 @@ async function mtLogin() {
     if (!auth) { mtShowAuthError('Cannot connect to server. Please refresh and try again.'); setBusy(false); return; }
 
     try {
-        await auth.signInWithEmailAndPassword(email, password);
-        // onAuthStateChanged handles navigation — button stays busy until redirect
-        // Safety fallback: re-enable if navigation doesn't happen within 15s
-        setTimeout(() => setBusy(false), 15000);
+        const loginCred = await auth.signInWithEmailAndPassword(email, password);
+        // Check if SA email — navigate directly for reliability (esp. on file://)
+        const isSA = MT.SUPER_ADMINS.map(e=>e.toLowerCase()).includes(email.toLowerCase());
+        if (isSA) {
+            MT.currentUser = loginCred.user;
+            setBusy(false);
+            setTimeout(() => mtShowSuperAdmin(), 400);
+        } else {
+            // onAuthStateChanged handles navigation — button stays busy until redirect
+            // Safety fallback: re-enable if navigation doesn't happen within 15s
+            setTimeout(() => setBusy(false), 15000);
+        }
     } catch (err) {
         const codes = {
             'auth/user-not-found':    'No account with that email. Please register first.',
@@ -22156,9 +22164,18 @@ async function mtRegister() {
             const el = document.getElementById(id);
             if (el) el.value = '';
         });
-        mtShowAuthSuccess('✅ Account created! Setting up your workspace...');
-        setBusy(false);
-        // onAuthStateChanged fires and handles navigation to setup wizard
+        // For super admin emails — navigate directly, don't wait for onAuthStateChanged
+        const isSA = MT.SUPER_ADMINS.map(e=>e.toLowerCase()).includes(email.toLowerCase());
+        if (isSA) {
+            MT.currentUser = userCred.user;
+            mtToast('✅ Super Admin account ready!', 'success');
+            setBusy(false);
+            setTimeout(() => mtShowSuperAdmin(), 500);
+        } else {
+            mtShowAuthSuccess('✅ Account created! Setting up your workspace...');
+            setBusy(false);
+            // onAuthStateChanged fires and handles navigation to setup wizard
+        }
     } catch (err) {
         const codes = {
             'auth/email-already-in-use': 'An account with this email already exists. Try signing in instead.',
@@ -22197,9 +22214,17 @@ async function mtGoogleLogin() {
     try {
         const provider = new firebase.auth.GoogleAuthProvider();
         provider.setCustomParameters({ prompt: 'select_account' });
-        // signInWithPopup triggers onAuthStateChanged which handles all navigation
-        await auth.signInWithPopup(provider);
-        // onAuthStateChanged handles everything — no manual navigation needed
+        const googleCred = await auth.signInWithPopup(provider);
+        // Direct navigation for SA email — reliable even on file://
+        if (googleCred && googleCred.user) {
+            const isSA = MT.SUPER_ADMINS.map(e=>e.toLowerCase()).includes((googleCred.user.email||'').toLowerCase());
+            if (isSA) {
+                MT.currentUser = googleCred.user;
+                setTimeout(() => mtShowSuperAdmin(), 400);
+                return;
+            }
+        }
+        // Non-SA: onAuthStateChanged handles everything
     } catch (err) {
         if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') return;
         if (err.code === 'auth/popup-blocked') {
@@ -23308,17 +23333,23 @@ async function mtInit() {
             const u = JSON.parse(savedUser);
             const o = JSON.parse(savedOrg);
             if (u && o && o.name) {
-                currentAppUser   = u;
-                MT.currentOrg   = o;
-                MT.currentOrgRole = u.role || 'admin';
-                MT.currentUser  = { uid: 'local_' + (u.id||1), email: u.email||'local@prism.app', displayName: u.fullname };
-                mtShowApp();
-                mtUpdateOrgBadge();
-                setTimeout(() => {
-                    if (typeof updateUserDisplay === 'function') updateUserDisplay();
-                    if (typeof loadDashboard === 'function') loadDashboard();
-                }, 300);
-                // Firebase onAuthStateChanged will silently update MT.currentUser if signed in
+                // Don't auto-restore if this looks like a super admin session —
+                // let Firebase onAuthStateChanged handle navigation to SA panel
+                const isSAEmail = MT.SUPER_ADMINS.map(e=>e.toLowerCase()).includes((u.email||'').toLowerCase());
+                if (isSAEmail) {
+                    mtShowLanding(); // wait for Firebase to confirm SA identity
+                } else {
+                    currentAppUser   = u;
+                    MT.currentOrg   = o;
+                    MT.currentOrgRole = u.role || 'admin';
+                    MT.currentUser  = { uid: 'local_' + (u.id||1), email: u.email||'local@prism.app', displayName: u.fullname };
+                    mtShowApp();
+                    mtUpdateOrgBadge();
+                    setTimeout(() => {
+                        if (typeof updateUserDisplay === 'function') updateUserDisplay();
+                        if (typeof loadDashboard === 'function') loadDashboard();
+                    }, 300);
+                }
             }
         } catch(e) { mtShowLanding(); }
     } else {
@@ -23358,7 +23389,7 @@ async function mtInit() {
                 MT.currentUser = user;
 
                 // Super admin → SA panel
-                if (MT.SUPER_ADMINS.includes(user.email)) {
+                if (MT.SUPER_ADMINS.map(e=>e.toLowerCase()).includes((user.email||'').toLowerCase())) {
                     const sOrg = localStorage.getItem('mt_current_org');
                     if (sOrg) { try { MT.currentOrg = JSON.parse(sOrg); } catch(e) {} }
                     MT.currentOrgRole = localStorage.getItem('mt_current_org_role') || 'owner';
@@ -23492,4 +23523,3 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 </script>
-
