@@ -7128,7 +7128,8 @@
                 await dataRef.set(data, { merge: true });
                 console.log('[Sync] Data synced to Firestore — org:', orgId);
                 updateSyncStatus('synced');
-                try { showToast('☁️ Synced to: ' + orgId.substring(0,12) + '...', 'success', 4000); } catch(e) {}
+                const _pushedUsers = data.appUsers ? data.appUsers.length : 0;
+                try { showToast('☁️ Pushed to: ' + orgId.substring(0,12) + ' | users=' + _pushedUsers, 'success', 5000); } catch(e) {}
             } catch (error) {
                 console.error('[Sync] Error syncing to Firebase:', error);
                 updateSyncStatus('offline');
@@ -7189,7 +7190,14 @@
                 const dataRef = dbRef.collection('prism_data').doc(orgId);
                 const doc = await dataRef.get();
                 // DEBUG: show what was found
-                try { showToast(doc.exists ? '📦 Cloud data found! appUsers: ' + (doc.data().appUsers ? doc.data().appUsers.length : 0) : '❌ No cloud data at this path!', doc.exists ? 'success' : 'error', 5000); } catch(e) {}
+                if (doc.exists) {
+                    const _d = doc.data();
+                    const _users = _d.appUsers ? _d.appUsers.length : 0;
+                    const _tenants = _d.tenants ? _d.tenants.length : 0;
+                    try { showToast('📦 Found: appUsers=' + _users + ' tenants=' + _tenants, 'success', 6000); } catch(e) {}
+                } else {
+                    try { showToast('❌ No data at org_17715650! Push from PC first.', 'error', 6000); } catch(e) {}
+                }
 
                 if (doc.exists) {
                     const data = doc.data();
