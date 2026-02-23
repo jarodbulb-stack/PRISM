@@ -7094,6 +7094,8 @@
                     salaryPayments: await getAllFromStore('salaryPayments'),
                     timeRecords: await getAllFromStore('timeRecords'),
                     tasks: await getAllFromStore('tasks'),
+                    // App users (admin, cashier accounts) — sync across devices
+                    appUsers: JSON.parse(localStorage.getItem('prism_app_users') || '[]'),
                     lastSync: new Date().toISOString(),
                     orgId: orgId
                 };
@@ -7152,6 +7154,20 @@
                     if (data.cashAdvances) await syncCollectionToLocal('cashAdvances', data.cashAdvances);
                     if (data.salaryPayments) await syncCollectionToLocal('salaryPayments', data.salaryPayments);
                     if (data.timeRecords) await syncCollectionToLocal('timeRecords', data.timeRecords);
+                    if (data.tasks) await syncCollectionToLocal('tasks', data.tasks);
+
+                    // Restore app users (admin/cashier accounts) to localStorage
+                    if (data.appUsers && Array.isArray(data.appUsers) && data.appUsers.length > 0) {
+                        const localUsers = JSON.parse(localStorage.getItem('prism_app_users') || '[]');
+                        const merged = [...data.appUsers];
+                        localUsers.forEach(lu => {
+                            if (!merged.find(u => u.id === lu.id || u.username === lu.username)) {
+                                merged.push(lu);
+                            }
+                        });
+                        localStorage.setItem('prism_app_users', JSON.stringify(merged));
+                        console.log('[Sync] App users synced from cloud:', merged.length);
+                    }
 
                     // Refresh UI
                     await loadAllData();
@@ -23793,6 +23809,16 @@ window.addEventListener('DOMContentLoaded', () => {
                         if (data[t] && Array.isArray(data[t])) {
                             try { await syncCollectionToLocal(t, data[t]); } catch(e) {}
                         }
+                    }
+
+                    // Sync app users from real-time update
+                    if (data.appUsers && Array.isArray(data.appUsers) && data.appUsers.length > 0) {
+                        const localUsers = JSON.parse(localStorage.getItem('prism_app_users') || '[]');
+                        const merged = [...data.appUsers];
+                        localUsers.forEach(lu => {
+                            if (!merged.find(u => u.id === lu.id || u.username === lu.username)) merged.push(lu);
+                        });
+                        localStorage.setItem('prism_app_users', JSON.stringify(merged));
                     }
 
                     try {
