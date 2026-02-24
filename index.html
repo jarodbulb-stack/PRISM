@@ -7150,6 +7150,8 @@
                 console.log('[Sync] No Firebase user — skipping pull');
                 return;
             }
+            if (window._syncInProgress) { console.log('[Sync] Already syncing, skip'); return; }
+            window._syncInProgress = true;
             updateSyncStatus('syncing');
             console.log('[Sync] Starting sync from Firebase...');
 
@@ -7256,10 +7258,13 @@
                 console.error('[Sync] Error syncing from Firebase:', error);
                 try { showToast('❌ Pull failed: ' + (error.message || error), 'error', 5000); } catch(e) {}
                 updateSyncStatus('offline');
+            } finally {
+                window._syncInProgress = false;
             }
         }
 
         async function syncCollectionToLocal(storeName, data) {
+            if (!db) { console.warn('[Sync] DB not ready:', storeName); return; }
             return new Promise((resolve, reject) => {
                 const transaction = db.transaction([storeName], 'readwrite');
                 const store = transaction.objectStore(storeName);
@@ -18790,11 +18795,12 @@ Lender/Manager
                 return;
             }
 
-            // Force a fresh pull from cloud before showing users
-            // Use window.auth.currentUser directly (always up-to-date)
-            const _firebaseUser = (window.auth && window.auth.currentUser) || currentUser;
-            if (_firebaseUser && !(_firebaseUser.uid || '').startsWith('local_')) {
-                try { await syncFromFirebase(); } catch(e) { console.warn('Sync before users:', e); }
+            // Pull from cloud only if not already syncing
+            if (!window._syncInProgress) {
+                const _firebaseUser = (window.auth && window.auth.currentUser) || currentUser;
+                if (_firebaseUser && !(_firebaseUser.uid || '').startsWith('local_')) {
+                    try { await syncFromFirebase(); } catch(e) { console.warn('Sync before users:', e); }
+                }
             }
             
             let users = JSON.parse(localStorage.getItem('prism_app_users') || '[]');
