@@ -7241,8 +7241,7 @@
                         }
                         localStorage.setItem('prism_app_users', JSON.stringify(merged));
                         console.log('[Sync] App users synced from cloud:', merged.length);
-                        // Refresh users UI if currently visible
-                        try { if (typeof showUserManagement === 'function') showUserManagement(); } catch(e) {}
+                        // Note: showUserManagement() NOT called here to avoid sync loopscatch(e) {}
                     }
 
                     // Refresh UI
