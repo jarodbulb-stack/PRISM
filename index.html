@@ -7142,6 +7142,13 @@
             if (!dbRef || !cu) return;
             if (cu.uid && cu.uid.startsWith('local_')) return;
 
+            // Don't show "offline" toast - just skip silently if no user
+            const _hasFirebaseUser = (window.auth && window.auth.currentUser) || 
+                                     (cu && !cu.uid.startsWith('local_'));
+            if (!_hasFirebaseUser) {
+                console.log('[Sync] No Firebase user — skipping pull');
+                return;
+            }
             updateSyncStatus('syncing');
             console.log('[Sync] Starting sync from Firebase...');
 
@@ -7307,12 +7314,14 @@
                 return;
             }
             updateSyncStatus('syncing');
-            try { showToast('⏳ Syncing...', 'info'); } catch(e) {}
+            const _localUsers = JSON.parse(localStorage.getItem('prism_app_users') || '[]');
+            try { showToast('⏳ Syncing... (users: ' + _localUsers.length + ')', 'info'); } catch(e) {}
             try {
                 await syncToFirebase();
                 await syncFromFirebase();
                 updateSyncStatus('synced');
-                try { showToast('✅ Sync complete!', 'success'); } catch(e) {}
+                const _afterUsers = JSON.parse(localStorage.getItem('prism_app_users') || '[]');
+                try { showToast('✅ Sync complete! Users: ' + _afterUsers.length, 'success'); } catch(e) {}
             } catch(e) {
                 console.error('[ManualSync] Error:', e);
                 try { showToast('❌ Sync failed. Check your connection.', 'error'); } catch(e2) {}
@@ -18781,11 +18790,30 @@ Lender/Manager
             }
 
             // Force a fresh pull from cloud before showing users
-            if (currentUser && !(currentUser.uid || '').startsWith('local_')) {
-                try { await syncFromFirebase(); } catch(e) {}
+            // Use window.auth.currentUser directly (always up-to-date)
+            const _firebaseUser = (window.auth && window.auth.currentUser) || currentUser;
+            if (_firebaseUser && !(_firebaseUser.uid || '').startsWith('local_')) {
+                try { await syncFromFirebase(); } catch(e) { console.warn('Sync before users:', e); }
             }
             
-            const users = JSON.parse(localStorage.getItem('prism_app_users') || '[]');
+            let users = JSON.parse(localStorage.getItem('prism_app_users') || '[]');
+            
+            // If still empty after sync, create default admin so user is never stuck
+            if (users.length === 0) {
+                users = [{
+                    id: 1, username: 'admin', password: 'admin123',
+                    fullname: 'Administrator', role: 'admin', _isDefault: true,
+                    permissions: {
+                        'add-property':true,'edit-property':true,'delete-property':true,
+                        'add-tenant':true,'edit-tenant':true,'delete-tenant':true,
+                        'record-payment':true,'water-sales':true,'void-sale':true,
+                        'manage-staff':true,'manage-users':true,'view-reports':true,'backup-restore':true
+                    }
+                }];
+                localStorage.setItem('prism_app_users', JSON.stringify(users));
+                try { debouncedSync(); } catch(e) {}
+            }
+            
             const container = document.getElementById('user-list');
             
             if (users.length === 0) {
