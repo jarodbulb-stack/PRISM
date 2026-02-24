@@ -22991,7 +22991,10 @@ async function mtLoadSAData() {
     });
     try {
         await _waitForAuth();
+        const _uid = window.auth && window.auth.currentUser ? window.auth.currentUser.uid : 'none';
+        mtToast('🔍 Loading orgs for: ' + _uid.substring(0,8) + '...', 'info', 4000);
         const orgsSnap = await window.db.collection(MT.ORGS_COL).get();
+        mtToast('📦 Found ' + orgsSnap.size + ' org(s) in Firestore', orgsSnap.size > 0 ? 'success' : 'warning', 5000);
         const orgs = orgsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         mtRenderSAOrgs(orgs);
         document.getElementById('sa-total-orgs').textContent = orgs.length;
@@ -23004,8 +23007,8 @@ async function mtLoadSAData() {
         const revenue = orgs.reduce((sum, o) => sum + (planPrices[o.plan] || 299), 0);
         document.getElementById('sa-total-revenue').textContent = '₱' + revenue.toLocaleString();
     } catch (e) {
+        mtToast('❌ SA load error: ' + (e.message || e), 'error', 8000);
         console.warn('SA data load error:', e);
-        // Retry once after 2 seconds in case auth was not ready
         setTimeout(() => mtLoadSAData(), 2000);
     }
 }
