@@ -7076,17 +7076,17 @@
                 let orgId = (() => {
                     try { return (MT && MT.currentOrg && MT.currentOrg.id) || localStorage.getItem('mt_current_org_id') || null; } catch(e) { return null; }
                 })();
-                // Always find PRIMARY org (oldest where user is owner)
+                // Find PRIMARY org — query by userId only (no composite index needed)
                 try {
                     const memberSnap2 = await db.collection('mt_org_members')
                         .where('userId', '==', cu.uid)
-                        .where('role', '==', 'owner')
                         .get();
                     if (!memberSnap2.empty) {
                         let primaryOrgId = null;
                         let oldestNum = Infinity;
                         memberSnap2.docs.forEach(doc => {
                             const d = doc.data();
+                            if (d.role && d.role !== 'owner') return;
                             const num = parseInt((d.orgId || '').replace('org_', '')) || 0;
                             if (num > 0 && num < oldestNum) { oldestNum = num; primaryOrgId = d.orgId; }
                         });
@@ -7132,6 +7132,7 @@
                 console.log('[Sync] Pushed appUsers:', data.appUsers);
             } catch (error) {
                 console.error('[Sync] Error syncing to Firebase:', error);
+                try { showToast('❌ Push failed: ' + (error.message || error), 'error', 5000); } catch(e) {}
                 updateSyncStatus('offline');
             }
         }
@@ -7160,31 +7161,30 @@
                     if (orgId && orgId !== 'local_org') break;
                     await new Promise(r => setTimeout(r, 200));
                 }
-                // Always find PRIMARY org from Firestore (oldest org where user is owner)
-                // This prevents multi-org confusion when device created a different org
+                // Find PRIMARY org — query by userId only (no composite index needed)
                 try {
                     const dbRef2 = window.db || firestore;
                     const memberSnap = await dbRef2.collection('mt_org_members')
                         .where('userId', '==', cu.uid)
-                        .where('role', '==', 'owner')
                         .get();
                     if (!memberSnap.empty) {
-                        // Pick oldest org (lowest timestamp in orgId = first created)
+                        // Pick oldest org (lowest number in orgId = first created)
                         let primaryOrgId = null;
                         let oldestNum = Infinity;
                         memberSnap.docs.forEach(doc => {
                             const d = doc.data();
+                            // Only consider orgs where this user is owner
+                            if (d.role && d.role !== 'owner') return;
                             const num = parseInt((d.orgId || '').replace('org_', '')) || 0;
                             if (num > 0 && num < oldestNum) { oldestNum = num; primaryOrgId = d.orgId; }
                         });
-                        if (primaryOrgId && primaryOrgId !== orgId) {
-                            console.log('[Sync] Using primary orgId:', primaryOrgId, '(was:', orgId + ')');
+                        if (primaryOrgId) {
+                            console.log('[Sync] Primary orgId:', primaryOrgId);
                             orgId = primaryOrgId;
                         }
                     }
                 } catch(e) { console.warn('[Sync] Could not resolve primary orgId:', e); }
                 if (!orgId || orgId === 'local_org') orgId = cu.uid;
-                // Always save the resolved orgId
                 if (orgId && orgId !== 'local_org') {
                     localStorage.setItem('mt_current_org_id', orgId);
                     try { if (MT && MT.currentOrg) MT.currentOrg.id = orgId; } catch(e) {}
@@ -7254,6 +7254,7 @@
                 updateSyncStatus('synced');
             } catch (error) {
                 console.error('[Sync] Error syncing from Firebase:', error);
+                try { showToast('❌ Pull failed: ' + (error.message || error), 'error', 5000); } catch(e) {}
                 updateSyncStatus('offline');
             }
         }
@@ -23077,16 +23078,18 @@ async function mtSAGoToApp() {
         try {
             const snap = await window.db.collection(MT.ORG_MEMBERS_COL)
                 .where('userId', '==', MT.currentUser.uid)
-                .where('role', '==', 'owner')
                 .get();
             if (!snap.empty) {
-                // Pick oldest org (lowest timestamp in orgId)
-                let oldestDoc = snap.docs[0];
+                // Pick oldest owner org
+                let oldestDoc = null;
                 let oldestNum = Infinity;
                 snap.docs.forEach(doc => {
-                    const num = parseInt((doc.data().orgId || '').replace('org_', '')) || 0;
+                    const d = doc.data();
+                    if (d.role && d.role !== 'owner') return;
+                    const num = parseInt((d.orgId || '').replace('org_', '')) || 0;
                     if (num > 0 && num < oldestNum) { oldestNum = num; oldestDoc = doc; }
                 });
+                if (!oldestDoc) oldestDoc = snap.docs[0];
                 const orgId = oldestDoc.data().orgId;
                 const doc = await window.db.collection(MT.ORGS_COL).doc(orgId).get();
                 if (doc.exists) {
@@ -23819,9 +23822,37 @@ async function mtInit() {
                     }, 500);
 
                 } else {
-                    // New user — no org found anywhere — show setup wizard
+                    // No org in localStorage — check Firestore before showing setup
                     MT.currentUser = user;
                     mtHideLoading();
+                    try {
+                        const snap = await window.db.collection('mt_org_members')
+                            .where('userId', '==', user.uid).get();
+                        if (!snap.empty) {
+                            // User has existing org(s) — load the oldest one
+                            let oldestDoc = null, oldestNum = Infinity;
+                            snap.docs.forEach(doc => {
+                                const d = doc.data();
+                                if (d.role && d.role !== 'owner') return;
+                                const num = parseInt((d.orgId||'').replace('org_','')) || 0;
+                                if (num > 0 && num < oldestNum) { oldestNum = num; oldestDoc = doc; }
+                            });
+                            if (!oldestDoc) oldestDoc = snap.docs[0];
+                            const orgId = oldestDoc.data().orgId;
+                            const orgDoc = await window.db.collection('mt_organizations').doc(orgId).get();
+                            if (orgDoc.exists) {
+                                const org = { id: orgDoc.id, ...orgDoc.data() };
+                                MT.currentOrg = org;
+                                localStorage.setItem('mt_current_org', JSON.stringify(org));
+                                localStorage.setItem('mt_current_org_id', org.id);
+                                mtShowApp();
+                                mtUpdateOrgBadge();
+                                setTimeout(() => { if (typeof syncFromFirebase === 'function') syncFromFirebase(); }, 500);
+                                return;
+                            }
+                        }
+                    } catch(e) { console.warn('[MT] Firestore org lookup failed:', e); }
+                    // Truly new user — show setup wizard
                     mtShowSetup();
                 }
 
