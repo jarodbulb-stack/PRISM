@@ -6796,8 +6796,10 @@
                     syncIndicator.textContent = '🟢 Synced';
                     syncIndicator.style.color = '#10b981';
                 } else if (status === 'offline') {
-                    syncIndicator.textContent = '🔴 Offline';
-                    syncIndicator.style.color = '#ef4444';
+                    if (window._hasSyncedOnce) {
+                        syncIndicator.textContent = '🔴 Offline';
+                        syncIndicator.style.color = '#ef4444';
+                    }
                 } else if (status === 'syncing') {
                     syncIndicator.textContent = '🔄 Syncing...';
                     syncIndicator.style.color = '#f59e0b';
@@ -7246,13 +7248,14 @@
 
                     // Refresh UI
                     await loadAllData();
-                    try { showToast('☁️ Data loaded from cloud', 'success'); } catch(e) {}
+                    // Sync complete - no toast here (manualSync shows it)
                 } else {
                     console.log('[Sync] No data in Firebase, will sync local data up');
                     await syncToFirebase();
                 }
 
                 updateSyncStatus('synced');
+                window._hasSyncedOnce = true;
             } catch (error) {
                 console.error('[Sync] Error syncing from Firebase:', error);
                 try { showToast('❌ Pull failed: ' + (error.message || error), 'error', 5000); } catch(e) {}
