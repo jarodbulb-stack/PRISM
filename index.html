@@ -22984,7 +22984,13 @@ async function mtLoadSAData() {
         document.getElementById('sa-total-revenue').textContent = '₱' + revenue.toLocaleString();
         return;
     }
+    // Wait for Firebase auth to be ready before querying
+    const _waitForAuth = () => new Promise(res => {
+        if (window.auth && window.auth.currentUser) return res();
+        const unsub = window.auth.onAuthStateChanged(u => { unsub(); res(); });
+    });
     try {
+        await _waitForAuth();
         const orgsSnap = await window.db.collection(MT.ORGS_COL).get();
         const orgs = orgsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         mtRenderSAOrgs(orgs);
@@ -22999,6 +23005,8 @@ async function mtLoadSAData() {
         document.getElementById('sa-total-revenue').textContent = '₱' + revenue.toLocaleString();
     } catch (e) {
         console.warn('SA data load error:', e);
+        // Retry once after 2 seconds in case auth was not ready
+        setTimeout(() => mtLoadSAData(), 2000);
     }
 }
 
