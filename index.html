@@ -2889,7 +2889,7 @@
         <div class="mt-nav-links">
             <a href="#features">Features</a>
             <a href="#pricing">Pricing</a>
-            <a href="/cdn-cgi/l/email-protection#e18b80938e8583948d83a1868c80888dcf828e8c">Contact</a>
+            <a href="mailto:jarodbulb@gmail.com">Contact</a>
         </div>
         <div style="display:flex;gap:10px;">
             <button class="mt-btn-secondary" style="padding:10px 20px;font-size:0.9rem;" onclick="mtShowAuth('login')">Sign In</button>
@@ -3007,7 +3007,7 @@
     </div>
 
     <div class="mt-footer">
-        <p>Built by <strong>OMNIGRID ONLINE</strong> &bull; <a href="/cdn-cgi/l/email-protection#325853405d5650475e5072555f535b5e1c515d5f"><span class="__cf_email__" data-cfemail="4822293a272c2a3d242a082f25292124662b2725">[email&#160;protected]</span></a> &bull; <a href="/cdn-cgi/l/email-protection#8ce8ede2e3e1ede2e8ede1ccf5ede4e3e3a2efe3e1"><span class="__cf_email__" data-cfemail="aecacfc0c1c3cfc0cacfc3eed7cfc6c1c180cdc1c3">[email&#160;protected]</span></a></p>
+        <p>Built by <strong>OMNIGRID ONLINE</strong> &bull; jarodbulb@gmail.com &bull; danomandam@yahoo.com</p>
         <p style="margin-top:8px;">© 2025 PRISM - Property • Rental • Income • Sales • Management</p>
     </div>
 </div>
@@ -4944,11 +4944,11 @@
                         <p style="font-size: 1.1rem; font-weight: 600; color: var(--gray-900);">OMNIGRID</p>
                         <div style="margin-top:15px;padding:14px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;">
                             <p style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:10px;font-weight:600;">📧 Contact Us</p>
-                            <a href="/cdn-cgi/l/email-protection#82e8e3f0ede6e0f7eee0c2e5efe3ebeeace1edef" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;margin-bottom:6px;font-weight:500;">
-                                ✉️ <span class="__cf_email__" data-cfemail="0f656e7d606b6d7a636d4f68626e6663216c6062">[email&#160;protected]</span>
+                            <a href="mailto:danomandam@yahoo.com" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;margin-bottom:6px;font-weight:500;">
+                                ✉️ jarodbulb@gmail.com
                             </a>
-                            <a href="/cdn-cgi/l/email-protection#1470757a7b79757a707579546d757c7b7b3a777b79" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;font-weight:500;">
-                                ✉️ <span class="__cf_email__" data-cfemail="6307020d0c0e020d07020e231a020b0c0c4d000c0e">[email&#160;protected]</span>
+                            <a href="mailto:jarodbulb@gmail.com" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;font-weight:500;">
+                                ✉️ danomandam@yahoo.com
                             </a>
                             <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-color);">
                                 <p style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:6px;font-weight:600;">🌐 For licensing & inquiries:</p>
@@ -15862,7 +15862,7 @@ async function showPayrollSummary() {
                 water: monthlyExpenses.filter(e => e.category === 'water').reduce((sum, e) => sum + e.amount, 0),
                 fuel: monthlyExpenses.filter(e => e.category === 'fuel').reduce((sum, e) => sum + e.amount, 0),
                 repairs: monthlyExpenses.filter(e => e.category === 'repairs').reduce((sum, e) => sum + e.amount, 0),
-                personal_loan: monthlyExpenses.filter(e => e.category === 'personal_loan').reduce((sum, e) => sum + e.amount, 0),
+                personal_loan: monthlyExpenses.filter(e => ['personal_loan','loans'].includes(e.category)).reduce((sum, e) => sum + e.amount, 0),
                 savings: monthlyExpenses.filter(e => e.category === 'savings').reduce((sum, e) => sum + e.amount, 0)
             };
 
@@ -16735,7 +16735,7 @@ async function showPayrollSummary() {
                 .reduce((sum, e) => sum + e.amount, 0);
             
             // Allocations (not true expenses)
-            const allocationCategories = ['savings', 'investment', 'capital_reserve', 'owners_draw'];
+            const allocationCategories = ['savings', 'investment', 'capital_reserve', 'owners_draw', 'reserve', 'ownerdraw'];
             
             const savingsAmount = expenses
                 .filter(e => e.category === 'savings')
@@ -16746,11 +16746,11 @@ async function showPayrollSummary() {
                 .reduce((sum, e) => sum + e.amount, 0);
             
             const capitalReserve = expenses
-                .filter(e => e.category === 'capital_reserve')
+                .filter(e => ['capital_reserve','reserve'].includes(e.category))
                 .reduce((sum, e) => sum + e.amount, 0);
             
             const ownersDraw = expenses
-                .filter(e => e.category === 'owners_draw')
+                .filter(e => ['owners_draw','ownerdraw'].includes(e.category))
                 .reduce((sum, e) => sum + e.amount, 0);
             
             const totalAllocated = savingsAmount + investmentAmount + capitalReserve + ownersDraw;
@@ -16782,7 +16782,7 @@ async function showPayrollSummary() {
             
             // Other Expenses (excluding allocations and government)
             const otherExpenses = expenses
-                .filter(e => !['electric', 'water', 'maintenance', 'repairs', 'repair', 'fuel', 'transport', 'supplies', 'labor', ...allocationCategories, ...govtCategories].includes(e.category))
+                .filter(e => !['electric', 'water', 'maintenance', 'repairs', 'repair', 'fuel', 'transport', 'supplies', 'labor', 'payroll', 'inventory', ...allocationCategories, ...govtCategories].includes(e.category))
                 .reduce((sum, e) => sum + e.amount, 0);
             
             const totalExpenses = creditsReleased + utilities + maintenance + operations + otherExpenses;
@@ -17830,35 +17830,61 @@ Lender/Manager
                 case 'overdue':
                     titleText = '⚠️ Overdue Payments';
                     sectionName = 'tenants';
-                    const overdueTenants = tenants.filter(t => {
-                        if (t.status === 'inactive') return false;
-                        const dueDate = getNextDueDate(t);
-                        return dueDate < now;
+                    // Use same notificationData calculated by loadDashboard for consistency
+                    const overdueItems = notificationData ? notificationData.overdue : [];
+                    // Also recalc directly for accuracy: tenants unpaid past their due day
+                    const overdueList = [];
+                    const todayDay = now.getDate();
+                    tenants.forEach(t => {
+                        if (t.status === 'inactive') return;
+                        const dueDay = t.dueDay || 1;
+                        const monthStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+                        const paidThisMonth = payments.some(p => p.tenantId === t.id && 
+                            (p.monthCovered === monthStr || (p.date && p.date.startsWith(monthStr))));
+                        if (!paidThisMonth && todayDay > dueDay) {
+                            const prop = properties.find(p => p.id === t.propertyId);
+                            overdueList.push({ tenant: t, prop, daysOverdue: todayDay - dueDay });
+                        }
                     });
+                    // Add overdue credits
+                    const overdueCredits = [];
+                    credits.forEach(c => {
+                        const totalPaid = creditPayments.filter(p => p.creditId === c.id).reduce((s,p) => s+p.amount, 0);
+                        const totalDue = (c.principal||0) + (c.interest||0);
+                        if (totalPaid < totalDue) {
+                            const lastPmt = creditPayments.filter(p=>p.creditId===c.id).sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
+                            const daysSince = lastPmt ? Math.floor((now - new Date(lastPmt.date))/(1000*60*60*24)) : 999;
+                            if (daysSince > 30) overdueCredits.push({ credit: c, balance: totalDue - totalPaid, daysSince });
+                        }
+                    });
+                    const totalOverdue = overdueList.length + overdueCredits.length;
                     
                     html = `
                         <div style="background: var(--danger); color: white; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 15px;">
-                            <div style="font-size: 2rem; font-weight: bold;">${overdueTenants.length}</div>
+                            <div style="font-size: 2rem; font-weight: bold;">${totalOverdue}</div>
                             <div>Overdue Payments</div>
                         </div>
-                        ${overdueTenants.length === 0 ? '<p style="color: var(--text-secondary); text-align: center;">No overdue payments! 🎉</p>' : 
-                            overdueTenants.map(t => {
-                                const prop = properties.find(p => p.id === t.propertyId);
-                                const dueDate = getNextDueDate(t);
-                                const daysOverdue = Math.ceil((now - dueDate) / (1000 * 60 * 60 * 24));
-                                const lateFeeTotal = (t.lateFee || 0) * daysOverdue;
-                                return `
-                                    <div class="list-item" style="cursor: pointer; border-left: 3px solid var(--danger);" onclick="viewTenantDetails(${t.id}); hideModal('flashcard-detail-modal');">
-                                        <div class="item-info">
-                                            <strong>${t.name}</strong>
-                                            <div style="font-size: 0.85rem; color: var(--danger);">
-                                                ${daysOverdue} days overdue • Late fee: ₱${lateFeeTotal.toLocaleString()}
-                                            </div>
-                                        </div>
-                                        <span class="badge badge-danger">₱${(t.rent + lateFeeTotal).toLocaleString()}</span>
-                                    </div>
-                                `;
-                            }).join('')}
+                        ${totalOverdue === 0 ? '<p style="color: var(--text-secondary); text-align: center;">No overdue payments! 🎉</p>' : ''}
+                        ${overdueList.length > 0 ? '<h4 style="margin:10px 0 8px;">🏠 Overdue Tenants</h4>' : ''}
+                        ${overdueList.map(({tenant:t, prop, daysOverdue}) => `
+                            <div class="list-item" style="cursor:pointer;border-left:3px solid var(--danger);" onclick="viewTenantDetails(${t.id}); hideModal('flashcard-detail-modal');">
+                                <div class="item-info">
+                                    <strong>${t.name}</strong>
+                                    <div style="font-size:0.85rem;color:var(--danger);">${prop ? prop.name + ' • ' : ''}${daysOverdue} days overdue</div>
+                                </div>
+                                <span class="badge badge-danger">₱${(t.rent||0).toLocaleString()}</span>
+                            </div>
+                        `).join('')}
+                        ${overdueCredits.length > 0 ? '<h4 style="margin:10px 0 8px;">💳 Overdue Debtors</h4>' : ''}
+                        ${overdueCredits.map(({credit:c, balance, daysSince}) => `
+                            <div class="list-item" style="cursor:pointer;border-left:3px solid var(--warning);" onclick="viewCreditDetails(${c.id}); hideModal('flashcard-detail-modal');">
+                                <div class="item-info">
+                                    <strong>${c.borrowerName || c.debtor}</strong>
+                                    <div style="font-size:0.85rem;color:var(--warning);">Last payment ${daysSince} days ago</div>
+                                </div>
+                                <span class="badge badge-warning">₱${balance.toLocaleString()}</span>
+                            </div>
+                        `).join('')}
                     `;
                     break;
                     
@@ -19538,6 +19564,8 @@ function initReportsPage() {
             const additionalIncome = await dbGetAll('additionalIncome');
             const tenants = await dbGetAll('tenants');
             const credits = await dbGetAll('credits');
+            const properties = await dbGetAll('properties');
+            const allExpenses = await dbGetAll('expenses');
 
             // Filter by date range
             const filterByRange = (items, dateField = 'date') => {
@@ -19625,14 +19653,62 @@ function initReportsPage() {
             generateIncomeBreakdown(rentIncome, creditIncome, waterIncome, otherIncome, totalIncome);
             generateExpenseBreakdown(rangeExpenses, totalExpenses);
             await generateDateRangeTrend(fromDate, toDate, diffDays);
+            // Compute extra context for JAROD analysis
+            const now_r = new Date();
+            const todayDay = now_r.getDate();
+            const activeTenants_r = tenants.filter(t => t.status === 'active' || !t.status);
+            const totalExpectedRent = activeTenants_r.reduce((s,t) => s+(t.rent||0), 0);
+            const monthStr_r = now_r.getFullYear()+'-'+String(now_r.getMonth()+1).padStart(2,'0');
+            const overdueTenantList = activeTenants_r.filter(t => {
+                const dueDay = t.dueDay || 1;
+                const paid = payments.some(p => p.tenantId===t.id && (p.monthCovered===monthStr_r || (p.date&&p.date.startsWith(monthStr_r))));
+                return !paid && todayDay > dueDay;
+            });
+            const outstandingCredits = credits.filter(c => {
+                const paid = creditPayments.filter(p=>p.creditId===c.id).reduce((s,p)=>s+(p.amount||0),0);
+                return paid < ((c.principal||0)+(c.interest||0));
+            });
+            const totalOutstanding = outstandingCredits.reduce((s,c) => {
+                const paid = creditPayments.filter(p=>p.creditId===c.id).reduce((ss,p)=>ss+(p.amount||0),0);
+                return s + Math.max(0, ((c.principal||0)+(c.interest||0)) - paid);
+            }, 0);
+            const vacantCount = properties.filter(p => !activeTenants_r.some(t => t.propertyId===p.id)).length;
+            const waterGallons = rangeWaterSales.reduce((s,w)=>s+(w.gallons||0),0);
+            const waterCustomerCount = new Set(rangeWaterSales.map(w=>w.customerId||w.customerName)).size;
+            // Expense breakdown for this period
+            const expCats = {};
+            rangeExpenses.forEach(e => { const c=e.category||'other'; expCats[c]=(expCats[c]||0)+(e.amount||0); });
+            const topExpCat = Object.entries(expCats).sort((a,b)=>b[1]-a[1])[0];
+            // Previous period comparison
+            const periodMs = toDate - fromDate;
+            const prevFrom = new Date(fromDate.getTime() - periodMs - 86400000);
+            const prevTo = new Date(fromDate.getTime() - 86400001);
+            const prevPayments = filterByRange(payments, 'date').length;
+            const prevRangePayments = payments.filter(p => { if(!p.date) return false; const d=new Date(p.date+'T00:00:00'); return d>=prevFrom&&d<=prevTo; });
+            const prevRangeCreditPmts = creditPayments.filter(p => { if(!p.date) return false; const d=new Date(p.date+'T00:00:00'); return d>=prevFrom&&d<=prevTo; });
+            const prevRangeWater = waterSales.filter(s => !s.voided && s.date && new Date(s.date+'T00:00:00')>=prevFrom && new Date(s.date+'T00:00:00')<=prevTo);
+            const prevRangeIncome2 = additionalIncome.filter(i => i.date && new Date(i.date+'T00:00:00')>=prevFrom && new Date(i.date+'T00:00:00')<=prevTo);
+            const prevRangeExp = allExpenses.filter(e => e.date && new Date(e.date+'T00:00:00')>=prevFrom && new Date(e.date+'T00:00:00')<=prevTo);
+            const prevIncome = prevRangePayments.reduce((s,p)=>s+(p.amount||0),0)+prevRangeCreditPmts.reduce((s,p)=>s+(p.amount||0),0)+prevRangeWater.reduce((s,w)=>s+(w.amountPaid||0),0)+prevRangeIncome2.reduce((s,i)=>s+(i.amount||0),0);
+            const prevExpenses = prevRangeExp.reduce((s,e)=>s+(e.amount||0),0);
+            const prevNetProfit = prevIncome - prevExpenses;
+
             generateAIAnalysis({
                 month: rangeLabel,
                 year: '',
                 rentIncome, creditIncome, waterIncome, otherIncome,
                 totalIncome, totalExpenses, netProfit, profitMargin,
                 expenses: rangeExpenses,
-                tenantCount: tenants.filter(t => t.status === 'active').length,
-                debtorCount: credits.length
+                expCats, topExpCat,
+                tenantCount: activeTenants_r.length,
+                debtorCount: credits.length,
+                overdueTenants: overdueTenantList,
+                outstandingCredits, totalOutstanding,
+                vacantCount, propertyCount: properties.length,
+                waterGallons, waterCustomerCount,
+                totalExpectedRent,
+                prevIncome, prevExpenses, prevNetProfit,
+                diffDays
             });
             generateTransactionDetails(rangePayments, rangeCreditPayments, rangeWaterSales, rangeExpenses, rangeAdditionalIncome);
         }
@@ -19791,13 +19867,13 @@ function initReportsPage() {
             });
             
             const categoryIcons = {
-                'utilities': '⚡',
-                'maintenance': '🔧',
-                'supplies': '📦',
-                'salary': '👷',
-                'transportation': '🚗',
-                'food': '🍽️',
-                'other': '📋'
+                'electric':'⚡','water':'💧','fuel':'⛽','repairs':'🔧',
+                'taxes':'📋','insurance':'🛡️','transport':'🚌','supplies':'📦',
+                'labor':'👷','loans':'💳','food':'🍔','comms':'📱','other':'📝',
+                'sss':'🏛️','philhealth':'🏥','pagibig':'🏠','bir':'📋',
+                'accountant':'👨‍💼','savings':'🏦','investment':'📈',
+                'reserve':'🏦','ownerdraw':'👤','payroll':'💰',
+                'inventory':'📦','maintenance':'🔧','utilities':'💡'
             };
             
             const colors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'];
@@ -19959,821 +20035,323 @@ function initReportsPage() {
             document.getElementById('ai-overall-text').innerHTML = overallAnalysis;
         }
 
+        // ─────────────────────────────────────────────────────────
+        // JAROD ANALYSIS FUNCTIONS
+        // ─────────────────────────────────────────────────────────
         function generateIncomeAnalysisText(data) {
-            const { month, year, rentIncome, creditIncome, waterIncome, otherIncome, totalIncome, tenantCount } = data;
-            
+            const { month, rentIncome, creditIncome, waterIncome, otherIncome,
+                    totalIncome, tenantCount, totalExpectedRent,
+                    waterGallons, waterCustomerCount,
+                    outstandingCredits, prevIncome, diffDays } = data;
+
             if (totalIncome === 0) {
-                return `<p>📊 <strong>No income recorded for ${month} ${year}.</strong></p>
-                <p style="margin-top: 10px;">💡 <em>Tip: Make sure to record all payments and sales to track your business performance accurately.</em></p>`;
+                return `<div style="color:var(--text-secondary);font-size:0.9rem;">
+                    <p>📊 No income recorded for this period.</p>
+                    <p style="margin-top:8px;">Tip: Record rent payments, water sales, and credit repayments to generate insights here.</p>
+                </div>`;
             }
-            
-            const primarySource = [
-                { name: 'Rent', amount: rentIncome },
-                { name: 'Credit Repayments', amount: creditIncome },
-                { name: 'Water Sales', amount: waterIncome },
-                { name: 'Other Income', amount: otherIncome }
-            ].sort((a, b) => b.amount - a.amount)[0];
-            
-            const rentPercent = totalIncome > 0 ? Math.round((rentIncome / totalIncome) * 100) : 0;
-            
-            let analysis = `<p>📊 <strong>Income Analysis for ${month} ${year}:</strong></p>`;
-            analysis += `<p style="margin-top: 10px;">Your total income of <strong>₱${totalIncome.toLocaleString()}</strong> is primarily driven by <strong>${primarySource.name}</strong> (₱${primarySource.amount.toLocaleString()}), representing the largest portion of your revenue.</p>`;
-            
-            if (rentIncome > 0 && tenantCount > 0) {
-                const avgRent = Math.round(rentIncome / tenantCount);
-                analysis += `<p style="margin-top: 10px;">With ${tenantCount} active tenant(s), your average rent collection is <strong>₱${avgRent.toLocaleString()}</strong> per tenant this month.</p>`;
+
+            const sources = [
+                { name: '🏠 Rent', amount: rentIncome, color: '#10b981' },
+                { name: '💳 Credit Repaid', amount: creditIncome, color: '#3b82f6' },
+                { name: '💧 Water Sales', amount: waterIncome, color: '#06b6d4' },
+                { name: '💵 Other Income', amount: otherIncome, color: '#8b5cf6' }
+            ].filter(s => s.amount > 0).sort((a, b) => b.amount - a.amount);
+
+            const top = sources[0];
+            const topPct = Math.round((top.amount / totalIncome) * 100);
+
+            let html = `<div style="font-size:1rem;font-weight:700;margin-bottom:12px;">
+                Total Income: <span style="color:#10b981;">₱${totalIncome.toLocaleString()}</span>
+                <span style="font-size:0.78rem;font-weight:400;color:var(--text-secondary);margin-left:8px;">${month}</span>
+            </div>`;
+
+            // Progress bars per source
+            sources.forEach(s => {
+                const pct = Math.round((s.amount / totalIncome) * 100);
+                html += `<div style="margin-bottom:10px;">
+                    <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:3px;">
+                        <span>${s.name}</span>
+                        <span style="font-weight:700;">₱${s.amount.toLocaleString()} <span style="color:var(--text-secondary);font-weight:400;">(${pct}%)</span></span>
+                    </div>
+                    <div style="background:var(--bg-secondary);border-radius:4px;height:8px;overflow:hidden;">
+                        <div style="height:100%;width:${pct}%;background:${s.color};border-radius:4px;"></div>
+                    </div>
+                </div>`;
+            });
+
+            // Rent collection rate
+            if (tenantCount > 0 && totalExpectedRent > 0) {
+                const collectionRate = Math.round((rentIncome / totalExpectedRent) * 100);
+                const rateColor = collectionRate >= 90 ? '#10b981' : collectionRate >= 60 ? '#f59e0b' : '#ef4444';
+                html += `<div style="margin:12px 0;padding:10px;background:var(--bg-secondary);border-radius:8px;font-size:0.85rem;">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+                        <span>🏠 Rent Collection Rate</span>
+                        <strong style="color:${rateColor};">${collectionRate}%</strong>
+                    </div>
+                    <div style="background:var(--bg-primary);border-radius:4px;height:6px;overflow:hidden;">
+                        <div style="height:100%;width:${Math.min(collectionRate,100)}%;background:${rateColor};border-radius:4px;"></div>
+                    </div>
+                    <div style="font-size:0.78rem;color:var(--text-secondary);margin-top:4px;">
+                        Collected ₱${rentIncome.toLocaleString()} of expected ₱${totalExpectedRent.toLocaleString()} from ${tenantCount} tenant${tenantCount!==1?'s':''}
+                    </div>
+                </div>`;
             }
-            
-            if (waterIncome > 0) {
-                analysis += `<p style="margin-top: 10px;">💧 Water refilling contributed <strong>₱${waterIncome.toLocaleString()}</strong> to your income stream.</p>`;
+
+            // Water stats
+            if (waterIncome > 0 && waterGallons > 0) {
+                html += `<div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:8px;">
+                    💧 Water: ${waterGallons.toLocaleString()} gallons sold to ${waterCustomerCount} customer${waterCustomerCount!==1?'s':''} = ₱${waterIncome.toLocaleString()}
+                </div>`;
             }
-            
-            analysis += `<p style="margin-top: 15px; padding: 10px; background: rgba(59, 130, 246, 0.1); border-radius: 8px;">💡 <strong>Tip:</strong> ${
-                rentPercent > 70 ? 'Your income is heavily dependent on rent. Consider diversifying income sources like water sales or small loans to reduce risk.' :
-                rentPercent < 30 ? 'Great diversification! Your income comes from multiple sources, reducing dependency on any single stream.' :
-                'You have a good balance of income sources. Keep monitoring each stream for growth opportunities.'
-            }</p>`;
-            
-            return analysis;
+
+            // Period comparison
+            if (prevIncome > 0) {
+                const diff = totalIncome - prevIncome;
+                const diffPct = Math.round((diff / prevIncome) * 100);
+                const arrow = diff >= 0 ? '▲' : '▼';
+                const color = diff >= 0 ? '#10b981' : '#ef4444';
+                html += `<div style="font-size:0.82rem;margin-bottom:10px;">
+                    <span style="color:${color};">${arrow} ${Math.abs(diffPct)}% vs previous period</span>
+                    <span style="color:var(--text-secondary);"> (prev: ₱${prevIncome.toLocaleString()})</span>
+                </div>`;
+            }
+
+            // JAROD Insight
+            const insight = sources.length === 1
+                ? `All income from ${top.name}. Adding water sales or other streams reduces risk.`
+                : topPct > 75
+                ? `${top.name} is ${topPct}% of income. Strong consistency but consider growing other streams.`
+                : sources.length >= 3
+                ? `Well-diversified across ${sources.length} sources. ${top.name} leads at ${topPct}%.`
+                : `${top.name} leads at ${topPct}%. ${sources[1]?.name || ''} is a solid secondary source.`;
+
+            html += `<div style="padding:10px 14px;background:rgba(16,185,129,0.08);border-left:3px solid #10b981;border-radius:6px;font-size:0.85rem;">
+                💡 <strong>JAROD:</strong> ${insight}
+            </div>`;
+
+            return html;
         }
 
         function generateExpenseAnalysisText(data) {
-            const { month, year, totalExpenses, expenses, totalIncome } = data;
-            
-            if (totalExpenses === 0) {
-                return `<p>📊 <strong>No expenses recorded for ${month} ${year}.</strong></p>
-                <p style="margin-top: 10px;">💡 <em>Tip: Track all business expenses to get accurate profit calculations and identify cost-saving opportunities.</em></p>`;
-            }
-            
-            // Group expenses by category
-            const categories = {};
-            expenses.forEach(e => {
-                const cat = e.category || 'other';
-                if (!categories[cat]) categories[cat] = 0;
-                categories[cat] += e.amount || 0;
-            });
-            
-            const topCategory = Object.entries(categories).sort((a, b) => b[1] - a[1])[0];
-            const expenseRatio = totalIncome > 0 ? Math.round((totalExpenses / totalIncome) * 100) : 0;
-            
-            let analysis = `<p>📊 <strong>Expense Analysis for ${month} ${year}:</strong></p>`;
-            analysis += `<p style="margin-top: 10px;">Your total expenses of <strong>₱${totalExpenses.toLocaleString()}</strong> represent <strong>${expenseRatio}%</strong> of your income.</p>`;
-            
-            if (topCategory) {
-                const topPercent = Math.round((topCategory[1] / totalExpenses) * 100);
-                analysis += `<p style="margin-top: 10px;">The largest expense category is <strong>${topCategory[0].charAt(0).toUpperCase() + topCategory[0].slice(1)}</strong> at ₱${topCategory[1].toLocaleString()} (${topPercent}% of total expenses).</p>`;
-            }
-            
-            analysis += `<p style="margin-top: 15px; padding: 10px; background: rgba(245, 158, 11, 0.1); border-radius: 8px;">💡 <strong>Tip:</strong> ${
-                expenseRatio > 50 ? '⚠️ Your expenses are consuming more than half of your income. Review each category for potential cost-cutting opportunities.' :
-                expenseRatio > 30 ? 'Your expense ratio is moderate. Look for ways to optimize operational costs without compromising quality.' :
-                '✅ Excellent cost management! Your low expense ratio means higher profit margins. Consider reinvesting in property improvements.'
-            }</p>`;
-            
-            return analysis;
-        }
+            const { month, totalExpenses, expenses, totalIncome, expCats, topExpCat, prevExpenses } = data;
 
-        // =====================================================
-        // FINANCIAL DETAILS MODAL FUNCTIONS
-        // =====================================================
-        let financeDetailsChart = null;
-
-        async function showIncomeDetails() {
-            const reportData = await getReportData();
-            const { totalIncome, rentIncome, creditIncome, waterIncome, additionalIncome } = reportData;
-
-            let content = `
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <div style="font-size: 2.5rem;">💰</div>
-                    <h2 style="margin: 10px 0; color: var(--success);">₱${totalIncome.toLocaleString()}</h2>
-                    <p style="color: var(--text-secondary);">Total Income</p>
-                </div>
-                
-                <div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px;">
-                    <h4 style="margin-bottom: 10px;">Income Breakdown:</h4>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span>🏠 Rent Collected:</span>
-                        <strong>₱${rentIncome.toLocaleString()}</strong>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span>💳 Credit Repaid:</span>
-                        <strong>₱${creditIncome.toLocaleString()}</strong>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span>💧 Water Sales:</span>
-                        <strong>₱${waterIncome.toLocaleString()}</strong>
-                    </div>
-                    <div style="display: flex; justify-content: space-between;">
-                        <span>💵 Additional Income:</span>
-                        <strong>₱${additionalIncome.toLocaleString()}</strong>
-                    </div>
-                </div>
-            `;
-            
-            document.getElementById('financial-details-title').textContent = '💰 Income Details';
-            document.getElementById('financial-details-content').innerHTML = content;
-            createIncomeChart(reportData);
-            showModal('financial-details-modal');
-        }
-
-        async function showExpenseDetails() {
-            const reportData = await getReportData();
-            const { totalExpenses, expenses } = reportData;
-            const categories = {};
-            expenses.forEach(e => {
-                const cat = e.category || 'other';
-                if (!categories[cat]) categories[cat] = 0;
-                categories[cat] += e.amount || 0;
-            });
-            let categoryHtml = '';
-            Object.entries(categories).sort((a, b) => b[1] - a[1]).forEach(([cat, amt]) => {
-                const percent = totalExpenses > 0 ? Math.round((amt / totalExpenses) * 100) : 0;
-                const catEmoji = cat === 'utilities' ? '💡' : cat === 'maintenance' ? '🔧' : cat === 'supplies' ? '📦' : cat === 'salaries' ? '💰' : '📝';
-                categoryHtml += `<div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span>${catEmoji} ${cat.charAt(0).toUpperCase() + cat.slice(1)}:</span><strong>₱${amt.toLocaleString()} (${percent}%)</strong></div>`;
-            });
-            document.getElementById('financial-details-title').textContent = '💸 Expense Details';
-            document.getElementById('financial-details-content').innerHTML = `<div style="text-align: center; margin-bottom: 20px;"><div style="font-size: 2.5rem;">💸</div><h2 style="margin: 10px 0; color: var(--danger);">₱${totalExpenses.toLocaleString()}</h2><p style="color: var(--text-secondary);">Total Expenses</p></div><div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px;"><h4 style="margin-bottom: 10px;">Expense Breakdown:</h4>${categoryHtml || '<p style="color: var(--text-secondary);">No expenses recorded</p>'}</div>`;
-            createExpenseChart(categories);
-            showModal('financial-details-modal');
-        }
-
-        async function showNetProfitDetails() {
-            const reportData = await getReportData();
-            const { totalIncome, totalExpenses, netProfit, profitMargin } = reportData;
-            document.getElementById('financial-details-title').textContent = '📊 Net Profit Analysis';
-            document.getElementById('financial-details-content').innerHTML = `<div style="text-align: center; margin-bottom: 20px;"><div style="font-size: 2.5rem;">📊</div><h2 style="margin: 10px 0; color: ${netProfit >= 0 ? 'var(--success)' : 'var(--danger)'};">₱${netProfit.toLocaleString()}</h2><p style="color: var(--text-secondary);">Net Profit</p><div style="font-size: 1.5rem; color: var(--primary); margin-top: 5px;">${profitMargin}%</div><p style="color: var(--text-secondary); font-size: 0.85rem;">Profit Margin</p></div><div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px;"><h4 style="margin-bottom: 10px;">Financial Summary:</h4><div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span style="color: var(--success);">💰 Total Income:</span><strong style="color: var(--success);">₱${totalIncome.toLocaleString()}</strong></div><div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span style="color: var(--danger);">💸 Total Expenses:</span><strong style="color: var(--danger);">₱${totalExpenses.toLocaleString()}</strong></div><hr style="margin: 10px 0; border-color: var(--border-color);"><div style="display: flex; justify-content: space-between;"><span style="font-size: 1.1rem;">📈 Net Profit:</span><strong style="font-size: 1.1rem; color: ${netProfit >= 0 ? 'var(--success)' : 'var(--danger)'};">₱${netProfit.toLocaleString()}</strong></div></div>`;
-            createNetProfitChart(reportData);
-            showModal('financial-details-modal');
-        }
-
-        async function showIncomeVsExpenseChart() {
-            const reportData = await getReportData();
-            document.getElementById('financial-details-title').textContent = '📊 Income vs Expense Analysis';
-            document.getElementById('financial-details-content').innerHTML = `<div style="text-align: center; margin-bottom: 15px;"><p style="color: var(--text-secondary);">Visual comparison with JAROD's AI analysis</p></div>`;
-            createIncomeVsExpenseChart(reportData);
-            showModal('financial-details-modal');
-        }
-
-        async function getReportData() {
-            const reportPeriod = document.getElementById('report-period')?.value || 'month';
-            const currentDate = new Date();
-            let startDate, endDate;
-            if (reportPeriod === 'month') {
-                startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-                endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-            } else if (reportPeriod === 'quarter') {
-                const quarter = Math.floor(currentDate.getMonth() / 3);
-                startDate = new Date(currentDate.getFullYear(), quarter * 3, 1);
-                endDate = new Date(currentDate.getFullYear(), (quarter + 1) * 3, 0);
-            } else {
-                startDate = new Date(currentDate.getFullYear(), 0, 1);
-                endDate = new Date(currentDate.getFullYear(), 11, 31);
-            }
-            const dateStr = (d) => d.toISOString().split('T')[0];
-            const startStr = dateStr(startDate);
-            const endStr = dateStr(endDate);
-            const payments = await dbGetAll('payments');
-            const creditPayments = await dbGetAll('creditPayments');
-            const waterSales = await dbGetAll('waterSales');
-            const additionalIncomes = await dbGetAll('additionalIncome');
-            const expenses = await dbGetAll('expenses');
-            const filteredPayments = payments.filter(p => p.date >= startStr && p.date <= endStr);
-            const filteredCreditPayments = creditPayments.filter(p => p.date >= startStr && p.date <= endStr);
-            const filteredWaterSales = waterSales.filter(s => s.date >= startStr && s.date <= endStr && !s.voided);
-            const filteredAdditional = additionalIncomes.filter(a => a.date >= startStr && a.date <= endStr);
-            const filteredExpenses = expenses.filter(e => e.date >= startStr && e.date <= endStr);
-            const rentIncome = filteredPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-            const creditIncome = filteredCreditPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-            const waterIncome = filteredWaterSales.reduce((sum, s) => sum + (s.amountPaid || 0), 0);
-            const additionalIncome = filteredAdditional.reduce((sum, a) => sum + (a.amount || 0), 0);
-            const totalIncome = rentIncome + creditIncome + waterIncome + additionalIncome;
-            const totalExpenses = filteredExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-            const netProfit = totalIncome - totalExpenses;
-            const profitMargin = totalIncome > 0 ? Math.round((netProfit / totalIncome) * 100) : 0;
-            return { rentIncome, creditIncome, waterIncome, additionalIncome, totalIncome, totalExpenses, netProfit, profitMargin, expenses: filteredExpenses };
-        }
-
-        function createIncomeChart(data) {
-            const ctx = document.getElementById('financial-details-chart');
-            if (!ctx) return;
-            if (financeDetailsChart) financeDetailsChart.destroy();
-            financeDetailsChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Rent', 'Credit Repaid', 'Water Sales', 'Additional'],
-                    datasets: [{
-                        data: [data.rentIncome, data.creditIncome, data.waterIncome, data.additionalIncome],
-                        backgroundColor: ['#10b981', '#3b82f6', '#06b6d4', '#8b5cf6']
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: { position: 'bottom' },
-                        title: { display: true, text: 'Income Sources' }
-                    }
-                }
-            });
-        }
-
-        function createExpenseChart(categories) {
-            const ctx = document.getElementById('financial-details-chart');
-            if (!ctx) return;
-            if (financeDetailsChart) financeDetailsChart.destroy();
-            const labels = Object.keys(categories).map(c => c.charAt(0).toUpperCase() + c.slice(1));
-            const data = Object.values(categories);
-            const colors = ['#ef4444', '#f59e0b', '#eab308', '#84cc16', '#22c55e'];
-            financeDetailsChart = new Chart(ctx, {
-                type: 'pie',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: data,
-                        backgroundColor: colors.slice(0, labels.length)
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: { position: 'bottom' },
-                        title: { display: true, text: 'Expense Categories' }
-                    }
-                }
-            });
-        }
-
-        function createNetProfitChart(data) {
-            const ctx = document.getElementById('financial-details-chart');
-            if (!ctx) return;
-            if (financeDetailsChart) financeDetailsChart.destroy();
-            financeDetailsChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['Income', 'Expenses', 'Net Profit'],
-                    datasets: [{
-                        label: 'Amount (₱)',
-                        data: [data.totalIncome, data.totalExpenses, data.netProfit],
-                        backgroundColor: ['#10b981', '#ef4444', data.netProfit >= 0 ? '#3b82f6' : '#f59e0b']
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: { display: false },
-                        title: { display: true, text: 'Financial Summary' }
-                    },
-                    scales: {
-                        y: { beginAtZero: true }
-                    }
-                }
-            });
-        }
-
-        function createIncomeVsExpenseChart(data) {
-            const ctx = document.getElementById('financial-details-chart');
-            if (!ctx) return;
-            if (financeDetailsChart) financeDetailsChart.destroy();
-            financeDetailsChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['Total Income', 'Total Expenses'],
-                    datasets: [{
-                        label: 'Amount (₱)',
-                        data: [data.totalIncome, data.totalExpenses],
-                        backgroundColor: ['#10b981', '#ef4444'],
-                        borderWidth: 2,
-                        borderColor: ['#059669', '#dc2626']
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: { display: false },
-                        title: { display: true, text: `Income vs Expense | Net: ₱${data.netProfit.toLocaleString()} (${data.profitMargin}%)` }
-                    },
-                    scales: {
-                        y: { 
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    return '₱' + value.toLocaleString();
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        // =====================================================
-        // CREDITS DETAIL FUNCTIONS
-        // =====================================================
-        async function showLentOutDetails() {
-            const credits = await dbGetAll('credits');
-            const creditPayments = await dbGetAll('creditPayments');
-            const today = new Date().toISOString().split('T')[0];
-
-            // Compute per-debtor summary
-            const debtorRows = credits.map(c => {
-                const payments = creditPayments.filter(p => p.creditId === c.id);
-                const totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
-                const totalDue = (c.principal || 0) + (c.interest || 0);
-                const balance = Math.max(0, totalDue - totalPaid);
-                const isPaid = balance <= 0;
-                const isOverdue = !isPaid && c.dueDate && c.dueDate < today;
-                const pct = totalDue > 0 ? Math.round((totalPaid / totalDue) * 100) : 0;
-                return { ...c, totalPaid, totalDue, balance, isPaid, isOverdue, pct, paymentCount: payments.length };
-            });
-
-            const totalLent     = credits.reduce((sum, c) => sum + (c.principal || 0), 0);
-            const totalDueAll   = debtorRows.reduce((sum, r) => sum + r.totalDue, 0);
-            const totalPaidAll  = debtorRows.reduce((sum, r) => sum + r.totalPaid, 0);
-            const totalBalance  = debtorRows.reduce((sum, r) => sum + r.balance, 0);
-            const activeCount   = debtorRows.filter(r => !r.isPaid && !r.isOverdue).length;
-            const overdueCount  = debtorRows.filter(r => r.isOverdue).length;
-            const paidCount     = debtorRows.filter(r => r.isPaid).length;
-
-            // Sort: overdue first, then active, then paid
-            debtorRows.sort((a,b) => {
-                if (a.isOverdue && !b.isOverdue) return -1;
-                if (!a.isOverdue && b.isOverdue) return 1;
-                if (!a.isPaid && b.isPaid) return -1;
-                if (a.isPaid && !b.isPaid) return 1;
-                return b.balance - a.balance;
-            });
-
-            const statusBadge = (row) => {
-                if (row.isPaid) return '<span style="background:#d1fae5;color:#065f46;font-size:0.7rem;padding:2px 8px;border-radius:20px;font-weight:700;">✅ PAID</span>';
-                if (row.isOverdue) return '<span style="background:#fee2e2;color:#991b1b;font-size:0.7rem;padding:2px 8px;border-radius:20px;font-weight:700;">🚨 OVERDUE</span>';
-                return '<span style="background:#dbeafe;color:#1e40af;font-size:0.7rem;padding:2px 8px;border-radius:20px;font-weight:700;">⏳ ACTIVE</span>';
+            const catLabels = {
+                electric:'⚡ Electric', water:'💧 Water Bill', fuel:'⛽ Fuel',
+                repairs:'🔧 Repairs', taxes:'📋 Taxes', insurance:'🛡️ Insurance',
+                transport:'🚌 Transport', supplies:'📦 Supplies', labor:'👷 Labor',
+                loans:'💳 Loans', food:'🍔 Food', comms:'📱 Comms', other:'📝 Other',
+                sss:'🏛️ SSS', philhealth:'🏥 PhilHealth', pagibig:'🏠 Pag-IBIG',
+                bir:'📋 BIR Tax', accountant:'👨‍💼 Accountant', savings:'🏦 Savings',
+                investment:'📈 Investment', reserve:'🏦 Reserve', ownerdraw:'👤 Owner Draw',
+                payroll:'💰 Payroll', inventory:'📦 Inventory', maintenance:'🔧 Maintenance',
+                utilities:'💡 Utilities'
             };
 
-            const rows = debtorRows.length === 0
-                ? '<div style="text-align:center;padding:30px;color:var(--text-secondary);">No credit records yet.</div>'
-                : debtorRows.map(row => `
-                    <div onclick="showCreditDetails(${row.id})" style="background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;padding:14px;margin-bottom:8px;cursor:pointer;${row.isOverdue?'border-left:4px solid #ef4444;':row.isPaid?'border-left:4px solid #10b981;':'border-left:4px solid #3b82f6;'}">
-                        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
-                            <div>
-                                <div style="font-weight:700;color:var(--text-primary);font-size:0.95rem;">${row.debtor || 'Unknown'}</div>
-                                <div style="font-size:0.75rem;color:var(--text-secondary);">${row.purpose || 'No purpose stated'}</div>
-                            </div>
-                            ${statusBadge(row)}
-                        </div>
-                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px;font-size:0.78rem;">
-                            <div style="text-align:center;background:var(--bg-card);border-radius:6px;padding:6px;">
-                                <div style="color:var(--text-secondary);">Principal</div>
-                                <div style="font-weight:700;color:var(--primary);">₱${(row.principal||0).toLocaleString()}</div>
-                            </div>
-                            <div style="text-align:center;background:var(--bg-card);border-radius:6px;padding:6px;">
-                                <div style="color:var(--text-secondary);">Paid</div>
-                                <div style="font-weight:700;color:#10b981;">₱${row.totalPaid.toLocaleString()}</div>
-                            </div>
-                            <div style="text-align:center;background:var(--bg-card);border-radius:6px;padding:6px;">
-                                <div style="color:var(--text-secondary);">Balance</div>
-                                <div style="font-weight:700;color:${row.balance>0?'#ef4444':'#10b981'};">₱${row.balance.toLocaleString()}</div>
-                            </div>
-                        </div>
-                        <div style="background:var(--bg-card);border-radius:4px;height:6px;overflow:hidden;">
-                            <div style="height:100%;width:${row.pct}%;background:${row.isPaid?'#10b981':row.isOverdue?'#ef4444':'#3b82f6'};border-radius:4px;transition:width 0.4s;"></div>
-                        </div>
-                        <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:0.7rem;color:var(--text-secondary);">
-                            <span>${row.pct}% repaid · ${row.paymentCount} payment${row.paymentCount!==1?'s':''}</span>
-                            <span>${row.dueDate ? '📅 Due: '+row.dueDate : ''}</span>
-                        </div>
-                    </div>`).join('');
+            if (totalExpenses === 0) {
+                return `<div style="color:var(--text-secondary);font-size:0.9rem;">
+                    <p>📊 No expenses recorded for this period.</p>
+                    <p style="margin-top:8px;">Record your expenses to get accurate profit calculations and cost breakdowns.</p>
+                </div>`;
+            }
 
-            const content = `
-                <!-- Summary Header -->
-                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px;">
-                    <div style="background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.2);border-radius:10px;padding:12px;text-align:center;">
-                        <div style="font-size:1.3rem;font-weight:800;color:var(--primary);">₱${totalLent.toLocaleString()}</div>
-                        <div style="font-size:0.72rem;color:var(--text-secondary);">Total Principal Lent</div>
-                    </div>
-                    <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:12px;text-align:center;">
-                        <div style="font-size:1.3rem;font-weight:800;color:#ef4444;">₱${totalBalance.toLocaleString()}</div>
-                        <div style="font-size:0.72rem;color:var(--text-secondary);">Outstanding Balance</div>
-                    </div>
-                    <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:10px;padding:12px;text-align:center;">
-                        <div style="font-size:1.3rem;font-weight:800;color:#10b981;">₱${totalPaidAll.toLocaleString()}</div>
-                        <div style="font-size:0.72rem;color:var(--text-secondary);">Total Collected</div>
-                    </div>
-                    <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:12px;text-align:center;">
-                        <div style="font-size:1.3rem;font-weight:800;color:#f59e0b;">${credits.length}</div>
-                        <div style="font-size:0.72rem;color:var(--text-secondary);">Total Debtors</div>
-                    </div>
-                </div>
-                <!-- Status badges -->
-                <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
-                    ${overdueCount>0?`<span style="background:#fee2e2;color:#991b1b;padding:4px 12px;border-radius:20px;font-size:0.78rem;font-weight:700;">🚨 ${overdueCount} Overdue</span>`:''}
-                    <span style="background:#dbeafe;color:#1e40af;padding:4px 12px;border-radius:20px;font-size:0.78rem;font-weight:700;">⏳ ${activeCount} Active</span>
-                    <span style="background:#d1fae5;color:#065f46;padding:4px 12px;border-radius:20px;font-size:0.78rem;font-weight:700;">✅ ${paidCount} Paid</span>
-                </div>
-                <!-- Debtor List -->
-                <div style="font-weight:700;color:var(--text-primary);margin-bottom:8px;font-size:0.85rem;">📋 Debtor List</div>
-                ${rows}`;
+            const expenseRatio = totalIncome > 0 ? Math.round((totalExpenses / totalIncome) * 100) : 100;
+            const sorted = Object.entries(expCats || {}).sort((a, b) => b[1] - a[1]);
+            const colors = ['#ef4444','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899'];
 
-            document.getElementById('financial-details-title').textContent = '💳 Total Lent Out — All Debtors';
-            document.getElementById('financial-details-content').innerHTML = content;
-            createCreditsChart(credits);
-            showModal('financial-details-modal');
-        }
+            let html = `<div style="font-size:1rem;font-weight:700;margin-bottom:4px;">
+                Total Expenses: <span style="color:#ef4444;">₱${totalExpenses.toLocaleString()}</span>
+            </div>
+            <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:12px;">
+                Expense ratio: <strong style="color:${expenseRatio>80?'#ef4444':expenseRatio>50?'#f59e0b':'#10b981'};">${expenseRatio}%</strong> of income
+                ${prevExpenses > 0 ? ' · vs prev: ₱'+prevExpenses.toLocaleString() : ''}
+            </div>`;
 
-        async function showRepaidDetails() {
-            const creditPayments = await dbGetAll('creditPayments');
-            const totalRepaid = creditPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-            
-            // Group by month
-            const byMonth = {};
-            creditPayments.forEach(p => {
-                const month = p.date.substring(0, 7);
-                if (!byMonth[month]) byMonth[month] = 0;
-                byMonth[month] += p.amount || 0;
+            // Category bars
+            sorted.forEach(([cat, amt], idx) => {
+                const pct = Math.round((amt / totalExpenses) * 100);
+                const label = catLabels[cat] || ('📝 ' + cat.charAt(0).toUpperCase() + cat.slice(1));
+                const color = colors[idx % colors.length];
+                html += `<div style="margin-bottom:9px;">
+                    <div style="display:flex;justify-content:space-between;font-size:0.83rem;margin-bottom:3px;">
+                        <span>${label}</span>
+                        <span style="font-weight:700;">₱${amt.toLocaleString()} <span style="color:var(--text-secondary);font-weight:400;">(${pct}%)</span></span>
+                    </div>
+                    <div style="background:var(--bg-secondary);border-radius:4px;height:7px;overflow:hidden;">
+                        <div style="height:100%;width:${pct}%;background:${color};border-radius:4px;"></div>
+                    </div>
+                </div>`;
             });
-            
-            let content = `
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <div style="font-size: 2.5rem;">💰</div>
-                    <h2 style="margin: 10px 0; color: var(--success);">₱${totalRepaid.toLocaleString()}</h2>
-                    <p style="color: var(--text-secondary);">Total Repaid</p>
-                </div>
-                
-                <div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                    <h4 style="margin-bottom: 10px;">Payment Summary:</h4>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span>Total Payments:</span>
-                        <strong>${creditPayments.length}</strong>
-                    </div>
-                    <div style="display: flex; justify-content: space-between;">
-                        <span>Average Payment:</span>
-                        <strong>₱${creditPayments.length > 0 ? Math.round(totalRepaid / creditPayments.length).toLocaleString() : '0'}</strong>
-                    </div>
-                </div>
-            `;
-            
-            document.getElementById('financial-details-title').textContent = '💰 Total Repaid';
-            document.getElementById('financial-details-content').innerHTML = content;
-            createRepaidChart(byMonth);
-            showModal('financial-details-modal');
-        }
 
-        async function showCreditsByStatus(status) {
-            setCreditFilter(status);
-            const credits = await dbGetAll('credits');
-            const creditPayments = await dbGetAll('creditPayments');
-            
-            let filtered = credits.filter(c => {
-                const payments = creditPayments.filter(p => p.creditId === c.id);
-                const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
-                const totalDue = (c.principal || 0) + (c.interest || 0);
-                const isPaid = totalPaid >= totalDue;
-                const isOverdue = !isPaid && new Date(c.dueDate) < new Date();
-                
-                if (status === 'active') return !isPaid && !isOverdue;
-                if (status === 'paid') return isPaid;
-                if (status === 'overdue') return isOverdue;
-                return true;
-            });
-            
-            const total = filtered.reduce((sum, c) => sum + (c.principal || 0), 0);
-            
-            let content = `
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <h3 style="margin: 10px 0;">${status.charAt(0).toUpperCase() + status.slice(1)} Credits</h3>
-                    <div style="font-size: 2rem; color: var(--primary);">₱${total.toLocaleString()}</div>
-                    <p style="color: var(--text-secondary);">${filtered.length} ${status} loan(s)</p>
-                </div>
-                
-                <div style="max-height: 300px; overflow-y: auto;">
-            `;
-            
-            filtered.forEach(c => {
-                const payments = creditPayments.filter(p => p.creditId === c.id);
-                const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
-                content += `
-                    <div class="list-item" onclick="viewCreditDetails(${c.id}); hideModal('financial-details-modal');" style="cursor: pointer;">
-                        <div class="list-item-content">
-                            <div class="list-item-title">${c.borrowerName}</div>
-                            <div class="list-item-subtitle">₱${c.principal.toLocaleString()} • Paid: ₱${totalPaid.toLocaleString()}</div>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            content += '</div>';
-            
-            document.getElementById('financial-details-title').textContent = `${status.charAt(0).toUpperCase() + status.slice(1)} Credits`;
-            document.getElementById('financial-details-content').innerHTML = content;
-            document.getElementById('financial-details-chart').style.display = 'none';
-            showModal('financial-details-modal');
-        }
+            // Period comparison
+            if (prevExpenses > 0) {
+                const diff = totalExpenses - prevExpenses;
+                const diffPct = Math.round((Math.abs(diff) / prevExpenses) * 100);
+                const isUp = diff > 0;
+                html += `<div style="font-size:0.82rem;margin:8px 0;">
+                    <span style="color:${isUp?'#ef4444':'#10b981'};">${isUp?'▲':'▼'} ${diffPct}% vs previous period</span>
+                    <span style="color:var(--text-secondary);"> — expenses ${isUp?'increased':'decreased'} by ₱${Math.abs(diff).toLocaleString()}</span>
+                </div>`;
+            }
 
-        // =====================================================
-        // TENANTS DETAIL FUNCTIONS
-        // =====================================================
-        async function showTenantsByStatus(status) {
-            setTenantFilter(status);
-            const tenants = await dbGetAll('tenants');
-            const payments = await dbGetAll('payments');
-            const currentDate = new Date();
-            
-            let filtered = tenants.filter(t => {
-                if (t.status !== 'active') return false;
-                
-                const currentMonth = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
-                const tenantPayments = payments.filter(p => p.tenantId === t.id && p.forMonth === currentMonth);
-                const hasPaid = tenantPayments.length > 0;
-                const isOverdue = !hasPaid && currentDate.getDate() > (t.dueDay || 5);
-                
-                if (status === 'paid') return hasPaid;
-                if (status === 'unpaid') return !hasPaid && !isOverdue;
-                if (status === 'overdue') return isOverdue;
-                return true;
-            });
-            
-            const totalRent = filtered.reduce((sum, t) => sum + (t.rent || 0), 0);
-            
-            let content = `
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <h3 style="margin: 10px 0;">${status.charAt(0).toUpperCase() + status.slice(1)} Tenants</h3>
-                    <div style="font-size: 2rem; color: var(--primary);">₱${totalRent.toLocaleString()}</div>
-                    <p style="color: var(--text-secondary);">${filtered.length} tenant(s)</p>
-                </div>
-                
-                <div style="max-height: 300px; overflow-y: auto;">
-            `;
-            
-            filtered.forEach(t => {
-                const property = allProperties.find(p => p.id === t.propertyId);
-                content += `
-                    <div class="list-item" onclick="viewTenantDetails(${t.id}); hideModal('financial-details-modal');" style="cursor: pointer;">
-                        <div class="list-item-content">
-                            <div class="list-item-title">${t.name}</div>
-                            <div class="list-item-subtitle">${property ? property.name : 'No property'} • ₱${t.rent.toLocaleString()}/mo</div>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            content += '</div>';
-            
-            document.getElementById('financial-details-title').textContent = `${status.charAt(0).toUpperCase() + status.slice(1)} Tenants`;
-            document.getElementById('financial-details-content').innerHTML = content;
-            document.getElementById('financial-details-chart').style.display = 'none';
-            showModal('financial-details-modal');
-        }
+            // JAROD insight
+            const topLabel = topExpCat ? (catLabels[topExpCat[0]] || topExpCat[0]) : '';
+            const topPct2 = topExpCat ? Math.round((topExpCat[1] / totalExpenses) * 100) : 0;
+            const insight = expenseRatio > 80
+                ? `⚠️ Expenses are ${expenseRatio}% of income. ${topLabel} is the biggest cost at ${topPct2}%. Review for reduction.`
+                : expenseRatio > 50
+                ? `Moderate expense ratio (${expenseRatio}%). Watch ${topLabel} — it's ${topPct2}% of total costs.`
+                : `Good control at ${expenseRatio}% ratio. ${topLabel} leads costs at ${topPct2}%.`;
 
-        // =====================================================
-        // DASHBOARD EXPENSE DETAIL FUNCTIONS
-        // =====================================================
-        async function showTotalSpentDetails() {
-            const expenses = await dbGetAll('expenses');
-            const currentDate = new Date();
-            const currentMonth = expenses.filter(e => {
-                const expDate = new Date(e.date);
-                return expDate.getMonth() === currentDate.getMonth() && expDate.getFullYear() === currentDate.getFullYear();
-            });
-            
-            const totalSpent = currentMonth.reduce((sum, e) => sum + (e.amount || 0), 0);
-            
-            // Group by category
-            const categories = {};
-            currentMonth.forEach(e => {
-                const cat = e.category || 'other';
-                if (!categories[cat]) categories[cat] = 0;
-                categories[cat] += e.amount || 0;
-            });
-            
-            let content = `
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <div style="font-size: 2.5rem;">💸</div>
-                    <h2 style="margin: 10px 0; color: var(--danger);">₱${totalSpent.toLocaleString()}</h2>
-                    <p style="color: var(--text-secondary);">Total Spent This Month</p>
-                </div>
-                
-                <div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                    <h4 style="margin-bottom: 10px;">Expense Breakdown:</h4>
-            `;
-            
-            Object.entries(categories).sort((a, b) => b[1] - a[1]).forEach(([cat, amt]) => {
-                const percent = totalSpent > 0 ? Math.round((amt / totalSpent) * 100) : 0;
-                content += `
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span>${cat.charAt(0).toUpperCase() + cat.slice(1)}:</span>
-                        <strong>₱${amt.toLocaleString()} (${percent}%)</strong>
-                    </div>
-                `;
-            });
-            
-            content += `
-                </div>
-                
-                <div style="padding: 12px; background: rgba(239, 68, 68, 0.1); border-radius: 8px; border-left: 4px solid #ef4444;">
-                    <p style="margin: 0; font-size: 0.9rem;">
-                        <strong>💡 Tip:</strong> Track every expense to identify savings opportunities and improve profitability.
-                    </p>
-                </div>
-            `;
-            
-            document.getElementById('financial-details-title').textContent = '💸 Total Spent This Month';
-            document.getElementById('financial-details-content').innerHTML = content;
-            createExpenseChart(categories);
-            showModal('financial-details-modal');
-        }
+            html += `<div style="padding:10px 14px;background:rgba(245,158,11,0.08);border-left:3px solid #f59e0b;border-radius:6px;font-size:0.85rem;margin-top:4px;">
+                💡 <strong>JAROD:</strong> ${insight}
+            </div>`;
 
-        async function showNetIncomeDetails() {
-            const data = await getDashboardData();
-            const { totalIncome, totalExpenses, netIncome } = data;
-            
-            let content = `
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <div style="font-size: 2.5rem;">💰</div>
-                    <h2 style="margin: 10px 0; color: ${netIncome >= 0 ? 'var(--success)' : 'var(--danger)'};">₱${netIncome.toLocaleString()}</h2>
-                    <p style="color: var(--text-secondary);">Net Income This Month</p>
-                </div>
-                
-                <div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                    <h4 style="margin-bottom: 10px;">Financial Summary:</h4>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span style="color: var(--success);">Total Income:</span>
-                        <strong style="color: var(--success);">₱${totalIncome.toLocaleString()}</strong>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span style="color: var(--danger);">Total Expenses:</span>
-                        <strong style="color: var(--danger);">₱${totalExpenses.toLocaleString()}</strong>
-                    </div>
-                    <hr style="margin: 10px 0; border-color: var(--border-color);">
-                    <div style="display: flex; justify-content: space-between;">
-                        <span style="font-size: 1.1rem;">Net Income:</span>
-                        <strong style="font-size: 1.1rem; color: ${netIncome >= 0 ? 'var(--success)' : 'var(--danger)'};">₱${netIncome.toLocaleString()}</strong>
-                    </div>
-                </div>
-                
-                <div style="padding: 12px; background: rgba(16, 185, 129, 0.1); border-radius: 8px; border-left: 4px solid #10b981;">
-                    <p style="margin: 0; font-size: 0.9rem;">
-                        <strong>💰 Status:</strong> ${netIncome > 0 ? 'Positive cash flow! You\'re earning more than spending.' : netIncome < 0 ? 'Negative cash flow. Review expenses and increase income.' : 'Break even. Monitor closely.'}
-                    </p>
-                </div>
-            `;
-            
-            document.getElementById('financial-details-title').textContent = '💰 Net Income Analysis';
-            document.getElementById('financial-details-content').innerHTML = content;
-            createIncomeVsExpenseChart({ totalIncome, totalExpenses, netProfit: netIncome, profitMargin: totalIncome > 0 ? Math.round((netIncome / totalIncome) * 100) : 0 });
-            showModal('financial-details-modal');
-        }
-
-        async function getDashboardData() {
-            const currentDate = new Date();
-            const currentMonth = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
-            
-            const payments = await dbGetAll('payments');
-            const creditPayments = await dbGetAll('creditPayments');
-            const waterSales = await dbGetAll('waterSales');
-            const additionalIncomes = await dbGetAll('additionalIncome');
-            const expenses = await dbGetAll('expenses');
-            
-            const monthStart = `${currentMonth}-01`;
-            const monthEnd = `${currentMonth}-31`;
-            
-            const monthPayments = payments.filter(p => p.forMonth === currentMonth);
-            const monthCreditPayments = creditPayments.filter(p => p.date >= monthStart && p.date <= monthEnd);
-            const monthWaterSales = waterSales.filter(s => s.date >= monthStart && s.date <= monthEnd && !s.voided);
-            const monthAdditional = additionalIncomes.filter(a => a.date >= monthStart && a.date <= monthEnd);
-            const monthExpenses = expenses.filter(e => e.date >= monthStart && e.date <= monthEnd);
-            
-            const rentIncome = monthPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-            const creditIncome = monthCreditPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-            const waterIncome = monthWaterSales.reduce((sum, s) => sum + (s.amountPaid || 0), 0);
-            const additionalIncome = monthAdditional.reduce((sum, a) => sum + (a.amount || 0), 0);
-            const totalIncome = rentIncome + creditIncome + waterIncome + additionalIncome;
-            const totalExpenses = monthExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-            const netIncome = totalIncome - totalExpenses;
-            
-            return { totalIncome, totalExpenses, netIncome };
-        }
-
-        function createCreditsChart(credits) {
-            const ctx = document.getElementById('financial-details-chart');
-            if (!ctx) return;
-            if (financeDetailsChart) financeDetailsChart.destroy();
-            ctx.style.display = 'block';
-            
-            const activePrincipal = credits.reduce((sum, c) => sum + (c.principal || 0), 0);
-            const activeInterest = credits.reduce((sum, c) => sum + (c.interest || 0), 0);
-            
-            financeDetailsChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Principal', 'Interest'],
-                    datasets: [{
-                        data: [activePrincipal, activeInterest],
-                        backgroundColor: ['#3b82f6', '#8b5cf6']
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: { position: 'bottom' },
-                        title: { display: true, text: 'Loan Composition' }
-                    }
-                }
-            });
-        }
-
-        function createRepaidChart(byMonth) {
-            const ctx = document.getElementById('financial-details-chart');
-            if (!ctx) return;
-            if (financeDetailsChart) financeDetailsChart.destroy();
-            ctx.style.display = 'block';
-            
-            const labels = Object.keys(byMonth).sort();
-            const data = labels.map(m => byMonth[m]);
-            
-            financeDetailsChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels.map(l => l.substring(5)),
-                    datasets: [{
-                        label: 'Repayments (₱)',
-                        data: data,
-                        borderColor: '#10b981',
-                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                        fill: true
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: { display: false },
-                        title: { display: true, text: 'Repayment Trend' }
-                    },
-                    scales: {
-                        y: { beginAtZero: true }
-                    }
-                }
-            });
+            return html;
         }
 
         function generateOverallAnalysisText(data) {
-            const { month, year, totalIncome, totalExpenses, netProfit, profitMargin, tenantCount, debtorCount, rentIncome, creditIncome, waterIncome } = data;
-            
-            let analysis = `<p>📊 <strong>Overall Financial Summary for ${month} ${year}:</strong></p>`;
-            
+            const { month, totalIncome, totalExpenses, netProfit, profitMargin,
+                    tenantCount, debtorCount, rentIncome, creditIncome,
+                    waterIncome, otherIncome, expenses, expCats,
+                    overdueTenants, outstandingCredits, totalOutstanding,
+                    vacantCount, propertyCount, totalExpectedRent,
+                    waterGallons, prevIncome, prevExpenses, prevNetProfit,
+                    diffDays } = data;
+
+            const catLabels = {
+                electric:'Electric', water:'Water Bill', fuel:'Fuel',
+                repairs:'Repairs', taxes:'Taxes', insurance:'Insurance',
+                transport:'Transport', supplies:'Supplies', labor:'Labor',
+                loans:'Loans', food:'Food', comms:'Comms', other:'Other',
+                sss:'SSS', philhealth:'PhilHealth', pagibig:'Pag-IBIG',
+                bir:'BIR Tax', accountant:'Accountant', savings:'Savings',
+                investment:'Investment', reserve:'Reserve', ownerdraw:'Owner Draw',
+                payroll:'Payroll', inventory:'Inventory', maintenance:'Maintenance',
+                utilities:'Utilities'
+            };
+
             if (totalIncome === 0 && totalExpenses === 0) {
-                return analysis + `<p style="margin-top: 10px;">No financial activity recorded for this period. Start tracking your income and expenses to get valuable insights!</p>`;
+                return `<p style="color:var(--text-secondary);">No activity this period. Generate a report after recording transactions.</p>`;
             }
-            
-            // Performance Assessment
-            const performanceLevel = profitMargin >= 70 ? 'Excellent' : profitMargin >= 50 ? 'Good' : profitMargin >= 30 ? 'Fair' : 'Needs Improvement';
-            const performanceEmoji = profitMargin >= 70 ? '🌟' : profitMargin >= 50 ? '✅' : profitMargin >= 30 ? '📊' : '⚠️';
-            
-            analysis += `<p style="margin-top: 10px;">${performanceEmoji} <strong>Performance Rating: ${performanceLevel}</strong></p>`;
-            analysis += `<p style="margin-top: 10px;">With a net profit of <strong>₱${netProfit.toLocaleString()}</strong> and a profit margin of <strong>${profitMargin}%</strong>, your business ${
-                netProfit > 0 ? 'is generating positive returns.' : 'operated at a loss this period.'
-            }</p>`;
-            
-            // Key Metrics
-            analysis += `<div style="margin-top: 15px; padding: 15px; background: rgba(16, 185, 129, 0.1); border-radius: 8px;">
-                <p><strong>📈 Key Insights:</strong></p>
-                <ul style="margin: 10px 0 0 20px; line-height: 1.8;">
-                    ${tenantCount > 0 ? `<li>You have <strong>${tenantCount} active tenant(s)</strong> generating rental income</li>` : ''}
-                    ${debtorCount > 0 ? `<li>You have <strong>${debtorCount} active loan(s)</strong> in your credit portfolio</li>` : ''}
-                    ${waterIncome > 0 ? `<li>Water refilling business contributed <strong>₱${waterIncome.toLocaleString()}</strong></li>` : ''}
-                    <li>Every ₱1 of income costs you <strong>₱${totalIncome > 0 ? (totalExpenses / totalIncome).toFixed(2) : '0.00'}</strong> in expenses</li>
+
+            const isGain = netProfit > 0;
+            const isBreak = netProfit === 0;
+            const ratio = totalIncome > 0 ? (totalExpenses / totalIncome) : 1;
+            const sorted = Object.entries(expCats || {}).sort((a,b) => b[1]-a[1]);
+            const topCat = sorted[0];
+
+            // Performance badge
+            const perf = profitMargin >= 60 ? { label:'EXCELLENT', color:'#10b981', emoji:'🌟', bg:'rgba(16,185,129,0.08)' }
+                       : profitMargin >= 40 ? { label:'GOOD',      color:'#3b82f6', emoji:'✅', bg:'rgba(59,130,246,0.08)' }
+                       : profitMargin >= 20 ? { label:'FAIR',      color:'#f59e0b', emoji:'📊', bg:'rgba(245,158,11,0.08)' }
+                       : isGain             ? { label:'LOW MARGIN',color:'#f59e0b', emoji:'⚠️', bg:'rgba(245,158,11,0.08)' }
+                       :                     { label:'AT A LOSS',  color:'#ef4444', emoji:'🚨', bg:'rgba(239,68,68,0.08)' };
+
+            let html = `<div style="display:flex;align-items:center;gap:12px;padding:14px;background:${perf.bg};border-radius:10px;margin-bottom:16px;">
+                <div style="font-size:2.2rem;">${perf.emoji}</div>
+                <div>
+                    <div style="font-weight:800;color:${perf.color};font-size:1rem;letter-spacing:0.5px;">${perf.label}</div>
+                    <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:2px;">${
+                        isGain  ? `Net gain of ₱${netProfit.toLocaleString()} — ${profitMargin}% profit margin`
+                        : isBreak ? 'Income and expenses are balanced — Break Even'
+                        : `Net loss of ₱${Math.abs(netProfit).toLocaleString()} — expenses exceed income`
+                    }</div>
+                </div>
+            </div>`;
+
+            // 4-grid summary
+            html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+                <div style="background:var(--bg-secondary);border-radius:8px;padding:10px;text-align:center;">
+                    <div style="font-size:1rem;font-weight:700;color:#10b981;">₱${totalIncome.toLocaleString()}</div>
+                    <div style="font-size:0.72rem;color:var(--text-secondary);">Total Income</div>
+                </div>
+                <div style="background:var(--bg-secondary);border-radius:8px;padding:10px;text-align:center;">
+                    <div style="font-size:1rem;font-weight:700;color:#ef4444;">₱${totalExpenses.toLocaleString()}</div>
+                    <div style="font-size:0.72rem;color:var(--text-secondary);">Total Expenses</div>
+                </div>
+                <div style="background:var(--bg-secondary);border-radius:8px;padding:10px;text-align:center;">
+                    <div style="font-size:1rem;font-weight:700;color:${isGain?'#10b981':'#ef4444'};">₱${Math.abs(netProfit).toLocaleString()}</div>
+                    <div style="font-size:0.72rem;color:var(--text-secondary);">${isGain?'Net Profit':'Net Loss'}</div>
+                </div>
+                <div style="background:var(--bg-secondary);border-radius:8px;padding:10px;text-align:center;">
+                    <div style="font-size:1rem;font-weight:700;color:${perf.color};">${profitMargin}%</div>
+                    <div style="font-size:0.72rem;color:var(--text-secondary);">Profit Margin</div>
+                </div>
+            </div>`;
+
+            // Period comparison
+            if (prevIncome > 0 || prevExpenses > 0) {
+                const incomeDiff = totalIncome - prevIncome;
+                const expDiff = totalExpenses - prevExpenses;
+                const netDiff = netProfit - prevNetProfit;
+                html += `<div style="background:var(--bg-secondary);border-radius:8px;padding:12px;margin-bottom:14px;font-size:0.83rem;">
+                    <div style="font-weight:700;margin-bottom:8px;">📅 vs Previous Period</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;">
+                        <div><div style="color:${incomeDiff>=0?'#10b981':'#ef4444'};font-weight:700;">${incomeDiff>=0?'▲':'▼'} ₱${Math.abs(incomeDiff).toLocaleString()}</div><div style="color:var(--text-secondary);">Income</div></div>
+                        <div><div style="color:${expDiff<=0?'#10b981':'#ef4444'};font-weight:700;">${expDiff>=0?'▲':'▼'} ₱${Math.abs(expDiff).toLocaleString()}</div><div style="color:var(--text-secondary);">Expenses</div></div>
+                        <div><div style="color:${netDiff>=0?'#10b981':'#ef4444'};font-weight:700;">${netDiff>=0?'▲':'▼'} ₱${Math.abs(netDiff).toLocaleString()}</div><div style="color:var(--text-secondary);">Net Profit</div></div>
+                    </div>
+                </div>`;
+            }
+
+            // Alerts section — critical issues first
+            const alerts = [];
+            if (overdueTenants && overdueTenants.length > 0)
+                alerts.push(`🚨 <strong>${overdueTenants.length} overdue tenant${overdueTenants.length!==1?'s':''}</strong> — ₱${overdueTenants.reduce((s,t)=>s+(t.rent||0),0).toLocaleString()} uncollected rent`);
+            if (totalOutstanding > 0)
+                alerts.push(`💳 <strong>${outstandingCredits.length} active debt${outstandingCredits.length!==1?'ors':'or'}</strong> — ₱${totalOutstanding.toLocaleString()} total outstanding`);
+            if (vacantCount > 0)
+                alerts.push(`🏠 <strong>${vacantCount} vacant propert${vacantCount!==1?'ies':'y'}</strong> out of ${propertyCount} — potential unrealized income`);
+            if (!isGain)
+                alerts.push(`📉 Business is running at a loss of ₱${Math.abs(netProfit).toLocaleString()} — needs immediate attention`);
+            if (waterGallons > 0 && waterIncome === 0)
+                alerts.push(`💧 Water gallons recorded but no income posted — check water sales entries`);
+
+            if (alerts.length > 0) {
+                html += `<div style="margin-bottom:14px;"><div style="font-weight:700;font-size:0.88rem;margin-bottom:8px;">⚠️ Alerts</div>`;
+                alerts.forEach(a => {
+                    html += `<div style="padding:8px 12px;background:rgba(239,68,68,0.07);border-left:3px solid #ef4444;border-radius:6px;font-size:0.83rem;margin-bottom:6px;">${a}</div>`;
+                });
+                html += `</div>`;
+            }
+
+            // Key metrics
+            html += `<div style="margin-bottom:14px;"><div style="font-weight:700;font-size:0.88rem;margin-bottom:8px;">📌 Key Metrics</div><ul style="margin:0 0 0 18px;line-height:2.1;font-size:0.85rem;">`;
+            if (tenantCount > 0) html += `<li>${tenantCount} active tenant${tenantCount!==1?'s':''} — expected rent ₱${(totalExpectedRent||0).toLocaleString()}/mo</li>`;
+            if (debtorCount > 0) html += `<li>${debtorCount} credit account${debtorCount!==1?'s':''} — ₱${totalOutstanding.toLocaleString()} still outstanding</li>`;
+            if (waterIncome > 0) html += `<li>Water sales: ${waterGallons?.toLocaleString()||0} gals → ₱${waterIncome.toLocaleString()}</li>`;
+            if (otherIncome > 0) html += `<li>Additional income: ₱${otherIncome.toLocaleString()}</li>`;
+            if (topCat) html += `<li>Top expense: ${catLabels[topCat[0]]||topCat[0]} = ₱${topCat[1].toLocaleString()} (${Math.round(topCat[1]/totalExpenses*100)}% of costs)</li>`;
+            html += `<li>Cost per peso earned: <strong>₱${ratio.toFixed(2)}</strong></li>`;
+            html += `</ul></div>`;
+
+            // JAROD Recommendations
+            const recs = [];
+            if (overdueTenants && overdueTenants.length > 0)
+                recs.push(`📞 Follow up with ${overdueTenants.length} overdue tenant${overdueTenants.length!==1?'s':''} — send payment reminders or visit`);
+            if (vacantCount > 0)
+                recs.push(`🔑 Fill ${vacantCount} vacant unit${vacantCount!==1?'s':''} to increase monthly rent income by up to ₱${((totalExpectedRent/Math.max(tenantCount,1))*vacantCount).toLocaleString()}`);
+            if (totalOutstanding > 0 && creditIncome === 0)
+                recs.push(`💳 No credit repayments this period — contact debtors to collect ₱${totalOutstanding.toLocaleString()}`);
+            if (!isGain)
+                recs.push(`🔴 Reduce expenses or boost income — current loss is ₱${Math.abs(netProfit).toLocaleString()}`);
+            else if (ratio > 0.7)
+                recs.push(`💡 Expense ratio ${Math.round(ratio*100)}% — review top costs for reduction`);
+            if (topCat && topCat[1]/totalExpenses > 0.35)
+                recs.push(`📉 ${catLabels[topCat[0]]||topCat[0]} is ${Math.round(topCat[1]/totalExpenses*100)}% of expenses — largest single cost, worth reviewing`);
+            if (isGain && profitMargin >= 40)
+                recs.push(`🏆 Healthy ${profitMargin}% margin — consider reinvesting in property maintenance or expansion`);
+            recs.push(`📊 Compare periods regularly — use the presets (Last Month, This Quarter) for trend tracking`);
+
+            html += `<div style="padding:12px 14px;background:rgba(99,102,241,0.08);border-left:3px solid #6366f1;border-radius:8px;font-size:0.85rem;">
+                <div style="font-weight:700;margin-bottom:8px;">💡 JAROD's Recommendations</div>
+                <ul style="margin:0 0 0 18px;line-height:2.1;">
+                    ${recs.map(r => `<li>${r}</li>`).join('')}
                 </ul>
             </div>`;
-            
-            // Actionable Tips
-            analysis += `<div style="margin-top: 15px; padding: 15px; background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%); border-radius: 8px;">
-                <p><strong>💡 Recommendations:</strong></p>
-                <ul style="margin: 10px 0 0 20px; line-height: 1.8;">`;
-            
-            if (profitMargin < 50) {
-                analysis += `<li>🔍 Review and reduce non-essential expenses to improve profit margins</li>`;
-            }
-            if (rentIncome > 0 && tenantCount > 0 && rentIncome / tenantCount < 3000) {
-                analysis += `<li>💰 Consider reviewing rental rates - your average is below ₱3,000/tenant</li>`;
-            }
-            if (creditIncome > 0) {
-                analysis += `<li>📋 Continue monitoring credit repayments and follow up on overdue accounts</li>`;
-            }
-            if (waterIncome === 0) {
-                analysis += `<li>💧 Your water refilling station has no sales - consider promoting this service</li>`;
-            }
-            if (profitMargin >= 70) {
-                analysis += `<li>🏆 Excellent margins! Consider reinvesting profits into property improvements or expansion</li>`;
-            }
-            
-            analysis += `<li>📊 Compare this month with previous months to identify trends and patterns</li>
-                </ul>
-            </div>`;
-            
-            return analysis;
+
+            return html;
         }
 
         function generateTransactionDetails(payments, creditPayments, waterSales, expenses, additionalIncome) {
@@ -21426,9 +21004,9 @@ async function editTask(id) {
                 
                 // ===== CREDITS/LOANS =====
                 const credits = [
-                    { borrowerName: 'Roberto Fernandez', borrowerPhone: '09151234567', principal: 10000, interest: 1000, interestRate: 10, date: '2024-10-01', dueDate: '2025-01-01', notes: 'Personal loan', createdAt: new Date().toISOString() },
-                    { borrowerName: 'Liza Mendoza', borrowerPhone: '09162345678', principal: 5000, interest: 500, interestRate: 10, date: '2024-11-15', dueDate: '2025-02-15', notes: 'Emergency loan', createdAt: new Date().toISOString() },
-                    { borrowerName: 'Carlos Rivera', borrowerPhone: '09173456789', principal: 15000, interest: 2250, interestRate: 15, date: '2024-09-01', dueDate: '2024-12-01', notes: 'Business loan', createdAt: new Date().toISOString() },
+                    { debtor: 'Roberto Fernandez', phone: '09151234567', principal: 10000, interest: 1000, interestRate: 10, dateLent: '2024-10-01', dueDate: '2025-01-01', purpose: 'Personal loan', status: 'active', createdAt: new Date().toISOString() },
+                    { debtor: 'Liza Mendoza', phone: '09162345678', principal: 5000, interest: 500, interestRate: 10, dateLent: '2024-11-15', dueDate: '2025-02-15', purpose: 'Emergency loan', status: 'active', createdAt: new Date().toISOString() },
+                    { debtor: 'Carlos Rivera', phone: '09173456789', principal: 15000, interest: 2250, interestRate: 15, dateLent: '2024-09-01', dueDate: '2024-12-01', purpose: 'Business loan', status: 'active', createdAt: new Date().toISOString() },
                 ];
                 
                 for (const c of credits) {
@@ -21531,19 +21109,45 @@ async function editTask(id) {
                     });
                 }
                 
-                // ===== EXPENSES =====
+                // ===== EXPENSES - All Categories =====
                 const expenses = [
-                    { description: 'Electricity Bill', category: 'utilities', amount: 2500, date: dateStr(1), createdAt: new Date().toISOString() },
-                    { description: 'Water Bill', category: 'utilities', amount: 800, date: dateStr(1), createdAt: new Date().toISOString() },
-                    { description: 'Property Repair - Lot 1', category: 'maintenance', amount: 1500, date: dateStr(3), createdAt: new Date().toISOString() },
-                    { description: 'Office Supplies', category: 'supplies', amount: 350, date: dateStr(5), createdAt: new Date().toISOString() },
+                    // Property
+                    { description: 'Meralco Electric Bill - Feb', category: 'electric', amount: 3200, date: dateStr(1), notes: 'Main building meter', createdAt: new Date().toISOString() },
+                    { description: 'MCWD Water Bill - Feb', category: 'water', amount: 850, date: dateStr(1), notes: 'Water station + office', createdAt: new Date().toISOString() },
+                    { description: 'Roof Repair - Apartment Unit A', category: 'repairs', amount: 2500, date: dateStr(3), notes: 'Leaking roof fixed', createdAt: new Date().toISOString() },
+                    { description: 'Annual Property Tax - Lot 1', category: 'taxes', amount: 4500, date: dateStr(5), notes: 'Real property tax 2026', createdAt: new Date().toISOString() },
+                    { description: 'Fire Insurance Premium', category: 'insurance', amount: 3800, date: dateStr(2), notes: 'Annual insurance renewal', createdAt: new Date().toISOString() },
+                    // Operations
+                    { description: 'Truck Fuel - Delivery', category: 'fuel', amount: 1800, date: dateStr(4), notes: 'Fuel for hardware delivery truck', createdAt: new Date().toISOString() },
+                    { description: 'Tricycle Transport - Supplies', category: 'transport', amount: 350, date: dateStr(6), notes: 'Transport cost for restocking', createdAt: new Date().toISOString() },
+                    { description: 'Office Supplies & Stationery', category: 'supplies', amount: 680, date: dateStr(5), notes: 'Receipt books, pens, folders', createdAt: new Date().toISOString() },
+                    { description: 'Plumber Labor - Water Line Fix', category: 'labor', amount: 1200, date: dateStr(7), notes: 'Fix leaking water line Room 1', createdAt: new Date().toISOString() },
+                    // Personal
+                    { description: 'Personal Loan Payment', category: 'loans', amount: 2000, date: dateStr(10), notes: 'Monthly amortization', createdAt: new Date().toISOString() },
+                    { description: 'Staff Meals - Monthly', category: 'food', amount: 1500, date: dateStr(8), notes: 'Lunch allowance for staff', createdAt: new Date().toISOString() },
+                    { description: 'Internet & Phone Bills', category: 'comms', amount: 1299, date: dateStr(2), notes: 'Globe fiber + mobile load', createdAt: new Date().toISOString() },
+                    { description: 'Miscellaneous Expenses', category: 'other', amount: 500, date: dateStr(9), notes: 'Various small purchases', createdAt: new Date().toISOString() },
+                    // Government Contributions
+                    { description: 'SSS Employer Contribution - Feb', category: 'sss', amount: 2400, date: dateStr(10), notes: '3 employees @ ₱800 each', createdAt: new Date().toISOString() },
+                    { description: 'PhilHealth Contribution - Feb', category: 'philhealth', amount: 900, date: dateStr(10), notes: '3 employees @ ₱300 each', createdAt: new Date().toISOString() },
+                    { description: 'Pag-IBIG Contribution - Feb', category: 'pagibig', amount: 300, date: dateStr(10), notes: '3 employees @ ₱100 each', createdAt: new Date().toISOString() },
+                    { description: 'BIR Income Tax - Q1', category: 'bir', amount: 5000, date: dateStr(15), notes: 'Quarterly income tax payment', createdAt: new Date().toISOString() },
+                    { description: 'Accountant Professional Fee', category: 'accountant', amount: 1500, date: dateStr(1), notes: 'Monthly bookkeeping fee', createdAt: new Date().toISOString() },
+                    // Money Allocation
+                    { description: 'Business Savings Deposit', category: 'savings', amount: 5000, date: dateStr(1), notes: 'Monthly savings allocation', createdAt: new Date().toISOString() },
+                    { description: 'Hardware Inventory Investment', category: 'investment', amount: 15000, date: dateStr(3), notes: 'Cement bags, GI sheets, lumber', createdAt: new Date().toISOString() },
+                    { description: 'Emergency Reserve Fund', category: 'reserve', amount: 2000, date: dateStr(1), notes: 'Monthly reserve allocation', createdAt: new Date().toISOString() },
+                    { description: 'Owner Draw - Feb', category: 'ownerdraw', amount: 8000, date: dateStr(15), notes: 'Owner monthly withdrawal', createdAt: new Date().toISOString() },
+                    // Payroll
+                    { description: 'Weekly Payroll - Week 1', category: 'payroll', amount: 5040, date: dateStr(7), notes: 'Roger, Cenia, Mario - 6 days each', createdAt: new Date().toISOString() },
+                    { description: 'Weekly Payroll - Week 2', category: 'payroll', amount: 5040, date: dateStr(14), notes: 'Roger, Cenia, Mario - 6 days each', createdAt: new Date().toISOString() },
                 ];
                 
                 for (const exp of expenses) {
                     await dbAdd('expenses', exp);
                 }
                 
-                console.log('✅ Expenses added');
+                console.log('✅ Expenses added - all categories covered');
                 
                 // ===== TASKS =====
                 const tasks = [
@@ -21794,19 +21398,7 @@ async function editTask(id) {
                     }
                 }
 
-                // ===== MORE EXPENSES this month =====
-                const existingExp = await dbGetAll('expenses');
-                if (existingExp.length < 6) {
-                    const moreExp = [
-                        { description: 'Hardware Store Restocking', category: 'inventory', amount: 15000, date: dateStr(2), notes: 'Cement bags, GI sheets', createdAt: new Date().toISOString() },
-                        { description: 'Employee Salaries', category: 'payroll', amount: 8400, date: dateStr(7), notes: 'Weekly payroll 3 staff', createdAt: new Date().toISOString() },
-                        { description: 'Vehicle Fuel', category: 'transport', amount: 1200, date: dateStr(4), notes: 'Delivery truck', createdAt: new Date().toISOString() },
-                        { description: 'Water Station Filter Replacement', category: 'maintenance', amount: 2800, date: dateStr(6), notes: 'UV filter + carbon filter', createdAt: new Date().toISOString() },
-                    ];
-                    for (const exp of moreExp) {
-                        await dbAdd('expenses', exp);
-                    }
-                }
+                // All expenses covered in main block above
 
                 // ===== RELOAD ALL SECTIONS =====
                 console.log('Reloading all sections...');
