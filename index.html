@@ -2889,7 +2889,7 @@
         <div class="mt-nav-links">
             <a href="#features">Features</a>
             <a href="#pricing">Pricing</a>
-            <a href="mailto:jarodbulb@gmail.com">Contact</a>
+            <a href="/cdn-cgi/l/email-protection#bfd5decdd0dbddcad3ddffd8d2ded6d391dcd0d2">Contact</a>
         </div>
         <div style="display:flex;gap:10px;">
             <button class="mt-btn-secondary" style="padding:10px 20px;font-size:0.9rem;" onclick="mtShowAuth('login')">Sign In</button>
@@ -3007,7 +3007,7 @@
     </div>
 
     <div class="mt-footer">
-        <p>Built by <strong>OMNIGRID ONLINE</strong> &bull; <a href="mailto:jarodbulb@gmail.com">jarodbulb@gmail.com</a> &bull; <a href="mailto:danomandam@yahoo.com">danomandam@yahoo.com</a></p>
+        <p>Built by <strong>OMNIGRID ONLINE</strong> &bull; <a href="/cdn-cgi/l/email-protection#5a303b28353e382f36381a3d373b333674393537"><span class="__cf_email__" data-cfemail="e08a81928f8482958c82a0878d81898cce838f8d">[email&#160;protected]</span></a> &bull; <a href="/cdn-cgi/l/email-protection#c6a2a7a8a9aba7a8a2a7ab86bfa7aea9a9e8a5a9ab"><span class="__cf_email__" data-cfemail="92f6f3fcfdfff3fcf6f3ffd2ebf3fafdfdbcf1fdff">[email&#160;protected]</span></a></p>
         <p style="margin-top:8px;">© 2025 PRISM - Property • Rental • Income • Sales • Management</p>
     </div>
 </div>
@@ -4944,11 +4944,11 @@
                         <p style="font-size: 1.1rem; font-weight: 600; color: var(--gray-900);">OMNIGRID</p>
                         <div style="margin-top:15px;padding:14px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;">
                             <p style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:10px;font-weight:600;">📧 Contact Us</p>
-                            <a href="mailto:jarodbulb@gmail.com" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;margin-bottom:6px;font-weight:500;">
-                                ✉️ jarodbulb@gmail.com
+                            <a href="/cdn-cgi/l/email-protection#a8c2c9dac7cccaddc4cae8cfc5c9c1c486cbc7c5" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;margin-bottom:6px;font-weight:500;">
+                                ✉️ <span class="__cf_email__" data-cfemail="cba1aab9a4afa9bea7a98baca6aaa2a7e5a8a4a6">[email&#160;protected]</span>
                             </a>
-                            <a href="mailto:danomandam@yahoo.com" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;font-weight:500;">
-                                ✉️ danomandam@yahoo.com
+                            <a href="/cdn-cgi/l/email-protection#97f3f6f9f8faf6f9f3f6fad7eef6fff8f8b9f4f8fa" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;font-weight:500;">
+                                ✉️ <span class="__cf_email__" data-cfemail="ec888d8283818d82888d81ac958d848383c28f8381">[email&#160;protected]</span>
                             </a>
                             <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-color);">
                                 <p style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:6px;font-weight:600;">🌐 For licensing & inquiries:</p>
@@ -8007,7 +8007,7 @@
                 const backup = backups[backupIndex];
                 
                 if (!backup) {
-                    showToast('d', 'info');
+                    showToast('❌ Record not found.', 'error');
                     return;
                 }
 
@@ -8901,7 +8901,7 @@
                 : await dbGet('credits', id);
             
             if (!record) {
-                showToast('d', 'info');
+                showToast('❌ Tenant not found.', 'error');
                 return;
             }
 
@@ -8973,7 +8973,7 @@
                     : await dbGet('credits', id);
                 
                 if (!record) {
-                    showToast('d', 'info');
+                    showToast('❌ Tenant not found.', 'error');
                     return;
                 }
 
@@ -9083,7 +9083,7 @@
                     : await dbGet('credits', id);
                 
                 if (!record) {
-                    showToast('d', 'info');
+                    showToast('❌ Tenant not found.', 'error');
                     return;
                 }
 
@@ -9171,7 +9171,7 @@
                     : await dbGet('credits', id);
                 
                 if (!record) {
-                    showToast('d', 'info');
+                    showToast('❌ Tenant not found.', 'error');
                     return;
                 }
 
@@ -9514,7 +9514,7 @@
 
             const property = await dbGet('properties', id);
             if (!property) {
-                showToast('d', 'info');
+                showToast('❌ Property not found.', 'error');
                 return;
             }
 
@@ -10040,7 +10040,7 @@
 
             const tenant = await dbGet('tenants', id);
             if (!tenant) {
-                showToast('d', 'info');
+                showToast('❌ Tenant not found.', 'error');
                 return;
             }
 
@@ -11842,15 +11842,8 @@ async function loadWaterCustomers() {
 
         // Show water payment modal
         function showWaterPaymentModal(customerId, customerName, balance) {
-            const amount = prompt(`💵 Record Payment for ${customerName}\n\nOutstanding Balance: ₱${balance.toLocaleString()}\n\nEnter payment amount:`);
-            if (!amount) return;
-            
-            const paymentAmount = parseFloat(amount.replace(/,/g, '')) || 0;
-            if (paymentAmount <= 0) {
-                showToast('⚠️ Please enter a valid amount.', 'warning');
-                return;
-            }
-            
+            const paymentAmount = parseFloat(window.prompt(`💵 Record Payment for ${customerName}\nOutstanding: ₱${balance.toLocaleString()}\nEnter amount:`) || '0');
+            if (!paymentAmount || paymentAmount <= 0) { showToast('⚠️ Please enter a valid amount.', 'warning'); return; }
             processWaterPayment(customerId, paymentAmount);
         }
 
@@ -13650,7 +13643,7 @@ async function showPayrollSummary() {
 
             const credit = await dbGet('credits', id);
             if (!credit) {
-                showToast('d', 'info');
+                showToast('❌ Credit not found.', 'error');
                 return;
             }
 
@@ -14455,7 +14448,7 @@ async function showPayrollSummary() {
 
                 const note = await dbGet('customNotes', id);
                 if (!note) {
-                    showToast('d', 'info');
+                    showToast('❌ Note not found.', 'error');
                     return;
                 }
 
@@ -15402,7 +15395,7 @@ async function showPayrollSummary() {
             };
             
             if (!income.description || !income.amount || !income.date) {
-                showToast('s', 'info');
+                showToast('✅ Sample data loaded successfully!', 'success', 4000);
                 return;
             }
             
@@ -21824,7 +21817,7 @@ async function editTask(id) {
                 
                 debouncedSync();
                 
-                showToast('s', 'info');
+                showToast('✅ Sample data loaded successfully!', 'success', 4000);
                 
                 
                 
@@ -24009,6 +24002,7 @@ window.addEventListener('DOMContentLoaded', () => {
                         localStorage.setItem('prism_app_users', JSON.stringify(merged));
                     }
 
+                    
                     try {
                         if (typeof loadDashboard === 'function') loadDashboard();
                         if (typeof refreshFinancialOverview === 'function') refreshFinancialOverview();
@@ -24025,4 +24019,6 @@ window.addEventListener('DOMContentLoaded', () => {
         }
         // ========== END REAL-TIME SYNC ==========
 
-        </script>
+</script>
+</body>
+</html>
