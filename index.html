@@ -65,10 +65,22 @@
         }
         
         // Step 1: Load firebase-app first (required base)
-        loadScript(BASE + 'firebase-app-compat.js', 'app', function() {
-            // Step 2: Load auth + firestore IN PARALLEL once app is ready
-            loadScript(BASE + 'firebase-auth-compat.js', 'auth');
-            loadScript(BASE + 'firebase-firestore-compat.js', 'firestore');
+        // Primary CDN: gstatic, Fallback CDN: jsdelivr
+        var FB_FALLBACK = 'https://cdn.jsdelivr.net/npm/firebase@10.7.1/compat/';
+        
+        function loadScriptWithFallback(gstaticPath, fallbackPath, key, onLoad) {
+            loadScript(BASE + gstaticPath, key, onLoad, function() {
+                // gstatic failed — try jsdelivr fallback
+                console.warn('[PRISM] Trying fallback CDN for:', key);
+                loadScript(FB_FALLBACK + fallbackPath, key, onLoad, function() {
+                    console.error('[PRISM] Both CDNs failed for:', key);
+                });
+            });
+        }
+        
+        loadScriptWithFallback('firebase-app-compat.js', 'app/dist/app-compat.js', 'app', function() {
+            loadScriptWithFallback('firebase-auth-compat.js', 'auth/dist/auth-compat.js', 'auth', null);
+            loadScriptWithFallback('firebase-firestore-compat.js', 'firestore/dist/firestore-compat.js', 'firestore', null);
         });
         
         // Load Chart.js in parallel (independent)
