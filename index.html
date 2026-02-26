@@ -3840,19 +3840,50 @@
         <div id="credits" class="section">
             <!-- Credits Stats -->
             <div class="stats-grid">
-                <div class="stat-card" onclick="showLentOutDetails()" style="cursor: pointer;">
+                <div class="stat-card" onclick="showLentOutDetails()" style="cursor: pointer; border:2px solid transparent; transition: border 0.2s;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='transparent'">
                     <div class="stat-value" id="stat-total-lent">₱0</div>
-                    <div class="stat-label">Total Lent Out</div>
+                    <div class="stat-label">💸 Total Lent Out</div>
+                    <div style="font-size:0.7rem;color:var(--text-secondary);margin-top:4px;">Tap for breakdown →</div>
                 </div>
-                <div class="stat-card" onclick="showRepaidDetails()" style="cursor: pointer;">
-                    <div class="stat-value" id="stat-total-repaid">₱0</div>
-                    <div class="stat-label">Total Repaid</div>
+                <div class="stat-card" onclick="showRepaidDetails()" style="cursor: pointer; border:2px solid transparent; transition: border 0.2s;" onmouseover="this.style.borderColor='var(--success)'" onmouseout="this.style.borderColor='transparent'">
+                    <div class="stat-value text-success" id="stat-total-repaid">₱0</div>
+                    <div class="stat-label">✅ Total Repaid</div>
+                    <div style="font-size:0.7rem;color:var(--text-secondary);margin-top:4px;">Tap for breakdown →</div>
+                </div>
+            </div>
+
+            <!-- Quick Add Debtor -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Quick Add Debtor</div>
+                </div>
+                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 10px;">Choose how to add a debtor/borrower:</p>
+                <div class="expense-summary-grid">
+                    <div class="expense-summary-item" onclick="openAddDebtorModal('personal')" style="cursor: pointer;" title="Personal loan to individual">
+                        <div class="icon">👤</div>
+                        <div class="label">Personal</div>
+                    </div>
+                    <div class="expense-summary-item" onclick="openAddDebtorModal('business')" style="cursor: pointer;" title="Business/commercial loan">
+                        <div class="icon">🏢</div>
+                        <div class="label">Business</div>
+                    </div>
+                    <div class="expense-summary-item" onclick="openAddDebtorModal('tenant')" style="cursor: pointer;" title="Loan to existing tenant">
+                        <div class="icon">🏠</div>
+                        <div class="label">Tenant</div>
+                    </div>
+                    <div class="expense-summary-item" onclick="showModal('credit-modal')" style="cursor: pointer;" title="Full form with all fields">
+                        <div class="icon">📋</div>
+                        <div class="label">Full Form</div>
+                    </div>
                 </div>
             </div>
 
             <div class="card">
                 <div class="card-header">
                     <div class="card-title">Active Credits/Loans</div>
+                    <button class="btn btn-primary btn-sm" onclick="showModal('credit-modal')" style="font-size: 0.8rem;">
+                        + Add Debtor
+                    </button>
                 </div>
                 <div class="search-box">
                     <span class="search-icon">🔍</span>
@@ -4265,6 +4296,51 @@
                 </div>
             </div>
 
+            <!-- Cashier Rules Card -->
+            <div class="card" style="border-left: 4px solid #f59e0b; background: linear-gradient(135deg, rgba(245,158,11,0.05), rgba(245,158,11,0.02));">
+                <div class="card-header">
+                    <div class="card-title">🔐 Cashier Role — Permissions</div>
+                    <span style="font-size:0.72rem;background:#f59e0b;color:white;padding:2px 8px;border-radius:10px;font-weight:700;">POLICY</span>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:0.82rem;">
+                    <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:8px;padding:12px;">
+                        <div style="font-weight:700;color:#10b981;margin-bottom:8px;">✅ CAN DO</div>
+                        <ul style="margin:0;padding-left:16px;line-height:2;color:var(--text-primary);">
+                            <li>Add/record payments</li>
+                            <li>Add new tenants</li>
+                            <li>Add new debtors</li>
+                            <li>Record collections</li>
+                            <li>Add income entries</li>
+                            <li>Add expense entries</li>
+                            <li>Add water sales</li>
+                            <li>Create notes/reminders</li>
+                            <li>Send endorsements</li>
+                            <li>Add/update tasks</li>
+                            <li>Mark attendance</li>
+                            <li>View own dashboard</li>
+                        </ul>
+                    </div>
+                    <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:12px;">
+                        <div style="font-weight:700;color:#ef4444;margin-bottom:8px;">🚫 CANNOT DO</div>
+                        <ul style="margin:0;padding-left:16px;line-height:2;color:var(--text-primary);">
+                            <li>Delete any record</li>
+                            <li>Void sales/payments</li>
+                            <li>View other staff profiles</li>
+                            <li>View salary/payroll data</li>
+                            <li>Access Settings</li>
+                            <li>Access Reports page</li>
+                            <li>Manage users/passcode</li>
+                            <li>Backup or restore data</li>
+                            <li>Edit/delete properties</li>
+                            <li>Edit credit terms</li>
+                            <li>View financial overview</li>
+                            <li>Cloud sync controls</li>
+                        </ul>
+                    </div>
+                </div>
+                <p style="font-size:0.75rem;color:var(--text-secondary);margin-top:10px;">⚠️ These restrictions are enforced automatically when a cashier account is logged in. Admin must approve void requests.</p>
+            </div>
+
             <div class="card">
                 <div class="card-header">
                     <div class="card-title">👷 Employee Management</div>
@@ -4425,13 +4501,22 @@
                 </div>
             </div>
 
+            <!-- JAROD Graph Explanation Card -->
+            <div class="card" id="jarod-graph-explanation" style="display:none;background:linear-gradient(135deg,rgba(99,102,241,0.06),rgba(99,102,241,0.02));border-left:4px solid #6366f1;">
+                <div class="card-header">
+                    <div class="card-title">🤖 JAROD's Chart Guide</div>
+                    <span style="font-size:0.72rem;color:#6366f1;font-weight:600;">Reading Your Data</span>
+                </div>
+                <div id="jarod-graph-text" style="font-size:0.85rem;line-height:1.7;color:var(--text-primary);"></div>
+            </div>
+
             <!-- Detailed Transactions -->
             <div class="card">
                 <div class="card-header">
                     <div class="card-title">📋 Detailed Transactions</div>
-                    <button class="btn btn-sm btn-secondary" onclick="toggleTransactionDetails()">Show/Hide</button>
+                    <button class="btn btn-sm btn-primary" id="txn-toggle-btn" onclick="toggleTransactionDetails()">▼ Show All</button>
                 </div>
-                <div id="transaction-details" style="display: none; max-height: 400px; overflow-y: auto;">
+                <div id="transaction-details" style="display: none; max-height: 500px; overflow-y: auto;">
                     <!-- Will be populated dynamically -->
                 </div>
             </div>
@@ -4989,6 +5074,11 @@
                 <div class="action-buttons">
                     <button class="btn btn-secondary" onclick="runManualHealthCheck()">🏥 Run Health Check</button>
                     <button class="btn btn-primary" onclick="createManualBackup()">💾 Create Backup</button>
+                <p style="font-size:0.75rem;color:var(--text-secondary);margin-top:8px;">
+                    📁 Backup is saved as a <strong>.json file</strong> in your browser's <strong>Downloads folder</strong>.<br>
+                    Filename format: <code>PRISM-backup-YYYY-MM-DD_HH-MM.json</code><br>
+                    To restore: go to <strong>Settings → Import Data → Choose File</strong> and select your backup file.
+                </p>
                 </div>
             </div>
 
@@ -8515,6 +8605,13 @@
         }
 
         function showSection(sectionId) {
+            // Cashier restriction — block access to restricted sections
+            const isCashier = currentAppUser && currentAppUser.role === 'cashier';
+            const cashierBlocked = ['reports', 'settings', 'employees'];
+            if (isCashier && cashierBlocked.includes(sectionId)) {
+                showToast('🚫 Access restricted. Cashiers cannot view this section.', 'warning', 3000);
+                return;
+            }
             // Scroll to top
             window.scrollTo({ top: 0, behavior: 'smooth' });
             // Update nav buttons
@@ -8779,16 +8876,125 @@
             showSection('reports');
         }
 
-        function showLentOutDetails() {
-            showSection('credits');
+        async function showLentOutDetails() {
+            const credits = await dbGetAll('credits');
+            if (!credits.length) { showToast('No credit records found.', 'info'); return; }
+            const active = credits.filter(c => c.status !== 'paid');
+            const paid = credits.filter(c => c.status === 'paid');
+            const totalLent = credits.reduce((s,c) => s + (c.principal||0), 0);
+            const totalActive = active.reduce((s,c) => s + (c.principal||0), 0);
+            const overdue = active.filter(c => c.dueDate && new Date(c.dueDate) < new Date());
+
+            let rows = credits.sort((a,b) => (b.principal||0)-(a.principal||0)).slice(0,10).map(c => `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color);">
+                    <div>
+                        <div style="font-weight:600;">${c.debtorName||'Unknown'}</div>
+                        <div style="font-size:0.75rem;color:var(--text-secondary);">${c.dateLent||c.date||'?'} · ${c.status||'active'}</div>
+                    </div>
+                    <div style="font-weight:700;color:${c.status==='paid'?'#10b981':'var(--primary)'};">₱${(c.principal||0).toLocaleString()}</div>
+                </div>`).join('');
+
+            document.getElementById('financial-details-title').textContent = '💸 Total Lent Out — Summary';
+            document.getElementById('financial-details-content').innerHTML = `
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+                    <div style="background:rgba(37,99,235,0.08);border-radius:8px;padding:12px;text-align:center;">
+                        <div style="font-size:1.5rem;font-weight:700;color:var(--primary);">₱${totalLent.toLocaleString()}</div>
+                        <div style="font-size:0.75rem;color:var(--text-secondary);">Total Ever Lent</div>
+                    </div>
+                    <div style="background:rgba(239,68,68,0.08);border-radius:8px;padding:12px;text-align:center;">
+                        <div style="font-size:1.5rem;font-weight:700;color:#ef4444;">₱${totalActive.toLocaleString()}</div>
+                        <div style="font-size:0.75rem;color:var(--text-secondary);">Still Outstanding</div>
+                    </div>
+                    <div style="background:rgba(245,158,11,0.08);border-radius:8px;padding:12px;text-align:center;">
+                        <div style="font-size:1.5rem;font-weight:700;color:#f59e0b;">${overdue.length}</div>
+                        <div style="font-size:0.75rem;color:var(--text-secondary);">Overdue Accounts</div>
+                    </div>
+                    <div style="background:rgba(16,185,129,0.08);border-radius:8px;padding:12px;text-align:center;">
+                        <div style="font-size:1.5rem;font-weight:700;color:#10b981;">${paid.length}</div>
+                        <div style="font-size:0.75rem;color:var(--text-secondary);">Fully Paid</div>
+                    </div>
+                </div>
+                <div style="font-weight:600;margin-bottom:8px;">Top Debtors (by amount):</div>
+                ${rows}
+                ${credits.length > 10 ? `<p style="font-size:0.75rem;color:var(--text-secondary);text-align:center;margin-top:8px;">+ ${credits.length-10} more records</p>` : ''}
+            `;
+            showModal('financial-details-modal');
         }
 
-        function showRepaidDetails() {
-            showSection('credits');
+        async function showRepaidDetails() {
+            const creditPayments = await dbGetAll('creditPayments');
+            const credits = await dbGetAll('credits');
+            if (!creditPayments.length) { showToast('No repayments recorded yet.', 'info'); return; }
+            const totalRepaid = creditPayments.reduce((s,p) => s + (p.amount||0), 0);
+            const thisMonth = new Date().toISOString().slice(0,7);
+            const monthRepaid = creditPayments.filter(p => (p.date||'').startsWith(thisMonth)).reduce((s,p) => s + (p.amount||0), 0);
+            const recentPmts = creditPayments.sort((a,b) => (b.date||'').localeCompare(a.date||'')).slice(0,10);
+
+            let rows = recentPmts.map(p => {
+                const credit = credits.find(c => c.id === p.creditId);
+                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color);">
+                    <div>
+                        <div style="font-weight:600;">${credit ? credit.debtorName : 'Unknown'}</div>
+                        <div style="font-size:0.75rem;color:var(--text-secondary);">${p.date||'?'}</div>
+                    </div>
+                    <div style="font-weight:700;color:#10b981;">+₱${(p.amount||0).toLocaleString()}</div>
+                </div>`;
+            }).join('');
+
+            document.getElementById('financial-details-title').textContent = '✅ Total Repaid — Summary';
+            document.getElementById('financial-details-content').innerHTML = `
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+                    <div style="background:rgba(16,185,129,0.08);border-radius:8px;padding:12px;text-align:center;">
+                        <div style="font-size:1.5rem;font-weight:700;color:#10b981;">₱${totalRepaid.toLocaleString()}</div>
+                        <div style="font-size:0.75rem;color:var(--text-secondary);">Total Collected</div>
+                    </div>
+                    <div style="background:rgba(99,102,241,0.08);border-radius:8px;padding:12px;text-align:center;">
+                        <div style="font-size:1.5rem;font-weight:700;color:#6366f1;">₱${monthRepaid.toLocaleString()}</div>
+                        <div style="font-size:0.75rem;color:var(--text-secondary);">This Month</div>
+                    </div>
+                </div>
+                <div style="font-weight:600;margin-bottom:8px;">Recent Repayments:</div>
+                ${rows}
+                ${creditPayments.length > 10 ? `<p style="font-size:0.75rem;color:var(--text-secondary);text-align:center;margin-top:8px;">+ ${creditPayments.length-10} more records</p>` : ''}
+            `;
+            showModal('financial-details-modal');
         }
 
         function showCreditsByStatus(status) {
             showSection('credits');
+            // Filter credits list by status
+            setTimeout(() => {
+                const btn = document.querySelector(`#credit-filters .filter-btn[data-filter="${status}"]`);
+                if (btn) btn.click();
+            }, 300);
+        }
+
+        function openAddDebtorModal(type) {
+            showModal('credit-modal');
+            // Reset form first
+            const form = document.getElementById('credit-form');
+            if (form) form.reset();
+            // Set today's date
+            const dateEl = document.getElementById('credit-date');
+            if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+            // Pre-fill notes based on type
+            const notesEl = document.getElementById('credit-notes') || document.querySelector('#credit-modal textarea');
+            if (type === 'personal' && notesEl) notesEl.value = 'Personal loan';
+            if (type === 'business' && notesEl) notesEl.value = 'Business loan';
+            if (type === 'tenant') {
+                // Focus on debtor name field and show hint
+                const debtorEl = document.getElementById('credit-debtor');
+                if (debtorEl) {
+                    debtorEl.placeholder = 'Enter tenant name...';
+                    setTimeout(() => debtorEl.focus(), 300);
+                }
+                if (notesEl) notesEl.value = 'Loan to tenant';
+            }
+            // Focus name field
+            setTimeout(() => {
+                const debtorEl = document.getElementById('credit-debtor');
+                if (debtorEl) debtorEl.focus();
+            }, 350);
         }
 
         function showTenantsByStatus(status) {
@@ -19934,6 +20140,20 @@ function initReportsPage() {
                 diffDays
             });
             generateTransactionDetails(rangePayments, rangeCreditPayments, rangeWaterSales, rangeExpenses, rangeAdditionalIncome);
+            
+            // Auto-show transaction details and update toggle button
+            const txnContainer = document.getElementById('transaction-details');
+            const txnBtn = document.getElementById('txn-toggle-btn');
+            if (txnContainer) txnContainer.style.display = 'block';
+            if (txnBtn) txnBtn.textContent = '▲ Hide';
+            
+            // Scroll to report results
+            setTimeout(() => {
+                const verdict = document.getElementById('report-verdict-banner');
+                if (verdict) verdict.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 300);
+            
+            showToast('✅ Report generated!', 'success', 2000);
         }
 
         async function generateDateRangeTrend(fromDate, toDate, diffDays) {
@@ -20256,6 +20476,68 @@ function initReportsPage() {
             // Overall Analysis with Tips
             const overallAnalysis = generateOverallAnalysisText(data);
             document.getElementById('ai-overall-text').innerHTML = overallAnalysis;
+
+            // JAROD Graph Explanation
+            generateJarodGraphExplanation(data);
+        }
+
+        function generateJarodGraphExplanation(data) {
+            const card = document.getElementById('jarod-graph-explanation');
+            const el = document.getElementById('jarod-graph-text');
+            if (!card || !el) return;
+            card.style.display = 'block';
+
+            const { totalIncome, totalExpenses, netProfit, profitMargin,
+                    rentIncome, creditIncome, waterIncome, otherIncome,
+                    rangeLabel, diffDays } = data;
+
+            const profitColor = netProfit >= 0 ? '#10b981' : '#ef4444';
+            const profitWord = netProfit >= 0 ? 'PROFIT' : 'LOSS';
+            const topIncomeSource = [
+                { label: 'Rent', val: rentIncome||0 },
+                { label: 'Loan Repayments', val: creditIncome||0 },
+                { label: 'Water Sales', val: waterIncome||0 },
+                { label: 'Other Income', val: otherIncome||0 }
+            ].sort((a,b) => b.val-a.val)[0];
+
+            el.innerHTML = `
+                <p style="margin-bottom:12px;">Here's what each section of your report is showing you for <strong>${rangeLabel||'this period'}</strong>:</p>
+                
+                <div style="background:var(--bg-secondary);border-radius:8px;padding:10px 14px;margin-bottom:10px;">
+                    <div style="font-weight:700;color:var(--primary);margin-bottom:4px;">📊 Financial Summary Cards (Top)</div>
+                    <p>These 4 cards give you a quick snapshot: <strong>Total Income ₱${(totalIncome||0).toLocaleString()}</strong>, 
+                    <strong>Total Expenses ₱${(totalExpenses||0).toLocaleString()}</strong>, 
+                    <strong style="color:${profitColor};">Net ${profitWord} ₱${Math.abs(netProfit||0).toLocaleString()}</strong>, 
+                    and <strong>Profit Margin ${data.profitMargin||0}%</strong>. 
+                    Click any card to drill into that category.</p>
+                </div>
+
+                <div style="background:var(--bg-secondary);border-radius:8px;padding:10px 14px;margin-bottom:10px;">
+                    <div style="font-weight:700;color:#10b981;margin-bottom:4px;">💰 Income Breakdown (Bar/List)</div>
+                    <p>Shows where your money came from. Your top source is <strong>${topIncomeSource.label} (₱${topIncomeSource.val.toLocaleString()})</strong>. 
+                    Wider bars = more income from that source. Aim to grow multiple income streams to reduce risk.</p>
+                </div>
+
+                <div style="background:var(--bg-secondary);border-radius:8px;padding:10px 14px;margin-bottom:10px;">
+                    <div style="font-weight:700;color:#f59e0b;margin-bottom:4px;">💸 Expense Breakdown (Pie Chart)</div>
+                    <p>The pie chart shows which category eats the most of your budget. 
+                    Larger slices = bigger expense category. 
+                    If one category dominates above 40%, consider reducing it or finding alternatives.</p>
+                </div>
+
+                <div style="background:var(--bg-secondary);border-radius:8px;padding:10px 14px;margin-bottom:10px;">
+                    <div style="font-weight:700;color:#6366f1;margin-bottom:4px;">📈 Income vs Expenses Trend (Line Chart)</div>
+                    <p>The blue line tracks your income over time, the red line tracks expenses. 
+                    When blue is above red = profit. When red crosses above blue = losing money that period. 
+                    Look for consistent upward blue trend — that's healthy business growth.</p>
+                </div>
+
+                <div style="background:var(--bg-secondary);border-radius:8px;padding:10px 14px;">
+                    <div style="font-weight:700;color:#0ea5e9;margin-bottom:4px;">📋 Detailed Transactions (Below)</div>
+                    <p>Every single transaction in this date range — income and expenses combined and sorted by date. 
+                    Green = money in, Red = money out. Use this to verify records or spot unusual entries.</p>
+                </div>
+            `;
         }
 
         // ─────────────────────────────────────────────────────────
@@ -20619,9 +20901,101 @@ function initReportsPage() {
             `).join('');
         }
 
-        function toggleTransactionDetails() {
+        async function toggleTransactionDetails() {
             const container = document.getElementById('transaction-details');
-            container.style.display = container.style.display === 'none' ? 'block' : 'none';
+            const btn = document.getElementById('txn-toggle-btn');
+            const isHidden = container.style.display === 'none' || container.style.display === '';
+            
+            if (isHidden) {
+                container.style.display = 'block';
+                if (btn) btn.textContent = '▲ Hide';
+                // Populate if empty
+                if (!container.innerHTML.trim() || container.innerHTML.includes('populated')) {
+                    await populateTransactionDetails();
+                }
+            } else {
+                container.style.display = 'none';
+                if (btn) btn.textContent = '▼ Show All';
+            }
+        }
+
+        async function populateTransactionDetails() {
+            const container = document.getElementById('transaction-details');
+            const fromStr = document.getElementById('report-date-from').value;
+            const toStr = document.getElementById('report-date-to').value;
+            
+            container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-secondary);">⏳ Loading transactions...</div>';
+            
+            const fromDate = fromStr ? new Date(fromStr + 'T00:00:00') : new Date(0);
+            const toDate = toStr ? new Date(toStr + 'T23:59:59') : new Date();
+            
+            const filterByRange = (items, field='date') => items.filter(i => {
+                const d = new Date((i[field]||'') + (i[field] && i[field].length===10 ? 'T00:00:00' : ''));
+                return d >= fromDate && d <= toDate;
+            });
+            
+            const payments = filterByRange(await dbGetAll('payments'));
+            const creditPmts = filterByRange(await dbGetAll('creditPayments'));
+            const expenses = filterByRange(await dbGetAll('expenses'));
+            const income = filterByRange(await dbGetAll('additionalIncome'));
+            const tenants = await dbGetAll('tenants');
+            const credits = await dbGetAll('credits');
+
+            // Combine all into one list
+            let all = [];
+            payments.forEach(p => {
+                const t = tenants.find(t => t.id === p.tenantId);
+                all.push({ date: p.date, type: '🏠 Rent', desc: t ? t.name : 'Tenant', amount: p.amount||0, color: '#10b981', sign: '+' });
+            });
+            creditPmts.forEach(p => {
+                const c = credits.find(c => c.id === p.creditId);
+                all.push({ date: p.date, type: '💰 Loan Repayment', desc: c ? c.debtorName : 'Debtor', amount: p.amount||0, color: '#6366f1', sign: '+' });
+            });
+            income.forEach(i => {
+                all.push({ date: i.date, type: '💵 Income', desc: i.description||i.source||'Other Income', amount: i.amount||0, color: '#0ea5e9', sign: '+' });
+            });
+            expenses.forEach(e => {
+                all.push({ date: e.date, type: '💸 Expense', desc: e.description||e.category||'Expense', amount: e.amount||0, color: '#ef4444', sign: '-' });
+            });
+
+            all.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+
+            if (!all.length) {
+                container.innerHTML = '<div class="empty-state"><p>No transactions in this date range.</p></div>';
+                return;
+            }
+
+            const totalIn = all.filter(x=>x.sign==='+').reduce((s,x)=>s+x.amount,0);
+            const totalOut = all.filter(x=>x.sign==='-').reduce((s,x)=>s+x.amount,0);
+
+            container.innerHTML = `
+                <div style="display:flex;gap:10px;padding:10px;background:var(--bg-secondary);border-radius:8px;margin-bottom:10px;">
+                    <div style="flex:1;text-align:center;">
+                        <div style="font-weight:700;color:#10b981;">+₱${totalIn.toLocaleString()}</div>
+                        <div style="font-size:0.72rem;color:var(--text-secondary);">Total In</div>
+                    </div>
+                    <div style="flex:1;text-align:center;">
+                        <div style="font-weight:700;color:#ef4444;">-₱${totalOut.toLocaleString()}</div>
+                        <div style="font-size:0.72rem;color:var(--text-secondary);">Total Out</div>
+                    </div>
+                    <div style="flex:1;text-align:center;">
+                        <div style="font-weight:700;color:${totalIn-totalOut>=0?'#10b981':'#ef4444'};">${totalIn-totalOut>=0?'+':''}₱${(totalIn-totalOut).toLocaleString()}</div>
+                        <div style="font-size:0.72rem;color:var(--text-secondary);">Net</div>
+                    </div>
+                </div>
+                <div style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:6px;">${all.length} transactions</div>
+                ${all.map(x => `
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 4px;border-bottom:1px solid var(--border-color);">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span style="font-size:0.7rem;background:${x.color}22;color:${x.color};padding:2px 6px;border-radius:10px;white-space:nowrap;">${x.type}</span>
+                            <div>
+                                <div style="font-size:0.82rem;font-weight:500;">${x.desc}</div>
+                                <div style="font-size:0.72rem;color:var(--text-secondary);">${x.date||'?'}</div>
+                            </div>
+                        </div>
+                        <div style="font-weight:700;color:${x.color};white-space:nowrap;">${x.sign}₱${x.amount.toLocaleString()}</div>
+                    </div>`).join('')}
+            `;
         }
 
         function exportReportPDF() {
