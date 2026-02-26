@@ -842,8 +842,7 @@
             font-size: 24px;
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
-            z-index: 102;
-            transition: all 0.3s ease;
+                        z-index: 9991; transition: all 0.3s ease;
         }
 
         .fab.active {
@@ -860,7 +859,11 @@
             display: none;
             flex-direction: column;
             gap: 12px;
-            z-index: 101;
+            z-index: 9990;
+            pointer-events: none;
+        }
+        .fab-menu.show {
+            pointer-events: all;
         }
 
         .fab-menu.show {
@@ -872,6 +875,8 @@
             align-items: center;
             gap: 12px;
             justify-content: flex-end;
+            cursor: pointer;
+            pointer-events: all;
         }
 
         .fab-item span {
@@ -883,6 +888,9 @@
             font-weight: 500;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             white-space: nowrap;
+            cursor: pointer;
+            pointer-events: all;
+            user-select: none;
         }
 
         [data-theme="dark"] .fab-item span {
@@ -891,20 +899,34 @@
         }
 
         .fab-item button {
-            width: 44px;
-            height: 44px;
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
             border: none;
             background: white;
             color: var(--primary);
-            font-size: 18px;
+            font-size: 20px;
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
             flex-shrink: 0;
+            pointer-events: all;
+            position: relative;
+            z-index: 103;
+        }
+
+        .fab-item button:hover {
+            transform: scale(1.1);
+            background: var(--primary);
+            color: white;
         }
 
         [data-theme="dark"] .fab-item button {
             background: var(--gray-700);
+            color: white;
+        }
+        
+        [data-theme="dark"] .fab-item button:hover {
+            background: var(--primary);
             color: white;
         }
 
@@ -3121,10 +3143,7 @@
                     <span class="icon">🏪</span>Retail / Store
                     <span style="position:absolute;top:8px;right:8px;font-size:0.7rem;">✅</span>
                 </div>
-                <div class="mt-biz-type selected" onclick="mtToggleBizModule('hardware', this)">
-                    <span class="icon">🔧</span>Hardware Store
-                    <span style="position:absolute;top:8px;right:8px;font-size:0.7rem;">✅</span>
-                </div>
+
                 <div class="mt-biz-type selected" onclick="mtToggleBizModule('employees', this)">
                     <span class="icon">👷</span>Staff / Payroll
                     <span style="position:absolute;top:8px;right:8px;font-size:0.7rem;">✅</span>
@@ -3138,7 +3157,7 @@
         <div class="mt-step-panel" id="mt-step-2">
             <div class="mt-form-group">
                 <label>Organization / Business Name *</label>
-                <input type="text" class="mt-form-input" id="mt-setup-orgname" placeholder="e.g. RLM Hardware Store">
+                <input type="text" class="mt-form-input" id="mt-setup-orgname" placeholder="e.g. RLM Rentals">
             </div>
             <div class="mt-form-group">
                 <label>Address</label>
@@ -3644,6 +3663,58 @@
                         <div class="label">Savings</div>
                     </div>
                 </div>
+                <p style="font-size:0.72rem;font-weight:700;color:#86198f;margin:14px 0 6px;letter-spacing:0.3px;">🏛️ GOVERNMENT CONTRIBUTIONS</p>
+                <div class="expense-summary-grid">
+                    <div class="expense-summary-item" onclick="openExpenseWithCategory('sss')" style="cursor:pointer;background:rgba(134,25,143,0.06);border:1px solid rgba(134,25,143,0.15);" title="Click to add SSS">
+                        <div class="icon">🏛️</div>
+                        <div class="amount" id="exp-sss">₱0</div>
+                        <div class="label">SSS</div>
+                    </div>
+                    <div class="expense-summary-item" onclick="openExpenseWithCategory('philhealth')" style="cursor:pointer;background:rgba(134,25,143,0.06);border:1px solid rgba(134,25,143,0.15);" title="Click to add PhilHealth">
+                        <div class="icon">🏥</div>
+                        <div class="amount" id="exp-philhealth">₱0</div>
+                        <div class="label">PhilHealth</div>
+                    </div>
+                    <div class="expense-summary-item" onclick="openExpenseWithCategory('pagibig')" style="cursor:pointer;background:rgba(134,25,143,0.06);border:1px solid rgba(134,25,143,0.15);" title="Click to add Pag-IBIG">
+                        <div class="icon">🏠</div>
+                        <div class="amount" id="exp-pagibig">₱0</div>
+                        <div class="label">Pag-IBIG</div>
+                    </div>
+                    <div class="expense-summary-item" onclick="openExpenseWithCategory('bir')" style="cursor:pointer;background:rgba(134,25,143,0.06);border:1px solid rgba(134,25,143,0.15);" title="Click to add BIR Tax">
+                        <div class="icon">📋</div>
+                        <div class="amount" id="exp-bir">₱0</div>
+                        <div class="label">BIR Tax</div>
+                    </div>
+                    <div class="expense-summary-item" onclick="openExpenseWithCategory('accountant')" style="cursor:pointer;background:rgba(134,25,143,0.06);border:1px solid rgba(134,25,143,0.15);" title="Click to add Accountant fee">
+                        <div class="icon">👨‍💼</div>
+                        <div class="amount" id="exp-accountant">₱0</div>
+                        <div class="label">Accountant</div>
+                    </div>
+                </div>
+                <p style="font-size:0.72rem;font-weight:700;color:#1e40af;margin:14px 0 6px;letter-spacing:0.3px;">💼 SET ASIDE</p>
+                <div class="expense-summary-grid">
+                    <div class="expense-summary-item" onclick="openExpenseWithCategory('investment')" style="cursor:pointer;background:rgba(30,64,175,0.06);border:1px solid rgba(30,64,175,0.15);" title="Click to add Investment">
+                        <div class="icon">📈</div>
+                        <div class="amount" id="exp-investment">₱0</div>
+                        <div class="label">Investment</div>
+                    </div>
+                    <div class="expense-summary-item" onclick="openExpenseWithCategory('capital_reserve')" style="cursor:pointer;background:rgba(30,64,175,0.06);border:1px solid rgba(30,64,175,0.15);" title="Click to add Reserve Fund">
+                        <div class="icon">🏦</div>
+                        <div class="amount" id="exp-reserve">₱0</div>
+                        <div class="label">Reserve</div>
+                    </div>
+                    <div class="expense-summary-item" onclick="openExpenseWithCategory('owners_draw')" style="cursor:pointer;background:rgba(30,64,175,0.06);border:1px solid rgba(30,64,175,0.15);" title="Click to add Owner's Draw">
+                        <div class="icon">👤</div>
+                        <div class="amount" id="exp-ownerdraw">₱0</div>
+                        <div class="label">Owner Draw</div>
+                    </div>
+                    <div class="expense-summary-item" onclick="openExpenseWithCategory('payroll')" style="cursor:pointer;background:rgba(30,64,175,0.06);border:1px solid rgba(30,64,175,0.15);" title="Click to add Payroll">
+                        <div class="icon">💰</div>
+                        <div class="amount" id="exp-payroll">₱0</div>
+                        <div class="label">Payroll</div>
+                    </div>
+                </div>
+
             </div>
 
             <!-- Collection Calendar -->
@@ -4592,15 +4663,28 @@
                             <span style="color: #374151;">Operations</span>
                             <span style="font-weight: 600;" id="fin-operations">₱0</span>
                         </div>
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                            <span style="color: #374151;">Other</span>
-                            <span style="font-weight: 600;" id="fin-other-expenses">₱0</span>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                            <span style="color:#374151;">Personal/General</span>
+                            <span style="font-weight:600;" id="fin-other-expenses">₱0</span>
                         </div>
-                        <div style="border-top: 2px solid #ef4444; margin-top: 10px; padding-top: 10px; display: flex; justify-content: space-between;">
-                            <span style="color: #991b1b; font-weight: 700;">TOTAL OUT</span>
-                            <span style="color: #991b1b; font-weight: 700; font-size: 1.1rem;" id="fin-total-expenses">₱0</span>
+                        <div style="border-top:2px solid #ef4444;margin-top:10px;padding-top:10px;display:flex;justify-content:space-between;">
+                            <span style="color:#991b1b;font-weight:700;">TOTAL OUT</span>
+                            <span style="color:#991b1b;font-weight:700;font-size:1.1rem;" id="fin-total-expenses">₱0</span>
                         </div>
                     </div>
+
+                    <!-- PERSONAL / GENERAL BREAKDOWN -->
+                    <div style="background:#fff7ed;border-radius:12px;padding:15px;margin-bottom:15px;">
+                        <h4 style="color:#c2410c;margin:0 0 12px 0;font-size:0.9rem;">👤 PERSONAL / GENERAL</h4>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="color:#374151;">📋 Taxes & Permits</span><span style="font-weight:600;" id="fin-taxes">₱0</span></div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="color:#374151;">🛡️ Insurance</span><span style="font-weight:600;" id="fin-insurance">₱0</span></div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="color:#374151;">💳 Loan Payments</span><span style="font-weight:600;" id="fin-loan">₱0</span></div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="color:#374151;">🍔 Food & Meals</span><span style="font-weight:600;" id="fin-food">₱0</span></div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="color:#374151;">📱 Communication</span><span style="font-weight:600;" id="fin-comms">₱0</span></div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="color:#374151;">📝 Other</span><span style="font-weight:600;" id="fin-other-misc">₱0</span></div>
+                    </div>
+
+
                     
                     <!-- GOVERNMENT CONTRIBUTIONS -->
                     <div style="background: #fdf4ff; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
@@ -4952,7 +5036,7 @@
                             </a>
                             <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-color);">
                                 <p style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:6px;font-weight:600;">🌐 For licensing & inquiries:</p>
-                                <p style="font-size:0.78rem;color:var(--text-secondary);">PRISM is available for other rental businesses, hardware stores, and water stations. Contact us to get your own copy.</p>
+                                <p style="font-size:0.78rem;color:var(--text-secondary);">PRISM is available for other rental businesses and water refilling stations. Contact us to get your own copy.</p>
                             </div>
                         </div>
                     </div>
@@ -4963,29 +5047,33 @@
 
     <!-- FAB Menu -->
     <div class="fab-menu" id="fab-menu">
-        <div class="fab-item">
+        <div class="fab-item" onclick="showModal('property-modal');closeFabMenu();" style="cursor:pointer;">
             <span>Add Property</span>
-            <button onclick="showModal('property-modal')">🏠</button>
+            <button type="button">🏠</button>
         </div>
-        <div class="fab-item">
+        <div class="fab-item" onclick="showModal('tenant-modal');closeFabMenu();" style="cursor:pointer;">
             <span>Add Tenant</span>
-            <button onclick="showModal('tenant-modal')">👤</button>
+            <button type="button">👤</button>
         </div>
-        <div class="fab-item">
+        <div class="fab-item" onclick="showModal('credit-modal');closeFabMenu();" style="cursor:pointer;">
             <span>Add Credit/Debtor</span>
-            <button onclick="showModal('credit-modal')">💰</button>
+            <button type="button">💰</button>
         </div>
-        <div class="fab-item">
+        <div class="fab-item" onclick="showModal('payment-modal');closeFabMenu();" style="cursor:pointer;">
             <span>Record Payment</span>
-            <button onclick="showModal('payment-modal')">₱</button>
+            <button type="button">₱</button>
         </div>
-        <div class="fab-item">
+        <div class="fab-item" onclick="showIncomeModal();closeFabMenu();" style="cursor:pointer;">
             <span>Add Income</span>
-            <button onclick="showIncomeModal()">💵</button>
+            <button type="button">💵</button>
         </div>
-        <div class="fab-item">
+        <div class="fab-item" onclick="showAddExpenseModal();closeFabMenu();" style="cursor:pointer;">
+            <span>Add Expense</span>
+            <button type="button">📤</button>
+        </div>
+        <div class="fab-item" onclick="showModal('contract-modal');closeFabMenu();" style="cursor:pointer;">
             <span>Contract & Policies</span>
-            <button onclick="showModal('contract-modal')">📄</button>
+            <button type="button">📄</button>
         </div>
     </div>
     <button class="fab" id="fab-btn" onclick="toggleFabMenu()">+</button>
@@ -5354,15 +5442,15 @@
                             <option value="Cleaning Fee">
                             <option value="Key Replacement">
                             <option value="Printing/Photocopy">
-                            <option value="Hardware Store Sales">
-                            <option value="Hardware Store - Cement">
-                            <option value="Hardware Store - Nails/Screws">
-                            <option value="Hardware Store - Electrical">
-                            <option value="Hardware Store - Plumbing">
-                            <option value="Hardware Store - Paint">
-                            <option value="Hardware Store - Tools">
-                            <option value="Hardware Store - GI Sheets">
-                            <option value="Hardware Store - Lumber">
+                            
+                            
+                            
+                            
+                            
+                            
+                            
+                            
+                            
                             <option value="Delivery Fee">
                             <option value="Loan Interest">
                             <option value="Contract Payment">
@@ -6003,21 +6091,7 @@
                                 <option value="capital_reserve">🏠 Capital Reserve</option>
                                 <option value="owners_draw">👤 Owner's Draw</option>
                             </optgroup>
-                            <optgroup label="🏪 Hardware Store">
-                                <option value="hw_inventory">📦 Inventory Restocking</option>
-                                <option value="hw_cement">🧱 Cement & Construction</option>
-                                <option value="hw_electrical">⚡ Electrical Supplies</option>
-                                <option value="hw_plumbing">🔧 Plumbing Materials</option>
-                                <option value="hw_tools">🛠️ Tools & Equipment</option>
-                                <option value="hw_paint">🎨 Paint & Finishing</option>
-                                <option value="hw_delivery">🚚 Delivery Costs</option>
-                            </optgroup>
-                            <optgroup label="💧 Water Station">
-                                <option value="ws_filter">🔵 Filter Replacement</option>
-                                <option value="ws_bottles">🫙 Containers/Bottles</option>
-                                <option value="ws_chemicals">🧪 Treatment Chemicals</option>
-                                <option value="ws_maintenance">🔧 Equipment Maintenance</option>
-                            </optgroup>
+
                             <optgroup label="📁 Other">
                                 <option value="payroll">👷 Payroll/Salaries</option>
                                 <option value="other">📝 Other</option>
@@ -8460,7 +8534,7 @@
             if (sectionId === 'tenants') loadTenants();
             if (sectionId === 'credits') loadCredits();
             if (sectionId === 'water') loadWaterCustomers();
-            if (sectionId === 'income') loadIncome();
+            if (sectionId === 'income') { loadIncome(); refreshFinancialOverview(); }
             if (sectionId === 'employees') loadEmployees();
             if (sectionId === 'expenses') loadExpenses();
             if (sectionId === 'tasks') loadTasks();
@@ -8665,6 +8739,18 @@
             const fabBtn = document.getElementById('fab-btn');
             fabMenu.classList.toggle('show');
             fabBtn.classList.toggle('active');
+        }
+
+        function closeFabMenu() {
+            const fabMenu = document.getElementById('fab-menu');
+            const fabBtn = document.getElementById('fab-btn');
+            if (fabMenu) { fabMenu.classList.remove('show'); }
+            if (fabBtn)  { fabBtn.classList.remove('active'); }
+        }
+
+        function showAddExpenseModal() {
+            showSection('expenses');
+            setTimeout(() => showModal('expense-modal'), 300);
         }
 
         // Close FAB menu when clicking outside
@@ -14574,6 +14660,12 @@ async function showPayrollSummary() {
         // INCOME & CHARGES FUNCTIONS
         // =====================
         async function showIncomeModal() {
+            // If income modal elements don't exist, navigate to income section first
+            if (!document.getElementById('income-linked-to')) {
+                showSection('income');
+                setTimeout(() => showAddIncomeModal(), 350);
+                return;
+            }
             // Populate linked-to dropdown with tenants, debtors, and regular customers
             const tenants = await dbGetAll('tenants');
             const credits = await dbGetAll('credits');
@@ -14616,12 +14708,12 @@ async function showPayrollSummary() {
                 options += '</optgroup>';
             }
             
-            document.getElementById('income-linked-to').innerHTML = options;
-            document.getElementById('income-date').value = new Date().toISOString().split('T')[0];
+            const linkedEl = document.getElementById('income-linked-to'); if (linkedEl) linkedEl.innerHTML = options;
+            const incomeDateEl = document.getElementById('income-date'); if (incomeDateEl) incomeDateEl.value = new Date().toISOString().split('T')[0];
             document.getElementById('income-form').reset();
             document.getElementById('income-date').value = new Date().toISOString().split('T')[0];
             document.getElementById('custom-source-group').style.display = 'none';
-            showModal('income-modal');
+            const incomeModal = document.getElementById('income-modal'); if (incomeModal) showModal('income-modal'); else { showSection('income'); setTimeout(() => showAddIncomeModal(), 350); }
         }
 
         function toggleCustomSource() {
@@ -14977,7 +15069,7 @@ async function showPayrollSummary() {
             // Calculate stats
             const now = new Date();
             const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-            const monthlyExpenses = expenses.filter(e => e.date.startsWith(currentMonth));
+            const monthlyExpenses = expenses.filter(e => e.date && e.date.startsWith(currentMonth));
             const monthlyTotal = monthlyExpenses.reduce((sum, e) => sum + e.amount, 0);
             const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
 
@@ -15014,6 +15106,7 @@ async function showPayrollSummary() {
                 electric: '⚡ Electric Bill',
                 water: '💧 Water Bill',
                 repairs: '🔧 Repairs & Maintenance',
+                maintenance: '🔧 Repairs & Maintenance',
                 taxes: '📋 Taxes & Permits',
                 insurance: '🛡️ Insurance',
                 fuel: '⛽ Fuel/Gas',
@@ -15021,9 +15114,18 @@ async function showPayrollSummary() {
                 supplies: '📦 Supplies & Materials',
                 labor: '👷 Labor/Services',
                 personal_loan: '💳 Personal Loan',
-                savings: '🏦 Savings/Investment',
                 food: '🍔 Food & Meals',
                 communication: '📱 Communication',
+                sss: '🏛️ SSS Contribution',
+                philhealth: '🏥 PhilHealth',
+                pagibig: '🏠 Pag-IBIG',
+                bir: '📋 BIR / Income Tax',
+                accountant: '👨‍💼 Accountant Fee',
+                savings: '🏦 Savings',
+                investment: '📈 Investment',
+                capital_reserve: '🏦 Reserve Fund',
+                owners_draw: "👤 Owner's Draw",
+                payroll: '💰 Payroll/Salaries',
                 utilities: '🔌 Utilities',
                 other: '📝 Other'
             };
@@ -15056,6 +15158,7 @@ async function showPayrollSummary() {
                 electric: '⚡ Electric Bill',
                 water: '💧 Water Bill',
                 repairs: '🔧 Repairs & Maintenance',
+                maintenance: '🔧 Repairs & Maintenance',
                 taxes: '📋 Taxes & Permits',
                 insurance: '🛡️ Insurance',
                 fuel: '⛽ Fuel/Gas',
@@ -15063,9 +15166,18 @@ async function showPayrollSummary() {
                 supplies: '📦 Supplies & Materials',
                 labor: '👷 Labor/Services',
                 personal_loan: '💳 Personal Loan',
-                savings: '🏦 Savings/Investment',
                 food: '🍔 Food & Meals',
                 communication: '📱 Communication',
+                sss: '🏛️ SSS Contribution',
+                philhealth: '🏥 PhilHealth',
+                pagibig: '🏠 Pag-IBIG',
+                bir: '📋 BIR / Income Tax',
+                accountant: '👨‍💼 Accountant Fee',
+                savings: '🏦 Savings',
+                investment: '📈 Investment',
+                capital_reserve: '🏦 Reserve Fund',
+                owners_draw: "👤 Owner's Draw",
+                payroll: '💰 Payroll/Salaries',
                 utilities: '🔌 Utilities',
                 other: '📝 Other'
             };
@@ -15225,27 +15337,29 @@ async function showPayrollSummary() {
                 
                 // Set a helpful description based on category
                 const descriptions = {
-                    'electric': 'Electricity bill',
-                    'water': 'Water bill',
-                    'repairs': 'Repair/Maintenance',
-                    'taxes': 'Taxes/Permits',
-                    'insurance': 'Insurance payment',
-                    'fuel': 'Fuel/Gas',
-                    'transport': 'Transportation',
-                    'supplies': 'Supplies/Materials',
-                    'labor': 'Labor/Services',
-                    'personal_loan': 'Loan payment',
-                    'food': 'Food/Meals',
-                    'communication': 'Phone/Internet bill',
-                    'sss': 'SSS monthly contribution',
-                    'philhealth': 'PhilHealth contribution',
-                    'pagibig': 'Pag-IBIG contribution',
-                    'bir': 'BIR tax payment',
-                    'accountant': 'Accountant/Bookkeeper fee',
-                    'savings': 'Transfer to savings',
-                    'investment': 'Investment deposit',
-                    'capital_reserve': 'Capital reserve fund',
-                    'owners_draw': 'Owner withdrawal',
+                    'electric': 'Meralco electric bill',
+                    'water': 'MCWD water bill',
+                    'repairs': 'Repair/Maintenance work',
+                    'taxes': 'Real property tax / permit fee',
+                    'insurance': 'Insurance premium payment',
+                    'fuel': 'Fuel/Gas for vehicle',
+                    'transport': 'Transportation cost',
+                    'supplies': 'Office/business supplies',
+                    'labor': 'Labor/services fee',
+                    'personal_loan': 'Monthly loan amortization',
+                    'food': 'Food/meals for staff',
+                    'communication': 'Globe/PLDT internet + phone',
+                    'sss': 'SSS employer contribution',
+                    'philhealth': 'PhilHealth monthly contribution',
+                    'pagibig': 'Pag-IBIG monthly contribution',
+                    'bir': 'BIR quarterly income tax',
+                    'accountant': 'Accountant/bookkeeper monthly fee',
+                    'savings': 'Monthly savings deposit',
+                    'investment': 'Business investment / reinvestment',
+                    'capital_reserve': 'Emergency reserve fund deposit',
+                    'owners_draw': 'Owner monthly withdrawal',
+                    'payroll': 'Weekly/monthly payroll',
+
                     'other': ''
                 };
                 document.getElementById('expense-description').value = descriptions[category] || '';
@@ -15764,7 +15878,7 @@ async function showPayrollSummary() {
             }
 
             // Credit repaid this month
-            const monthlyCreditPayments = creditPayments.filter(p => p.date.startsWith(currentMonth));
+            const monthlyCreditPayments = creditPayments.filter(p => p.date && p.date.startsWith(currentMonth));
             const creditRepaid = monthlyCreditPayments.reduce((sum, p) => sum + p.amount, 0);
             safeSetText('stat-credit-repaid', '₱' + creditRepaid.toLocaleString());
 
@@ -15774,7 +15888,7 @@ async function showPayrollSummary() {
             try {
                 const additionalIncome = await dbGetAll('additionalIncome');
                 otherIncomeThisMonth = additionalIncome
-                    .filter(i => i.date.startsWith(currentMonth))
+                    .filter(i => i.date && i.date.startsWith(currentMonth))
                     .reduce((sum, i) => sum + i.amount, 0);
             } catch (e) {}
             
@@ -15829,7 +15943,7 @@ async function showPayrollSummary() {
             safeSetText('stat-outstanding', '₱' + (overallCreditDue - overallCreditCollected).toLocaleString());
 
             // Monthly expenses and net income
-            const monthlyExpenses = expenses.filter(e => e.date.startsWith(currentMonth));
+            const monthlyExpenses = expenses.filter(e => e.date && e.date.startsWith(currentMonth));
             const totalExpenses = monthlyExpenses.reduce((sum, e) => sum + e.amount, 0);
             const netIncome = collected + creditRepaid - totalExpenses;
             
@@ -15857,22 +15971,43 @@ async function showPayrollSummary() {
             }
 
             // Calculate expense category totals for this month
+            const catSum = cat => monthlyExpenses.filter(e => e.category === cat).reduce((s, e) => s + (e.amount||0), 0);
             const expenseByCategory = {
-                electric: monthlyExpenses.filter(e => e.category === 'electric').reduce((sum, e) => sum + e.amount, 0),
-                water: monthlyExpenses.filter(e => e.category === 'water').reduce((sum, e) => sum + e.amount, 0),
-                fuel: monthlyExpenses.filter(e => e.category === 'fuel').reduce((sum, e) => sum + e.amount, 0),
-                repairs: monthlyExpenses.filter(e => e.category === 'repairs').reduce((sum, e) => sum + e.amount, 0),
-                personal_loan: monthlyExpenses.filter(e => ['personal_loan','loans'].includes(e.category)).reduce((sum, e) => sum + e.amount, 0),
-                savings: monthlyExpenses.filter(e => e.category === 'savings').reduce((sum, e) => sum + e.amount, 0)
+                electric:      catSum('electric'),
+                water:         catSum('water'),
+                fuel:          catSum('fuel'),
+                repairs:       catSum('repairs') + catSum('maintenance'),
+                personal_loan: catSum('personal_loan'),
+                savings:       catSum('savings'),
+                sss:           catSum('sss'),
+                philhealth:    catSum('philhealth'),
+                pagibig:       catSum('pagibig'),
+                bir:           catSum('bir'),
+                accountant:    catSum('accountant'),
+                investment:    catSum('investment'),
+                capital_reserve: catSum('capital_reserve'),
+                owners_draw:   catSum('owners_draw'),
+                payroll:       catSum('payroll'),
             };
 
-            // Update expense category breakdown UI
+            // Update expense category breakdown UI (dashboard 6-card grid)
             safeSetText('exp-electric', '₱' + expenseByCategory.electric.toLocaleString());
-            safeSetText('exp-water', '₱' + expenseByCategory.water.toLocaleString());
-            safeSetText('exp-fuel', '₱' + expenseByCategory.fuel.toLocaleString());
-            safeSetText('exp-repairs', '₱' + expenseByCategory.repairs.toLocaleString());
-            safeSetText('exp-loans', '₱' + expenseByCategory.personal_loan.toLocaleString());
-            safeSetText('exp-savings', '₱' + expenseByCategory.savings.toLocaleString());
+            safeSetText('exp-water',    '₱' + expenseByCategory.water.toLocaleString());
+            safeSetText('exp-fuel',     '₱' + expenseByCategory.fuel.toLocaleString());
+            safeSetText('exp-repairs',  '₱' + expenseByCategory.repairs.toLocaleString());
+            safeSetText('exp-loans',    '₱' + expenseByCategory.personal_loan.toLocaleString());
+            safeSetText('exp-savings',  '₱' + expenseByCategory.savings.toLocaleString());
+            // Extended category cards (if present)
+            safeSetText('exp-sss',      '₱' + expenseByCategory.sss.toLocaleString());
+            safeSetText('exp-philhealth','₱' + expenseByCategory.philhealth.toLocaleString());
+            safeSetText('exp-pagibig',  '₱' + expenseByCategory.pagibig.toLocaleString());
+            safeSetText('exp-bir',      '₱' + expenseByCategory.bir.toLocaleString());
+            safeSetText('exp-accountant','₱' + expenseByCategory.accountant.toLocaleString());
+            safeSetText('exp-investment','₱' + expenseByCategory.investment.toLocaleString());
+            safeSetText('exp-reserve',  '₱' + expenseByCategory.capital_reserve.toLocaleString());
+            safeSetText('exp-ownerdraw','₱' + expenseByCategory.owners_draw.toLocaleString());
+            safeSetText('exp-payroll',  '₱' + expenseByCategory.payroll.toLocaleString());
+
 
             // Render calendar with error handling
             try {
@@ -15950,12 +16085,12 @@ async function showPayrollSummary() {
 
             // Calculate income and expenses per month
             const data = months.map(m => {
-                const rentIncome = payments.filter(p => p.date.startsWith(m.key)).reduce((sum, p) => sum + p.amount, 0);
-                const creditIncome = creditPayments.filter(p => p.date.startsWith(m.key)).reduce((sum, p) => sum + p.amount, 0);
+                const rentIncome .filter(p => p.date && p.date.startsWith(tartsWith(m.key)).reduce((sum, p) => sum + p.amount, 0);
+                const creditInc.filter(p => p.date && p.date.startsWith(> p.date.startsWith(m.key)).reduce((sum, p) => sum + p.amount, 0);
                 const totalIncome = rentIncome + creditIncome;
 
-                const monthExpenses = expenses.filter(e => e.date.startsWith(m.key)).reduce((sum, e) => sum + e.amount, 0);
-                const monthCreditsReleased = credits.filter(c => c.dateLent.startsWith(m.key)).reduce((sum, c) => sum + c.principal, 0);
+                const monthExpenses = expenses.filter(e => e.date && e.date.startsWith(m.key)).reduce((sum, e) => sum + e.amount, 0);
+                const monthCreditsReleased = credits.filter(c => (c.dateLent||c.date||'').startsWith(m.key)).reduce((sum, c) => sum + c.principal, 0);
                 const totalExpenses = monthExpenses + monthCreditsReleased;
 
                 return { label: m.label, income: totalIncome, expenses: totalExpenses };
@@ -16165,8 +16300,8 @@ async function showPayrollSummary() {
             const currentMonthStr = `${year}-${String(month + 1).padStart(2, '0')}`;
             
             // Get payment data for this month
-            const monthPayments = payments.filter(p => p.date.startsWith(currentMonthStr));
-            const monthCreditPayments = creditPayments.filter(p => p.date.startsWith(currentMonthStr));
+            .filter(p => p.date && p.date.startsWith(filter(p => p.date.startsWith(currentMonthStr));
+            co.filter(p => p.date && p.date.startsWith(tPayments.filter(p => p.date.startsWith(currentMonthStr));
             
             // Build schedule data
             const scheduleData = {};
@@ -16716,26 +16851,20 @@ async function showPayrollSummary() {
             
             const totalIncome = rentCollected + creditRepaid + storeIncome + otherIncome;
 
-            // MONEY OUT (True Expenses - excluding allocations)
-            const creditsReleased = credits.reduce((sum, c) => sum + c.principal, 0);
-            
+            // MONEY OUT — helper
+            const eSum = cats => expenses.filter(e => cats.includes(e.category)).reduce((s,e) => s+(e.amount||0), 0);
+            const creditsReleased = credits.reduce((sum, c) => sum + (c.principal||0), 0);
             // Utilities
-            const utilities = expenses
-                .filter(e => ['electric', 'water'].includes(e.category))
-                .reduce((sum, e) => sum + e.amount, 0);
-            
+            const utilities = eSum(['electric','water']);
             // Maintenance/Repairs
-            const maintenance = expenses
-                .filter(e => ['maintenance', 'repairs', 'repair'].includes(e.category))
-                .reduce((sum, e) => sum + e.amount, 0);
-            
+            const maintenance = eSum(['maintenance','repairs','repair']);
             // Operations
-            const operations = expenses
-                .filter(e => ['fuel', 'transport', 'supplies', 'labor'].includes(e.category))
-                .reduce((sum, e) => sum + e.amount, 0);
+            // Personal / General
+            const personalExpenses = eSum(['personal_loan','food','communication','taxes','insurance','other']);
+
             
             // Allocations (not true expenses)
-            const allocationCategories = ['savings', 'investment', 'capital_reserve', 'owners_draw', 'reserve', 'ownerdraw'];
+            const allocationCategories = ['savings', 'investment', 'capital_reserve', 'owners_draw'];
             
             const savingsAmount = expenses
                 .filter(e => e.category === 'savings')
@@ -16746,11 +16875,11 @@ async function showPayrollSummary() {
                 .reduce((sum, e) => sum + e.amount, 0);
             
             const capitalReserve = expenses
-                .filter(e => ['capital_reserve','reserve'].includes(e.category))
+                .filter(e => e.category === 'capital_reserve')
                 .reduce((sum, e) => sum + e.amount, 0);
             
             const ownersDraw = expenses
-                .filter(e => ['owners_draw','ownerdraw'].includes(e.category))
+                .filter(e => e.category === 'owners_draw')
                 .reduce((sum, e) => sum + e.amount, 0);
             
             const totalAllocated = savingsAmount + investmentAmount + capitalReserve + ownersDraw;
@@ -16781,11 +16910,17 @@ async function showPayrollSummary() {
             const totalGovt = sssAmount + philhealthAmount + pagibigAmount + birAmount + accountantAmount;
             
             // Other Expenses (excluding allocations and government)
-            const otherExpenses = expenses
-                .filter(e => !['electric', 'water', 'maintenance', 'repairs', 'repair', 'fuel', 'transport', 'supplies', 'labor', 'payroll', 'inventory', ...allocationCategories, ...govtCategories].includes(e.category))
-                .reduce((sum, e) => sum + e.amount, 0);
+            const otherExpenses = personalExpenses;
             
             const totalExpenses = creditsReleased + utilities + maintenance + operations + otherExpenses;
+            // Individual category totals for UI
+            const taxesAmt     = eSum(['taxes']);
+            const insuranceAmt = eSum(['insurance']);
+            const loanAmt      = eSum(['personal_loan']);
+            const foodAmt      = eSum(['food']);
+            const commsAmt     = eSum(['communication']);
+
+            const otherAmt     = eSum(['other']);
 
             // NET CASH FLOW = Income - Expenses - Allocated - Government
             const netCashFlow = totalIncome - totalExpenses - totalAllocated - totalGovt;
@@ -16821,8 +16956,18 @@ async function showPayrollSummary() {
                 operationsEl.textContent = `₱${operations.toLocaleString()}`;
             }
             
-            document.getElementById('fin-other-expenses').textContent = `₱${otherExpenses.toLocaleString()}`;
-            document.getElementById('fin-total-expenses').textContent = `₱${totalExpenses.toLocaleString()}`;
+            // Update individual expense category rows (safe set)
+            const fSet = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = '₱'+val.toLocaleString(); };
+            fSet('fin-other-expenses', otherExpenses);
+            fSet('fin-total-expenses', totalExpenses);
+            // Personal
+            fSet('fin-taxes',     taxesAmt);
+            fSet('fin-insurance', insuranceAmt);
+            fSet('fin-loan',      loanAmt);
+            fSet('fin-food',      foodAmt);
+            fSet('fin-comms',     commsAmt);
+            fSet('fin-other-misc', otherAmt);
+
             
             // Update UI - GOVERNMENT CONTRIBUTIONS
             const sssEl = document.getElementById('fin-sss');
@@ -17148,13 +17293,30 @@ async function showPayrollSummary() {
             }
 
             const categoryLabels = {
+                electric: 'Electric Bill',
+                water: 'Water Bill',
                 repairs: 'Repairs & Maintenance',
-                utilities: 'Utilities',
+                maintenance: 'Repairs & Maintenance',
                 taxes: 'Taxes & Permits',
                 insurance: 'Insurance',
+                fuel: 'Fuel/Gas',
+                transport: 'Transportation',
                 supplies: 'Supplies & Materials',
                 labor: 'Labor/Services',
-                transport: 'Transportation',
+                personal_loan: 'Personal Loan',
+                food: 'Food & Meals',
+                communication: 'Communication',
+                sss: 'SSS Contribution',
+                philhealth: 'PhilHealth',
+                pagibig: 'Pag-IBIG',
+                bir: 'BIR / Income Tax',
+                accountant: 'Accountant Fee',
+                savings: 'Savings',
+                investment: 'Investment',
+                capital_reserve: 'Reserve Fund',
+                owners_draw: "Owner's Draw",
+                payroll: 'Payroll/Salaries',
+                utilities: 'Utilities',
                 other: 'Other'
             };
 
@@ -19675,9 +19837,11 @@ function initReportsPage() {
             const vacantCount = properties.filter(p => !activeTenants_r.some(t => t.propertyId===p.id)).length;
             const waterGallons = rangeWaterSales.reduce((s,w)=>s+(w.gallons||0),0);
             const waterCustomerCount = new Set(rangeWaterSales.map(w=>w.customerId||w.customerName)).size;
-            // Expense breakdown for this period
-            const expCats = {};
-            rangeExpenses.forEach(e => { const c=e.category||'other'; expCats[c]=(expCats[c]||0)+(e.amount||0); });
+            const expCatsRaw = {};
+            rangeExpenses.forEach(e => { const c=e.category||'other'; expCatsRaw[c]=(expCatsRaw[c]||0)+(e.amount||0); });
+            
+            
+            const expCats = expCatsRaw;
             const topExpCat = Object.entries(expCats).sort((a,b)=>b[1]-a[1])[0];
             // Previous period comparison
             const periodMs = toDate - fromDate;
@@ -19869,11 +20033,11 @@ function initReportsPage() {
             const categoryIcons = {
                 'electric':'⚡','water':'💧','fuel':'⛽','repairs':'🔧',
                 'taxes':'📋','insurance':'🛡️','transport':'🚌','supplies':'📦',
-                'labor':'👷','loans':'💳','food':'🍔','comms':'📱','other':'📝',
-                'sss':'🏛️','philhealth':'🏥','pagibig':'🏠','bir':'📋',
-                'accountant':'👨‍💼','savings':'🏦','investment':'📈',
-                'reserve':'🏦','ownerdraw':'👤','payroll':'💰',
-                'inventory':'📦','maintenance':'🔧','utilities':'💡'
+                'labor':'👷','personal_loan':'💳','food':'🍔','communication':'📱',
+                'other':'📝','sss':'🏛️','philhealth':'🏥','pagibig':'🏠',
+                'bir':'📋','accountant':'👨‍💼','savings':'🏦','investment':'📈',
+                'capital_reserve':'🏦','owners_draw':'👤','payroll':'💰',
+                'maintenance':'🔧','utilities':'💡'
             };
             
             const colors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'];
@@ -20140,12 +20304,12 @@ function initReportsPage() {
                 electric:'⚡ Electric', water:'💧 Water Bill', fuel:'⛽ Fuel',
                 repairs:'🔧 Repairs', taxes:'📋 Taxes', insurance:'🛡️ Insurance',
                 transport:'🚌 Transport', supplies:'📦 Supplies', labor:'👷 Labor',
-                loans:'💳 Loans', food:'🍔 Food', comms:'📱 Comms', other:'📝 Other',
-                sss:'🏛️ SSS', philhealth:'🏥 PhilHealth', pagibig:'🏠 Pag-IBIG',
+                personal_loan:'💳 Personal Loan', food:'🍔 Food', communication:'📱 Comms',
+                other:'📝 Other', sss:'🏛️ SSS', philhealth:'🏥 PhilHealth', pagibig:'🏠 Pag-IBIG',
                 bir:'📋 BIR Tax', accountant:'👨‍💼 Accountant', savings:'🏦 Savings',
-                investment:'📈 Investment', reserve:'🏦 Reserve', ownerdraw:'👤 Owner Draw',
-                payroll:'💰 Payroll', inventory:'📦 Inventory', maintenance:'🔧 Maintenance',
-                utilities:'💡 Utilities'
+                investment:'📈 Investment', capital_reserve:'🏦 Reserve Fund',
+                owners_draw:'👤 Owner Draw', payroll:'💰 Payroll',
+                maintenance:'🔧 Maintenance', utilities:'💡 Utilities'
             };
 
             if (totalExpenses === 0) {
@@ -20194,6 +20358,16 @@ function initReportsPage() {
                 </div>`;
             }
 
+            // Group HW and WS for display
+            const hwTotal_j = sorted.filter(([k])=>hwKeys.includes(k)).reduce((s,[,v])=>s+v,0);
+            const wsTotal_j = sorted.filter(([k])=>wsKeys.includes(k)).reduce((s,[,v])=>s+v,0);
+            if (hwTotal_j > 0) {
+                const pct = Math.round((hwTotal_j/totalExpenses)*100);
+                            }
+            if (wsTotal_j > 0) {
+                const pct = Math.round((wsTotal_j/totalExpenses)*100);
+                html += '<div style="margin-bottom:9px;"><div style="display:flex;justify-content:space-between;font-size:0.83rem;margin-bottom:3px;"><span>💧 Water Station (total)</span><span style="font-weight:700;">₱'+wsTotal_j.toLocaleString()+' <span style="color:var(--text-secondary);font-weight:400;">('+pct+'%)</span></span></div><div style="background:var(--bg-secondary);border-radius:4px;height:7px;overflow:hidden;"><div style="height:100%;width:'+pct+'%;background:#0891b2;border-radius:4px;"></div></div></div>';
+            }
             // JAROD insight
             const topLabel = topExpCat ? (catLabels[topExpCat[0]] || topExpCat[0]) : '';
             const topPct2 = topExpCat ? Math.round((topExpCat[1] / totalExpenses) * 100) : 0;
@@ -20223,12 +20397,12 @@ function initReportsPage() {
                 electric:'Electric', water:'Water Bill', fuel:'Fuel',
                 repairs:'Repairs', taxes:'Taxes', insurance:'Insurance',
                 transport:'Transport', supplies:'Supplies', labor:'Labor',
-                loans:'Loans', food:'Food', comms:'Comms', other:'Other',
-                sss:'SSS', philhealth:'PhilHealth', pagibig:'Pag-IBIG',
+                personal_loan:'Personal Loan', food:'Food', communication:'Comms',
+                other:'Other', sss:'SSS', philhealth:'PhilHealth', pagibig:'Pag-IBIG',
                 bir:'BIR Tax', accountant:'Accountant', savings:'Savings',
-                investment:'Investment', reserve:'Reserve', ownerdraw:'Owner Draw',
-                payroll:'Payroll', inventory:'Inventory', maintenance:'Maintenance',
-                utilities:'Utilities'
+                investment:'Investment', capital_reserve:'Reserve Fund',
+                owners_draw:'Owner Draw', payroll:'Payroll',
+                maintenance:'Maintenance', utilities:'Utilities'
             };
 
             if (totalIncome === 0 && totalExpenses === 0) {
@@ -21118,14 +21292,14 @@ async function editTask(id) {
                     { description: 'Annual Property Tax - Lot 1', category: 'taxes', amount: 4500, date: dateStr(5), notes: 'Real property tax 2026', createdAt: new Date().toISOString() },
                     { description: 'Fire Insurance Premium', category: 'insurance', amount: 3800, date: dateStr(2), notes: 'Annual insurance renewal', createdAt: new Date().toISOString() },
                     // Operations
-                    { description: 'Truck Fuel - Delivery', category: 'fuel', amount: 1800, date: dateStr(4), notes: 'Fuel for hardware delivery truck', createdAt: new Date().toISOString() },
+                    { description: 'Truck Fuel - Delivery', category: 'fuel', amount: 1800, date: dateStr(4), notes: 'Fuel for vehicle/transport', createdAt: new Date().toISOString() },
                     { description: 'Tricycle Transport - Supplies', category: 'transport', amount: 350, date: dateStr(6), notes: 'Transport cost for restocking', createdAt: new Date().toISOString() },
                     { description: 'Office Supplies & Stationery', category: 'supplies', amount: 680, date: dateStr(5), notes: 'Receipt books, pens, folders', createdAt: new Date().toISOString() },
                     { description: 'Plumber Labor - Water Line Fix', category: 'labor', amount: 1200, date: dateStr(7), notes: 'Fix leaking water line Room 1', createdAt: new Date().toISOString() },
                     // Personal
-                    { description: 'Personal Loan Payment', category: 'loans', amount: 2000, date: dateStr(10), notes: 'Monthly amortization', createdAt: new Date().toISOString() },
+                    { description: 'Personal Loan Payment', category: 'personal_loan', amount: 2000, date: dateStr(10), notes: 'Monthly amortization', createdAt: new Date().toISOString() },
                     { description: 'Staff Meals - Monthly', category: 'food', amount: 1500, date: dateStr(8), notes: 'Lunch allowance for staff', createdAt: new Date().toISOString() },
-                    { description: 'Internet & Phone Bills', category: 'comms', amount: 1299, date: dateStr(2), notes: 'Globe fiber + mobile load', createdAt: new Date().toISOString() },
+                    { description: 'Internet & Phone Bills', category: 'communication', amount: 1299, date: dateStr(2), notes: 'Globe fiber + mobile load', createdAt: new Date().toISOString() },
                     { description: 'Miscellaneous Expenses', category: 'other', amount: 500, date: dateStr(9), notes: 'Various small purchases', createdAt: new Date().toISOString() },
                     // Government Contributions
                     { description: 'SSS Employer Contribution - Feb', category: 'sss', amount: 2400, date: dateStr(10), notes: '3 employees @ ₱800 each', createdAt: new Date().toISOString() },
@@ -21135,12 +21309,13 @@ async function editTask(id) {
                     { description: 'Accountant Professional Fee', category: 'accountant', amount: 1500, date: dateStr(1), notes: 'Monthly bookkeeping fee', createdAt: new Date().toISOString() },
                     // Money Allocation
                     { description: 'Business Savings Deposit', category: 'savings', amount: 5000, date: dateStr(1), notes: 'Monthly savings allocation', createdAt: new Date().toISOString() },
-                    { description: 'Hardware Inventory Investment', category: 'investment', amount: 15000, date: dateStr(3), notes: 'Cement bags, GI sheets, lumber', createdAt: new Date().toISOString() },
-                    { description: 'Emergency Reserve Fund', category: 'reserve', amount: 2000, date: dateStr(1), notes: 'Monthly reserve allocation', createdAt: new Date().toISOString() },
-                    { description: 'Owner Draw - Feb', category: 'ownerdraw', amount: 8000, date: dateStr(15), notes: 'Owner monthly withdrawal', createdAt: new Date().toISOString() },
+                    { description: 'Business Investment', category: 'investment', amount: 15000, date: dateStr(3), notes: 'Monthly business reinvestment', createdAt: new Date().toISOString() },
+                    { description: 'Emergency Reserve Fund', category: 'capital_reserve', amount: 2000, date: dateStr(1), notes: 'Monthly reserve allocation', createdAt: new Date().toISOString() },
+                    { description: 'Owner Draw - Feb', category: 'owners_draw', amount: 8000, date: dateStr(15), notes: 'Owner monthly withdrawal', createdAt: new Date().toISOString() },
                     // Payroll
                     { description: 'Weekly Payroll - Week 1', category: 'payroll', amount: 5040, date: dateStr(7), notes: 'Roger, Cenia, Mario - 6 days each', createdAt: new Date().toISOString() },
                     { description: 'Weekly Payroll - Week 2', category: 'payroll', amount: 5040, date: dateStr(14), notes: 'Roger, Cenia, Mario - 6 days each', createdAt: new Date().toISOString() },
+
                 ];
                 
                 for (const exp of expenses) {
@@ -21387,8 +21562,8 @@ async function editTask(id) {
                 const existingIncome = await dbGetAll('additionalIncome');
                 if (existingIncome.length < 5) {
                     const moreIncome = [
-                        { description: 'Hardware Store Sales - Week 1', category: 'store', amount: 12500, date: dateStr(3), notes: 'Cement, nails, paints', createdAt: new Date().toISOString() },
-                        { description: 'Hardware Store Sales - Week 2', category: 'store', amount: 9800, date: dateStr(10), notes: 'Tools and electrical', createdAt: new Date().toISOString() },
+                        { description: 'Store Sales - Week 1', category: 'store', amount: 12500, date: dateStr(3), notes: 'Weekly store sales', createdAt: new Date().toISOString() },
+                        { description: 'Store Sales - Week 2', category: 'store', amount: 9800, date: dateStr(10), notes: 'Weekly store sales', createdAt: new Date().toISOString() },
                         { description: 'Interest Income - Loans', category: 'interest', amount: 3750, date: dateStr(1), notes: 'Monthly interest collection', createdAt: new Date().toISOString() },
                         { description: 'Water Station Sales - Week 1', category: 'water', amount: 4200, date: dateStr(5), notes: '168 gallons @ ₱25', createdAt: new Date().toISOString() },
                         { description: 'Parking Fee - Monthly', category: 'parking', amount: 1500, date: dateStr(1), notes: '3 vehicles @ ₱500', createdAt: new Date().toISOString() },
@@ -22348,7 +22523,7 @@ function mtSetupNext(step) {
         const address = document.getElementById('mt-setup-address')?.value || '-';
         const phone = document.getElementById('mt-setup-phone')?.value || '-';
         const planNames = { basic:'Basic (₱299/mo)', standard:'Standard (₱599/mo)', enterprise:'Enterprise (₱999/mo)' };
-        const bizNames = { property:'Property Rental', lending:'Lending/Credit', water:'Water Station', retail:'Retail Store', hardware:'Hardware Store', mixed:'Mixed Business' };
+        const bizNames = { property:'Property Rental', lending:'Lending/Credit', water:'Water Station', retail:'Retail Store', mixed:'Mixed Business' };
         document.getElementById('mt-setup-summary').innerHTML = `
             <div><b>🏢 Business:</b> ${orgName}</div>
             <div><b>🏭 Type:</b> ${bizNames[MT.selectedBizType] || MT.selectedBizType}</div>
@@ -22520,7 +22695,7 @@ function mtOpenOrgSwitcher() {
     const orgs = JSON.parse(localStorage.getItem('mt_user_orgs') || '[]');
     list.innerHTML = orgs.map(org => `
         <li class="${org.id === MT.currentOrg?.id ? 'current' : ''}" onclick="mtSwitchOrg('${org.id}')">
-            <div class="org-icon">${org.bizType === 'hardware' ? '🔧' : org.bizType === 'water' ? '💧' : org.bizType === 'property' ? '🏠' : '🏢'}</div>
+            <div class="org-icon">${org.bizType === 'water' ? '💧' : org.bizType === 'property' ? '🏠' : '🏢'}</div>
             <div>
                 <div style="font-weight:600;">${org.name}</div>
                 <div style="font-size:0.75rem;color:#64748b;text-transform:uppercase;">${org.plan} plan</div>
