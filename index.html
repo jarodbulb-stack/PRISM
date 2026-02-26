@@ -885,14 +885,17 @@
         .fab-item {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
             justify-content: flex-end;
             cursor: pointer;
-            pointer-events: all;
+            background: none;
+            border: none;
+            padding: 0;
+            text-align: right;
         }
 
-        .fab-item span {
-            background: var(--gray-900);
+        .fab-item-label {
+            background: #1e293b;
             color: white;
             padding: 8px 14px;
             border-radius: 8px;
@@ -900,45 +903,38 @@
             font-weight: 500;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             white-space: nowrap;
-            cursor: pointer;
-            pointer-events: all;
-            user-select: none;
+            pointer-events: none;
         }
 
-        [data-theme="dark"] .fab-item span {
-            background: var(--gray-100);
-            color: var(--gray-900);
+        [data-theme="dark"] .fab-item-label {
+            background: #f1f5f9;
+            color: #1e293b;
         }
 
-        .fab-item button {
+        .fab-item-icon {
             width: 48px;
             height: 48px;
             border-radius: 50%;
-            border: none;
             background: white;
             color: var(--primary);
             font-size: 20px;
-            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
             flex-shrink: 0;
-            pointer-events: all;
-            position: relative;
-            z-index: 103;
+            pointer-events: none;
+            transition: transform 0.15s, background 0.15s;
         }
 
-        .fab-item button:hover {
+        .fab-item:hover .fab-item-icon {
             transform: scale(1.1);
             background: var(--primary);
             color: white;
         }
 
-        [data-theme="dark"] .fab-item button {
-            background: var(--gray-700);
-            color: white;
-        }
-        
-        [data-theme="dark"] .fab-item button:hover {
-            background: var(--primary);
+        [data-theme="dark"] .fab-item-icon {
+            background: #374151;
             color: white;
         }
 
@@ -5059,34 +5055,34 @@
 
     <!-- FAB Menu -->
     <div class="fab-menu" id="fab-menu">
-        <div class="fab-item" onclick="showModal('property-modal');closeFabMenu();" style="cursor:pointer;">
-            <span>Add Property</span>
-            <button type="button">🏠</button>
-        </div>
-        <div class="fab-item" onclick="showModal('tenant-modal');closeFabMenu();" style="cursor:pointer;">
-            <span>Add Tenant</span>
-            <button type="button">👤</button>
-        </div>
-        <div class="fab-item" onclick="showModal('credit-modal');closeFabMenu();" style="cursor:pointer;">
-            <span>Add Credit/Debtor</span>
-            <button type="button">💰</button>
-        </div>
-        <div class="fab-item" onclick="showModal('payment-modal');closeFabMenu();" style="cursor:pointer;">
-            <span>Record Payment</span>
-            <button type="button">₱</button>
-        </div>
-        <div class="fab-item" onclick="showIncomeModal();closeFabMenu();" style="cursor:pointer;">
-            <span>Add Income</span>
-            <button type="button">💵</button>
-        </div>
-        <div class="fab-item" onclick="showAddExpenseModal();closeFabMenu();" style="cursor:pointer;">
-            <span>Add Expense</span>
-            <button type="button">📤</button>
-        </div>
-        <div class="fab-item" onclick="showModal('contract-modal');closeFabMenu();" style="cursor:pointer;">
-            <span>Contract & Policies</span>
-            <button type="button">📄</button>
-        </div>
+        <button class="fab-item" onclick="fabAction(function(){showModal('property-modal');})">
+            <span class="fab-item-label">Add Property</span>
+            <span class="fab-item-icon">🏠</span>
+        </button>
+        <button class="fab-item" onclick="fabAction(function(){showModal('tenant-modal');})">
+            <span class="fab-item-label">Add Tenant</span>
+            <span class="fab-item-icon">👤</span>
+        </button>
+        <button class="fab-item" onclick="fabAction(function(){showModal('credit-modal');})">
+            <span class="fab-item-label">Add Credit/Debtor</span>
+            <span class="fab-item-icon">💰</span>
+        </button>
+        <button class="fab-item" onclick="fabAction(function(){showModal('payment-modal');})">
+            <span class="fab-item-label">Record Payment</span>
+            <span class="fab-item-icon">₱</span>
+        </button>
+        <button class="fab-item" onclick="fabAction(function(){showIncomeModal();})">
+            <span class="fab-item-label">Add Income</span>
+            <span class="fab-item-icon">💵</span>
+        </button>
+        <button class="fab-item" onclick="fabAction(function(){showAddExpenseModal();})">
+            <span class="fab-item-label">Add Expense</span>
+            <span class="fab-item-icon">📤</span>
+        </button>
+        <button class="fab-item" onclick="fabAction(function(){showModal('contract-modal');})">
+            <span class="fab-item-label">Contract & Policies</span>
+            <span class="fab-item-icon">📄</span>
+        </button>
     </div>
     <button class="fab" id="fab-btn" onclick="toggleFabMenu()">+</button>
 
@@ -8753,23 +8749,74 @@
             fabBtn.classList.toggle('active');
         }
 
+        // Global confirm resolver (set by showPrismConfirm)
+        window.prismConfirmResolve = null;
+        function prismConfirmResolve(val) {
+            if (window.prismConfirmResolve) window.prismConfirmResolve(val);
+        }
+
+        function showNetIncomeDetails() {
+            showSection('income');
+        }
+
+        function showTotalSpentDetails() {
+            showSection('expenses');
+        }
+
+        function showNetProfitDetails() {
+            showSection('reports');
+        }
+
+        function showIncomeDetails() {
+            showSection('income');
+        }
+
+        function showExpenseDetails() {
+            showSection('expenses');
+        }
+
+        function showIncomeVsExpenseChart() {
+            showSection('reports');
+        }
+
+        function showLentOutDetails() {
+            showSection('credits');
+        }
+
+        function showRepaidDetails() {
+            showSection('credits');
+        }
+
+        function showCreditsByStatus(status) {
+            showSection('credits');
+        }
+
+        function showTenantsByStatus(status) {
+            showSection('tenants');
+        }
+
         function closeFabMenu() {
             const fabMenu = document.getElementById('fab-menu');
             const fabBtn = document.getElementById('fab-btn');
-            if (fabMenu) { fabMenu.classList.remove('show'); }
-            if (fabBtn)  { fabBtn.classList.remove('active'); }
+            if (fabMenu) fabMenu.classList.remove('show');
+            if (fabBtn)  fabBtn.classList.remove('active');
         }
 
-        function showAddExpenseModal() {
-            showSection('expenses');
-            setTimeout(() => showModal('expense-modal'), 300);
+        // Single entry point for all FAB actions — closes menu then runs action
+        function fabAction(fn) {
+            closeFabMenu();
+            setTimeout(fn, 50); // slight delay so menu closes cleanly first
         }
 
-        // Close FAB menu when clicking outside
+
+
+        // Close FAB menu when clicking outside (not on fab items or fab button)
         document.addEventListener('click', (e) => {
             const fabMenu = document.getElementById('fab-menu');
             const fabBtn = document.getElementById('fab-btn');
-            if (!fabMenu.contains(e.target) && e.target !== fabBtn && fabMenu.classList.contains('show')) {
+            if (!fabMenu || !fabBtn) return;
+            const clickedFab = fabMenu.contains(e.target) || fabBtn.contains(e.target) || e.target === fabBtn;
+            if (!clickedFab && fabMenu.classList.contains('show')) {
                 fabMenu.classList.remove('show');
                 fabBtn.classList.remove('active');
             }
@@ -11603,8 +11650,8 @@ async function recordTenantPayment(tenantId) {
             <div id="prism-confirm-title">Confirm</div>
             <div id="prism-confirm-message"></div>
             <div id="prism-confirm-buttons">
-                <button id="prism-confirm-cancel" onclick="prismConfirmResolve(false)">Cancel</button>
-                <button id="prism-confirm-ok" class="danger" onclick="prismConfirmResolve(true)">Confirm</button>
+                <button id="prism-confirm-cancel" onclick="if(window.prismConfirmResolve)window.prismConfirmResolve(false)">Cancel</button>
+                <button id="prism-confirm-ok" class="danger" onclick="if(window.prismConfirmResolve)window.prismConfirmResolve(true)">Confirm</button>
             </div>
         </div>
     </div>
