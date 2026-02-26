@@ -60,6 +60,14 @@
     window._firebaseLoadStatus = { app: true, auth: true, firestore: true };
     console.log('[PRISM] Firebase loaded inline ✓');
 </script>
+    <!-- Chart.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <script>
+    if (typeof Chart === 'undefined') {
+        window.Chart = function(ctx, cfg) { this.destroy=function(){}; this.update=function(){}; };
+        console.warn('[PRISM] Chart.js CDN failed - charts unavailable');
+    } else { console.log('[PRISM] Chart.js loaded ✓'); }
+    </script>
     
     <title>PRISM - Property, Rental, Income & Sales Manager</title>
     <style>
@@ -12559,29 +12567,39 @@ async function loadWaterCustomers() {
                     💰 PAYROLL PROCESS ${unpaidDays > 0 ? '(' + unpaidDays + ' unpaid days)' : ''}
                 </button>
                 
-                <h4 style="margin-bottom: 10px;">📅 Recent Attendance</h4>
-                <div style="max-height: 150px; overflow-y: auto; margin-bottom: 15px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <h4>📅 Attendance Records (${empRecords.length})</h4>
+                    <button class="btn btn-sm btn-primary" onclick="showTimeRecordModal(${id},'${emp.name}')">+ Add</button>
+                </div>
+                <div style="max-height: 200px; overflow-y: auto; margin-bottom: 15px;">
             `;
-            
+
             if (empRecords.length === 0) {
                 content += '<p style="color: var(--text-secondary); font-size: 0.9rem;">No attendance records yet.</p>';
             } else {
-                empRecords.slice(0, 7).forEach(r => {
+                empRecords.forEach(r => {
                     const statusIcon = r.status === 'present' ? '✅' : r.status === 'absent' ? '❌' : r.status === 'halfday' ? '🕐' : r.status === 'restday' ? '🔘' : '📋';
                     const statusText = r.status === 'present' ? 'Present' : r.status === 'absent' ? 'Absent' : r.status === 'halfday' ? 'Half Day' : r.status === 'restday' ? 'Rest Day' : 'Leave';
-                    const paidBadge = r.paid ? '<span class="badge badge-success" style="font-size: 0.7rem;">Paid</span>' : '<span class="badge badge-warning" style="font-size: 0.7rem;">Unpaid</span>';
+                    const paidBadge = r.paid ? '<span class="badge badge-success" style="font-size:0.65rem;">Paid</span>' : '<span class="badge badge-warning" style="font-size:0.65rem;">Unpaid</span>';
+                    const extras = [];
+                    if (r.lateDeduction > 0) extras.push('Late: -₱'+r.lateDeduction.toLocaleString());
+                    if (r.otHours > 0) extras.push('OT: '+r.otHours+'h');
+                    if (r.bonus > 0) extras.push('🎁₱'+r.bonus.toLocaleString());
+                    if (r.overtime > 0) extras.push('⏰₱'+r.overtime.toLocaleString());
+                    if (r.incentive > 0) extras.push('🏆₱'+r.incentive.toLocaleString());
                     content += `
-                        <div class="list-item" style="padding: 8px;" onclick="editTimeRecord(${r.id})">
-                            <div class="list-item-content">
-                                <div class="list-item-title" style="font-size: 0.9rem;">${statusIcon} ${r.date}</div>
-                                <div class="list-item-subtitle" style="font-size: 0.8rem;">${statusText} ${r.otHours ? '• OT: '+r.otHours+'hrs' : ''} ${r.lateDeduction ? '• Late: -₱'+r.lateDeduction : ''}</div>
+                        <div class="list-item" style="padding:8px;display:flex;align-items:center;gap:6px;">
+                            <div class="list-item-content" style="flex:1;cursor:pointer;" onclick="editTimeRecord(${r.id})">
+                                <div class="list-item-title" style="font-size:0.85rem;">${statusIcon} ${r.date} — ${statusText} ${paidBadge}</div>
+                                ${extras.length > 0 ? '<div class="list-item-subtitle" style="font-size:0.75rem;">'+extras.join(' · ')+'</div>' : ''}
                             </div>
-                            <div>${paidBadge}</div>
+                            <button onclick="editTimeRecord(${r.id})" title="Edit" style="background:rgba(99,102,241,0.15);border:1px solid #6366f1;color:#6366f1;border-radius:6px;padding:3px 8px;font-size:0.75rem;cursor:pointer;">✏️</button>
+                            <button onclick="deleteAttendanceRecord(${r.id}, ${id})" title="Delete" style="background:rgba(239,68,68,0.12);border:1px solid #ef4444;color:#ef4444;border-radius:6px;padding:3px 8px;font-size:0.75rem;cursor:pointer;">🗑️</button>
                         </div>
                     `;
                 });
             }
-            
+
             content += `
                 </div>
                 <h4 style="margin-bottom: 10px;">💰 Salary History</h4>
@@ -12604,6 +12622,41 @@ async function loadWaterCustomers() {
                 });
             }
             
+            // ── Cash Advances Section ──────────────────────────────
+            content += `
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;margin-top:4px;">
+                    <h4>💵 Cash Advances (${empAdvances.length})</h4>
+                    <button class="btn btn-sm btn-warning" onclick="showCashAdvanceModal(${id},'${emp.name}')">+ Add</button>
+                </div>
+                <div style="max-height:160px;overflow-y:auto;margin-bottom:15px;">
+            `;
+            if (empAdvances.length === 0) {
+                content += '<p style="color:var(--text-secondary);font-size:0.9rem;">No cash advances yet.</p>';
+            } else {
+                empAdvances.forEach(a => {
+                    const deducted = a.deducted ? '<span class="badge badge-success" style="font-size:0.65rem;">Deducted</span>' : '<span class="badge badge-warning" style="font-size:0.65rem;">Pending</span>';
+                    content += `
+                        <div class="list-item" style="padding:8px;display:flex;align-items:center;gap:6px;">
+                            <div class="list-item-content" style="flex:1;">
+                                <div class="list-item-title" style="font-size:0.85rem;">💵 ₱${(a.amount||0).toLocaleString()} — ${a.date||'No date'} ${deducted}</div>
+                                ${a.reason ? '<div class="list-item-subtitle" style="font-size:0.75rem;">'+a.reason+'</div>' : ''}
+                            </div>
+                            <button onclick="editCashAdvance(${a.id},${id},'${emp.name}')" title="Edit" style="background:rgba(245,158,11,0.15);border:1px solid #f59e0b;color:#f59e0b;border-radius:6px;padding:3px 8px;font-size:0.75rem;cursor:pointer;">✏️</button>
+                            <button onclick="deleteCashAdvance(${a.id},${id})" title="Delete" style="background:rgba(239,68,68,0.12);border:1px solid #ef4444;color:#ef4444;border-radius:6px;padding:3px 8px;font-size:0.75rem;cursor:pointer;">🗑️</button>
+                        </div>
+                    `;
+                });
+            }
+            content += '</div>';
+
+            // ── Additional Charges Section ──────────────────────────────
+            try {
+                const empChargesHtml = await renderClientCharges('employee', id);
+                if (empChargesHtml) {
+                    content += empChargesHtml;
+                }
+            } catch(e) {}
+
             // Role-based action buttons
             const _isAdmin = currentAppUser && (currentAppUser.role === 'admin' || currentAppUser.role === 'owner');
             if (_isAdmin) {
@@ -12612,10 +12665,14 @@ async function loadWaterCustomers() {
                 <!-- Quick Actions -->
                 <div style="background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;padding:12px;margin-bottom:10px;">
                     <div style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">⚡ Quick Payroll Actions</div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
                         <button class="btn btn-sm" onclick="showBonusModal(${id},'${emp.name}')" style="background:rgba(16,185,129,0.15);border:1px solid #10b981;color:#10b981;font-weight:600;padding:8px 4px;font-size:0.78rem;">🎁 Bonus</button>
                         <button class="btn btn-sm" onclick="showOvertimeModal(${id},'${emp.name}')" style="background:rgba(245,158,11,0.15);border:1px solid #f59e0b;color:#f59e0b;font-weight:600;padding:8px 4px;font-size:0.78rem;">⏰ Overtime</button>
                         <button class="btn btn-sm" onclick="showIncentiveModal(${id},'${emp.name}')" style="background:rgba(99,102,241,0.15);border:1px solid #6366f1;color:#6366f1;font-weight:600;padding:8px 4px;font-size:0.78rem;">🏆 Incentive</button>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <button class="btn btn-sm btn-warning" onclick="addChargeToClient('employee', ${id})" style="font-weight:600;padding:8px 4px;font-size:0.78rem;">💵 Add Charge</button>
+                        <button class="btn btn-sm" onclick="showCashAdvanceModal(${id},'${emp.name}')" style="background:rgba(239,68,68,0.12);border:1px solid #ef4444;color:#ef4444;font-weight:600;padding:8px 4px;font-size:0.78rem;">💳 Cash Advance</button>
                     </div>
                 </div>
                 <div style="display: flex; gap: 10px;">
@@ -13568,6 +13625,88 @@ async function showPayrollSummary() {
             showModal('employee-modal');
         }
 
+        async function deleteAttendanceRecord(recordId, employeeId) {
+            if (!await showConfirm('Delete this attendance record? This will affect payroll calculations.', 'danger', '🗑️ Delete Attendance', 'Yes, Delete')) return;
+            await dbDelete('timeRecords', recordId);
+            showToast('Attendance record deleted.', 'success');
+            viewEmployeeDetails(employeeId);
+        }
+
+        function editCashAdvance(advanceId, employeeId, employeeName) {
+            dbGet('cashAdvances', advanceId).then(adv => {
+                if (!adv) return;
+                const ex = document.getElementById('edit-advance-modal');
+                if (ex) ex.remove();
+                const modal = document.createElement('div');
+                modal.id = 'edit-advance-modal';
+                modal.className = 'modal-overlay show';
+                modal.onclick = e => { if (e.target===modal) modal.remove(); };
+                modal.innerHTML = `
+                    <div class="modal" style="max-width:360px;">
+                        <div class="modal-header">
+                            <h3 class="modal-title">✏️ Edit Cash Advance</h3>
+                            <button class="modal-close" onclick="document.getElementById('edit-advance-modal').remove()">×</button>
+                        </div>
+                        <div class="modal-body">
+                            <div style="background:var(--bg-primary);border-radius:8px;padding:10px;margin-bottom:14px;text-align:center;">
+                                <div style="font-weight:700;">👤 ${employeeName}</div>
+                            </div>
+                            <div class="form-group">
+                                <label>Date</label>
+                                <input type="date" id="ea-date" class="form-control" value="${adv.date||''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Amount (₱)</label>
+                                <input type="number" id="ea-amount" class="form-control" value="${adv.amount||0}" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label>Reason / Note</label>
+                                <input type="text" id="ea-reason" class="form-control" value="${adv.reason||''}" placeholder="Reason for advance">
+                            </div>
+                            <div class="form-group">
+                                <label>Status</label>
+                                <select id="ea-deducted" class="form-control">
+                                    <option value="0" ${!adv.deducted?'selected':''}>Pending deduction</option>
+                                    <option value="1" ${adv.deducted?'selected':''}>Already deducted</option>
+                                </select>
+                            </div>
+                            <div id="ea-error" style="color:#ef4444;font-size:0.85rem;display:none;margin-bottom:8px;"></div>
+                            <div style="display:flex;gap:10px;">
+                                <button class="btn btn-secondary" onclick="document.getElementById('edit-advance-modal').remove()" style="flex:1;">Cancel</button>
+                                <button class="btn btn-primary" onclick="saveEditCashAdvance(${advanceId},${employeeId})" style="flex:1;">💾 Save</button>
+                            </div>
+                        </div>
+                    </div>`;
+                document.body.appendChild(modal);
+            });
+        }
+
+        async function saveEditCashAdvance(advanceId, employeeId) {
+            const date = document.getElementById('ea-date')?.value;
+            const amount = parseFloat(document.getElementById('ea-amount')?.value) || 0;
+            const reason = document.getElementById('ea-reason')?.value || '';
+            const deducted = document.getElementById('ea-deducted')?.value === '1';
+            if (!date || amount <= 0) {
+                const errEl = document.getElementById('ea-error');
+                if (errEl) { errEl.textContent = 'Please fill in date and amount.'; errEl.style.display='block'; }
+                return;
+            }
+            const adv = await dbGet('cashAdvances', advanceId);
+            if (!adv) return;
+            adv.date = date; adv.amount = amount; adv.reason = reason; adv.deducted = deducted;
+            await dbPut('cashAdvances', adv);
+            document.getElementById('edit-advance-modal')?.remove();
+            showToast('Cash advance updated.', 'success');
+            viewEmployeeDetails(employeeId);
+        }
+
+        async function deleteCashAdvance(advanceId, employeeId) {
+            if (!await showConfirm('Delete this cash advance record?', 'danger', '🗑️ Delete Cash Advance', 'Yes, Delete')) return;
+            await dbDelete('cashAdvances', advanceId);
+            showToast('Cash advance deleted.', 'success');
+            viewEmployeeDetails(employeeId);
+        }
+
         async function deleteEmployee(id) {
             // Only admin can delete employees
             if (!currentAppUser || currentAppUser.role === 'cashier') {
@@ -13936,6 +14075,11 @@ async function showPayrollSummary() {
             document.getElementById('payroll-adjust-modal').remove();
             showToast(`✅ ${typeLabels[type]} of ₱${amount.toLocaleString()} added for ${date}`, 'success');
             loadEmployees();
+            // If employee detail modal is open, refresh it
+            const detailModal = document.getElementById('employee-detail-modal');
+            if (detailModal && detailModal.classList.contains('show')) {
+                viewEmployeeDetails(empId);
+            }
         }
 
         async function showPayrollForEmployee(empId) {
@@ -14120,6 +14264,7 @@ async function showPayrollSummary() {
                     <button class="btn btn-secondary" onclick="showStatementOfAccount(${id}, 'credit')">📊 Statement</button>
                     <button class="btn btn-info" onclick="printCreditReport(${id})">🖨️ Print</button>
                     ${currentAppUser && currentAppUser.role !== 'cashier' ? `
+                        <button class="btn btn-warning" onclick="addChargeToClient('credit', ${id})">💵 Add Charge</button>
                         <button class="btn btn-danger" onclick="deleteCredit(${id})">Delete Credit</button>
                     ` : `
                         <button class="btn btn-primary" onclick="quickEndorse('credit', '💳 Credit account needs admin attention: ' + '${credit.debtor}' + ' — Balance: ₱' + balance.toLocaleString())">📋 Endorse to Admin</button>
@@ -15025,10 +15170,21 @@ async function showPayrollSummary() {
 
         // Add charge to specific tenant/debtor
         async function addChargeToClient(type, id) {
-            const client = type === 'tenant' ? await dbGet('tenants', id) : await dbGet('credits', id);
-            if (!client) return;
-
-            const name = type === 'tenant' ? client.name : client.debtor;
+            let client, name;
+            if (type === 'tenant') {
+                client = await dbGet('tenants', id);
+                name = client ? client.name : 'Unknown';
+            } else if (type === 'credit') {
+                client = await dbGet('credits', id);
+                name = client ? client.debtor : 'Unknown';
+            } else if (type === 'employee') {
+                client = await dbGet('employees', id);
+                name = client ? client.name : 'Unknown';
+            } else {
+                client = await dbGet('tenants', id);
+                name = client ? client.name : 'Unknown';
+            }
+            if (!client) { showToast('Record not found.', 'error'); return; }
 
             document.getElementById('charge-modal-content').innerHTML = `
                 <form onsubmit="saveClientCharge(event, '${type}', ${id})">
@@ -15045,6 +15201,10 @@ async function showPayrollSummary() {
                             <option value="cleaning_fee">Cleaning Fee</option>
                             <option value="late_fee">Late Fee</option>
                             <option value="service_charge">Service Charge</option>
+                            <option value="deduction">Salary Deduction</option>
+                            <option value="penalty">Penalty</option>
+                            <option value="uniform_fee">Uniform / ID Fee</option>
+                            <option value="tool_damage">Tool / Equipment Damage</option>
                             <option value="other">Other</option>
                         </select>
                     </div>
@@ -15106,13 +15266,15 @@ async function showPayrollSummary() {
             // Refresh the client detail view
             if (type === 'tenant') {
                 await viewTenantDetails(id);
-            } else {
+            } else if (type === 'credit') {
                 await viewCreditDetails(id);
+            } else if (type === 'employee') {
+                await viewEmployeeDetails(id);
             }
 
             // Sync to Firebase
             debouncedSync();
-            showToast('ℹ️ Action completed.', 'info');
+            showToast('✅ Charge added successfully.', 'success');
         }
 
         function getChargeTypeLabel(type) {
@@ -20114,8 +20276,8 @@ function initReportsPage() {
                 return s + Math.max(0, ((c.principal||0)+(c.interest||0)) - paid);
             }, 0);
             const vacantCount = properties.filter(p => !activeTenants_r.some(t => t.propertyId===p.id)).length;
-            const waterGallons = rangeWaterSales.reduce((s,w)=>s+(w.gallons||0),0);
-            const waterCustomerCount = new Set(rangeWaterSales.map(w=>w.customerId||w.customerName)).size;
+            const wtr_gallons = rangeWaterSales.reduce((s,w)=>s+(w.gallons||0),0);
+            const wtr_custCount = new Set(rangeWaterSales.map(w=>w.customerId||w.customerName)).size;
             const expCatsRaw = {};
             rangeExpenses.forEach(e => { const c=e.category||'other'; expCatsRaw[c]=(expCatsRaw[c]||0)+(e.amount||0); });
             
@@ -20148,7 +20310,7 @@ function initReportsPage() {
                 overdueTenants: overdueTenantList,
                 outstandingCredits, totalOutstanding,
                 vacantCount, propertyCount: properties.length,
-                waterGallons, waterCustomerCount,
+                waterGallons: wtr_gallons, waterCustomerCount: wtr_custCount,
                 totalExpectedRent,
                 prevIncome, prevExpenses, prevNetProfit,
                 diffDays
@@ -20480,19 +20642,38 @@ function initReportsPage() {
 
         function generateAIAnalysis(data) {
             // Income Analysis
-            const incomeAnalysis = generateIncomeAnalysisText(data);
-            document.getElementById('ai-income-text').innerHTML = incomeAnalysis;
-            
+            try {
+                const incomeAnalysis = generateIncomeAnalysisText(data);
+                document.getElementById('ai-income-text').innerHTML = incomeAnalysis;
+            } catch(e) {
+                console.error('[JAROD] Income analysis error:', e);
+                document.getElementById('ai-income-text').innerHTML = '<p style="color:#ef4444;">Analysis error: '+e.message+'</p>';
+            }
+
             // Expense Analysis
-            const expenseAnalysis = generateExpenseAnalysisText(data);
-            document.getElementById('ai-expense-text').innerHTML = expenseAnalysis;
-            
+            try {
+                const expenseAnalysis = generateExpenseAnalysisText(data);
+                document.getElementById('ai-expense-text').innerHTML = expenseAnalysis;
+            } catch(e) {
+                console.error('[JAROD] Expense analysis error:', e);
+                document.getElementById('ai-expense-text').innerHTML = '<p style="color:#ef4444;">Analysis error: '+e.message+'</p>';
+            }
+
             // Overall Analysis with Tips
-            const overallAnalysis = generateOverallAnalysisText(data);
-            document.getElementById('ai-overall-text').innerHTML = overallAnalysis;
+            try {
+                const overallAnalysis = generateOverallAnalysisText(data);
+                document.getElementById('ai-overall-text').innerHTML = overallAnalysis;
+            } catch(e) {
+                console.error('[JAROD] Overall analysis error:', e);
+                document.getElementById('ai-overall-text').innerHTML = '<p style="color:#ef4444;">Analysis error: '+e.message+'</p>';
+            }
 
             // JAROD Graph Explanation
-            generateJarodGraphExplanation(data);
+            try {
+                generateJarodGraphExplanation(data);
+            } catch(e) {
+                console.error('[JAROD] Graph explanation error:', e);
+            }
         }
 
         function generateJarodGraphExplanation(data) {
@@ -20503,7 +20684,7 @@ function initReportsPage() {
 
             const { totalIncome, totalExpenses, netProfit, profitMargin,
                     rentIncome, creditIncome, waterIncome, otherIncome,
-                    rangeLabel, diffDays } = data;
+                    month: rangeLabel, diffDays } = data;
 
             const profitColor = netProfit >= 0 ? '#10b981' : '#ef4444';
             const profitWord = netProfit >= 0 ? 'PROFIT' : 'LOSS';
@@ -20655,7 +20836,7 @@ function initReportsPage() {
         function generateExpenseAnalysisText(data) {
             const { month, totalExpenses, expenses, totalIncome, expCats, topExpCat, prevExpenses } = data;
             // Define key groups at top to prevent scope errors
-            const hwKeys = ['electric','water','fuel','repairs','maintenance','taxes','insurance','transport','supplies','labor','payroll','utilities'];
+            const operationalKeys = ['electric','water','fuel','repairs','maintenance','taxes','insurance','transport','supplies','labor','payroll','utilities'];
             const wsKeys = ['water_station','gallon','container','water_refill'];
 
             const catLabels = {
@@ -20716,12 +20897,9 @@ function initReportsPage() {
                 </div>`;
             }
 
-            // Group HW and WS for display
-            const hwTotal_j = sorted.filter(([k])=>hwKeys.includes(k)).reduce((s,[,v])=>s+v,0);
+            // Group operational and water station expenses for display
+            const opTotal_j = sorted.filter(([k])=>operationalKeys.includes(k)).reduce((s,[,v])=>s+v,0);
             const wsTotal_j = sorted.filter(([k])=>wsKeys.includes(k)).reduce((s,[,v])=>s+v,0);
-            if (hwTotal_j > 0) {
-                const pct = Math.round((hwTotal_j/totalExpenses)*100);
-                            }
             if (wsTotal_j > 0) {
                 const pct = Math.round((wsTotal_j/totalExpenses)*100);
                 html += '<div style="margin-bottom:9px;"><div style="display:flex;justify-content:space-between;font-size:0.83rem;margin-bottom:3px;"><span>💧 Water Station (total)</span><span style="font-weight:700;">₱'+wsTotal_j.toLocaleString()+' <span style="color:var(--text-secondary);font-weight:400;">('+pct+'%)</span></span></div><div style="background:var(--bg-secondary);border-radius:4px;height:7px;overflow:hidden;"><div style="height:100%;width:'+pct+'%;background:#0891b2;border-radius:4px;"></div></div></div>';
@@ -20748,8 +20926,8 @@ function initReportsPage() {
                     waterIncome, otherIncome, expenses, expCats,
                     overdueTenants, outstandingCredits, totalOutstanding,
                     vacantCount, propertyCount, totalExpectedRent,
-                    waterGallons, prevIncome, prevExpenses, prevNetProfit,
-                    diffDays } = data;
+                    waterGallons, waterCustomerCount,
+                    prevIncome, prevExpenses, prevNetProfit, diffDays } = data;
 
             const catLabels = {
                 electric:'Electric', water:'Water Bill', fuel:'Fuel',
@@ -22413,6 +22591,10 @@ async function editTask(id) {
         // Task functions
         window.showAddTaskModal = showAddTaskModal;
         window.filterTasks = filterTasks;
+        window.deleteAttendanceRecord = deleteAttendanceRecord;
+        window.editCashAdvance = editCashAdvance;
+        window.saveEditCashAdvance = saveEditCashAdvance;
+        window.deleteCashAdvance = deleteCashAdvance;
         window.filterTaskDetailByPriority = filterTaskDetailByPriority;
         window.filterTaskDetailByDue = filterTaskDetailByDue;
         window.setTaskStatusFilter = setTaskStatusFilter;
