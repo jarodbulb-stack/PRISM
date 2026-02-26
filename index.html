@@ -7039,11 +7039,11 @@
                 if (error.code === 'auth/popup-closed-by-user') {
                     try { showToast('ℹ️ Sign-in cancelled.', 'info'); } catch(e) {}
                 } else if (error.code === 'auth/popup-blocked') {
-                    showToast('ℹ️ Action completed.', 'info');
+                    showToast('⚠️ Sign-in failed. Enable popups or try a different browser.', 'warning');
                 } else if (error.code === 'auth/unauthorized-domain') {
                     showToast('🚫 Domain not authorized. Add this domain to Firebase Authorized Domains in your Firebase Console.', 'error', 8000);
                 } else if (error.code === 'auth/operation-not-supported-in-this-environment') {
-                    showToast('ℹ️ Action completed.', 'info');
+                    showToast('⚠️ Sign-in is not supported in this environment.', 'warning');
                 } else {
                     try { showToast('❌ Sign-in failed: ' + (error.message || error.code), 'error'); } catch(e) {}
                 }
@@ -7117,7 +7117,7 @@
                 let errorMessage = '';
                 switch (error.code) {
                     case 'auth/operation-not-supported-in-this-environment':
-                        showToast('ℹ️ Action completed.', 'info');
+                        showToast('⚠️ Sign-in not supported in this environment. Try a different browser.', 'warning');
                         return;
                     case 'auth/invalid-credential':
                         errorMessage = 'Invalid email or password. Please check your credentials and try again.';
@@ -7189,7 +7189,7 @@
                 let errorMessage = '';
                 switch (error.code) {
                     case 'auth/operation-not-supported-in-this-environment':
-                        showToast('ℹ️ Action completed.', 'info');
+                        showToast('⚠️ Sign-in not supported in this environment.', 'warning');
                         return;
                     case 'auth/invalid-credential':
                         errorMessage = 'Invalid credentials. Please check your information and try again.';
@@ -8229,10 +8229,10 @@
                     if (healthCheck.passed) {
                         this.exitReadOnlyMode();
                         this.closeRecoveryModal();
-                        showToast('ℹ️ Action completed.', 'info');
+                        showToast('✅ Database recovered successfully.', 'success');
                         window.location.reload();
                     } else {
-                        showToast('ℹ️ Action completed.', 'info');
+                        showToast('⚠️ Recovery incomplete. App will reload.', 'warning');
                     }
                 } catch (error) {
                     showToast('❌ Recovery failed: ' + error.message, 'error');
@@ -8350,7 +8350,6 @@
 
                     // Handle connection closing unexpectedly
                     db.onclose = () => {
-                        console.log('Database connection closed');
                         dbReady = false;
                     };
 
@@ -9718,7 +9717,7 @@
             const status = document.getElementById('property-status').value || 'vacant';
 
             if (!name || !type || rent <= 0) {
-                showToast('ℹ️ Action completed.', 'info');
+                showToast('⚠️ Please fill in all required fields (Name, Type, Rent).', 'warning');
                 return;
             }
 
@@ -9930,33 +9929,6 @@
         }
 
         // [REMOVED: duplicate editProperty - orphan using wrong modal]
-
-        async function updateProperty(event, id) {
-            event.preventDefault();
-
-            const name = document.getElementById('edit-property-name').value.trim();
-            const type = document.getElementById('edit-property-type').value;
-            const address = document.getElementById('edit-property-address').value.trim();
-            const rentStr = document.getElementById('edit-property-rent').value.trim();
-            const rent = parseFloat(rentStr.replace(/,/g, '')) || 0;
-
-            if (!name || !type || rent <= 0) {
-                showToast('ℹ️ Action completed.', 'info');
-                return;
-            }
-
-            const property = await dbGet('properties', id);
-            property.name = name;
-            property.type = type;
-            property.address = address;
-            property.rent = rent;
-            property.updatedAt = new Date().toISOString();
-
-            await dbUpdate('properties', property);
-            hideModal('expense-detail-modal');
-            loadProperties();
-            loadDashboard();
-        }
 
         async function deleteProperty(id) {
             // Check for tenants
@@ -10513,7 +10485,10 @@
                                         <td class="text-success">₱${p.amount.toLocaleString()}</td>
                                         <td>
                                             <button class="btn btn-sm btn-secondary" onclick="showReceipt(${p.id}, 'rent')" title="View Receipt">📄</button>
-                                            ${currentAppUser && currentAppUser.role !== 'cashier' ? `<button class="btn btn-sm btn-danger" onclick="deletePayment(${p.id}, 'rent', ${id})" title="Delete">🗑</button>` : ''}
+                                            ${currentAppUser && currentAppUser.role !== 'cashier' ? `
+                                            <button class="btn btn-sm btn-warning" onclick="editPayment(${p.id}, 'rent', ${id})" title="Edit">✏️</button>
+                                            <button class="btn btn-sm btn-danger" onclick="deletePayment(${p.id}, 'rent', ${id})" title="Delete">🗑️</button>
+                                            ` : ''}
                                         </td>
                                     </tr>
                                 `}).join('')}
@@ -10833,6 +10808,99 @@ async function recordTenantPayment(tenantId) {
         }
 
         // Delete payment
+
+        async function editPayment(paymentId, type, clientId) {
+            const store = type === 'rent' ? 'payments' : 'creditPayments';
+            const payment = await dbGet(store, paymentId);
+            if (!payment) { showToast('Payment record not found.', 'error'); return; }
+
+            const modalHtml = `
+                <div class="modal-overlay show" id="edit-payment-modal" onclick="if(event.target===this)this.remove()">
+                    <div class="modal" style="max-width:420px;">
+                        <div class="modal-header">
+                            <h3 class="modal-title">✏️ Edit Payment</h3>
+                            <button class="modal-close" onclick="document.getElementById('edit-payment-modal').remove()">×</button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="edit-payment-form">
+                                <div class="form-group">
+                                    <label>Date</label>
+                                    <input type="date" id="ep-date" value="${payment.date || ''}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Amount (₱)</label>
+                                    <input type="number" id="ep-amount" value="${payment.amount || ''}" min="0" step="0.01" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Payment Method</label>
+                                    <select id="ep-method">
+                                        <option value="cash" ${(payment.paymentMethod||'cash')==='cash'?'selected':''}>Cash</option>
+                                        <option value="gcash" ${payment.paymentMethod==='gcash'?'selected':''}>GCash</option>
+                                        <option value="maya" ${payment.paymentMethod==='maya'?'selected':''}>Maya</option>
+                                        <option value="bank" ${payment.paymentMethod==='bank'?'selected':''}>Bank Transfer</option>
+                                        <option value="other" ${payment.paymentMethod==='other'?'selected':''}>Other</option>
+                                    </select>
+                                </div>
+                                ${type === 'rent' ? `
+                                <div class="form-group">
+                                    <label>Month Covered</label>
+                                    <input type="month" id="ep-month" value="${payment.monthCovered ? payment.monthCovered.substring(0,7) : ''}">
+                                </div>` : ''}
+                                <div class="form-group">
+                                    <label>Notes (optional)</label>
+                                    <textarea id="ep-notes" rows="2" style="width:100%;padding:8px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);">${payment.notes || ''}</textarea>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" onclick="document.getElementById('edit-payment-modal').remove()">Cancel</button>
+                            <button class="btn btn-primary" onclick="saveEditPayment(${paymentId}, '${type}', ${clientId})">💾 Save Changes</button>
+                        </div>
+                    </div>
+                </div>`;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+
+        async function saveEditPayment(paymentId, type, clientId) {
+            const date = document.getElementById('ep-date').value;
+            const amount = parseFloat(document.getElementById('ep-amount').value) || 0;
+            const method = document.getElementById('ep-method').value;
+            const notes = document.getElementById('ep-notes').value.trim();
+            const monthEl = document.getElementById('ep-month');
+
+            if (!date || amount <= 0) {
+                showToast('⚠️ Please enter a valid date and amount.', 'warning');
+                return;
+            }
+
+            const store = type === 'rent' ? 'payments' : 'creditPayments';
+            const payment = await dbGet(store, paymentId);
+            if (!payment) return;
+
+            payment.date = date;
+            payment.amount = amount;
+            payment.paymentMethod = method;
+            payment.notes = notes;
+            if (monthEl && monthEl.value) payment.monthCovered = monthEl.value + '-01';
+
+            await dbUpdate(store, payment);
+            document.getElementById('edit-payment-modal').remove();
+            showToast('✅ Payment updated successfully.', 'success');
+
+            if (type === 'rent') {
+                viewTenantDetails(clientId);
+            } else {
+                viewCreditDetails(clientId);
+            }
+            debouncedSync();
+        }
+        window.addChargeToClient = addChargeToClient;
+        window.saveClientCharge = saveClientCharge;
+        window.markChargePaid = markChargePaid;
+        window.deleteCharge = deleteCharge;
+        window.editPayment = editPayment;
+        window.saveEditPayment = saveEditPayment;
+
         async function deletePayment(paymentId, type, parentId) {
             if (currentAppUser && currentAppUser.role === 'cashier') {
                 showToast('⛔ Cashiers cannot delete payments. Contact admin.', 'error');
@@ -11895,6 +11963,104 @@ async function recordTenantPayment(tenantId) {
         let allWaterCustomersData = [];
         let waterFilter = 'all';
 
+
+        async function editWaterSale(saleId) {
+            const sale = await dbGet('waterSales', saleId);
+            if (!sale) { showToast('Sale record not found.', 'error'); return; }
+
+            const customers = await dbGetAll('waterCustomers');
+            const custOpts = customers.map(c => 
+                `<option value="${c.id}" ${c.id === sale.customerId ? 'selected' : ''}>${c.name}</option>`
+            ).join('');
+
+            const modalHtml = `
+                <div class="modal-overlay show" id="edit-watersale-modal" onclick="if(event.target===this)this.remove()">
+                    <div class="modal" style="max-width:420px;">
+                        <div class="modal-header">
+                            <h3 class="modal-title">✏️ Edit Water Sale</h3>
+                            <button class="modal-close" onclick="document.getElementById('edit-watersale-modal').remove()">×</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label>Customer</label>
+                                <select id="ews-customer">${custOpts}</select>
+                            </div>
+                            <div class="form-group">
+                                <label>Date</label>
+                                <input type="date" id="ews-date" value="${sale.date || ''}">
+                            </div>
+                            <div class="form-group">
+                                <label>Gallons</label>
+                                <input type="number" id="ews-gallons" value="${sale.gallons || ''}" min="0" step="0.5">
+                            </div>
+                            <div class="form-group">
+                                <label>Price per Gallon (₱)</label>
+                                <input type="number" id="ews-price" value="${sale.pricePerGallon || ''}" min="0" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label>Amount Paid (₱)</label>
+                                <input type="number" id="ews-paid" value="${sale.amountPaid || ''}" min="0" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label>Status</label>
+                                <select id="ews-status">
+                                    <option value="paid" ${sale.status==='paid'?'selected':''}>Paid</option>
+                                    <option value="partial" ${sale.status==='partial'?'selected':''}>Partial</option>
+                                    <option value="unpaid" ${sale.status==='unpaid'?'selected':''}>Unpaid</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" onclick="document.getElementById('edit-watersale-modal').remove()">Cancel</button>
+                            <button class="btn btn-primary" onclick="saveEditWaterSale(${saleId})">💾 Save Changes</button>
+                        </div>
+                    </div>
+                </div>`;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+
+        async function saveEditWaterSale(saleId) {
+            const customerId = parseInt(document.getElementById('ews-customer').value);
+            const date = document.getElementById('ews-date').value;
+            const gallons = parseFloat(document.getElementById('ews-gallons').value) || 0;
+            const pricePerGallon = parseFloat(document.getElementById('ews-price').value) || 0;
+            const amountPaid = parseFloat(document.getElementById('ews-paid').value) || 0;
+            const status = document.getElementById('ews-status').value;
+
+            if (!date || gallons <= 0) {
+                showToast('⚠️ Please enter valid gallons and date.', 'warning');
+                return;
+            }
+
+            const sale = await dbGet('waterSales', saleId);
+            if (!sale) return;
+
+            const customers = await dbGetAll('waterCustomers');
+            const customer = customers.find(c => c.id === customerId);
+
+            sale.customerId = customerId;
+            sale.customerName = customer ? customer.name : sale.customerName;
+            sale.date = date;
+            sale.gallons = gallons;
+            sale.pricePerGallon = pricePerGallon;
+            sale.totalPrice = gallons * pricePerGallon;
+            sale.amountPaid = amountPaid;
+            sale.status = amountPaid >= (gallons * pricePerGallon) ? 'paid' : amountPaid > 0 ? 'partial' : 'unpaid';
+
+            await dbUpdate('waterSales', sale);
+            document.getElementById('edit-watersale-modal').remove();
+            // Close history modal and reopen
+            const histModal = document.getElementById('water-history-modal');
+            if (histModal) {
+                histModal.remove();
+                showWaterCustomerSalesHistory(customerId);
+            }
+            showToast('✅ Water sale updated.', 'success');
+            debouncedSync();
+        }
+        window.editWaterSale = editWaterSale;
+        window.saveEditWaterSale = saveEditWaterSale;
+
         async function deleteWaterSale(id) {
     if (!await showConfirm('This water sale record will be permanently deleted.', 'danger', '🗑️ Delete Water Sale', 'Yes, Delete')) return;
     await dbDelete('waterSales', id);
@@ -11998,7 +12164,7 @@ async function loadWaterCustomers() {
             const notes = document.getElementById('water-customer-notes').value.trim();
             
             if (!name) {
-                showToast('ℹ️ Action completed.', 'info');
+                showToast('⚠️ Customer name is required.', 'warning');
                 return;
             }
             
@@ -12071,7 +12237,7 @@ async function loadWaterCustomers() {
             const notes = document.getElementById('water-sale-notes').value.trim();
             
             if (gallons <= 0) {
-                showToast('ℹ️ Action completed.', 'info');
+                showToast('⚠️ Please enter valid gallons sold.', 'warning');
                 return;
             }
             
@@ -13173,7 +13339,7 @@ async function showPayrollSummary() {
         async function showPayrollProcess(employeeId) {
             const employee = await dbGet('employees', employeeId);
             if (!employee) {
-                showToast('ℹ️ Action completed.', 'info');
+                showToast('⚠️ Employee not found.', 'error');
                 return;
             }
             
@@ -13694,7 +13860,7 @@ async function showPayrollSummary() {
             const adv = await dbGet('cashAdvances', advanceId);
             if (!adv) return;
             adv.date = date; adv.amount = amount; adv.reason = reason; adv.deducted = deducted;
-            await dbPut('cashAdvances', adv);
+            await dbUpdate('cashAdvances', adv);
             document.getElementById('edit-advance-modal')?.remove();
             showToast('Cash advance updated.', 'success');
             viewEmployeeDetails(employeeId);
@@ -14132,13 +14298,19 @@ async function showPayrollSummary() {
                         </div>
                         ${sales.map(s => `
                             <div style="background:var(--bg-primary);border:1px solid var(--border-color);border-radius:8px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
-                                <div>
+                                <div style="flex:1;">
                                     <div style="font-weight:600;color:var(--text-primary);">${s.gallons || 0} gal × ₱${s.pricePerGallon || 0}</div>
                                     <div style="font-size:0.75rem;color:var(--text-secondary);">${s.date} · ${s.status || 'paid'}</div>
                                 </div>
-                                <div style="text-align:right;">
-                                    <div style="font-weight:700;color:#10b981;">₱${(s.amountPaid||0).toLocaleString()}</div>
-                                    ${(s.totalPrice||0) > (s.amountPaid||0) ? `<div style="font-size:0.72rem;color:#ef4444;">Bal: ₱${((s.totalPrice||0)-(s.amountPaid||0)).toLocaleString()}</div>` : ''}
+                                <div style="text-align:right;display:flex;align-items:center;gap:6px;">
+                                    <div>
+                                        <div style="font-weight:700;color:#10b981;">₱${(s.amountPaid||0).toLocaleString()}</div>
+                                        ${(s.totalPrice||0) > (s.amountPaid||0) ? `<div style="font-size:0.72rem;color:#ef4444;">Bal: ₱${((s.totalPrice||0)-(s.amountPaid||0)).toLocaleString()}</div>` : ''}
+                                    </div>
+                                    ${currentAppUser && currentAppUser.role !== 'cashier' ? `
+                                    <button class="btn btn-sm btn-warning" onclick="editWaterSale(${s.id})" title="Edit">✏️</button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteWaterSale(${s.id})" title="Delete">🗑️</button>
+                                    ` : ''}
                                 </div>
                             </div>`).join('')}
                     </div>
@@ -14252,7 +14424,10 @@ async function showPayrollSummary() {
                                         <td>
                                             <button class="btn btn-sm btn-secondary" onclick="showReceipt(${p.id}, 'credit')" title="View Receipt">📄</button>
                                             ${currentAppUser && currentAppUser.role !== 'cashier' ? `<button class="btn btn-sm btn-danger" onclick="deletePayment(${p.id}, 'credit', ${id})" title="Delete">🗑</button>` : ''}
-                                        </td>
+                                            ${currentAppUser && currentAppUser.role !== 'cashier' ? `
+                                            <button class="btn btn-sm btn-warning" onclick="editPayment(${p.id}, 'credit', ${id})" title="Edit">✏️</button>
+                                            <button class="btn btn-sm btn-danger" onclick="deletePayment(${p.id}, 'credit', ${id})" title="Delete">🗑️</button>
+                                            ` : ''}
                                     </tr>
                                 `}).join('')}
                             </tbody>
@@ -14601,7 +14776,6 @@ async function showPayrollSummary() {
 
         // Open note modal with pre-selected category
         function openNoteWithCategory(category) {
-            console.log('Opening note with category:', category);
             try {
                 document.getElementById('note-modal-title').textContent = 'Add Note';
                 document.getElementById('note-form').reset();
@@ -14814,12 +14988,18 @@ async function showPayrollSummary() {
 
             container.innerHTML = notes.sort((a, b) => new Date(b.date) - new Date(a.date)).map(note => {
                 return `
-                    <div class="note-card" onclick="viewNoteDetails(${note.id})">
-                        <div class="note-header">
-                            <h4 class="note-title">${note.title}</h4>
-                            <span class="note-category ${note.category}">${categoryLabels[note.category] || note.category}</span>
+                    <div class="note-card">
+                        <div class="note-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;">
+                            <h4 class="note-title" onclick="viewNoteDetails(${note.id})" style="cursor:pointer;flex:1;">${note.title}</h4>
+                            <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+                                <span class="note-category ${note.category}">${categoryLabels[note.category] || note.category}</span>
+                                ${currentAppUser && currentAppUser.role !== 'cashier' ? `
+                                <button class="btn btn-sm btn-warning" onclick="event.stopPropagation();editNote(${note.id})" title="Edit" style="padding:2px 6px;font-size:0.75rem;">✏️</button>
+                                <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteNote(${note.id})" title="Delete" style="padding:2px 6px;font-size:0.75rem;">🗑️</button>
+                                ` : ''}
+                            </div>
                         </div>
-                        <p class="note-preview">${note.description}</p>
+                        <p class="note-preview" onclick="viewNoteDetails(${note.id})" style="cursor:pointer;">${note.description}</p>
                         <div class="note-meta">
                             <span>${note.date}</span>
                             ${note.photo ? '<span class="has-photo">📷 Has photo</span>' : ''}
@@ -14831,7 +15011,6 @@ async function showPayrollSummary() {
 
         function setNoteFilter(filter) {
             try {
-                console.log('Setting note filter to:', filter);
                 noteFilter = filter;
                 
                 // Update active state on buttons
@@ -15027,7 +15206,8 @@ async function showPayrollSummary() {
                 </div>
 
                 <div class="action-buttons">
-                    <button class="btn btn-danger" onclick="deleteNote(${id})">Delete Note</button>
+                    <button class="btn btn-warning" onclick="editNote(${id})">✏️ Edit Note</button>
+                    <button class="btn btn-danger" onclick="deleteNote(${id})">🗑️ Delete</button>
                 </div>
             `;
 
@@ -15285,6 +15465,10 @@ async function showPayrollSummary() {
                 'cleaning_fee': 'Cleaning Fee',
                 'late_fee': 'Late Fee',
                 'service_charge': 'Service Charge',
+                'deduction': 'Salary Deduction',
+                'penalty': 'Penalty',
+                'uniform_fee': 'Uniform / ID Fee',
+                'tool_damage': 'Tool / Equipment Damage',
                 'other': 'Other'
             };
             return labels[type] || type;
@@ -15575,13 +15759,17 @@ async function showPayrollSummary() {
                 const areaLabel = expense.propertyId === 'personal' ? '👤 Personal' : expense.propertyId === 'business' ? '💼 Business' : (property ? property.name : '');
                 const hasPhoto = expense.photo ? '📷' : '';
                 return `
-                    <div class="list-item" onclick="viewExpenseDetails(${expense.id})">
-                        <div class="item-info">
+                    <div class="list-item" style="display:flex;align-items:center;">
+                        <div class="item-info" style="flex:1;cursor:pointer;" onclick="viewExpenseDetails(${expense.id})">
                             <h4>${expense.description} ${hasPhoto}</h4>
                             <p>${expense.date} • ${categoryLabels[expense.category] || expense.category}${areaLabel ? ' • ' + areaLabel : ''}</p>
                         </div>
-                        <div class="item-amount">
+                        <div style="display:flex;align-items:center;gap:6px;">
                             <div class="amount due">₱${expense.amount.toLocaleString()}</div>
+                            ${currentAppUser && currentAppUser.role !== 'cashier' ? `
+                            <button class="btn btn-sm btn-warning" onclick="event.stopPropagation();editExpense(${expense.id})" title="Edit">✏️</button>
+                            <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteExpense(${expense.id})" title="Delete">🗑️</button>
+                            ` : ''}
                         </div>
                     </div>
                 `;
@@ -15647,7 +15835,8 @@ async function showPayrollSummary() {
                 </div>
 
                 <div class="action-buttons">
-                    <button class="btn btn-danger" onclick="deleteExpense(${id})">Delete Expense</button>
+                    <button class="btn btn-warning" onclick="editExpense(${id})">✏️ Edit Expense</button>
+                    <button class="btn btn-danger" onclick="deleteExpense(${id})">🗑️ Delete</button>
                 </div>
             `;
 
@@ -15769,7 +15958,6 @@ async function showPayrollSummary() {
 
         // Open expense modal with pre-selected category
         async function openExpenseWithCategory(category) {
-            console.log('Opening expense with category:', category);
             try {
                 await populateExpensePropertyDropdown();
                 document.getElementById('expense-date').value = new Date().toISOString().split('T')[0];
@@ -15898,13 +16086,17 @@ async function showPayrollSummary() {
             container.innerHTML = filtered
                 .sort((a, b) => new Date(b.date) - new Date(a.date))
                 .map(income => `
-                    <div class="list-item" ${!_isCashierView ? `onclick="editIncome(${income.id})"` : ''} style="${!_isCashierView ? 'cursor:pointer;' : ''}">
-                        <div class="item-info">
+                    <div class="list-item" style="display:flex;align-items:center;justify-content:space-between;">
+                        <div class="item-info" style="flex:1;cursor:${!_isCashierView?'pointer':'default'};" ${!_isCashierView ? `onclick="editIncome(${income.id})"` : ''}>
                             <h4>💰 ${income.description}</h4>
                             <p>${income.date} • <strong>${income.category}</strong>${income.recordedBy ? ' • by ' + income.recordedBy : ''}</p>
                         </div>
-                        <div class="item-amount">
-                            <div class="amount collected">+₱${income.amount.toLocaleString()}</div>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <div class="amount collected" style="margin-right:4px;">+₱${income.amount.toLocaleString()}</div>
+                            ${!_isCashierView ? `
+                            <button class="btn btn-sm btn-warning" onclick="event.stopPropagation();editIncome(${income.id})" title="Edit">✏️</button>
+                            <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteIncome(${income.id})" title="Delete">🗑️</button>
+                            ` : ''}
                         </div>
                     </div>
                 `).join('');
@@ -15965,7 +16157,7 @@ async function showPayrollSummary() {
                 income.recordedByRole = currentAppUser?.role || 'unknown';
                 if (id) {
                     income.id = parseInt(id);
-                    await dbPut('additionalIncome', income);
+                    await dbUpdate('additionalIncome', income);
                     showToast('Income updated successfully', 'success');
                 } else {
                     income.createdAt = new Date().toISOString();
@@ -16652,63 +16844,7 @@ async function showPayrollSummary() {
             }
         }
 
-        function showDueNotifications(type) {
-            const items = type === 'overdue' ? notificationData.overdue : notificationData.due;
-            
-            if (items.length === 0) {
-                showToast(type === 'overdue' ? '✅ No overdue payments!' : '✅ No payments due soon!', 'success');
-                return;
-            }
 
-            let html = '<div style="max-height: 400px; overflow-y: auto;">';
-            
-            items.forEach(item => {
-                const bgColor = type === 'overdue' ? '#fef2f2' : '#fffbeb';
-                const borderColor = type === 'overdue' ? '#ef4444' : '#f59e0b';
-                const statusText = type === 'overdue' 
-                    ? `${item.daysOverdue} days overdue` 
-                    : `Due in ${item.daysUntilDue} day${item.daysUntilDue !== 1 ? 's' : ''}`;
-                
-                html += `
-                    <div style="padding: 12px; margin-bottom: 8px; background: ${bgColor}; border-left: 3px solid ${borderColor}; border-radius: 8px; cursor: pointer;" 
-                         onclick="hideModal('notification-detail-modal'); ${item.type === 'tenant' ? `viewTenantDetails(${item.id})` : `viewCreditDetails(${item.id})`}">
-                        <div style="display: flex; justify-content: space-between; align-items: start;">
-                            <div>
-                                <strong style="color: var(--text-primary);">${item.name}</strong>
-                                <span class="badge ${item.type === 'tenant' ? 'badge-info' : 'badge-warning'}">${item.type === 'tenant' ? 'Tenant' : 'Debtor'}</span>
-                                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">
-                                    ${item.type === 'tenant' && item.property ? item.property + ' • ' : ''}${statusText}
-                                </p>
-                            </div>
-                            <div style="font-weight: 600; color: ${borderColor};">₱${item.amount.toLocaleString()}</div>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            html += '</div>';
-
-            // Create modal dynamically
-            const existingModal = document.getElementById('notification-detail-modal');
-            if (existingModal) existingModal.remove();
-
-            const modal = document.createElement('div');
-            modal.id = 'notification-detail-modal';
-            modal.className = 'modal-overlay show';
-            modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
-            modal.innerHTML = `
-                <div class="modal">
-                    <div class="modal-header">
-                        <h3>${type === 'overdue' ? '⚠️ Overdue Payments' : '📅 Due Soon'}</h3>
-                        <button class="modal-close" onclick="document.getElementById('notification-detail-modal').remove()">&times;</button>
-                    </div>
-                    <div class="modal-body">
-                        ${html}
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
-        }
 
         // Calendar functions
         function changeCalendarMonth(direction) {
@@ -16722,7 +16858,6 @@ async function showPayrollSummary() {
             
             // Exit early if calendar elements don't exist
             if (!calendar || !monthLabel) {
-                console.log('Calendar elements not found, skipping calendar render');
                 return;
             }
             
@@ -17060,7 +17195,7 @@ async function showPayrollSummary() {
                 // Sync to Firebase after restore
                 debouncedSync();
 
-                showToast('ℹ️ Action completed.', 'info');
+                showToast('✅ Data restored successfully.', 'success');
                 loadDashboard();
                 loadProperties();
                 loadTenants();
@@ -17101,7 +17236,6 @@ async function showPayrollSummary() {
 
                 // Clear Firebase cloud data (so it doesn't come back)
                 if (firebaseReady && (window.db || firestore) && (currentUser || MT.currentUser)) {
-                    console.log('[Clear] Deleting cloud data...');
                     const _db = window.db || firestore;
                     const _orgId = (MT && MT.currentOrg && MT.currentOrg.id) || localStorage.getItem('mt_current_org_id') || (currentUser && currentUser.uid);
                     const userDocRef = _db.collection('prism_data').doc(_orgId);
@@ -17125,11 +17259,10 @@ async function showPayrollSummary() {
                         lastSync: new Date().toISOString(),
                         clearedAt: new Date().toISOString()
                     });
-                    console.log('[Clear] Cloud data cleared successfully');
                     try { showToast('☁️ All data cleared from cloud', 'success'); } catch(e) {}
                 }
 
-                showToast('ℹ️ Action completed.', 'info');
+                showToast('⚠️ Cloud clear failed. Please try again.', 'error');
                 
                 // Refresh UI
                 loadDashboard();
@@ -17171,7 +17304,6 @@ async function showPayrollSummary() {
             try {
                 // Clear local
                 await dbClear(storeName);
-                console.log(`[Clear] Local ${storeName} cleared`);
 
                 // Clear from Firebase
                 if (firebaseReady && (window.db || firestore) && (currentUser || MT.currentUser)) {
@@ -17182,7 +17314,6 @@ async function showPayrollSummary() {
                     updateData[storeName] = [];
                     updateData.lastSync = new Date().toISOString();
                     await userDocRef.update(updateData);
-                    console.log(`[Clear] Cloud ${storeName} cleared`);
                     try { showToast(`☁️ ${label} cleared from cloud`, 'success'); } catch(e) {}
                 }
 
@@ -17639,7 +17770,7 @@ async function showPayrollSummary() {
             const payments = await dbGetAll('payments');
 
             if (tenants.length === 0) {
-                showToast('ℹ️ Action completed.', 'info');
+                showToast('ℹ️ No tenants found to export.', 'info');
                 return;
             }
 
@@ -17668,7 +17799,7 @@ async function showPayrollSummary() {
             const creditPayments = await dbGetAll('creditPayments');
 
             if (credits.length === 0) {
-                showToast('ℹ️ Action completed.', 'info');
+                showToast('ℹ️ No debtors found to export.', 'info');
                 return;
             }
 
@@ -17702,7 +17833,7 @@ async function showPayrollSummary() {
             const creditPayments = await dbGetAll('creditPayments');
 
             if (rentPayments.length === 0 && creditPayments.length === 0) {
-                showToast('ℹ️ Action completed.', 'info');
+                showToast('ℹ️ No payment records found to export.', 'info');
                 return;
             }
 
@@ -17729,7 +17860,7 @@ async function showPayrollSummary() {
             const properties = await dbGetAll('properties');
 
             if (expenses.length === 0) {
-                showToast('ℹ️ Action completed.', 'info');
+                showToast('ℹ️ No expense records found to export.', 'info');
                 return;
             }
 
@@ -19255,10 +19386,8 @@ Lender/Manager
             const password = document.getElementById('app-login-password').value;
             
             // Show what was entered for debugging (remove in production)
-            console.log('Login attempt with username:', username);
             
             const users = JSON.parse(localStorage.getItem('prism_app_users') || '[]');
-            console.log('Available users:', users.length);
             
             const user = users.find(u => u.username === username && u.password === password);
             
@@ -19404,7 +19533,7 @@ Lender/Manager
             const closeBtn = document.getElementById('login-close-btn');
             if (closeBtn) closeBtn.style.display = 'block';
             
-            showToast('ℹ️ Action completed.', 'info');
+            showToast('✅ Login successful.', 'success');
         }
 
         // Check permission
@@ -21360,7 +21489,6 @@ function initReportsPage() {
                 const tasks = await dbGetAll('tasks');
                 allTasksData = tasks || [];
                 
-                console.log(`📋 Loaded ${allTasksData.length} tasks`);
                 
                 // Update stats
                 const totalTasks = allTasksData.length;
@@ -21401,7 +21529,6 @@ function initReportsPage() {
         async function ensureTasksStore() {
             if (!db) await initDB();
             if (!db.objectStoreNames.contains('tasks')) {
-                console.log('Tasks store does not exist, will be created on next DB upgrade');
             }
         }
 
@@ -21439,7 +21566,6 @@ function initReportsPage() {
         }
 
         function filterTasksByStatus(status) {
-            console.log(`🔍 Showing task details for status: ${status}`);
             
             // Filter tasks based on status
             let filteredTasks = [];
@@ -21583,7 +21709,6 @@ function initReportsPage() {
         function renderTasksList(tasks) {
             const container = document.getElementById('tasks-list');
             if (!container) {
-                console.log('Tasks list container not found');
                 return;
             }
             
@@ -21828,32 +21953,23 @@ async function editTask(id) {
 
         // Save expense photo (stub - photos handled by base64 in expense save)
         function saveExpensePhoto() {
-            console.log('Expense photo will be saved with expense record');
         }
 
         // Save note photo (stub - photos handled by base64 in note save)
         function saveNotePhoto() {
-            console.log('Note photo will be saved with note record');
         }
 
         // Set water customer filter
-        function setWaterCustomerFilter(filter) {
-            console.log('Setting water customer filter:', filter);
-            // This would filter water customers by status
-            filterWaterCustomers();
-        }
+
 
         // SAMPLE DATA GENERATOR
         // =====================
         async function loadSampleData() {
-            console.log('🎯 loadSampleData() called');
             
             if (!await showConfirm('This will add sample properties, tenants, employees, credits, and water customers. Your existing data will NOT be deleted.', 'info', '📦 Load Sample Data', 'Yes, Load Samples')) {
-                console.log('User cancelled sample data load');
                 return;
             }
             
-            console.log('User confirmed - starting sample data load...');
             
             try {
                 const today = new Date();
@@ -21861,7 +21977,6 @@ async function editTask(id) {
                 const thisYear = today.getFullYear();
                 const dateStr = (day) => `${thisYear}-${String(thisMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 
-                console.log('Starting to add properties...');
                 // ===== PROPERTIES =====
                 const properties = [
                     { name: 'Lot 1 - Poblacion', type: 'lot', address: 'Purok 1, Poblacion', rent: 3000, status: 'occupied', createdAt: new Date().toISOString() },
@@ -22308,7 +22423,6 @@ async function editTask(id) {
                 // All expenses covered in main block above
 
                 // ===== RELOAD ALL SECTIONS =====
-                console.log('Reloading all sections...');
                 await loadDashboard();
                 await loadProperties();
                 await loadTenants();
@@ -22631,7 +22745,6 @@ async function editTask(id) {
         window.filterExpenses = filterExpenses;
         
         window.testSettingsButtons = function() {
-            console.log('=== Testing Settings Button Functions ===');
             
             const tests = [
                 { name: 'loadSampleData', func: window.loadSampleData },
@@ -22653,7 +22766,6 @@ async function editTask(id) {
             });
             
             console.log('=== Test Complete ===');
-            console.log('💡 To test manually: Open browser console.');
         };
 
         // =====================
