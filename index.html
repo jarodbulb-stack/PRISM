@@ -401,7 +401,12 @@
         }
 
         [data-theme="dark"] .expense-summary-item {
-            background: var(--gray-200);
+            background: #e2e8f0;
+            border-color: #cbd5e1;
+        }
+        [data-theme="dark"] .expense-summary-item .amount,
+        [data-theme="dark"] .expense-summary-item .label {
+            color: #1e293b !important;
         }
 
         [data-theme="dark"] .ledger-table th {
@@ -1636,11 +1641,26 @@
         }
 
         [data-theme="dark"] .expense-summary-item {
-            background: var(--gray-700);
+            background: #e2e8f0;
+            border-color: #cbd5e1;
+        }
+
+        [data-theme="dark"] .expense-summary-item .amount {
+            color: #1e293b !important;
+        }
+
+        [data-theme="dark"] .expense-summary-item .label {
+            color: #334155 !important;
         }
 
         [data-theme="dark"] .expense-summary-item[onclick]:hover {
             background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        [data-theme="dark"] .expense-summary-item[onclick]:hover .amount,
+        [data-theme="dark"] .expense-summary-item[onclick]:hover .label {
+            color: white !important;
         }
 
         /* Notes Module */
