@@ -19273,7 +19273,7 @@ Lender/Manager
                     monthPayments.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(p => {
                         const tenant = tenants.find(t => t.id === p.tenantId);
                         const prop = tenant ? properties.find(pr => pr.id === tenant.propertyId) : null;
-                        rcHtml += '<div class="list-item" style="cursor:pointer;" onclick="viewTenantDetails(' + p.tenantId + '); hideModal('flashcard-detail-modal');">'
+                        rcHtml += '<div class="list-item" style="cursor:pointer;" onclick="viewTenantDetails(' + p.tenantId + '); hideModal(\"flashcard-detail-modal\");">'
                             + '<div class="item-info">'
                             + '<strong>' + (tenant ? tenant.name : 'Unknown Tenant') + '</strong>'
                             + '<div style="font-size:0.85rem;color:var(--text-secondary);">'
@@ -19288,7 +19288,7 @@ Lender/Manager
                     if (unpaidTenants.length > 0) rcHtml += '<h4 style="margin:15px 0 8px;">\u23F3 Not Yet Paid</h4>';
                     unpaidTenants.forEach(t => {
                         const prop = properties.find(p => p.id === t.propertyId);
-                        rcHtml += '<div class="list-item" style="cursor:pointer;border-left:3px solid var(--warning);" onclick="viewTenantDetails(' + t.id + '); hideModal('flashcard-detail-modal');">'
+                        rcHtml += '<div class="list-item" style="cursor:pointer;border-left:3px solid var(--warning);" onclick="viewTenantDetails(' + t.id + '); hideModal(\"flashcard-detail-modal\");">'
                             + '<div class="item-info">'
                             + '<strong>' + t.name + '</strong>'
                             + '<div style="font-size:0.85rem;color:var(--text-secondary);">'
@@ -24464,10 +24464,19 @@ async function mtSAGoToApp() {
             }
         } catch(e) {
             console.warn('[SA] Firestore org lookup failed:', e);
+            // Firebase error — don't force setup, try cached org
+            const _saCache = (() => { try { return JSON.parse(localStorage.getItem('mt_current_org') || 'null'); } catch(_){return null;} })();
+            if (_saCache && _saCache.id) {
+                MT.currentOrg = _saCache;
+                mtShowApp();
+                return;
+            }
+            mtToast('⚠️ Cannot connect to server. Check internet and refresh.', 'error', 6000);
+            return;
         }
     }
 
-    // No org found anywhere — fresh SA with no org yet
+    // No org found anywhere (Firestore confirmed) — fresh SA with no org yet
     mtToast('ℹ️ No organization found. Setting one up now.', 'info');
     mtShowSetup();
 }
@@ -25014,6 +25023,11 @@ async function mtInit() {
     // Restore session immediately if local data exists (prevents flash of landing page)
     const savedUser = localStorage.getItem('carent_current_user');
     const savedOrg  = localStorage.getItem('mt_current_org');
+    
+    // Also check for Firebase-authenticated org session (Google login users)
+    const savedOrgId = localStorage.getItem('mt_current_org_id');
+    const savedOrgRole = localStorage.getItem('mt_current_org_role');
+    
     if (savedUser && savedOrg) {
         try {
             const u = JSON.parse(savedUser);
@@ -25205,8 +25219,28 @@ async function mtInit() {
                                 return;
                             }
                         }
-                    } catch(e) { console.warn('[MT] Firestore org lookup failed:', e); }
-                    // Truly new user — show setup wizard
+                    } catch(e) {
+                        console.warn('[MT] Firestore org lookup failed:', e);
+                        // Firebase unavailable — try restoring from localStorage before showing setup
+                        const _cachedOrg = (() => { try { return JSON.parse(localStorage.getItem('mt_current_org') || 'null'); } catch(_){return null;} })();
+                        const _cachedOrgId = localStorage.getItem('mt_current_org_id');
+                        if (_cachedOrg && (_cachedOrg.id || _cachedOrgId)) {
+                            // Org exists in cache — restore session, don't show setup wizard
+                            console.log('[MT] Firebase unavailable — restoring org from cache:', _cachedOrg.name || _cachedOrgId);
+                            MT.currentOrg = _cachedOrg;
+                            if (!MT.currentOrgRole) MT.currentOrgRole = localStorage.getItem('mt_current_org_role') || 'owner';
+                            mtShowApp();
+                            mtUpdateOrgBadge();
+                            setTimeout(() => { if (typeof loadDashboard === 'function') loadDashboard(); }, 300);
+                            return;
+                        }
+                        // No local cache either — show auth page, not setup wizard
+                        mtHideLoading();
+                        mtShowAuth('login');
+                        mtToast('⚠️ Could not connect to server. If you have an account, sign in to continue.', 'warning', 6000);
+                        return;
+                    }
+                    // Truly new user (Firestore confirmed empty) — show setup wizard
                     mtShowSetup();
                 }
 
