@@ -4,7 +4,7 @@
 ║              PRISM — Property Rental Income Sales Mgmt           ║
 ║                  OMNIGRID ONLINE © 2026                          ║
 ╠══════════════════════════════════════════════════════════════════╣
-║  Version  : PRISM-v4.20260227 "IRONCLAD"                         ║
+║  Version  : PRISM-v4.1.20260227 "IRONCLAD-FIX"                   ║
 ║  Released : 2026-02-27                                           ║
 ║  Lines    : 25,390                                            ║
 ║  Size     : 1785.5 KB                                            ║
@@ -13,7 +13,12 @@
 ║  SHA256 : 20db0cf266569566341ef9a8cf1e50e5617c33b33466fb2b635b38d0f99f1f9e  ║
 ║  MD5    : e83d6461a0d4a10be58a988b7c95e205                       ║
 ╠══════════════════════════════════════════════════════════════════╣
-║  v4 "IRONCLAD" — Hardening & Unified Finance Engine:             ║
+║  v4.1 "IRONCLAD-FIX" — Critical Bug Fixes:                      ║
+║  ✅ renderNotificationsBanner: null guard for #notifications-banner ║
+║  ✅ renderNotificationsBanner: null guard for notificationData   ║
+║  ✅ loadDashboard: stat-collected/stat-expected use safeSetText  ║
+║  ✅ Prevents crash during loadSampleData + Firebase sync         ║
+╠══════════════════════════════════════════════════════════════════╣
 ║  ✅ PRISMCore Finance Engine injected (single source of truth)   ║
 ║  ✅ All 14 credit interest blocks unified to Finance.calcCredit  ║
 ║  ✅ Dashboard uses Finance engine for all financial stats        ║
@@ -2958,7 +2963,7 @@
         <div class="mt-nav-links">
             <a href="#features">Features</a>
             <a href="#pricing">Pricing</a>
-            <a href="mailto:jarodbulb@gmail.com">Contact</a>
+            <a href="/cdn-cgi/l/email-protection#cfa5aebda0abadbaa3ad8fa8a2aea6a3e1aca0a2">Contact</a>
         </div>
         <div style="display:flex;gap:10px;">
             <button class="mt-btn-secondary" style="padding:10px 20px;font-size:0.9rem;" onclick="mtShowAuth('login')">Sign In</button>
@@ -3076,7 +3081,7 @@
     </div>
 
     <div class="mt-footer">
-        <p>Built by <strong>OMNIGRID ONLINE</strong> &bull; jarodbulb@gmail.com &bull; danomandam@yahoo.com</p>
+        <p>Built by <strong>OMNIGRID ONLINE</strong> &bull; <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="d5bfb4a7bab1b7a0b9b795b2b8b4bcb9fbb6bab8">[email&#160;protected]</a> &bull; <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="3450555a5b59555a505559744d555c5b5b1a575b59">[email&#160;protected]</a></p>
         <p style="margin-top:8px;">© 2025 PRISM - Property • Rental • Income • Sales • Management</p>
     </div>
 </div>
@@ -5165,11 +5170,11 @@
                         <p style="font-size: 1.1rem; font-weight: 600; color: var(--gray-900);">OMNIGRID</p>
                         <div style="margin-top:15px;padding:14px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;">
                             <p style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:10px;font-weight:600;">📧 Contact Us</p>
-                            <a href="mailto:danomandam@yahoo.com" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;margin-bottom:6px;font-weight:500;">
-                                ✉️ jarodbulb@gmail.com
+                            <a href="/cdn-cgi/l/email-protection#8aeeebe4e5e7ebe4eeebe7caf3ebe2e5e5a4e9e5e7" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;margin-bottom:6px;font-weight:500;">
+                                ✉️ <span class="__cf_email__" data-cfemail="0862697a676c6a7d646a486f65696164266b6765">[email&#160;protected]</span>
                             </a>
-                            <a href="mailto:jarodbulb@gmail.com" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;font-weight:500;">
-                                ✉️ danomandam@yahoo.com
+                            <a href="/cdn-cgi/l/email-protection#335952415c5751465f5173545e525a5f1d505c5e" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;font-weight:500;">
+                                ✉️ <span class="__cf_email__" data-cfemail="7014111e1f1d111e14111d300911181f1f5e131f1d">[email&#160;protected]</span>
                             </a>
                             <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-color);">
                                 <p style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:6px;font-weight:600;">🌐 For licensing & inquiries:</p>
@@ -6767,7 +6772,7 @@
         </div>
     </div>
 
-    <script>
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
         // =====================
         // TOAST NOTIFICATION (must be first)
         // =====================
@@ -17076,8 +17081,8 @@ async function showPayrollSummary() {
             const collected = Finance.calcRentCollectedMonth(payments, nowYear, nowMonth);
             const expectedRent = Finance.calcExpectedRent(tenants);
 
-            document.getElementById('stat-collected').textContent = '₱' + collected.toLocaleString();
-            document.getElementById('stat-expected').textContent = '₱' + expectedRent.toLocaleString();
+            safeSetText('stat-collected', '₱' + collected.toLocaleString());
+            safeSetText('stat-expected', '₱' + expectedRent.toLocaleString());
             safeSetText('collected-label', '₱' + collected.toLocaleString() + ' collected');
             safeSetText('expected-label', '₱' + expectedRent.toLocaleString() + ' expected');
 
@@ -17408,6 +17413,11 @@ async function showPayrollSummary() {
         // Render notifications banner
         function renderNotificationsBanner() {
             const banner = document.getElementById('notifications-banner');
+            // Guard: element may not exist if dashboard section is not in DOM yet
+            if (!banner) return;
+            // Guard: notificationData may not be initialized yet
+            if (!notificationData || !notificationData.due || !notificationData.overdue) return;
+
             const totalNotifications = notificationData.due.length + notificationData.overdue.length;
             
             if (totalNotifications === 0) {
@@ -25447,20 +25457,4 @@ window.addEventListener('DOMContentLoaded', () => {
                     }
 
                     
-                    try {
-                        if (typeof loadDashboard === 'function') loadDashboard();
-                        if (typeof refreshFinancialOverview === 'function') refreshFinancialOverview();
-                    } catch(e) {}
-                    try { showToast('Data updated from another device', 'info', 2500); } catch(e) {}
-                }, function(err) {
-                    console.warn('[RealtimeSync] Listener error:', err);
-                });
-        }
-
-        function mtStopRealtimeSync() {
-            if (_realtimeSyncUnsubscribe) { _realtimeSyncUnsubscribe(); _realtimeSyncUnsubscribe = null; }
-        }
-
-</script>
-</body>
-</html>
+  
