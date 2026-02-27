@@ -4,31 +4,37 @@
 ║              PRISM — Property Rental Income Sales Mgmt           ║
 ║                  OMNIGRID ONLINE © 2026                          ║
 ╠══════════════════════════════════════════════════════════════════╣
-║  Version  : PRISM-v2.20260227                                  ║
-║  Released : 2026-02-27 00:35 UTC                               ║
-║  Lines    : 24830                                              ║
-║  Size     : 1744.3 KB                                          ║
+║  Version  : PRISM-v4.20260227 "IRONCLAD"                         ║
+║  Released : 2026-02-27                                           ║
+║  Lines    : 25,390                                            ║
+║  Size     : 1785.5 KB                                            ║
 ╠══════════════════════════════════════════════════════════════════╣
-║  INTEGRITY CHECKSUMS (do not modify this file manually)          ║
-║  SHA256 : 9688f74fbc9a4450346781a7900a125ebb39641bdcfe2271127d6f97  ║
-║           23159028                                           ║
-║  MD5    : d13691cf394d2b257aca1d52af0c5496                   ║
+║  INTEGRITY CHECKSUMS                                             ║
+║  SHA256 : 20db0cf266569566341ef9a8cf1e50e5617c33b33466fb2b635b38d0f99f1f9e  ║
+║  MD5    : e83d6461a0d4a10be58a988b7c95e205                       ║
 ╠══════════════════════════════════════════════════════════════════╣
-║  FEATURES INCLUDED IN THIS BUILD:                                ║
-║  ✅ Multi-tenant Firebase sync (cross-device)                    ║
-║  ✅ Role-based access: Owner/Admin/Manager/Cashier/Viewer        ║
-║  ✅ Properties, Tenants, Credits/Loans management                ║
-║  ✅ Water Refilling Station module                                ║
-║  ✅ Employee/Payroll/Attendance management                       ║
-║  ✅ Expenses, Additional Income, Tasks, Notes                    ║
-║  ✅ Edit/Delete on all data records                              ║
-║  ✅ Quick-action bars on all detail modals                       ║
-║  ✅ Financial dashboard with real-time stats                     ║
-║  ✅ Reports, Charts, Statement of Account                        ║
-║  ✅ Receipt generation, Signature & Photo capture                ║
-║  ✅ Works 100% offline (IndexedDB) + online sync                 ║
+║  v4 "IRONCLAD" — Hardening & Unified Finance Engine:             ║
+║  ✅ PRISMCore Finance Engine injected (single source of truth)   ║
+║  ✅ All 14 credit interest blocks unified to Finance.calcCredit  ║
+║  ✅ Dashboard uses Finance engine for all financial stats        ║
+║  ✅ Overdue/due-soon uses Finance.getTenantOverdueStatus()       ║
+║  ✅ Outstanding credit uses Finance.calcTotalOutstandingCredit() ║
+║  ✅ dbAdd/dbUpdate auto-sanitize records (timestamps + rounding) ║
+║  ✅ Global unhandledrejection + error event listeners added      ║
+║  ✅ dateMatchesMonth hardened with null checks                   ║
+║  ✅ Water sale numbers use Finance.safeInt/safeNum               ║
+║  ✅ Water sale status uses Finance.getWaterSaleStatus()          ║
+║  ✅ Payment amounts use Finance.safeNum (no NaN propagation)     ║
+║  ✅ Finance.getDebtorName() resolves all debtor name fields      ║
+║  ✅ Finance.validate() layer for all record types                ║
+║  ✅ Finance.sanitizeRecord() normalizes before every DB write    ║
 ╠══════════════════════════════════════════════════════════════════╣
-║  STABLE BUILD — DO NOT EDIT WITHOUT VERSION CONTROL              ║
+║  PRISMCore API (window.Finance / window.PRISMCore):              ║
+║  Finance.setDebug(true)  — enable verbose logging                ║
+║  Finance.validate(type, data) — validate before save            ║
+║  Finance.calcCreditBalance(credit, creditPayments) — balance     ║
+║  Finance.calcIncomeMonth(...) — complete income breakdown        ║
+╠══════════════════════════════════════════════════════════════════╣
 ║  Contact: jarodbulb@gmail.com | danomandam@yahoo.com             ║
 ╚══════════════════════════════════════════════════════════════════╝
 -->
@@ -3421,11 +3427,11 @@
 
                 <!-- Today's Totals -->
                 <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px;" id="cashier-stats-grid">
-                    <div class="stat-card" onclick="showSection('income')" style="background:linear-gradient(135deg,rgba(16,185,129,0.15),rgba(16,185,129,0.05));border:1px solid rgba(16,185,129,0.2);cursor:pointer;" title="View today's collections">
+                    <div class="stat-card" onclick="showCashierTodayDetail()" style="background:linear-gradient(135deg,rgba(16,185,129,0.15),rgba(16,185,129,0.05));border:1px solid rgba(16,185,129,0.2);cursor:pointer;" title="View today's collections">
                         <div style="font-size:1.5rem;font-weight:800;color:#10b981;" id="cs-total-collected">₱0</div>
                         <div style="font-size:0.78rem;color:var(--text-secondary);margin-top:4px;">Total Collected Today</div>
                     </div>
-                    <div class="stat-card" onclick="showSection('expenses')" style="background:linear-gradient(135deg,rgba(239,68,68,0.15),rgba(239,68,68,0.05));border:1px solid rgba(239,68,68,0.2);cursor:pointer;" title="View expenses">
+                    <div class="stat-card" onclick="showCashierExpenseDetail()" style="background:linear-gradient(135deg,rgba(239,68,68,0.15),rgba(239,68,68,0.05));border:1px solid rgba(239,68,68,0.2);cursor:pointer;" title="View expenses">
                         <div style="font-size:1.5rem;font-weight:800;color:#ef4444;" id="cs-total-expenses">₱0</div>
                         <div style="font-size:0.78rem;color:var(--text-secondary);margin-top:4px;">Expenses Recorded Today</div>
                     </div>
@@ -4215,7 +4221,7 @@
                 </div>
                 <div class="stat-card" style="cursor: pointer;" onclick="showWaterFlashcardDetail('gallons')">
                     <div class="stat-value" id="stat-water-gallons">0</div>
-                    <div class="stat-label">Gallons Sold</div>
+                <div class="stat-label">Gallons This Month</div>
                 </div>
             </div>
 
@@ -8550,6 +8556,327 @@
             });
         }
 
+
+
+        // ── Global Error Boundaries ──────────────────────────────────────────
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('[PRISM] Unhandled promise rejection:', event.reason);
+            // Prevent the default browser error and show friendly message
+            event.preventDefault();
+            const msg = event.reason?.message || String(event.reason) || 'Unknown error';
+            // Only show toast for non-network errors
+            if (!msg.includes('NetworkError') && !msg.includes('fetch')) {
+                if (typeof showToast === 'function') {
+                    showToast('⚠️ An error occurred. Data was not saved. Please try again.', 'warning');
+                }
+            }
+        });
+
+        window.addEventListener('error', function(event) {
+            console.error('[PRISM] Global error:', event.message, 'at', event.filename, ':', event.lineno);
+        });
+
+        // =====================================================================
+        // PRISM CORE ENGINE v3 — Centralized Finance, Validation & Debug Layer
+        // =====================================================================
+        const PRISMCore = (function() {
+            'use strict';
+
+            // ── Debug Logger ────────────────────────────────────────────────
+            let _debug = false;
+            function log(level, ...args) {
+                if (!_debug && level !== 'ERROR') return;
+                const prefix = { INFO: '🔵', WARN: '🟡', ERROR: '🔴', DEBUG: '⚪' }[level] || '▪';
+                console[level === 'ERROR' ? 'error' : level === 'WARN' ? 'warn' : 'log'](prefix + ' [PRISM]', ...args);
+            }
+
+            // ── Number Safety ────────────────────────────────────────────────
+            function safeNum(v, fallback = 0) {
+                if (v === null || v === undefined || v === '') return fallback;
+                const n = typeof v === 'string' ? parseFloat(v.replace(/,/g, '')) : Number(v);
+                return isFinite(n) ? n : fallback;
+            }
+            function safeInt(v, fallback = 0) {
+                const n = parseInt(v, 10);
+                return isFinite(n) ? n : fallback;
+            }
+            function roundMoney(v) {
+                return Math.round(safeNum(v) * 100) / 100;
+            }
+            function formatPHP(v) {
+                return '\u20B1' + roundMoney(v).toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+            }
+
+            // ── Date Safety ──────────────────────────────────────────────────
+            function safeDate(v) {
+                if (!v) return null;
+                const d = new Date(v);
+                return isNaN(d.getTime()) ? null : d;
+            }
+            function _dateMatchesMonth(dateStr, year, month) {
+                const d = safeDate(dateStr);
+                if (!d) return false;
+                return d.getFullYear() === year && d.getMonth() === month;
+            }
+            function monthStr(year, month) {
+                return year + '-' + String(month + 1).padStart(2, '0');
+            }
+            function daysBetween(d1, d2) {
+                const a = safeDate(d1), b = d2 ? safeDate(d2) : new Date();
+                if (!a || !b) return 0;
+                return Math.floor((b - a) / 86400000);
+            }
+            function monthsBetween(d1, d2) {
+                return Math.max(1, Math.ceil(daysBetween(d1, d2) / 30));
+            }
+
+            // ── Credit Finance Engine ────────────────────────────────────────
+            // SINGLE SOURCE OF TRUTH for all credit balance calculations
+            function calcCreditTotalDue(credit, asOf) {
+                if (!credit) return 0;
+                const principal = safeNum(credit.principal);
+                const now = asOf ? safeDate(asOf) : new Date();
+                if (credit.interestType === 'simple') {
+                    const months = monthsBetween(credit.dateLent, now);
+                    const rate = safeNum(credit.interestRate) / 100;
+                    return roundMoney(principal + (principal * rate * months));
+                } else if (credit.interestType === 'flat') {
+                    return roundMoney(principal + safeNum(credit.interestRate));
+                } else {
+                    return roundMoney(principal + safeNum(credit.interest));
+                }
+            }
+            function calcCreditPaid(creditId, creditPayments) {
+                return roundMoney(
+                    (creditPayments || [])
+                        .filter(p => p.creditId === creditId)
+                        .reduce((s, p) => s + safeNum(p.amount), 0)
+                );
+            }
+            function calcCreditBalance(credit, creditPayments, asOf) {
+                const due = calcCreditTotalDue(credit, asOf);
+                const paid = calcCreditPaid(credit.id, creditPayments);
+                return roundMoney(Math.max(0, due - paid));
+            }
+            function isCreditActive(credit, creditPayments) {
+                return calcCreditBalance(credit, creditPayments) > 0;
+            }
+            function calcTotalOutstandingCredit(credits, creditPayments) {
+                return roundMoney(
+                    (credits || []).reduce((sum, c) => sum + calcCreditBalance(c, creditPayments), 0)
+                );
+            }
+            function getDebtorName(credit) {
+                if (!credit) return 'Unknown';
+                return credit.debtor || credit.borrowerName || credit.debtorName || 'Unknown';
+            }
+
+            // ── Rent Finance Engine ──────────────────────────────────────────
+            function isTenantPaidThisMonth(tenantId, payments, year, month) {
+                const ms = monthStr(year, month);
+                return (payments || [])
+                    .filter(p => p.tenantId === tenantId && (p.type === 'rent' || !p.type))
+                    .some(p => p.monthCovered && (p.monthCovered === ms || p.monthCovered.startsWith(ms)));
+            }
+            function calcRentCollectedMonth(payments, year, month) {
+                return roundMoney(
+                    (payments || [])
+                        .filter(p => _dateMatchesMonth(p.date, year, month))
+                        .reduce((s, p) => s + safeNum(p.amount), 0)
+                );
+            }
+            function calcExpectedRent(tenants) {
+                return roundMoney(
+                    (tenants || [])
+                        .filter(t => t.status !== 'inactive')
+                        .reduce((s, t) => s + safeNum(t.rent), 0)
+                );
+            }
+
+            // ── Income Engine ────────────────────────────────────────────────
+            function calcIncomeMonth(payments, creditPayments, additionalIncome, waterSales, year, month) {
+                const rent = calcRentCollectedMonth(payments, year, month);
+                const credit = roundMoney(
+                    (creditPayments || []).filter(p => _dateMatchesMonth(p.date, year, month))
+                        .reduce((s, p) => s + safeNum(p.amount), 0)
+                );
+                const other = roundMoney(
+                    (additionalIncome || []).filter(i => _dateMatchesMonth(i.date, year, month))
+                        .reduce((s, i) => s + safeNum(i.amount), 0)
+                );
+                const water = roundMoney(
+                    (waterSales || []).filter(s => _dateMatchesMonth(s.date, year, month) && !s.voided)
+                        .reduce((s, ws) => s + safeNum(ws.amountPaid), 0)
+                );
+                return { rent, credit, other, water, total: roundMoney(rent + credit + other + water) };
+            }
+            function calcExpensesMonth(expenses, year, month) {
+                return roundMoney(
+                    (expenses || [])
+                        .filter(e => _dateMatchesMonth(e.date, year, month))
+                        .reduce((s, e) => s + safeNum(e.amount), 0)
+                );
+            }
+            function calcNetIncomeMonth(payments, creditPayments, additionalIncome, waterSales, expenses, year, month) {
+                const income = calcIncomeMonth(payments, creditPayments, additionalIncome, waterSales, year, month);
+                const exp = calcExpensesMonth(expenses, year, month);
+                return roundMoney(income.total - exp);
+            }
+
+            // ── Overdue / Due-Soon Engine ────────────────────────────────────
+            function getTenantOverdueStatus(tenant, payments, now) {
+                const today = now || new Date();
+                const dayOfMonth = today.getDate();
+                const year = today.getFullYear();
+                const month = today.getMonth();
+                if (!tenant || tenant.status === 'inactive' || safeNum(tenant.rent) <= 0) return null;
+                const dueDay = safeInt(tenant.dueDay, 5);
+                if (isTenantPaidThisMonth(tenant.id, payments, year, month)) return null;
+                if (dayOfMonth > dueDay) return { status: 'overdue', daysOverdue: dayOfMonth - dueDay };
+                if (dayOfMonth >= dueDay - 3) return { status: 'due-soon', daysUntil: dueDay - dayOfMonth };
+                return null;
+            }
+            function getCreditOverdueStatus(credit, creditPayments, now) {
+                const today = now || new Date();
+                const bal = calcCreditBalance(credit, creditPayments);
+                if (bal <= 0) return null;
+                const pmts = (creditPayments || []).filter(p => p.creditId === credit.id);
+                const last = [...pmts].sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+                const days = last ? daysBetween(last.date, today) : 999;
+                if (days > 30) return { status: 'overdue', daysSince: days, balance: bal };
+                if (days >= 25) return { status: 'due-soon', daysUntil: 30 - days, balance: bal };
+                return null;
+            }
+
+            // ── Validation Layer ─────────────────────────────────────────────
+            const validators = {
+                payment: (d) => {
+                    const errs = [];
+                    if (!d.tenantId && !d.creditId && !d.customerId) errs.push('Missing client reference');
+                    if (safeNum(d.amount) <= 0) errs.push('Amount must be greater than zero');
+                    if (!d.date) errs.push('Payment date is required');
+                    if (d.date && !safeDate(d.date)) errs.push('Invalid date format');
+                    return errs;
+                },
+                credit: (d) => {
+                    const errs = [];
+                    if (!getDebtorName(d) || getDebtorName(d) === 'Unknown') errs.push('Borrower name is required');
+                    if (safeNum(d.principal) <= 0) errs.push('Principal amount must be greater than zero');
+                    if (!d.dateLent) errs.push('Date lent is required');
+                    return errs;
+                },
+                tenant: (d) => {
+                    const errs = [];
+                    if (!d.name || !d.name.trim()) errs.push('Tenant name is required');
+                    if (safeNum(d.rent) < 0) errs.push('Rent cannot be negative');
+                    return errs;
+                },
+                expense: (d) => {
+                    const errs = [];
+                    if (safeNum(d.amount) <= 0) errs.push('Amount must be greater than zero');
+                    if (!d.date) errs.push('Date is required');
+                    if (!d.category) errs.push('Category is required');
+                    return errs;
+                },
+                waterSale: (d) => {
+                    const errs = [];
+                    if (safeInt(d.gallons) <= 0) errs.push('Gallons must be greater than zero');
+                    if (!d.date) errs.push('Date is required');
+                    return errs;
+                },
+                waterCustomer: (d) => {
+                    const errs = [];
+                    if (!d.name || !d.name.trim()) errs.push('Customer name is required');
+                    return errs;
+                },
+                employee: (d) => {
+                    const errs = [];
+                    if (!d.name || !d.name.trim()) errs.push('Employee name is required');
+                    if (safeNum(d.dailyRate) < 0) errs.push('Daily rate cannot be negative');
+                    return errs;
+                },
+            };
+            function validate(type, data) {
+                const fn = validators[type];
+                if (!fn) return [];
+                const errs = fn(data);
+                if (errs.length) log('WARN', 'Validation [' + type + ']:', errs);
+                return errs;
+            }
+            function validateAndToast(type, data) {
+                const errs = validate(type, data);
+                if (errs.length) {
+                    showToast('⚠️ ' + errs[0], 'warning');
+                    return false;
+                }
+                return true;
+            }
+
+            // ── Record Sanitizer ─────────────────────────────────────────────
+            // Adds timestamps and normalizes money fields before DB writes
+            function sanitizeRecord(data) {
+                const now = new Date().toISOString();
+                const out = Object.assign({}, data);
+                out.updatedAt = now;
+                if (!out.createdAt) out.createdAt = now;
+                // Round all monetary fields to 2 decimal places
+                ['amount', 'principal', 'rent', 'interest', 'total', 'amountPaid',
+                 'balance', 'dailyRate', 'netPay', 'grossPay', 'deductions',
+                 'pricePerGallon', 'interestRate'].forEach(f => {
+                    if (f in out && out[f] !== null && out[f] !== undefined) {
+                        out[f] = roundMoney(safeNum(out[f]));
+                    }
+                });
+                return out;
+            }
+
+            // ── Water Sale Helpers ───────────────────────────────────────────
+            function getWaterSaleStatus(gallons, pricePerGallon, amountPaid) {
+                const total = roundMoney(safeNum(gallons) * safeNum(pricePerGallon));
+                const paid = roundMoney(safeNum(amountPaid));
+                if (total <= 0) return 'unknown';
+                if (paid <= 0) return 'unpaid';
+                if (paid >= total) return 'paid';
+                return 'partial';
+            }
+            function getWaterSaleBalance(gallons, pricePerGallon, amountPaid) {
+                return roundMoney(Math.max(0, safeNum(gallons) * safeNum(pricePerGallon) - safeNum(amountPaid)));
+            }
+
+            // ── Async Error Guard ────────────────────────────────────────────
+            async function safeAsync(fn, context, fallback) {
+                try {
+                    return await fn();
+                } catch (err) {
+                    log('ERROR', 'safeAsync [' + context + ']:', err);
+                    if (typeof showToast === 'function') {
+                        showToast('\u26A0\uFE0F Error in ' + context + '. Please refresh if issues persist.', 'warning');
+                    }
+                    return fallback !== undefined ? fallback : null;
+                }
+            }
+
+            // ── Public API ───────────────────────────────────────────────────
+            return {
+                setDebug: function(v) { _debug = v; log('INFO', 'Debug:', v); },
+                log,
+                safeNum, safeInt, roundMoney, formatPHP,
+                safeDate, dateMatchesMonth: _dateMatchesMonth, monthStr, daysBetween, monthsBetween,
+                calcCreditTotalDue, calcCreditPaid, calcCreditBalance,
+                isCreditActive, calcTotalOutstandingCredit, getDebtorName,
+                isTenantPaidThisMonth, calcRentCollectedMonth, calcExpectedRent,
+                calcIncomeMonth, calcExpensesMonth, calcNetIncomeMonth,
+                getTenantOverdueStatus, getCreditOverdueStatus,
+                validate, validateAndToast,
+                sanitizeRecord,
+                getWaterSaleStatus, getWaterSaleBalance,
+                safeAsync,
+            };
+        })();
+
+        // Alias for backward compat
+        const Finance = PRISMCore;
+
         // Generic DB operations with connection safety
         async function dbAdd(storeName, data) {
             await ensureDB();
@@ -8607,11 +8934,13 @@
 
         async function dbUpdate(storeName, data) {
             await ensureDB();
+            // Auto-sanitize: updates updatedAt and rounds money fields
+            const sanitized = (typeof PRISMCore !== 'undefined') ? PRISMCore.sanitizeRecord(data) : data;
             return new Promise((resolve, reject) => {
                 try {
                     const tx = db.transaction(storeName, 'readwrite');
                     const store = tx.objectStore(storeName);
-                    const request = store.put(data);
+                    const request = store.put(sanitized);
                     request.onsuccess = () => resolve(request.result);
                     request.onerror = () => reject(request.error);
                     tx.onerror = () => reject(tx.error);
@@ -8917,24 +9246,127 @@
             if (window.prismConfirmResolve) window.prismConfirmResolve(val);
         }
 
-        function showNetIncomeDetails() {
-            showSection('income');
+        async function showNetIncomeDetails() {
+            const payments = await dbGetAll('payments');
+            const creditPayments = await dbGetAll('creditPayments');
+            const expenses = await dbGetAll('expenses');
+            const additionalIncome = await dbGetAll('additionalIncome');
+            const waterSales = await dbGetAll('waterSales');
+            const now = new Date();
+            const yr = now.getFullYear(), mo = now.getMonth();
+            const rentInc = payments.filter(p=>dateMatchesMonth(p.date,yr,mo)).reduce((s,p)=>s+(p.amount||0),0);
+            const creditInc = creditPayments.filter(p=>dateMatchesMonth(p.date,yr,mo)).reduce((s,p)=>s+(p.amount||0),0);
+            const otherInc = additionalIncome.filter(i=>dateMatchesMonth(i.date,yr,mo)).reduce((s,i)=>s+(i.amount||0),0);
+            const waterInc = waterSales.filter(s=>dateMatchesMonth(s.date,yr,mo)&&!s.voided).reduce((s,w)=>s+(w.amountPaid||w.total||0),0);
+            const totalInc = rentInc + creditInc + otherInc + waterInc;
+            const monthExp = expenses.filter(e=>e.date&&e.date.startsWith(`${yr}-${String(mo+1).padStart(2,'0')}`)).reduce((s,e)=>s+(e.amount||0),0);
+            const net = totalInc - monthExp;
+            document.getElementById('flashcard-detail-title').textContent = '📊 Net Income This Month';
+            document.getElementById('flashcard-detail-content').innerHTML = `
+                <div style="background:linear-gradient(135deg,${net>=0?'#10b981,#059669':'#ef4444,#dc2626'});color:white;padding:15px;border-radius:8px;text-align:center;margin-bottom:15px;">
+                    <div style="font-size:2rem;font-weight:bold;">₱${Math.abs(net).toLocaleString()}</div>
+                    <div>${net>=0?'Net Profit':'Net Loss'} This Month</div>
+                </div>
+                <div style="background:var(--bg-secondary);padding:15px;border-radius:8px;">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span>🏠 Rent Collected</span><strong style="color:var(--success);">+₱${rentInc.toLocaleString()}</strong></div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span>💳 Credit Repaid</span><strong style="color:var(--success);">+₱${creditInc.toLocaleString()}</strong></div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span>💧 Water Sales</span><strong style="color:var(--success);">+₱${waterInc.toLocaleString()}</strong></div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span>📝 Other Income</span><strong style="color:var(--success);">+₱${otherInc.toLocaleString()}</strong></div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span>💸 Expenses</span><strong style="color:var(--danger);">-₱${monthExp.toLocaleString()}</strong></div>
+                    <hr style="border-color:var(--border-color);margin:8px 0;">
+                    <div style="display:flex;justify-content:space-between;font-size:1.1rem;"><strong>NET</strong><strong style="color:${net>=0?'var(--success)':'var(--danger)'};">₱${net.toLocaleString()}</strong></div>
+                </div>`;
+            const btn = document.getElementById('flashcard-goto-btn');
+            if(btn){ btn.textContent='Go to Reports →'; btn.onclick=()=>{hideModal('flashcard-detail-modal');showSection('reports');}; }
+            showModal('flashcard-detail-modal');
         }
 
-        function showTotalSpentDetails() {
-            showSection('expenses');
+        async function showTotalSpentDetails() {
+            const expenses = await dbGetAll('expenses');
+            const now = new Date();
+            const yr = now.getFullYear(), mo = now.getMonth();
+            const monthStr = `${yr}-${String(mo+1).padStart(2,'0')}`;
+            const monthExp = expenses.filter(e=>e.date&&e.date.startsWith(monthStr)).reduce((s,e)=>s+(e.amount||0),0);
+            const totalExp = expenses.reduce((s,e)=>s+(e.amount||0),0);
+            const cats = {};
+            expenses.filter(e=>e.date&&e.date.startsWith(monthStr)).forEach(e=>{const c=e.category||'other';cats[c]=(cats[c]||0)+(e.amount||0);});
+            document.getElementById('flashcard-detail-title').textContent = '💸 Total Expenses';
+            document.getElementById('flashcard-detail-content').innerHTML = `
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:15px;">
+                    <div style="background:rgba(239,68,68,0.1);border-radius:8px;padding:12px;text-align:center;">
+                        <div style="font-size:1.4rem;font-weight:700;color:var(--danger);">₱${monthExp.toLocaleString()}</div>
+                        <div style="font-size:0.8rem;color:var(--text-secondary);">This Month</div>
+                    </div>
+                    <div style="background:rgba(239,68,68,0.1);border-radius:8px;padding:12px;text-align:center;">
+                        <div style="font-size:1.4rem;font-weight:700;color:var(--danger);">₱${totalExp.toLocaleString()}</div>
+                        <div style="font-size:0.8rem;color:var(--text-secondary);">All Time</div>
+                    </div>
+                </div>
+                <h4 style="margin:10px 0 8px;">This Month by Category</h4>
+                ${Object.keys(cats).length===0?'<p style="color:var(--text-secondary);text-align:center;">No expenses this month</p>':
+                Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([cat,amt])=>`
+                    <div class="list-item"><div class="item-info"><strong>${cat.charAt(0).toUpperCase()+cat.slice(1)}</strong></div>
+                    <span class="badge badge-danger">₱${amt.toLocaleString()}</span></div>`).join('')}`;
+            const btn = document.getElementById('flashcard-goto-btn');
+            if(btn){ btn.textContent='Go to Expenses →'; btn.onclick=()=>{hideModal('flashcard-detail-modal');showSection('expenses');}; }
+            showModal('flashcard-detail-modal');
         }
 
-        function showNetProfitDetails() {
+        async function showNetProfitDetails() {
             showSection('reports');
         }
 
-        function showIncomeDetails() {
-            showSection('income');
+        async function showIncomeDetails() {
+            const additionalIncome = await dbGetAll('additionalIncome');
+            const now = new Date();
+            const yr = now.getFullYear(), mo = now.getMonth();
+            const monthStr = `${yr}-${String(mo+1).padStart(2,'0')}`;
+            const monthInc = additionalIncome.filter(i=>i.date&&i.date.startsWith(monthStr)).reduce((s,i)=>s+(i.amount||0),0);
+            const totalInc = additionalIncome.reduce((s,i)=>s+(i.amount||0),0);
+            const recent = additionalIncome.sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,10);
+            document.getElementById('flashcard-detail-title').textContent = '💰 Additional Income';
+            document.getElementById('flashcard-detail-content').innerHTML = `
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:15px;">
+                    <div style="background:rgba(16,185,129,0.1);border-radius:8px;padding:12px;text-align:center;">
+                        <div style="font-size:1.4rem;font-weight:700;color:var(--success);">₱${monthInc.toLocaleString()}</div>
+                        <div style="font-size:0.8rem;color:var(--text-secondary);">This Month</div>
+                    </div>
+                    <div style="background:rgba(16,185,129,0.1);border-radius:8px;padding:12px;text-align:center;">
+                        <div style="font-size:1.4rem;font-weight:700;color:var(--success);">₱${totalInc.toLocaleString()}</div>
+                        <div style="font-size:0.8rem;color:var(--text-secondary);">All Time</div>
+                    </div>
+                </div>
+                <h4 style="margin:10px 0 8px;">Recent Transactions</h4>
+                ${recent.length===0?'<p style="color:var(--text-secondary);text-align:center;">No income records yet</p>':
+                recent.map(i=>`<div class="list-item"><div class="item-info"><strong>${i.description||i.source||'Income'}</strong>
+                    <div style="font-size:0.8rem;color:var(--text-secondary);">${i.date||''} • ${i.category||''}</div></div>
+                    <span class="badge badge-success">+₱${(i.amount||0).toLocaleString()}</span></div>`).join('')}`;
+            const btn = document.getElementById('flashcard-goto-btn');
+            if(btn){ btn.textContent='Go to Income →'; btn.onclick=()=>{hideModal('flashcard-detail-modal');showSection('income');}; }
+            showModal('flashcard-detail-modal');
         }
 
-        function showExpenseDetails() {
-            showSection('expenses');
+        async function showExpenseDetails() {
+            const expenses = await dbGetAll('expenses');
+            const now = new Date();
+            const monthStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+            const monthExp = expenses.filter(e=>e.date&&e.date.startsWith(monthStr));
+            const monthTotal = monthExp.reduce((s,e)=>s+(e.amount||0),0);
+            const recent = expenses.sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,10);
+            document.getElementById('flashcard-detail-title').textContent = '💸 Expenses Detail';
+            document.getElementById('flashcard-detail-content').innerHTML = `
+                <div style="background:rgba(239,68,68,0.1);border-radius:8px;padding:12px;text-align:center;margin-bottom:15px;">
+                    <div style="font-size:1.8rem;font-weight:700;color:var(--danger);">₱${monthTotal.toLocaleString()}</div>
+                    <div style="color:var(--text-secondary);">This Month (${monthExp.length} records)</div>
+                </div>
+                <h4 style="margin:10px 0 8px;">Recent Expenses</h4>
+                ${recent.length===0?'<p style="color:var(--text-secondary);text-align:center;">No expenses recorded</p>':
+                recent.map(e=>`<div class="list-item"><div class="item-info"><strong>${e.description||e.category||'Expense'}</strong>
+                    <div style="font-size:0.8rem;color:var(--text-secondary);">${e.date||''} • ${e.category||''}</div></div>
+                    <span class="badge badge-danger">₱${(e.amount||0).toLocaleString()}</span></div>`).join('')}`;
+            const btn = document.getElementById('flashcard-goto-btn');
+            if(btn){ btn.textContent='Go to Expenses →'; btn.onclick=()=>{hideModal('flashcard-detail-modal');showSection('expenses');}; }
+            showModal('flashcard-detail-modal');
         }
 
         function showIncomeVsExpenseChart() {
@@ -8953,7 +9385,7 @@
             let rows = credits.sort((a,b) => (b.principal||0)-(a.principal||0)).slice(0,10).map(c => `
                 <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color);">
                     <div>
-                        <div style="font-weight:600;">${c.debtorName||'Unknown'}</div>
+                        <div style="font-weight:600;">${c.debtor||c.borrowerName||c.debtorName||'Unknown'}</div>
                         <div style="font-size:0.75rem;color:var(--text-secondary);">${c.dateLent||c.date||'?'} · ${c.status||'active'}</div>
                     </div>
                     <div style="font-weight:700;color:${c.status==='paid'?'#10b981':'var(--primary)'};">₱${(c.principal||0).toLocaleString()}</div>
@@ -8999,7 +9431,7 @@
                 const credit = credits.find(c => c.id === p.creditId);
                 return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color);">
                     <div>
-                        <div style="font-weight:600;">${credit ? credit.debtorName : 'Unknown'}</div>
+                        <div style="font-weight:600;">${credit ? (credit.debtor||credit.borrowerName||credit.debtorName||'Unknown') : 'Unknown'}</div>
                         <div style="font-size:0.75rem;color:var(--text-secondary);">${p.date||'?'}</div>
                     </div>
                     <div style="font-weight:700;color:#10b981;">+₱${(p.amount||0).toLocaleString()}</div>
@@ -9721,13 +10153,7 @@
                 const payments = creditPayments.filter(p => p.creditId === credit.id);
                 const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
                 
-                let totalDue = credit.principal;
-                if (credit.interestType === 'simple') {
-                    const months = Math.ceil((now - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
-                    totalDue = credit.principal + (credit.principal * (credit.interestRate / 100) * months);
-                } else if (credit.interestType === 'flat') {
-                    totalDue = credit.principal + credit.interestRate;
-                }
+                let totalDue = Finance.calcCreditTotalDue(credit);
 
                 const fullyPaid = totalPaid >= totalDue;
                 const lastPayment = payments.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
@@ -10848,7 +11274,7 @@ async function recordTenantPayment(tenantId) {
             event.preventDefault();
 
             const amountStr = document.getElementById('tenant-payment-amount').value.trim();
-            const amount = parseFloat(amountStr.replace(/,/g, '')) || 0;
+            const amount = Finance.safeNum(amountStr.replace(/,/g, ''));
             const paymentMethod = document.getElementById('tenant-payment-method').value;
             const paymentType = document.getElementById('tenant-payment-type').value;
             const monthCovered = document.getElementById('tenant-payment-month').value;
@@ -11226,12 +11652,7 @@ async function recordTenantPayment(tenantId) {
                     const totalPaid = creditPayments.reduce((sum, p) => sum + p.amount, 0);
                     
                     // Calculate with interest
-                    let totalDue = credit.principal;
-                    if (credit.interestType === 'percentage') {
-                        totalDue = credit.principal * (1 + (credit.interestRate / 100));
-                    } else if (credit.interestType === 'fixed') {
-                        totalDue = credit.principal + credit.interestRate;
-                    }
+                    let totalDue = Finance.calcCreditTotalDue(credit);
                     
                     const remainingBalance = Math.max(0, totalDue - totalPaid);
 
@@ -11473,15 +11894,7 @@ async function recordTenantPayment(tenantId) {
                 const payments = allCreditPayments.filter(p => p.creditId === id).sort((a, b) => new Date(a.date) - new Date(b.date));
 
                 // Calculate total with interest
-                let totalDue = credit.principal;
-                let interestAmount = 0;
-                if (credit.interestType === 'percentage' || credit.interestType === 'simple') {
-                    interestAmount = credit.principal * (credit.interestRate / 100);
-                    totalDue = credit.principal + interestAmount;
-                } else if (credit.interestType === 'fixed' || credit.interestType === 'flat') {
-                    interestAmount = credit.interestRate;
-                    totalDue = credit.principal + interestAmount;
-                }
+                let totalDue = Finance.calcCreditTotalDue(credit);
 
                 const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
                 const remainingBalance = Math.max(0, totalDue - totalPaid);
@@ -11730,16 +12143,7 @@ async function recordTenantPayment(tenantId) {
             const allCreditPayments = await dbGetAll('creditPayments');
             const payments = allCreditPayments.filter(p => p.creditId === creditId).sort((a, b) => new Date(b.date) - new Date(a.date));
 
-            let totalDue = credit.principal;
-            let interestAmount = 0;
-            if (credit.interestType === 'simple') {
-                const months = Math.ceil((new Date() - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
-                interestAmount = credit.principal * (credit.interestRate / 100) * months;
-                totalDue = credit.principal + interestAmount;
-            } else if (credit.interestType === 'flat') {
-                interestAmount = credit.interestRate;
-                totalDue = credit.principal + interestAmount;
-            }
+            let totalDue = Finance.calcCreditTotalDue(credit);
 
             const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
             const balance = totalDue - totalPaid;
@@ -12127,7 +12531,7 @@ async function recordTenantPayment(tenantId) {
             sale.pricePerGallon = pricePerGallon;
             sale.totalPrice = gallons * pricePerGallon;
             sale.amountPaid = amountPaid;
-            sale.status = amountPaid >= (gallons * pricePerGallon) ? 'paid' : amountPaid > 0 ? 'partial' : 'unpaid';
+            sale.status = Finance.getWaterSaleStatus(gallons, pricePerGallon, amountPaid);
 
             await dbUpdate('waterSales', sale);
             document.getElementById('edit-watersale-modal').remove();
@@ -12170,12 +12574,16 @@ async function loadWaterCustomers() {
                 totalCredits += unpaid;
             });
             
-            sales.forEach(s => {
-                totalGallons += s.gallons || 0;
-                if (s.date === today) {
-                    todaySales += s.amountPaid || 0;
-                }
-            });
+                const nowWater = new Date();
+                sales.forEach(s => {
+                    if (s.date === today && !s.voided) todaySales += (s.amountPaid || s.total || 0);
+                    if (s.date) {
+                        const sd = new Date(s.date);
+                        if (sd.getMonth() === nowWater.getMonth() && sd.getFullYear() === nowWater.getFullYear() && !s.voided) {
+                            totalGallons += s.gallons || 0;
+                        }
+                    }
+                });
             
             document.getElementById('stat-water-customers').textContent = customers.length;
             document.getElementById('stat-water-credits').textContent = '₱' + totalCredits.toLocaleString();
@@ -12310,11 +12718,11 @@ async function loadWaterCustomers() {
             
             let customerId = document.getElementById('water-sale-customer').value;
             const newCustomer = document.getElementById('water-sale-new-customer').value.trim();
-            const gallons = parseInt(document.getElementById('water-sale-gallons').value) || 0;
-            const price = parseFloat(document.getElementById('water-sale-price').value) || 25;
-            const total = gallons * price;
+            const gallons = Finance.safeInt(document.getElementById('water-sale-gallons').value);
+            const price = Finance.safeNum(document.getElementById('water-sale-price').value) || 25;
+            const total = Finance.roundMoney(gallons * price);
             const paymentType = document.getElementById('water-sale-payment-type').value;
-            const paidNow = paymentType === 'partial' ? (parseFloat(document.getElementById('water-sale-paid').value.replace(/,/g, '')) || 0) : (paymentType === 'cash' ? total : 0);
+            const paidNow = paymentType === 'partial' ? Finance.safeNum(document.getElementById('water-sale-paid').value.replace(/,/g, '')) : (paymentType === 'cash' ? total : 0);
             const date = document.getElementById('water-sale-date').value;
             const notes = document.getElementById('water-sale-notes').value.trim();
             
@@ -12602,7 +13010,7 @@ async function loadWaterCustomers() {
                 totalAdvances += unpaidAdv;
                 
                 // Calculate unpaid work days (not yet paid out)
-                const empRecords = timeRecords.filter(r => r.employeeId === e.id && !r.paid && r.status === 'present');
+                const empRecords = timeRecords.filter(r => r.employeeId === e.id && !r.paid && (r.status === 'present' || r.status === 'halfday'));
                 e.unpaidDays = empRecords.length;
                 totalUnpaidDays += empRecords.length;
             });
@@ -14133,13 +14541,7 @@ async function showPayrollSummary() {
                 const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
 
                 // Calculate total with interest
-                let totalDue = credit.principal;
-                if (credit.interestType === 'simple') {
-                    const months = Math.ceil((now - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
-                    totalDue = credit.principal + (credit.principal * (credit.interestRate / 100) * months);
-                } else if (credit.interestType === 'flat') {
-                    totalDue = credit.principal + credit.interestRate;
-                }
+                let totalDue = Finance.calcCreditTotalDue(credit);
 
                 const balance = totalDue - totalPaid;
                 const progressPercent = Math.min(100, (totalPaid / totalDue) * 100);
@@ -14174,6 +14576,83 @@ async function showPayrollSummary() {
             const txnEl = document.getElementById('cashier-txn-list');
             if (txnEl) txnEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
             else showToast('📋 View your transactions list below', 'info');
+        }
+
+        async function showCashierTodayDetail() {
+            const today = new Date().toISOString().split('T')[0];
+            const payments = await dbGetAll('payments');
+            const creditPayments = await dbGetAll('creditPayments');
+            const waterSales = await dbGetAll('waterSales');
+            const additionalIncome = await dbGetAll('additionalIncome');
+            const todayRent   = payments.filter(p => (p.date||'').startsWith(today));
+            const todayCredit = creditPayments.filter(p => (p.date||'').startsWith(today));
+            const todayWater  = waterSales.filter(s => (s.date||'').startsWith(today) && !s.voided);
+            const todayIncome = additionalIncome.filter(i => (i.date||'').startsWith(today));
+            const rentTotal   = todayRent.reduce((s,p) => s+(p.amount||0), 0);
+            const creditTotal = todayCredit.reduce((s,p) => s+(p.amount||0), 0);
+            const waterTotal  = todayWater.reduce((s,w) => s+(w.amountPaid||w.total||0), 0);
+            const incomeTotal = todayIncome.reduce((s,i) => s+(i.amount||0), 0);
+            const grandTotal  = rentTotal + creditTotal + waterTotal + incomeTotal;
+            const tenants     = await dbGetAll('tenants');
+            const credits     = await dbGetAll('credits');
+            const waterCusts  = await dbGetAll('waterCustomers');
+            let rows = '';
+            todayRent.forEach(p => {
+                const t = tenants.find(x => x.id === p.tenantId);
+                rows += `<div class="list-item"><div class="item-info"><strong>🏠 ${t?t.name:'Rent'}</strong><div style="font-size:0.8rem;color:var(--text-secondary);">${p.date} • ${p.paymentMethod||'Cash'}</div></div><span class="badge badge-success">+₱${(p.amount||0).toLocaleString()}</span></div>`;
+            });
+            todayCredit.forEach(p => {
+                const c = credits.find(x => x.id === p.creditId);
+                rows += `<div class="list-item"><div class="item-info"><strong>💳 ${c?c.borrowerName||c.debtorName:'Credit'}</strong><div style="font-size:0.8rem;color:var(--text-secondary);">${p.date}</div></div><span class="badge badge-info">+₱${(p.amount||0).toLocaleString()}</span></div>`;
+            });
+            todayWater.forEach(s => {
+                const wc = waterCusts.find(x => x.id === s.customerId);
+                rows += `<div class="list-item"><div class="item-info"><strong>💧 ${wc?wc.name:s.customerName||'Walk-in'}</strong><div style="font-size:0.8rem;color:var(--text-secondary);">${s.gallons||0} gal • ${s.paymentType||'Cash'}</div></div><span class="badge badge-success">+₱${(s.amountPaid||s.total||0).toLocaleString()}</span></div>`;
+            });
+            todayIncome.forEach(i => {
+                rows += `<div class="list-item"><div class="item-info"><strong>📝 ${i.description||'Other Income'}</strong><div style="font-size:0.8rem;color:var(--text-secondary);">${i.date} • ${i.category||''}</div></div><span class="badge badge-success">+₱${(i.amount||0).toLocaleString()}</span></div>`;
+            });
+            document.getElementById('flashcard-detail-title').textContent = '💰 Today\'s Collections';
+            document.getElementById('flashcard-detail-content').innerHTML = `
+                <div style="background:linear-gradient(135deg,#10b981,#059669);color:white;padding:15px;border-radius:8px;text-align:center;margin-bottom:15px;">
+                    <div style="font-size:2rem;font-weight:bold;">₱${grandTotal.toLocaleString()}</div>
+                    <div>Total Collected Today</div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:15px;">
+                    <div style="background:var(--bg-secondary);padding:10px;border-radius:8px;text-align:center;"><div style="font-weight:700;color:var(--success);">₱${rentTotal.toLocaleString()}</div><div style="font-size:0.75rem;">🏠 Rent</div></div>
+                    <div style="background:var(--bg-secondary);padding:10px;border-radius:8px;text-align:center;"><div style="font-weight:700;color:var(--primary);">₱${creditTotal.toLocaleString()}</div><div style="font-size:0.75rem;">💳 Credit</div></div>
+                    <div style="background:var(--bg-secondary);padding:10px;border-radius:8px;text-align:center;"><div style="font-weight:700;color:#06b6d4;">₱${waterTotal.toLocaleString()}</div><div style="font-size:0.75rem;">💧 Water</div></div>
+                    <div style="background:var(--bg-secondary);padding:10px;border-radius:8px;text-align:center;"><div style="font-weight:700;color:var(--success);">₱${incomeTotal.toLocaleString()}</div><div style="font-size:0.75rem;">📝 Other</div></div>
+                </div>
+                <h4 style="margin:10px 0 8px;">All Transactions (${todayRent.length+todayCredit.length+todayWater.length+todayIncome.length})</h4>
+                ${rows || '<p style="color:var(--text-secondary);text-align:center;padding:15px;">No transactions today yet</p>'}
+            `;
+            const btn = document.getElementById('flashcard-goto-btn');
+            if(btn){ btn.textContent='View Transactions ↓'; btn.onclick=()=>{hideModal('flashcard-detail-modal'); const txnEl=document.getElementById('cashier-txn-list'); if(txnEl) txnEl.scrollIntoView({behavior:'smooth'});}; }
+            showModal('flashcard-detail-modal');
+        }
+
+        async function showCashierExpenseDetail() {
+            const today = new Date().toISOString().split('T')[0];
+            const expenses = await dbGetAll('expenses');
+            const todayExp = expenses.filter(e => (e.date||'').startsWith(today));
+            const total = todayExp.reduce((s,e) => s+(e.amount||0), 0);
+            document.getElementById('flashcard-detail-title').textContent = '💸 Today\'s Expenses';
+            document.getElementById('flashcard-detail-content').innerHTML = `
+                <div style="background:linear-gradient(135deg,#ef4444,#dc2626);color:white;padding:15px;border-radius:8px;text-align:center;margin-bottom:15px;">
+                    <div style="font-size:2rem;font-weight:bold;">₱${total.toLocaleString()}</div>
+                    <div>${todayExp.length} Expense Records Today</div>
+                </div>
+                ${todayExp.length===0
+                    ? '<p style="color:var(--text-secondary);text-align:center;padding:15px;">No expenses recorded today</p>'
+                    : todayExp.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(e=>`
+                        <div class="list-item"><div class="item-info"><strong>🧾 ${e.description||e.category||'Expense'}</strong>
+                        <div style="font-size:0.8rem;color:var(--text-secondary);">${e.date||''} • ${e.category||''}</div></div>
+                        <span class="badge badge-danger">-₱${(e.amount||0).toLocaleString()}</span></div>`).join('')}
+            `;
+            const btn = document.getElementById('flashcard-goto-btn');
+            if(btn){ btn.textContent='Go to Expenses →'; btn.onclick=()=>{hideModal('flashcard-detail-modal');showSection('expenses');}; }
+            showModal('flashcard-detail-modal');
         }
 
         async function showCashierTodayTransactions() {
@@ -14454,16 +14933,7 @@ async function showPayrollSummary() {
             const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
 
             // Calculate total with interest
-            let totalDue = credit.principal;
-            let interestAmount = 0;
-            if (credit.interestType === 'simple') {
-                const months = Math.ceil((new Date() - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
-                interestAmount = credit.principal * (credit.interestRate / 100) * months;
-                totalDue = credit.principal + interestAmount;
-            } else if (credit.interestType === 'flat') {
-                interestAmount = credit.interestRate;
-                totalDue = credit.principal + interestAmount;
-            }
+            let totalDue = Finance.calcCreditTotalDue(credit);
 
             const balance = totalDue - totalPaid;
 
@@ -14728,7 +15198,7 @@ async function showPayrollSummary() {
             event.preventDefault();
 
             const amountStr = document.getElementById('credit-payment-amount').value.trim();
-            const amount = parseFloat(amountStr.replace(/,/g, '')) || 0;
+            const amount = Finance.safeNum(amountStr.replace(/,/g, ''));
             const paymentMethod = document.getElementById('credit-payment-method').value;
             const date = document.getElementById('credit-payment-date').value;
             const notes = document.getElementById('credit-payment-notes').value.trim();
@@ -14756,14 +15226,7 @@ async function showPayrollSummary() {
             const totalPaid = creditPayments.reduce((sum, p) => sum + p.amount, 0);
             
             // Calculate total due (principal + interest)
-            let totalDue = credit.principal;
-            if (credit.interestType === 'simple' && credit.interestRate > 0) {
-                const monthsElapsed = Math.max(1, Math.floor((new Date() - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30)));
-                const interestDue = (credit.principal * credit.interestRate / 100) * monthsElapsed;
-                totalDue += interestDue;
-            } else if (credit.interestType === 'flat' && credit.interestRate > 0) {
-                totalDue += credit.interestRate;
-            }
+            let totalDue = Finance.calcCreditTotalDue(credit);
             
             const balance = totalDue - totalPaid;
             
@@ -14839,14 +15302,7 @@ async function showPayrollSummary() {
             const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
             
             // Calculate total due with interest
-            let totalDue = credit.principal;
-            if (credit.interestType === 'simple' && credit.interestRate > 0) {
-                const monthsElapsed = Math.max(1, Math.floor((new Date() - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30)));
-                const interestDue = (credit.principal * credit.interestRate / 100) * monthsElapsed;
-                totalDue += interestDue;
-            } else if (credit.interestType === 'flat' && credit.interestRate > 0) {
-                totalDue += credit.interestRate;
-            }
+            let totalDue = Finance.calcCreditTotalDue(credit);
             
             const balance = totalDue - totalPaid;
             
@@ -14865,14 +15321,7 @@ async function showPayrollSummary() {
 
         function calculateCreditBalance(credit) {
             // Helper function to calculate balance quickly
-            let totalDue = credit.principal;
-            if (credit.interestType === 'simple' && credit.interestRate > 0) {
-                const monthsElapsed = Math.max(1, Math.floor((new Date() - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30)));
-                const interestDue = (credit.principal * credit.interestRate / 100) * monthsElapsed;
-                totalDue += interestDue;
-            } else if (credit.interestType === 'flat' && credit.interestRate > 0) {
-                totalDue += credit.interestRate;
-            }
+            let totalDue = Finance.calcCreditTotalDue(credit);
             return totalDue;
         }
 
@@ -16365,6 +16814,19 @@ async function showPayrollSummary() {
             
             if (type === 'month') {
                 filteredIncome = additionalIncome.filter(i => i.date && i.date.startsWith(currentMonth));
+                // Include water sales to match dashboard Other Income stat
+                const waterSalesAll = await dbGetAll('waterSales');
+                const waterThisMonth = waterSalesAll
+                    .filter(s => s.date && s.date.startsWith(currentMonth) && !s.voided)
+                    .map(s => ({
+                        id: 'water_' + s.id,
+                        date: s.date,
+                        amount: s.amountPaid || 0,
+                        category: 'Water Sales',
+                        description: (s.customerName || s.customerId || 'Customer') + ' - ' + (s.gallons||0) + ' gal',
+                        source: 'water'
+                    }));
+                filteredIncome = [...filteredIncome, ...waterThisMonth];
                 titleText = '💰 This Month\'s Other Income';
                 const total = filteredIncome.reduce((sum, i) => sum + (i.amount || 0), 0);
                 summaryText = `Total for ${now.toLocaleString('default', { month: 'long', year: 'numeric' })}: ₱${total.toLocaleString()}`;
@@ -16463,8 +16925,11 @@ async function showPayrollSummary() {
             return String(dateVal).slice(0, 10);
         }
         function dateMatchesMonth(dateVal, year, month) {
-            const d = new Date(normalizeDate(dateVal));
-            return !isNaN(d.getTime()) && d.getFullYear() === year && d.getMonth() === month;
+            if (!dateVal) return false;
+            try {
+                const d = new Date(normalizeDate(dateVal));
+                return !isNaN(d.getTime()) && d.getFullYear() === year && d.getMonth() === month;
+            } catch(e) { return false; }
         }
 
         async function loadDashboard() {
@@ -16490,11 +16955,18 @@ async function showPayrollSummary() {
             const statVacant = document.getElementById('stat-vacant');
             
             if (statProperties) statProperties.textContent = properties.length;
-            if (statTenants) statTenants.textContent = tenants.length;
-            if (statDebtors) statDebtors.textContent = credits.length;
+            if (statTenants) statTenants.textContent = tenants.filter(t => t.status === 'active' || !t.status).length;
+            // Count only debtors with outstanding balance
+            const activeDebtorCount = credits.filter(c => {
+                const paid = creditPayments.filter(p => p.creditId === c.id).reduce((s,p) => s+(p.amount||0), 0);
+                return paid < ((c.principal||0) + (c.interest||0));
+            }).length;
+            if (statDebtors) statDebtors.textContent = activeDebtorCount;
 
             // Calculate vacant properties
-            const occupiedPropertyIds = new Set(tenants.map(t => t.propertyId));
+            const occupiedPropertyIds = new Set(
+                tenants.filter(t => t.status !== 'inactive').map(t => t.propertyId)
+            );
             const vacantCount = properties.filter(p => !occupiedPropertyIds.has(p.id)).length;
             if (statVacant) statVacant.textContent = vacantCount;
 
@@ -16506,15 +16978,13 @@ async function showPayrollSummary() {
             let dueSoonCount = 0;
             const dayOfMonth = now.getDate();
             
-            // Check tenants
-            tenants.forEach(tenant => {
-                const tenantPayments = payments.filter(p => p.tenantId === tenant.id && (p.type === 'rent' || !p.type));
-                const paidThisMonth = tenantPayments.some(p => p.monthCovered && (p.monthCovered === currentMonth || p.monthCovered.startsWith(currentMonth)));
-                const property = properties.find(p => p.id === tenant.propertyId);
-                
-                if (!paidThisMonth && (tenant.rent || 0) > 0) {
-                    if (dayOfMonth > 5) {
-                        // Overdue - past due date (5th)
+                // Check tenants for overdue/due-soon using Finance engine (single source of truth)
+                tenants.forEach(tenant => {
+                    const ovStatus = Finance.getTenantOverdueStatus(tenant, payments, now);
+                    if (!ovStatus) return;
+                    const property = properties.find(p => p.id === tenant.propertyId);
+                    const tenantDueDay = Finance.safeInt(tenant.dueDay, 5);
+                    if (ovStatus.status === 'overdue') {
                         overdueCount++;
                         notificationData.overdue.push({
                             type: 'tenant',
@@ -16522,11 +16992,10 @@ async function showPayrollSummary() {
                             name: tenant.name,
                             amount: tenant.rent,
                             property: property ? property.name : 'Unknown',
-                            daysOverdue: dayOfMonth - 5,
-                            dueDate: '5th of ' + now.toLocaleString('default', { month: 'short' })
+                            daysOverdue: ovStatus.daysOverdue,
+                            dueDate: tenantDueDay + getOrdinalSuffix(tenantDueDay) + ' of ' + now.toLocaleString('default', { month: 'short' })
                         });
-                    } else if (dayOfMonth >= 1 && dayOfMonth <= 5) {
-                        // Due soon - within due period
+                    } else if (ovStatus.status === 'due-soon') {
                         dueSoonCount++;
                         notificationData.due.push({
                             type: 'tenant',
@@ -16534,24 +17003,17 @@ async function showPayrollSummary() {
                             name: tenant.name,
                             amount: tenant.rent,
                             property: property ? property.name : 'Unknown',
-                            daysUntilDue: 5 - dayOfMonth,
-                            dueDate: '5th of ' + now.toLocaleString('default', { month: 'short' })
+                            daysUntilDue: ovStatus.daysUntil,
+                            dueDate: tenantDueDay + getOrdinalSuffix(tenantDueDay) + ' of ' + now.toLocaleString('default', { month: 'short' })
                         });
                     }
-                }
-            });
+                });
 
             // Check credits/debtors
             credits.forEach(credit => {
                 const creditPmts = creditPayments.filter(p => p.creditId === credit.id);
                 const totalPaid = creditPmts.reduce((sum, p) => sum + p.amount, 0);
-                let totalDue = credit.principal;
-                if (credit.interestType === 'simple') {
-                    const months = Math.ceil((now - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
-                    totalDue = credit.principal + (credit.principal * (credit.interestRate / 100) * months);
-                } else if (credit.interestType === 'flat') {
-                    totalDue = credit.principal + credit.interestRate;
-                }
+                let totalDue = Finance.calcCreditTotalDue(credit);
                 
                 const balance = totalDue - totalPaid;
                 if (balance > 0) {
@@ -16566,8 +17028,8 @@ async function showPayrollSummary() {
                         notificationData.overdue.push({
                             type: 'debtor',
                             id: credit.id,
-                            name: credit.debtor,
-                            amount: balance,
+                            name: Finance.getDebtorName(credit),
+                            amount: Finance.calcCreditBalance(credit, creditPayments),
                             daysOverdue: daysSincePayment - 30,
                             dueDate: 'Every ' + dueDay + getOrdinalSuffix(dueDay)
                         });
@@ -16577,8 +17039,8 @@ async function showPayrollSummary() {
                         notificationData.due.push({
                             type: 'debtor',
                             id: credit.id,
-                            name: credit.debtor,
-                            amount: balance,
+                            name: Finance.getDebtorName(credit),
+                            amount: Finance.calcCreditBalance(credit, creditPayments),
                             daysUntilDue: 30 - daysSincePayment,
                             dueDate: 'Every ' + dueDay + getOrdinalSuffix(dueDay)
                         });
@@ -16598,9 +17060,8 @@ async function showPayrollSummary() {
             // Monthly rent collection
             const nowMonth = now.getMonth();
             const nowYear = now.getFullYear();
-            const monthlyPayments = payments.filter(p => dateMatchesMonth(p.date, nowYear, nowMonth));
-            const collected = monthlyPayments.reduce((sum, p) => sum + p.amount, 0);
-            const expectedRent = tenants.reduce((sum, t) => sum + t.rent, 0);
+            const collected = Finance.calcRentCollectedMonth(payments, nowYear, nowMonth);
+            const expectedRent = Finance.calcExpectedRent(tenants);
 
             document.getElementById('stat-collected').textContent = '₱' + collected.toLocaleString();
             document.getElementById('stat-expected').textContent = '₱' + expectedRent.toLocaleString();
@@ -16639,13 +17100,7 @@ async function showPayrollSummary() {
             let overallCreditCollected = creditPayments.reduce((sum, p) => sum + p.amount, 0);
             
             credits.forEach(credit => {
-                let totalDue = credit.principal;
-                if (credit.interestType === 'simple') {
-                    const months = Math.ceil((now - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
-                    totalDue = credit.principal + (credit.principal * (credit.interestRate / 100) * months);
-                } else if (credit.interestType === 'flat') {
-                    totalDue = credit.principal + credit.interestRate;
-                }
+                let totalDue = Finance.calcCreditTotalDue(credit);
                 overallCreditDue += totalDue;
             });
 
@@ -16660,8 +17115,10 @@ async function showPayrollSummary() {
             }
 
             // Credit repaid this month
-            const monthlyCreditPayments = creditPayments.filter(p => dateMatchesMonth(p.date, nowYear, nowMonth));
-            const creditRepaid = monthlyCreditPayments.reduce((sum, p) => sum + p.amount, 0);
+            const creditRepaid = Finance.roundMoney(
+                creditPayments.filter(p => dateMatchesMonth(p.date, nowYear, nowMonth))
+                    .reduce((sum, p) => sum + Finance.safeNum(p.amount), 0)
+            );
             safeSetText('stat-credit-repaid', '₱' + creditRepaid.toLocaleString());
 
             // Other Income this month
@@ -16681,11 +17138,22 @@ async function showPayrollSummary() {
                     .reduce((sum, c) => sum + c.amount, 0);
             } catch (e) {}
 
-            // Update Other Income stat
-            safeSetText('stat-other-income', '₱' + otherIncomeThisMonth.toLocaleString());
+            // Add water sales to Other Income (match detail page)
+            let waterIncomeThisMonth = 0;
+            try {
+                const waterSalesAll = await dbGetAll('waterSales');
+                waterIncomeThisMonth = waterSalesAll
+                    .filter(s => dateMatchesMonth(s.date, nowYear, nowMonth))
+                    .reduce((sum, s) => sum + (s.amountPaid || 0), 0);
+            } catch(e) {}
+            const combinedOtherIncome = otherIncomeThisMonth + waterIncomeThisMonth;
 
-            // Total Income this month
-            const totalIncomeThisMonth = collected + creditRepaid + otherIncomeThisMonth;
+            // Update Other Income stat (includes water sales to match detail)
+            safeSetText('stat-other-income', '₱' + combinedOtherIncome.toLocaleString());
+
+            // Total Income this month (rent + credit + other + water)
+            const incomeBreakdown = Finance.calcIncomeMonth(payments, creditPayments, additionalIncome, waterSales || [], nowYear, nowMonth);
+            const totalIncomeThisMonth = Finance.roundMoney(incomeBreakdown.total);
             document.getElementById('stat-total-income').textContent = '₱' + totalIncomeThisMonth.toLocaleString();
 
             // Pending Charges
@@ -16721,12 +17189,13 @@ async function showPayrollSummary() {
                 monthlyCreditFill.className = 'progress-fill ' + (monthlyCreditPercent >= 100 ? 'success' : monthlyCreditPercent >= 50 ? 'warning' : 'danger');
             }
 
-            // Outstanding credits
-            safeSetText('stat-outstanding', '₱' + (overallCreditDue - overallCreditCollected).toLocaleString());
+            // Outstanding credits - sum of positive balances per credit (matches flashcard detail)
+            const outstandingCreditSum = Finance.calcTotalOutstandingCredit(credits, creditPayments);
+            safeSetText('stat-outstanding', '₱' + outstandingCreditSum.toLocaleString());
 
             // Monthly expenses and net income
             const monthlyExpenses = expenses.filter(e => e.date && e.date.startsWith(currentMonth));
-            const totalExpenses = monthlyExpenses.reduce((sum, e) => sum + e.amount, 0);
+            const totalExpenses = Finance.calcExpensesMonth(expenses, nowYear, nowMonth);
             const netIncome = collected + creditRepaid - totalExpenses;
             
             safeSetText('stat-expenses', '₱' + totalExpenses.toLocaleString());
@@ -17056,13 +17525,7 @@ async function showPayrollSummary() {
                 // Check if fully paid
                 const creditPmts = creditPayments.filter(p => p.creditId === credit.id);
                 const totalPaid = creditPmts.reduce((sum, p) => sum + p.amount, 0);
-                let totalDue = credit.principal;
-                if (credit.interestType === 'simple') {
-                    const months = Math.ceil((today - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
-                    totalDue = credit.principal + (credit.principal * (credit.interestRate / 100) * months);
-                } else if (credit.interestType === 'flat') {
-                    totalDue = credit.principal + credit.interestRate;
-                }
+                let totalDue = Finance.calcCreditTotalDue(credit);
                 
                 if (totalPaid >= totalDue) {
                     // Fully paid
@@ -17166,13 +17629,7 @@ async function showPayrollSummary() {
                 if (lentDate.getDate() === day) {
                     const creditPmts = creditPayments.filter(p => p.creditId === credit.id);
                     const totalPaid = creditPmts.reduce((sum, p) => sum + p.amount, 0);
-                    let totalDue = credit.principal;
-                    if (credit.interestType === 'simple') {
-                        const months = Math.ceil((today - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
-                        totalDue = credit.principal + (credit.principal * (credit.interestRate / 100) * months);
-                    } else if (credit.interestType === 'flat') {
-                        totalDue = credit.principal + credit.interestRate;
-                    }
+                    let totalDue = Finance.calcCreditTotalDue(credit);
                     
                     if (totalPaid < totalDue) {
                         hasItems = true;
@@ -17959,13 +18416,7 @@ async function showPayrollSummary() {
                 const payments = creditPayments.filter(p => p.creditId === credit.id);
                 const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
 
-                let totalDue = credit.principal;
-                if (credit.interestType === 'simple') {
-                    const months = Math.ceil((new Date() - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
-                    totalDue = credit.principal + (credit.principal * (credit.interestRate / 100) * months);
-                } else if (credit.interestType === 'flat') {
-                    totalDue = credit.principal + credit.interestRate;
-                }
+                let totalDue = Finance.calcCreditTotalDue(credit);
 
                 const balance = totalDue - totalPaid;
 
@@ -18679,78 +19130,89 @@ Lender/Manager
                 case 'due-soon':
                     titleText = '📅 Due Soon';
                     sectionName = 'tenants';
-                    const dueSoonTenants = tenants.filter(t => {
-                        if (t.status === 'inactive') return false;
-                        const dueDate = getNextDueDate(t);
-                        const daysUntil = Math.ceil((dueDate - now) / (1000 * 60 * 60 * 24));
-                        return daysUntil >= 0 && daysUntil <= 7;
+                    // Use EXACT same logic as dashboard card for guaranteed match
+                    const dueSoonList = [];
+                    const todayDayDS = now.getDate();
+                    const monthStrDS = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+                    tenants.forEach(t => {
+                        if ((t.status === 'inactive') || !(t.rent > 0)) return;
+                        const dueDayDS = t.dueDay || 5;
+                        const tenantPmtsDS = payments.filter(p => p.tenantId === t.id && (p.type === 'rent' || !p.type));
+                        const paidDS = tenantPmtsDS.some(p => p.monthCovered && 
+                            (p.monthCovered === monthStrDS || p.monthCovered.startsWith(monthStrDS)));
+                        if (!paidDS && todayDayDS >= dueDayDS - 3 && todayDayDS <= dueDayDS) {
+                            const prop = properties.find(p => p.id === t.propertyId);
+                            dueSoonList.push({ tenant: t, prop, daysUntil: dueDayDS - todayDayDS });
+                        }
                     });
-                    
                     html = `
                         <div style="background: var(--warning); color: white; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 15px;">
-                            <div style="font-size: 2rem; font-weight: bold;">${dueSoonTenants.length}</div>
-                            <div>Payments Due Within 7 Days</div>
+                            <div style="font-size: 2rem; font-weight: bold;">${dueSoonList.length}</div>
+                            <div>Payments Due Within 3 Days</div>
                         </div>
-                        ${dueSoonTenants.length === 0 ? '<p style="color: var(--text-secondary); text-align: center;">No payments due soon</p>' : 
-                            dueSoonTenants.map(t => {
-                                const prop = properties.find(p => p.id === t.propertyId);
-                                const dueDate = getNextDueDate(t);
-                                const daysUntil = Math.ceil((dueDate - now) / (1000 * 60 * 60 * 24));
-                                return `
-                                    <div class="list-item" style="cursor: pointer;" onclick="viewTenantDetails(${t.id}); hideModal('flashcard-detail-modal');">
-                                        <div class="item-info">
-                                            <strong>${t.name}</strong>
-                                            <div style="font-size: 0.85rem; color: var(--text-secondary);">
-                                                ${prop ? prop.name : ''} • Due: ${dueDate.toLocaleDateString()} (${daysUntil} days)
-                                            </div>
+                        ${dueSoonList.length === 0
+                            ? '<p style="color: var(--text-secondary); text-align: center; padding: 20px;">No payments due soon 🎉</p>'
+                            : dueSoonList.map(({tenant:t, prop, daysUntil}) => `
+                                <div class="list-item" style="cursor:pointer;" onclick="viewTenantDetails(${t.id}); hideModal('flashcard-detail-modal');">
+                                    <div class="item-info">
+                                        <strong>${t.name}</strong>
+                                        <div style="font-size:0.85rem;color:var(--text-secondary);">
+                                            ${prop ? prop.name : 'No property'} • Due: ${t.dueDay || 5}${getOrdinal(t.dueDay||5)} • ${daysUntil === 0 ? 'Due TODAY' : daysUntil + ' day(s) left'}
                                         </div>
-                                        <span class="badge badge-warning">₱${t.rent.toLocaleString()}</span>
                                     </div>
-                                `;
-                            }).join('')}
+                                    <span class="badge badge-warning">₱${(t.rent||0).toLocaleString()}</span>
+                                </div>
+                            `).join('')}
                     `;
                     break;
                     
                 case 'overdue':
                     titleText = '⚠️ Overdue Payments';
                     sectionName = 'tenants';
-                    // Use same notificationData calculated by loadDashboard for consistency
-                    const overdueItems = notificationData ? notificationData.overdue : [];
-                    // Also recalc directly for accuracy: tenants unpaid past their due day
-                    const overdueList = [];
-                    const todayDay = now.getDate();
+                    // EXACT same logic as updateDashboard
+                    const overdueListFC = [];
+                    const todayDayOV = now.getDate();
+                    const monthStrOV = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
                     tenants.forEach(t => {
-                        if (t.status === 'inactive') return;
-                        const dueDay = t.dueDay || 1;
-                        const monthStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
-                        const paidThisMonth = payments.some(p => p.tenantId === t.id && 
-                            (p.monthCovered === monthStr || (p.date && p.date.startsWith(monthStr))));
-                        if (!paidThisMonth && todayDay > dueDay) {
+                        if (t.status === 'inactive' || !(t.rent > 0)) return;
+                        const dueDayOV = t.dueDay || 5;
+                        const tenantPmtsOV = payments.filter(p => p.tenantId === t.id && (p.type === 'rent' || !p.type));
+                        const paidOV = tenantPmtsOV.some(p => p.monthCovered && 
+                            (p.monthCovered === monthStrOV || p.monthCovered.startsWith(monthStrOV)));
+                        if (!paidOV && todayDayOV > dueDayOV) {
                             const prop = properties.find(p => p.id === t.propertyId);
-                            overdueList.push({ tenant: t, prop, daysOverdue: todayDay - dueDay });
+                            overdueListFC.push({ tenant: t, prop, daysOverdue: todayDayOV - dueDayOV });
                         }
                     });
-                    // Add overdue credits
-                    const overdueCredits = [];
+                    // Overdue debtors - EXACT same logic as dashboard (daysSincePayment > 30)
+                    const overdueDebtorsFC = [];
                     credits.forEach(c => {
-                        const totalPaid = creditPayments.filter(p => p.creditId === c.id).reduce((s,p) => s+p.amount, 0);
-                        const totalDue = (c.principal||0) + (c.interest||0);
-                        if (totalPaid < totalDue) {
-                            const lastPmt = creditPayments.filter(p=>p.creditId===c.id).sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
-                            const daysSince = lastPmt ? Math.floor((now - new Date(lastPmt.date))/(1000*60*60*24)) : 999;
-                            if (daysSince > 30) overdueCredits.push({ credit: c, balance: totalDue - totalPaid, daysSince });
+                        const creditPmtsOV = creditPayments.filter(p => p.creditId === c.id);
+                        const totalPaidOV = creditPmtsOV.reduce((sum, p) => sum + p.amount, 0);
+                        let totalDueOV = c.principal || 0;
+                        if (c.interestType === 'simple' && c.interestRate && c.dateLent) {
+                            const months = Math.ceil((now - new Date(c.dateLent)) / (1000 * 60 * 60 * 24 * 30));
+                            totalDueOV = c.principal + (c.principal * (c.interestRate / 100) * months);
+                        } else if (c.interestType === 'flat') {
+                            totalDueOV = c.principal + (c.interestRate || 0);
+                        } else {
+                            totalDueOV = c.principal + (c.interest || 0);
+                        }
+                        const balanceOV = totalDueOV - totalPaidOV;
+                        if (balanceOV > 0) {
+                            const lastPmt = creditPmtsOV.sort((a,b) => new Date(b.date)-new Date(a.date))[0];
+                            const daysSince = lastPmt ? Math.floor((now-new Date(lastPmt.date))/(1000*60*60*24)) : 999;
+                            if (daysSince > 30) overdueDebtorsFC.push({ credit: c, balance: balanceOV, daysSince });
                         }
                     });
-                    const totalOverdue = overdueList.length + overdueCredits.length;
-                    
+                    const totalOvFC = overdueListFC.length + overdueDebtorsFC.length;
                     html = `
                         <div style="background: var(--danger); color: white; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 15px;">
-                            <div style="font-size: 2rem; font-weight: bold;">${totalOverdue}</div>
-                            <div>Overdue Payments</div>
+                            <div style="font-size: 2rem; font-weight: bold;">${totalOvFC}</div>
+                            <div>Total Overdue (${overdueListFC.length} tenants + ${overdueDebtorsFC.length} debtors)</div>
                         </div>
-                        ${totalOverdue === 0 ? '<p style="color: var(--text-secondary); text-align: center;">No overdue payments! 🎉</p>' : ''}
-                        ${overdueList.length > 0 ? '<h4 style="margin:10px 0 8px;">🏠 Overdue Tenants</h4>' : ''}
-                        ${overdueList.map(({tenant:t, prop, daysOverdue}) => `
+                        ${overdueListFC.length > 0 ? '<h4 style="margin:10px 0 8px;">🏠 Overdue Tenants</h4>' : ''}
+                        ${overdueListFC.map(({tenant:t, prop, daysOverdue}) => `
                             <div class="list-item" style="cursor:pointer;border-left:3px solid var(--danger);" onclick="viewTenantDetails(${t.id}); hideModal('flashcard-detail-modal');">
                                 <div class="item-info">
                                     <strong>${t.name}</strong>
@@ -18759,59 +19221,83 @@ Lender/Manager
                                 <span class="badge badge-danger">₱${(t.rent||0).toLocaleString()}</span>
                             </div>
                         `).join('')}
-                        ${overdueCredits.length > 0 ? '<h4 style="margin:10px 0 8px;">💳 Overdue Debtors</h4>' : ''}
-                        ${overdueCredits.map(({credit:c, balance, daysSince}) => `
+                        ${overdueDebtorsFC.length > 0 ? '<h4 style="margin:10px 0 8px;">💳 Overdue Debtors</h4>' : ''}
+                        ${overdueDebtorsFC.map(({credit:c, balance, daysSince}) => `
                             <div class="list-item" style="cursor:pointer;border-left:3px solid var(--warning);" onclick="viewCreditDetails(${c.id}); hideModal('flashcard-detail-modal');">
                                 <div class="item-info">
-                                    <strong>${c.borrowerName || c.debtor}</strong>
-                                    <div style="font-size:0.85rem;color:var(--warning);">Last payment ${daysSince} days ago</div>
+                                    <strong>${c.debtor||c.borrowerName||c.debtorName||'Unknown'}</strong>
+                                    <div style="font-size:0.85rem;color:var(--warning);">Last payment: ${daysSince >= 999 ? 'never' : daysSince + ' days ago'} • Balance: ₱${balance.toLocaleString()}</div>
                                 </div>
                                 <span class="badge badge-warning">₱${balance.toLocaleString()}</span>
                             </div>
                         `).join('')}
+                        ${totalOvFC === 0 ? '<p style="color:var(--text-secondary);text-align:center;padding:20px;">No overdue payments! 🎉</p>' : ''}
                     `;
                     break;
                     
                 case 'rent-collected':
                     titleText = '✅ Rent Collected This Month';
                     sectionName = 'tenants';
-                    const monthPayments = payments.filter(p => {
-                        const pDate = new Date(p.date);
-                        return pDate.getMonth() === currentMonth && pDate.getFullYear() === currentYear;
-                    });
+                    const monthPayments = payments.filter(p => dateMatchesMonth(p.date, currentYear, currentMonth));
                     const totalCollected = monthPayments.reduce((sum, p) => sum + p.amount, 0);
                     
+                    // Per-tenant paid/unpaid breakdown
+                    const activeTenantsPaid = tenants.filter(t => t.status !== 'inactive' && (t.rent||0) > 0);
+                    const paidTenants = activeTenantsPaid.filter(t => 
+                        monthPayments.some(p => p.tenantId === t.id));
+                    const unpaidTenants = activeTenantsPaid.filter(t => 
+                        !monthPayments.some(p => p.tenantId === t.id));
+                    
                     html = `
-                        <div style="background: var(--success); color: white; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 15px;">
-                            <div style="font-size: 2rem; font-weight: bold;">₱${totalCollected.toLocaleString()}</div>
-                            <div>Total Rent Collected</div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:15px;">
+                            <div style="background:var(--success);color:white;padding:15px;border-radius:8px;text-align:center;">
+                                <div style="font-size:1.8rem;font-weight:bold;">₱${totalCollected.toLocaleString()}</div>
+                                <div>Collected (${paidTenants.length} tenants)</div>
+                            </div>
+                            <div style="background:var(--warning);color:white;padding:15px;border-radius:8px;text-align:center;">
+                                <div style="font-size:1.8rem;font-weight:bold;">${unpaidTenants.length}</div>
+                                <div>Not Yet Paid</div>
+                            </div>
                         </div>
-                        <h4 style="margin: 15px 0 10px 0;">Recent Payments (${monthPayments.length})</h4>
-                        ${monthPayments.length === 0 ? '<p style="color: var(--text-secondary); text-align: center;">No rent payments this month</p>' : 
-                            monthPayments.sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 20).map(p => {
+                        ${monthPayments.length > 0 ? '<h4 style="margin:10px 0 8px;">✅ Payments This Month</h4>' : ''}
+                        ${monthPayments.length === 0 ? '<p style="color:var(--text-secondary);text-align:center;">No rent payments this month</p>' : 
+                            monthPayments.sort((a,b) => new Date(b.date) - new Date(a.date)).map(p => {
                                 const tenant = tenants.find(t => t.id === p.tenantId);
-                                return `
-                                    <div class="list-item">
+                                const prop = tenant ? properties.find(pr => pr.id === tenant.propertyId) : null;
+                                return \`
+                                    <div class="list-item" style="cursor:pointer;" onclick="viewTenantDetails(${p.tenantId}); hideModal('flashcard-detail-modal');">
                                         <div class="item-info">
-                                            <strong>${tenant ? tenant.name : 'Unknown'}</strong>
-                                            <div style="font-size: 0.85rem; color: var(--text-secondary);">
-                                                ${new Date(p.date).toLocaleDateString()} • ${p.paymentMethod || p.method || 'Cash'}
+                                            <strong>\${tenant ? tenant.name : 'Unknown Tenant'}</strong>
+                                            <div style="font-size:0.85rem;color:var(--text-secondary);">
+                                                \${prop ? prop.name + ' • ' : ''}\${new Date(p.date).toLocaleDateString()} • \${p.monthCovered || p.date?.slice(0,7) || ''} • \${p.paymentMethod || p.method || 'Cash'}
                                             </div>
                                         </div>
-                                        <span class="badge badge-success">₱${p.amount.toLocaleString()}</span>
+                                        <span class="badge badge-success">₱\${(p.amount||0).toLocaleString()}</span>
                                     </div>
-                                `;
+                                \`;
                             }).join('')}
+                        ${unpaidTenants.length > 0 ? '<h4 style="margin:15px 0 8px;">⏳ Not Yet Paid</h4>' : ''}
+                        ${unpaidTenants.map(t => {
+                            const prop = properties.find(p => p.id === t.propertyId);
+                            return \`
+                                <div class="list-item" style="cursor:pointer;border-left:3px solid var(--warning);" onclick="viewTenantDetails(\${t.id}); hideModal('flashcard-detail-modal');">
+                                    <div class="item-info">
+                                        <strong>\${t.name}</strong>
+                                        <div style="font-size:0.85rem;color:var(--text-secondary);">
+                                            \${prop ? prop.name : ''} • Due: \${t.dueDay||1}\${getOrdinal(t.dueDay||1)}
+                                        </div>
+                                    </div>
+                                    <span class="badge badge-warning">₱\${(t.rent||0).toLocaleString()}</span>
+                                </div>
+                            \`;
+                        }).join('')}
                     `;
                     break;
                     
                 case 'credit-repaid':
                     titleText = '💳 Credit Repaid This Month';
                     sectionName = 'credits';
-                    const monthCreditPayments = creditPayments.filter(p => {
-                        const pDate = new Date(p.date);
-                        return pDate.getMonth() === currentMonth && pDate.getFullYear() === currentYear;
-                    });
+                    const monthCreditPayments = creditPayments.filter(p => dateMatchesMonth(p.date, currentYear, currentMonth));
                     const totalCreditRepaid = monthCreditPayments.reduce((sum, p) => sum + p.amount, 0);
                     
                     html = `
@@ -18823,12 +19309,13 @@ Lender/Manager
                         ${monthCreditPayments.length === 0 ? '<p style="color: var(--text-secondary); text-align: center;">No credit repayments this month</p>' : 
                             monthCreditPayments.sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 20).map(p => {
                                 const credit = credits.find(c => c.id === p.creditId);
+                                const debtorName = credit ? (credit.debtor || credit.borrowerName || credit.debtorName || 'Unknown') : 'Unknown';
                                 return `
-                                    <div class="list-item">
+                                    <div class="list-item" style="cursor:pointer;" onclick="viewCreditDetails(${p.creditId}); hideModal('flashcard-detail-modal');">
                                         <div class="item-info">
-                                            <strong>${credit ? credit.borrowerName : 'Unknown'}</strong>
+                                            <strong>${debtorName}</strong>
                                             <div style="font-size: 0.85rem; color: var(--text-secondary);">
-                                                ${new Date(p.date).toLocaleDateString()}
+                                                ${new Date(p.date).toLocaleDateString()} • ${p.paymentMethod || p.method || 'Cash'}
                                             </div>
                                         </div>
                                         <span class="badge badge-info">₱${p.amount.toLocaleString()}</span>
@@ -18841,16 +19328,10 @@ Lender/Manager
                 case 'other-income':
                     titleText = '💵 Other Income This Month';
                     sectionName = 'settings';
-                    const monthOtherIncome = additionalIncome.filter(i => {
-                        const iDate = new Date(i.date);
-                        return iDate.getMonth() === currentMonth && iDate.getFullYear() === currentYear;
-                    });
+                    const monthOtherIncome = additionalIncome.filter(i => dateMatchesMonth(i.date, currentYear, currentMonth));
                     
                     // Add water sales
-                    const monthWaterSales = waterSales.filter(s => {
-                        const sDate = new Date(s.date);
-                        return sDate.getMonth() === currentMonth && sDate.getFullYear() === currentYear && !s.voided;
-                    });
+                    const monthWaterSales = waterSales.filter(s => dateMatchesMonth(s.date, currentYear, currentMonth) && !s.voided);
                     const waterTotal = monthWaterSales.reduce((sum, s) => sum + (s.amountPaid || 0), 0);
                     const otherTotal = monthOtherIncome.reduce((sum, i) => sum + i.amount, 0);
                     
@@ -18889,22 +19370,10 @@ Lender/Manager
                 case 'total-income':
                     titleText = '📊 Total Income This Month';
                     sectionName = 'dashboard';
-                    const mPayments = payments.filter(p => {
-                        const pDate = new Date(p.date);
-                        return pDate.getMonth() === currentMonth && pDate.getFullYear() === currentYear;
-                    });
-                    const mCreditPayments = creditPayments.filter(p => {
-                        const pDate = new Date(p.date);
-                        return pDate.getMonth() === currentMonth && pDate.getFullYear() === currentYear;
-                    });
-                    const mOtherIncome = additionalIncome.filter(i => {
-                        const iDate = new Date(i.date);
-                        return iDate.getMonth() === currentMonth && iDate.getFullYear() === currentYear;
-                    });
-                    const mWaterSales = waterSales.filter(s => {
-                        const sDate = new Date(s.date);
-                        return sDate.getMonth() === currentMonth && sDate.getFullYear() === currentYear && !s.voided;
-                    });
+                    const mPayments = payments.filter(p => dateMatchesMonth(p.date, currentYear, currentMonth));
+                    const mCreditPayments = creditPayments.filter(p => dateMatchesMonth(p.date, currentYear, currentMonth));
+                    const mOtherIncome = additionalIncome.filter(i => dateMatchesMonth(i.date, currentYear, currentMonth));
+                    const mWaterSales = waterSales.filter(s => dateMatchesMonth(s.date, currentYear, currentMonth) && !s.voided);
                     
                     const rentTotal = mPayments.reduce((sum, p) => sum + p.amount, 0);
                     const creditTotal = mCreditPayments.reduce((sum, p) => sum + p.amount, 0);
@@ -18974,26 +19443,39 @@ Lender/Manager
                 case 'outstanding-credit':
                     titleText = '💰 Outstanding Credit';
                     sectionName = 'credits';
+                    // Use same interest calculation as dashboard card
                     let totalOutstanding = 0;
                     const outstandingCredits = credits.map(c => {
                         const totalPaid = creditPayments.filter(p => p.creditId === c.id).reduce((sum, p) => sum + p.amount, 0);
-                        const balance = (c.principal + (c.interest || 0)) - totalPaid;
+                        // Match card formula: account for interest type
+                        let totalDue = c.principal || 0;
+                        if (c.interestType === 'simple' && c.interestRate && c.dateLent) {
+                            const mths = Math.ceil((now - new Date(c.dateLent)) / (1000 * 60 * 60 * 24 * 30));
+                            totalDue = c.principal + (c.principal * (c.interestRate / 100) * mths);
+                        } else if (c.interestType === 'flat') {
+                            totalDue = c.principal + (c.interestRate || 0);
+                        } else {
+                            totalDue = c.principal + (c.interest || 0);
+                        }
+                        const balance = totalDue - totalPaid;
                         if (balance > 0) totalOutstanding += balance;
-                        return { ...c, balance, totalPaid };
-                    }).filter(c => c.balance > 0);
+                        return { ...c, balance, totalPaid, totalDue };
+                    }).filter(c => c.balance > 0)
+                      .sort((a, b) => b.balance - a.balance);
                     
                     html = `
                         <div style="background: var(--danger); color: white; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 15px;">
                             <div style="font-size: 2rem; font-weight: bold;">₱${totalOutstanding.toLocaleString()}</div>
                             <div>Total Outstanding from ${outstandingCredits.length} Debtors</div>
                         </div>
-                        ${outstandingCredits.length === 0 ? '<p style="color: var(--text-secondary); text-align: center;">No outstanding credits! 🎉</p>' : 
-                            outstandingCredits.map(c => `
-                                <div class="list-item" style="cursor: pointer;" onclick="viewCreditDetails(${c.id}); hideModal('flashcard-detail-modal');">
+                        ${outstandingCredits.length === 0
+                            ? '<p style="color:var(--text-secondary);text-align:center;padding:20px;">No outstanding credit! 🎉</p>'
+                            : outstandingCredits.map(c => `
+                                <div class="list-item" style="cursor:pointer;" onclick="viewCreditDetails(${c.id}); hideModal('flashcard-detail-modal');">
                                     <div class="item-info">
-                                        <strong>${c.borrowerName}</strong>
-                                        <div style="font-size: 0.85rem; color: var(--text-secondary);">
-                                            Principal: ₱${c.principal.toLocaleString()} • Paid: ₱${c.totalPaid.toLocaleString()}
+                                        <strong>${c.borrowerName || c.debtorName || 'Unknown'}</strong>
+                                        <div style="font-size:0.85rem;color:var(--text-secondary);">
+                                            Principal: ₱${(c.principal||0).toLocaleString()} • Paid: ₱${c.totalPaid.toLocaleString()}
                                         </div>
                                     </div>
                                     <span class="badge badge-danger">₱${c.balance.toLocaleString()}</span>
@@ -19005,47 +19487,76 @@ Lender/Manager
                 case 'pending-charges':
                     titleText = '⏳ Pending Charges';
                     sectionName = 'tenants';
-                    // This would be additional charges not yet paid
+                    const pendingChargesList = await dbGetAll('clientCharges');
+                    const pendingOnly = pendingChargesList.filter(c => c.status === 'pending');
+                    const pendingTotalAmt = pendingOnly.reduce((sum, c) => sum + (c.amount || 0), 0);
+                    const allTenantsList = await dbGetAll('tenants');
+                    const allCreditsList = await dbGetAll('credits');
+                    const allEmpList = await dbGetAll('employees');
                     html = `
                         <div style="background: var(--warning); color: white; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 15px;">
-                            <div style="font-size: 2rem; font-weight: bold;">₱0</div>
-                            <div>Pending Charges</div>
+                            <div style="font-size: 2rem; font-weight: bold;">₱${pendingTotalAmt.toLocaleString()}</div>
+                            <div>Total Pending Charges (${pendingOnly.length})</div>
                         </div>
-                        <p style="color: var(--text-secondary); text-align: center;">No pending charges at this time.</p>
+                        ${pendingOnly.length === 0 ? '<p style="color: var(--text-secondary); text-align: center; padding: 20px;">No pending charges at this time.</p>' :
+                            pendingOnly.map(c => {
+                                const clientName = c.clientType === 'tenant' ? (allTenantsList.find(t => t.id === c.clientId) || {}).name :
+                                                   c.clientType === 'credit' ? (allCreditsList.find(x => x.id === c.clientId) || {}).borrowerName :
+                                                   c.clientType === 'employee' ? (allEmpList.find(e => e.id === c.clientId) || {}).name : 'Unknown';
+                                return \`<div class="list-item" style="border-left: 3px solid var(--warning);">
+                                    <div class="item-info">
+                                        <strong>\${clientName || 'Unknown'}</strong>
+                                        <div style="font-size:0.85rem;color:var(--text-secondary);">\${c.description || c.type || 'Charge'} • \${c.date || ''}</div>
+                                    </div>
+                                    <span class="badge badge-warning">₱\${(c.amount||0).toLocaleString()}</span>
+                                </div>\`;
+                            }).join('')}
                     `;
                     break;
                     
                 case 'total-receivables':
                     titleText = '💰 Total Receivables';
                     sectionName = 'dashboard';
-                    const activeTenantList = tenants.filter(t => t.status !== 'inactive');
-                    const expectedRent = activeTenantList.reduce((sum, t) => sum + t.rent, 0);
-                    let outstandingCredit = 0;
+                    // Outstanding rent = expected - collected this month
+                    const activeTenantList2 = tenants.filter(t => t.status !== 'inactive');
+                    const expectedRentTotal = activeTenantList2.reduce((sum, t) => sum + (t.rent||0), 0);
+                    const collectedThisMonth2 = payments.filter(p => dateMatchesMonth(p.date, currentYear, currentMonth))
+                        .reduce((sum, p) => sum + (p.amount||0), 0);
+                    const outstandingRent2 = Math.max(0, expectedRentTotal - collectedThisMonth2);
+                    // Outstanding credit
+                    let outstandingCredit2 = 0;
                     credits.forEach(c => {
-                        const totalPaid = creditPayments.filter(p => p.creditId === c.id).reduce((sum, p) => sum + p.amount, 0);
-                        const balance = (c.principal + (c.interest || 0)) - totalPaid;
-                        if (balance > 0) outstandingCredit += balance;
+                        const totalPaid2 = creditPayments.filter(p => p.creditId === c.id).reduce((sum, p) => sum+(p.amount||0), 0);
+                        const bal2 = (c.principal||0) + (c.interest||0) - totalPaid2;
+                        if (bal2 > 0) outstandingCredit2 += bal2;
                     });
-                    const totalReceivables = expectedRent + outstandingCredit;
-                    
+                    // Pending charges
+                    const pendingChargesAll = await dbGetAll('clientCharges');
+                    const pendingChargesAmt2 = pendingChargesAll.filter(c => c.status === 'pending')
+                        .reduce((sum, c) => sum + (c.amount||0), 0);
+                    const totalReceivables2 = outstandingRent2 + outstandingCredit2 + pendingChargesAmt2;
                     html = `
-                        <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 15px;">
-                            <div style="font-size: 2.5rem; font-weight: bold;">₱${totalReceivables.toLocaleString()}</div>
+                        <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 15px;">
+                            <div style="font-size: 2.5rem; font-weight: bold;">₱${totalReceivables2.toLocaleString()}</div>
                             <div>Total Receivables</div>
                         </div>
                         <div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                                <span>🏠 Expected Rent</span>
-                                <strong>₱${expectedRent.toLocaleString()}</strong>
+                            <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+                                <span>🏠 Outstanding Rent</span>
+                                <strong>₱${outstandingRent2.toLocaleString()}</strong>
                             </div>
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                            <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
                                 <span>💳 Outstanding Credit</span>
-                                <strong>₱${outstandingCredit.toLocaleString()}</strong>
+                                <strong>₱${outstandingCredit2.toLocaleString()}</strong>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+                                <span>⏳ Pending Charges</span>
+                                <strong>₱${pendingChargesAmt2.toLocaleString()}</strong>
                             </div>
                             <hr style="border-color: var(--border-color); margin: 10px 0;">
-                            <div style="display: flex; justify-content: space-between; font-size: 1.1rem;">
+                            <div style="display:flex;justify-content:space-between;font-size:1.1rem;">
                                 <strong>TOTAL RECEIVABLES</strong>
-                                <strong style="color: var(--danger);">₱${totalReceivables.toLocaleString()}</strong>
+                                <strong style="color:var(--danger);">₱${totalReceivables2.toLocaleString()}</strong>
                             </div>
                         </div>
                     `;
@@ -19198,24 +19709,32 @@ Lender/Manager
                     
                 case 'credits':
                     titleText = '💳 Water Credits';
-                    const creditCustomers = waterCustomers.filter(c => (c.balance || 0) > 0);
-                    const totalCredit = creditCustomers.reduce((sum, c) => sum + (c.balance || 0), 0);
+                    // Recalculate from sales (same as card) for accuracy
+                    let totalCreditCalc = 0;
+                    const creditCustList = waterCustomers.map(c => {
+                        const custSales = waterSales.filter(s => s.customerId === c.id);
+                        const unpaidBal = custSales
+                            .filter(s => s.status === 'credit' || s.status === 'partial')
+                            .reduce((sum, s) => sum + (s.balance || 0), 0);
+                        totalCreditCalc += unpaidBal;
+                        return { ...c, computedBalance: unpaidBal };
+                    }).filter(c => c.computedBalance > 0)
+                      .sort((a, b) => b.computedBalance - a.computedBalance);
                     
                     html = `
                         <div style="background: var(--warning); color: white; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 15px;">
-                            <div style="font-size: 2rem; font-weight: bold;">₱${totalCredit.toLocaleString()}</div>
-                            <div>Total Unpaid Credits from ${creditCustomers.length} Customers</div>
+                            <div style="font-size: 2rem; font-weight: bold;">₱${totalCreditCalc.toLocaleString()}</div>
+                            <div>Total Unpaid Credits from ${creditCustList.length} Customers</div>
                         </div>
-                        ${creditCustomers.length === 0 ? '<p style="color: var(--text-secondary); text-align: center;">No unpaid credits! 🎉</p>' : 
-                            creditCustomers.sort((a,b) => (b.balance||0) - (a.balance||0)).map(c => `
-                                <div class="list-item" style="cursor: pointer;" onclick="viewWaterCustomerDetails(${c.id}); hideModal('flashcard-detail-modal');">
+                        ${creditCustList.length === 0
+                            ? '<p style="color:var(--text-secondary);text-align:center;padding:20px;">No unpaid credits! 🎉</p>'
+                            : creditCustList.map(c => `
+                                <div class="list-item" style="cursor:pointer;" onclick="viewWaterCustomerDetails(${c.id}); hideModal('flashcard-detail-modal');">
                                     <div class="item-info">
                                         <strong>${c.name}</strong>
-                                        <div style="font-size: 0.85rem; color: var(--text-secondary);">
-                                            ${c.phone || 'No phone'}
-                                        </div>
+                                        <div style="font-size:0.85rem;color:var(--text-secondary);">${c.phone || 'No phone'}</div>
                                     </div>
-                                    <span class="badge badge-warning">₱${(c.balance || 0).toLocaleString()}</span>
+                                    <span class="badge badge-warning">₱${c.computedBalance.toLocaleString()}</span>
                                 </div>
                             `).join('')}
                     `;
@@ -21525,7 +22044,7 @@ function initReportsPage() {
             const monthEnd = `${currentMonth}-31`;
             
             const expenses = await dbGetAll('expenses');
-            const monthExpenses = expenses.filter(e => e.date >= monthStart && e.date <= monthEnd);
+            const monthExpenses = expenses.filter(e => e.date && e.date.startsWith(currentMonth));
             const totalMonth = monthExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
             
             // Group by category
@@ -21571,6 +22090,23 @@ function initReportsPage() {
                 </div>
             `;
             
+            // Add individual expense list
+            const listHtml = monthExpenses.length === 0 ? '' :
+                '<h4 style="margin:15px 0 8px;">📋 All Expenses This Month (' + monthExpenses.length + ')</h4>' +
+                monthExpenses.sort((a,b) => new Date(b.date)-new Date(a.date)).map(e => 
+                    '<div class="list-item">' +
+                        '<div class="item-info">' +
+                            '<strong>' + (e.description || e.category || 'Expense') + '</strong>' +
+                            '<div style="font-size:0.85rem;color:var(--text-secondary);">' +
+                                new Date(e.date).toLocaleDateString() + ' • ' + (e.category || 'other') +
+                            '</div>' +
+                        '</div>' +
+                        '<span class="badge badge-danger">₱' + (e.amount||0).toLocaleString() + '</span>' +
+                    '</div>'
+                ).join('');
+            
+            document.getElementById('financial-details-content').innerHTML += listHtml;
+
             if (Object.keys(categories).length > 0) {
                 createExpenseChart(categories);
             }
