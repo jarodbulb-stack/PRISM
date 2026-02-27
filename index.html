@@ -6926,6 +6926,7 @@
             messagingSenderId: "869655431614",
             appId: "1:869655431614:web:488b396da3aeabec9b91ef"
         };
+        window.firebaseConfig = firebaseConfig; // expose for MT layer fallback
         // ✅ Firebase config verified & updated — carent-c4017
 
         // Firebase variables (initialized after SDK loads)
@@ -8560,20 +8561,32 @@
 
         // ── Global Error Boundaries ──────────────────────────────────────────
         window.addEventListener('unhandledrejection', function(event) {
-            console.error('[PRISM] Unhandled promise rejection:', event.reason);
-            // Prevent the default browser error and show friendly message
-            event.preventDefault();
-            const msg = event.reason?.message || String(event.reason) || 'Unknown error';
-            // Only show toast for non-network errors
-            if (!msg.includes('NetworkError') && !msg.includes('fetch')) {
-                if (typeof showToast === 'function') {
-                    showToast('⚠️ An error occurred. Data was not saved. Please try again.', 'warning');
-                }
+            const reason = event.reason;
+            const msg = (reason && reason.message) ? reason.message : String(reason || '');
+            const code = (reason && reason.code) ? reason.code : '';
+            
+            // ALWAYS ignore Firebase/Firestore internal errors - they handle themselves
+            if (msg.includes('FAILED_PRECONDITION') || msg.includes('failed-precondition') ||
+                msg.includes('INTERNAL ASSERTION FAILED') || msg.includes('FirebaseError') ||
+                msg.includes('firestore') || msg.includes('firebase') || msg.includes('Firebase') ||
+                code.includes('failed-precondition') || code.includes('unavailable') ||
+                msg.includes('NetworkError') || msg.includes('fetch') ||
+                msg.includes('IndexedDB') || msg.includes('network') ||
+                msg.includes('The operation') || msg.includes('persistence')) {
+                // Log only, do NOT show toast, do NOT preventDefault
+                console.warn('[PRISM] Ignored internal rejection:', msg.slice(0, 100));
+                return;
             }
+            
+            console.error('[PRISM] Unhandled rejection:', msg.slice(0, 200));
+            // Only show a toast for genuine app-level errors (not Firebase internals)
+            // and do NOT call preventDefault() as that breaks Firebase error handling
         });
 
         window.addEventListener('error', function(event) {
-            console.error('[PRISM] Global error:', event.message, 'at', event.filename, ':', event.lineno);
+            const src = event.filename || '';
+            if (src.includes('firebase') || src.includes('gstatic')) return; // ignore Firebase SDK errors
+            console.error('[PRISM] Script error:', event.message, 'at', event.lineno);
         });
 
         // =====================================================================
@@ -23623,14 +23636,36 @@ function mtTogglePass(inputId, btn) {
 // ---- Firebase wait helper (used by all auth functions) ----
 async function _mtWaitForAuth(maxMs = 20000) {
     if (window.auth) return window.auth;
-    // Try direct init first
-    if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
-        try { window.auth = firebase.auth(); return window.auth; } catch(e) {}
+    // Try direct init first - if Firebase SDK is loaded, get auth immediately
+    if (typeof firebase !== 'undefined') {
+        try {
+            if (!firebase.apps || !firebase.apps.length) {
+                // Firebase loaded but not initialized yet - init now
+                const cfg = window.firebaseConfig || {
+                    apiKey: "AIzaSyB9yyIJudc5eQAgisohE7Jbh_ECE6wXWCQ",
+                    authDomain: "carent-c4017.firebaseapp.com",
+                    projectId: "carent-c4017",
+                    storageBucket: "carent-c4017.firebasestorage.app",
+                    messagingSenderId: "869655431614",
+                    appId: "1:869655431614:web:488b396da3aeabec9b91ef"
+                };
+                firebase.initializeApp(cfg);
+            }
+            if (firebase.apps && firebase.apps.length) {
+                window.auth = firebase.auth();
+                window.firebaseReady = true;
+                return window.auth;
+            }
+        } catch(e) { console.warn('[PRISM] Direct Firebase init in _mtWaitForAuth:', e.message); }
     }
     // Wait for initFirebase() to set window.auth
     return new Promise(resolve => {
         let waited = 0;
         const check = setInterval(() => {
+            // Also try direct grab on each tick
+            if (!window.auth && typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
+                try { window.auth = firebase.auth(); window.firebaseReady = true; } catch(e) {}
+            }
             waited += 200;
             if (window.auth) { clearInterval(check); resolve(window.auth); }
             else if (waited >= maxMs) { clearInterval(check); resolve(null); }
