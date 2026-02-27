@@ -4,7 +4,7 @@
 ║              PRISM — Property Rental Income Sales Mgmt           ║
 ║                  OMNIGRID ONLINE © 2026                          ║
 ╠══════════════════════════════════════════════════════════════════╣
-║  Version  : PRISM-v4.7.20260227 "IRONCLAD-DEBUG"                         ║
+║  Version  : PRISM-v4.8.20260227 "IRONCLAD-FINAL"                         ║
 ║  Released : 2026-02-27                                           ║
 ║  Lines    : 25,390                                            ║
 ║  Size     : 1785.5 KB                                            ║
@@ -25030,46 +25030,12 @@ async function mtAppLogout() {
 async function mtInit() {
     console.log('[MT] mtInit() starting...');
     try {
-    // Show landing immediately — don't wait for Firebase
-    mtHideLoading();
-    console.log('[MT] mtHideLoading() done');
-    
-    // Restore session immediately if local data exists (prevents flash of landing page)
-    const savedUser = localStorage.getItem('carent_current_user');
-    const savedOrg  = localStorage.getItem('mt_current_org');
-    
-    // Also check for Firebase-authenticated org session (Google login users)
-    const savedOrgId = localStorage.getItem('mt_current_org_id');
-    const savedOrgRole = localStorage.getItem('mt_current_org_role');
-    
-    if (savedUser && savedOrg) {
-        try {
-            const u = JSON.parse(savedUser);
-            const o = JSON.parse(savedOrg);
-            if (u && o && o.name) {
-                // Don't auto-restore if this looks like a super admin session —
-                // let Firebase onAuthStateChanged handle navigation to SA panel
-                const isSAEmail = MT.SUPER_ADMINS.map(e=>e.toLowerCase()).includes((u.email||'').toLowerCase());
-                if (isSAEmail) {
-                    mtShowLanding(); // wait for Firebase to confirm SA identity
-                } else {
-                    currentAppUser   = u;
-                    MT.currentOrg   = o;
-                    MT.currentOrgRole = u.role || 'admin';
-                    MT.currentUser  = { uid: 'local_' + (u.id||1), email: u.email||'local@prism.app', displayName: u.fullname };
-                    mtShowApp();
-                    mtUpdateOrgBadge();
-                    setTimeout(() => {
-                        if (typeof updateUserDisplay === 'function') updateUserDisplay();
-                        if (typeof loadDashboard === 'function') loadDashboard();
-                    }, 300);
-                }
-            }
-        } catch(e) { mtShowLanding(); }
-    } else {
-        console.log('[MT] No saved session — showing landing');
-        mtShowLanding();
-    }
+    // Initialize IndexedDB first so auth listener can use DB immediately
+    try { await initDB(); console.log('[MT] IndexedDB ready'); } catch(e) { console.warn('[MT] initDB failed:', e); }
+
+    // Navigation is handled entirely by setupFirebaseAuth() below.
+    // The auth state listener is the SINGLE source of truth for screen routing.
+    // The 2-second failsafe below catches any edge case where auth never fires.
 
     // Update auth page status when Firebase becomes ready
     const updateAuthStatus = () => {
@@ -25267,14 +25233,25 @@ async function mtInit() {
                 const localUser = localStorage.getItem('carent_current_user');
                 const localOrg  = localStorage.getItem('mt_current_org');
                 if (localUser && localOrg) {
-                    // Restore local session silently
+                    // Restore local session
                     try {
                         currentAppUser = JSON.parse(localUser);
                         MT.currentOrg  = JSON.parse(localOrg);
                         MT.currentOrgRole = currentAppUser.role || 'admin';
                         MT.currentUser = { uid: 'local_' + (currentAppUser.id||1), email: currentAppUser.email || 'local@prism.app', displayName: currentAppUser.fullname };
-                    } catch(e) {}
-                    // App already shown by mtInit — don't navigate again
+                        console.log('[MT] Local session restored — showing app');
+                        mtHideLoading();
+                        mtShowApp();
+                        mtUpdateOrgBadge();
+                        setTimeout(() => {
+                            if (typeof updateUserDisplay === 'function') updateUserDisplay();
+                            if (typeof loadDashboard === 'function') loadDashboard();
+                        }, 300);
+                    } catch(e) {
+                        console.warn('[MT] Local session restore failed:', e);
+                        mtHideLoading();
+                        mtShowLanding();
+                    }
                 } else {
                     mtHideLoading();
                     mtShowLanding();
@@ -25323,7 +25300,7 @@ window.addEventListener('DOMContentLoaded', () => {
             console.warn('[PRISM] Failsafe: No screen visible — showing landing page');
             mtShowLanding();
         }
-    }, 2000);
+    }, 3000);
 });
 
 
