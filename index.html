@@ -5810,9 +5810,18 @@
     <!-- Employee Detail Modal -->
     <div class="modal-overlay" id="employee-detail-modal">
         <div class="modal" style="max-width: 500px;">
-            <div class="modal-header">
-                <h3>👷 Employee Details</h3>
-                <button class="modal-close" onclick="hideModal('employee-detail-modal')">&times;</button>
+            <div class="modal-header" style="flex-direction:column;align-items:stretch;gap:8px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <h3 style="margin:0;">👷 Employee Details</h3>
+                    <button class="modal-close" onclick="hideModal('employee-detail-modal')">&times;</button>
+                </div>
+                <div id="emp-detail-quick-bar" style="display:none;gap:6px;flex-wrap:wrap;">
+                    <button class="btn btn-sm btn-secondary" id="emp-quick-edit" onclick="" style="flex:1;min-width:80px;">✏️ Edit Profile</button>
+                    <button class="btn btn-sm" id="emp-quick-bonus" onclick="" style="flex:1;min-width:70px;background:rgba(16,185,129,0.15);border:1px solid #10b981;color:#10b981;">🎁 Bonus</button>
+                    <button class="btn btn-sm" id="emp-quick-ot" onclick="" style="flex:1;min-width:70px;background:rgba(245,158,11,0.15);border:1px solid #f59e0b;color:#f59e0b;">⏰ OT</button>
+                    <button class="btn btn-sm" id="emp-quick-incentive" onclick="" style="flex:1;min-width:80px;background:rgba(99,102,241,0.15);border:1px solid #6366f1;color:#6366f1;">🏆 Incentive</button>
+                    <button class="btn btn-sm" id="emp-quick-advance" onclick="" style="flex:1;min-width:80px;background:rgba(239,68,68,0.12);border:1px solid #ef4444;color:#ef4444;">💳 Advance</button>
+                </div>
             </div>
             <div class="modal-body" id="employee-detail-content">
             </div>
@@ -12735,7 +12744,7 @@ async function loadWaterCustomers() {
                 
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
                     <h4>📅 Attendance Records (${empRecords.length})</h4>
-                    <button class="btn btn-sm btn-primary" onclick="showTimeRecordModal(${id},'${emp.name}')">+ Add</button>
+                    <button class="btn btn-sm btn-primary" onclick="showTimeRecordModal(${id},'${employee.name}')">+ Add</button>
                 </div>
                 <div style="max-height: 200px; overflow-y: auto; margin-bottom: 15px;">
             `;
@@ -12792,7 +12801,7 @@ async function loadWaterCustomers() {
             content += `
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;margin-top:4px;">
                     <h4>💵 Cash Advances (${empAdvances.length})</h4>
-                    <button class="btn btn-sm btn-warning" onclick="showCashAdvanceModal(${id},'${emp.name}')">+ Add</button>
+                    <button class="btn btn-sm btn-warning" onclick="showCashAdvanceModal(${id},'${employee.name}')">+ Add</button>
                 </div>
                 <div style="max-height:160px;overflow-y:auto;margin-bottom:15px;">
             `;
@@ -12807,7 +12816,7 @@ async function loadWaterCustomers() {
                                 <div class="list-item-title" style="font-size:0.85rem;">💵 ₱${(a.amount||0).toLocaleString()} — ${a.date||'No date'} ${deducted}</div>
                                 ${a.reason ? '<div class="list-item-subtitle" style="font-size:0.75rem;">'+a.reason+'</div>' : ''}
                             </div>
-                            <button onclick="editCashAdvance(${a.id},${id},'${emp.name}')" title="Edit" style="background:rgba(245,158,11,0.15);border:1px solid #f59e0b;color:#f59e0b;border-radius:6px;padding:3px 8px;font-size:0.75rem;cursor:pointer;">✏️</button>
+                            <button onclick="editCashAdvance(${a.id},${id},'${employee.name}')" title="Edit" style="background:rgba(245,158,11,0.15);border:1px solid #f59e0b;color:#f59e0b;border-radius:6px;padding:3px 8px;font-size:0.75rem;cursor:pointer;">✏️</button>
                             <button onclick="deleteCashAdvance(${a.id},${id})" title="Delete" style="background:rgba(239,68,68,0.12);border:1px solid #ef4444;color:#ef4444;border-radius:6px;padding:3px 8px;font-size:0.75rem;cursor:pointer;">🗑️</button>
                         </div>
                     `;
@@ -12832,13 +12841,13 @@ async function loadWaterCustomers() {
                 <div style="background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;padding:12px;margin-bottom:10px;">
                     <div style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">⚡ Quick Payroll Actions</div>
                     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
-                        <button class="btn btn-sm" onclick="showBonusModal(${id},'${emp.name}')" style="background:rgba(16,185,129,0.15);border:1px solid #10b981;color:#10b981;font-weight:600;padding:8px 4px;font-size:0.78rem;">🎁 Bonus</button>
-                        <button class="btn btn-sm" onclick="showOvertimeModal(${id},'${emp.name}')" style="background:rgba(245,158,11,0.15);border:1px solid #f59e0b;color:#f59e0b;font-weight:600;padding:8px 4px;font-size:0.78rem;">⏰ Overtime</button>
-                        <button class="btn btn-sm" onclick="showIncentiveModal(${id},'${emp.name}')" style="background:rgba(99,102,241,0.15);border:1px solid #6366f1;color:#6366f1;font-weight:600;padding:8px 4px;font-size:0.78rem;">🏆 Incentive</button>
+                        <button class="btn btn-sm" onclick="showBonusModal(${id},'${employee.name}')" style="background:rgba(16,185,129,0.15);border:1px solid #10b981;color:#10b981;font-weight:600;padding:8px 4px;font-size:0.78rem;">🎁 Bonus</button>
+                        <button class="btn btn-sm" onclick="showOvertimeModal(${id},'${employee.name}')" style="background:rgba(245,158,11,0.15);border:1px solid #f59e0b;color:#f59e0b;font-weight:600;padding:8px 4px;font-size:0.78rem;">⏰ Overtime</button>
+                        <button class="btn btn-sm" onclick="showIncentiveModal(${id},'${employee.name}')" style="background:rgba(99,102,241,0.15);border:1px solid #6366f1;color:#6366f1;font-weight:600;padding:8px 4px;font-size:0.78rem;">🏆 Incentive</button>
                     </div>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                         <button class="btn btn-sm btn-warning" onclick="addChargeToClient('employee', ${id})" style="font-weight:600;padding:8px 4px;font-size:0.78rem;">💵 Add Charge</button>
-                        <button class="btn btn-sm" onclick="showCashAdvanceModal(${id},'${emp.name}')" style="background:rgba(239,68,68,0.12);border:1px solid #ef4444;color:#ef4444;font-weight:600;padding:8px 4px;font-size:0.78rem;">💳 Cash Advance</button>
+                        <button class="btn btn-sm" onclick="showCashAdvanceModal(${id},'${employee.name}')" style="background:rgba(239,68,68,0.12);border:1px solid #ef4444;color:#ef4444;font-weight:600;padding:8px 4px;font-size:0.78rem;">💳 Cash Advance</button>
                     </div>
                 </div>
                 <div style="display: flex; gap: 10px;">
@@ -12855,6 +12864,29 @@ async function loadWaterCustomers() {
             }
             
             document.getElementById('employee-detail-content').innerHTML = content;
+
+            // Wire the quick-action bar in modal header
+            const qBar = document.getElementById('emp-detail-quick-bar');
+            if (qBar) {
+                qBar.style.display = 'flex';
+                const isAdminUser = currentAppUser && (currentAppUser.role === 'admin' || currentAppUser.role === 'owner');
+                // Edit Profile always visible to admin
+                const editBtn = document.getElementById('emp-quick-edit');
+                if (editBtn) {
+                    editBtn.onclick = () => editEmployee(id);
+                    editBtn.style.display = isAdminUser ? '' : 'none';
+                }
+                // Bonus / OT / Incentive / Advance — admin only
+                const bonusBtn = document.getElementById('emp-quick-bonus');
+                const otBtn    = document.getElementById('emp-quick-ot');
+                const incBtn   = document.getElementById('emp-quick-incentive');
+                const advBtn   = document.getElementById('emp-quick-advance');
+                if (bonusBtn)  { bonusBtn.onclick  = () => showBonusModal(id, employee.name);     bonusBtn.style.display  = isAdminUser ? '' : 'none'; }
+                if (otBtn)     { otBtn.onclick      = () => showOvertimeModal(id, employee.name);  otBtn.style.display     = isAdminUser ? '' : 'none'; }
+                if (incBtn)    { incBtn.onclick      = () => showIncentiveModal(id, employee.name);incBtn.style.display     = isAdminUser ? '' : 'none'; }
+                if (advBtn)    { advBtn.onclick      = () => showCashAdvanceModal(id, employee.name); advBtn.style.display  = isAdminUser ? '' : 'none'; }
+            }
+
             showModal('employee-detail-modal');
         }
 
