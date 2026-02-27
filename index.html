@@ -19243,55 +19243,48 @@ Lender/Manager
                     
                     // Per-tenant paid/unpaid breakdown
                     const activeTenantsPaid = tenants.filter(t => t.status !== 'inactive' && (t.rent||0) > 0);
-                    const paidTenants = activeTenantsPaid.filter(t => 
-                        monthPayments.some(p => p.tenantId === t.id));
-                    const unpaidTenants = activeTenantsPaid.filter(t => 
-                        !monthPayments.some(p => p.tenantId === t.id));
+                    const paidTenants = activeTenantsPaid.filter(t => monthPayments.some(p => p.tenantId === t.id));
+                    const unpaidTenants = activeTenantsPaid.filter(t => !monthPayments.some(p => p.tenantId === t.id));
                     
-                    html = `
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:15px;">
-                            <div style="background:var(--success);color:white;padding:15px;border-radius:8px;text-align:center;">
-                                <div style="font-size:1.8rem;font-weight:bold;">₱${totalCollected.toLocaleString()}</div>
-                                <div>Collected (${paidTenants.length} tenants)</div>
-                            </div>
-                            <div style="background:var(--warning);color:white;padding:15px;border-radius:8px;text-align:center;">
-                                <div style="font-size:1.8rem;font-weight:bold;">${unpaidTenants.length}</div>
-                                <div>Not Yet Paid</div>
-                            </div>
-                        </div>
-                        ${monthPayments.length > 0 ? '<h4 style="margin:10px 0 8px;">✅ Payments This Month</h4>' : ''}
-                        ${monthPayments.length === 0 ? '<p style="color:var(--text-secondary);text-align:center;">No rent payments this month</p>' : 
-                            monthPayments.sort((a,b) => new Date(b.date) - new Date(a.date)).map(p => {
-                                const tenant = tenants.find(t => t.id === p.tenantId);
-                                const prop = tenant ? properties.find(pr => pr.id === tenant.propertyId) : null;
-                                return \`
-                                    <div class="list-item" style="cursor:pointer;" onclick="viewTenantDetails(${p.tenantId}); hideModal('flashcard-detail-modal');">
-                                        <div class="item-info">
-                                            <strong>\${tenant ? tenant.name : 'Unknown Tenant'}</strong>
-                                            <div style="font-size:0.85rem;color:var(--text-secondary);">
-                                                \${prop ? prop.name + ' • ' : ''}\${new Date(p.date).toLocaleDateString()} • \${p.monthCovered || p.date?.slice(0,7) || ''} • \${p.paymentMethod || p.method || 'Cash'}
-                                            </div>
-                                        </div>
-                                        <span class="badge badge-success">₱\${(p.amount||0).toLocaleString()}</span>
-                                    </div>
-                                \`;
-                            }).join('')}
-                        ${unpaidTenants.length > 0 ? '<h4 style="margin:15px 0 8px;">⏳ Not Yet Paid</h4>' : ''}
-                        ${unpaidTenants.map(t => {
-                            const prop = properties.find(p => p.id === t.propertyId);
-                            return \`
-                                <div class="list-item" style="cursor:pointer;border-left:3px solid var(--warning);" onclick="viewTenantDetails(\${t.id}); hideModal('flashcard-detail-modal');">
-                                    <div class="item-info">
-                                        <strong>\${t.name}</strong>
-                                        <div style="font-size:0.85rem;color:var(--text-secondary);">
-                                            \${prop ? prop.name : ''} • Due: \${t.dueDay||1}\${getOrdinal(t.dueDay||1)}
-                                        </div>
-                                    </div>
-                                    <span class="badge badge-warning">₱\${(t.rent||0).toLocaleString()}</span>
-                                </div>
-                            \`;
-                        }).join('')}
-                    `;
+                    let rcHtml = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:15px;">'
+                        + '<div style="background:var(--success);color:white;padding:15px;border-radius:8px;text-align:center;">'
+                        + '<div style="font-size:1.8rem;font-weight:bold;">\u20B1' + totalCollected.toLocaleString() + '</div>'
+                        + '<div>Collected (' + paidTenants.length + ' tenants)</div></div>'
+                        + '<div style="background:var(--warning);color:white;padding:15px;border-radius:8px;text-align:center;">'
+                        + '<div style="font-size:1.8rem;font-weight:bold;">' + unpaidTenants.length + '</div>'
+                        + '<div>Not Yet Paid</div></div></div>';
+                    
+                    if (monthPayments.length > 0) rcHtml += '<h4 style="margin:10px 0 8px;">\u2705 Payments This Month</h4>';
+                    else rcHtml += '<p style="color:var(--text-secondary);text-align:center;">No rent payments this month</p>';
+                    
+                    monthPayments.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(p => {
+                        const tenant = tenants.find(t => t.id === p.tenantId);
+                        const prop = tenant ? properties.find(pr => pr.id === tenant.propertyId) : null;
+                        rcHtml += '<div class="list-item" style="cursor:pointer;" onclick="viewTenantDetails(' + p.tenantId + '); hideModal('flashcard-detail-modal');">'
+                            + '<div class="item-info">'
+                            + '<strong>' + (tenant ? tenant.name : 'Unknown Tenant') + '</strong>'
+                            + '<div style="font-size:0.85rem;color:var(--text-secondary);">'
+                            + (prop ? prop.name + ' &bull; ' : '') + new Date(p.date).toLocaleDateString()
+                            + ' &bull; ' + (p.monthCovered || (p.date ? p.date.slice(0,7) : '') || '') 
+                            + ' &bull; ' + (p.paymentMethod || p.method || 'Cash')
+                            + '</div></div>'
+                            + '<span class="badge badge-success">\u20B1' + (p.amount||0).toLocaleString() + '</span>'
+                            + '</div>';
+                    });
+                    
+                    if (unpaidTenants.length > 0) rcHtml += '<h4 style="margin:15px 0 8px;">\u23F3 Not Yet Paid</h4>';
+                    unpaidTenants.forEach(t => {
+                        const prop = properties.find(p => p.id === t.propertyId);
+                        rcHtml += '<div class="list-item" style="cursor:pointer;border-left:3px solid var(--warning);" onclick="viewTenantDetails(' + t.id + '); hideModal('flashcard-detail-modal');">'
+                            + '<div class="item-info">'
+                            + '<strong>' + t.name + '</strong>'
+                            + '<div style="font-size:0.85rem;color:var(--text-secondary);">'
+                            + (prop ? prop.name : '') + ' &bull; Due: ' + (t.dueDay||1) + (typeof getOrdinal === 'function' ? getOrdinal(t.dueDay||1) : '')
+                            + '</div></div>'
+                            + '<span class="badge badge-warning">\u20B1' + (t.rent||0).toLocaleString() + '</span>'
+                            + '</div>';
+                    });
+                    html = rcHtml;
                     break;
                     
                 case 'credit-repaid':
@@ -19485,7 +19478,7 @@ Lender/Manager
                     break;
                     
                 case 'pending-charges':
-                    titleText = '⏳ Pending Charges';
+                    titleText = '\u23F3 Pending Charges';
                     sectionName = 'tenants';
                     const pendingChargesList = await dbGetAll('clientCharges');
                     const pendingOnly = pendingChargesList.filter(c => c.status === 'pending');
@@ -19493,25 +19486,29 @@ Lender/Manager
                     const allTenantsList = await dbGetAll('tenants');
                     const allCreditsList = await dbGetAll('credits');
                     const allEmpList = await dbGetAll('employees');
-                    html = `
-                        <div style="background: var(--warning); color: white; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 15px;">
-                            <div style="font-size: 2rem; font-weight: bold;">₱${pendingTotalAmt.toLocaleString()}</div>
-                            <div>Total Pending Charges (${pendingOnly.length})</div>
-                        </div>
-                        ${pendingOnly.length === 0 ? '<p style="color: var(--text-secondary); text-align: center; padding: 20px;">No pending charges at this time.</p>' :
-                            pendingOnly.map(c => {
-                                const clientName = c.clientType === 'tenant' ? (allTenantsList.find(t => t.id === c.clientId) || {}).name :
-                                                   c.clientType === 'credit' ? (allCreditsList.find(x => x.id === c.clientId) || {}).borrowerName :
-                                                   c.clientType === 'employee' ? (allEmpList.find(e => e.id === c.clientId) || {}).name : 'Unknown';
-                                return \`<div class="list-item" style="border-left: 3px solid var(--warning);">
-                                    <div class="item-info">
-                                        <strong>\${clientName || 'Unknown'}</strong>
-                                        <div style="font-size:0.85rem;color:var(--text-secondary);">\${c.description || c.type || 'Charge'} • \${c.date || ''}</div>
-                                    </div>
-                                    <span class="badge badge-warning">₱\${(c.amount||0).toLocaleString()}</span>
-                                </div>\`;
-                            }).join('')}
-                    `;
+                    
+                    let pcHtml = '<div style="background:var(--warning);color:white;padding:15px;border-radius:8px;text-align:center;margin-bottom:15px;">'
+                        + '<div style="font-size:2rem;font-weight:bold;">\u20B1' + pendingTotalAmt.toLocaleString() + '</div>'
+                        + '<div>Total Pending Charges (' + pendingOnly.length + ')</div></div>';
+                    
+                    if (pendingOnly.length === 0) {
+                        pcHtml += '<p style="color:var(--text-secondary);text-align:center;padding:20px;">No pending charges at this time.</p>';
+                    } else {
+                        pendingOnly.forEach(c => {
+                            const clientName = c.clientType === 'tenant' ? (allTenantsList.find(t => t.id === c.clientId) || {}).name
+                                             : c.clientType === 'credit' ? (allCreditsList.find(x => x.id === c.clientId) || {}).borrowerName
+                                             : c.clientType === 'employee' ? (allEmpList.find(e => e.id === c.clientId) || {}).name : 'Unknown';
+                            pcHtml += '<div class="list-item" style="border-left:3px solid var(--warning);">'
+                                + '<div class="item-info">'
+                                + '<strong>' + (clientName || 'Unknown') + '</strong>'
+                                + '<div style="font-size:0.85rem;color:var(--text-secondary);">'
+                                + (c.description || c.type || 'Charge') + ' &bull; ' + (c.date || '')
+                                + '</div></div>'
+                                + '<span class="badge badge-warning">\u20B1' + (c.amount||0).toLocaleString() + '</span>'
+                                + '</div>';
+                        });
+                    }
+                    html = pcHtml;
                     break;
                     
                 case 'total-receivables':
