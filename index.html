@@ -1,4 +1,37 @@
 <!DOCTYPE html>
+<!--
+╔══════════════════════════════════════════════════════════════════╗
+║              PRISM — Property Rental Income Sales Mgmt           ║
+║                  OMNIGRID ONLINE © 2026                          ║
+╠══════════════════════════════════════════════════════════════════╣
+║  Version  : PRISM-v2.20260227                                  ║
+║  Released : 2026-02-27 00:35 UTC                               ║
+║  Lines    : 24830                                              ║
+║  Size     : 1744.3 KB                                          ║
+╠══════════════════════════════════════════════════════════════════╣
+║  INTEGRITY CHECKSUMS (do not modify this file manually)          ║
+║  SHA256 : 9688f74fbc9a4450346781a7900a125ebb39641bdcfe2271127d6f97  ║
+║           23159028                                           ║
+║  MD5    : d13691cf394d2b257aca1d52af0c5496                   ║
+╠══════════════════════════════════════════════════════════════════╣
+║  FEATURES INCLUDED IN THIS BUILD:                                ║
+║  ✅ Multi-tenant Firebase sync (cross-device)                    ║
+║  ✅ Role-based access: Owner/Admin/Manager/Cashier/Viewer        ║
+║  ✅ Properties, Tenants, Credits/Loans management                ║
+║  ✅ Water Refilling Station module                                ║
+║  ✅ Employee/Payroll/Attendance management                       ║
+║  ✅ Expenses, Additional Income, Tasks, Notes                    ║
+║  ✅ Edit/Delete on all data records                              ║
+║  ✅ Quick-action bars on all detail modals                       ║
+║  ✅ Financial dashboard with real-time stats                     ║
+║  ✅ Reports, Charts, Statement of Account                        ║
+║  ✅ Receipt generation, Signature & Photo capture                ║
+║  ✅ Works 100% offline (IndexedDB) + online sync                 ║
+╠══════════════════════════════════════════════════════════════════╣
+║  STABLE BUILD — DO NOT EDIT WITHOUT VERSION CONTROL              ║
+║  Contact: jarodbulb@gmail.com | danomandam@yahoo.com             ║
+╚══════════════════════════════════════════════════════════════════╝
+-->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -5492,26 +5525,44 @@
 
     <!-- Tenant Detail Modal -->
     <div class="modal-overlay" id="tenant-detail-modal">
-        <div class="modal">
-            <div class="modal-header">
-                <h3 id="tenant-detail-name">Tenant Details</h3>
-                <button class="modal-close" onclick="hideModal('tenant-detail-modal')">&times;</button>
+        <div class="modal" style="max-width:520px;">
+            <div class="modal-header" style="flex-direction:column;align-items:stretch;gap:8px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <h3 id="tenant-detail-name" style="margin:0;">Tenant Details</h3>
+                    <button class="modal-close" onclick="hideModal('tenant-detail-modal')">&times;</button>
+                </div>
+                <div id="tenant-quick-bar" style="display:none;gap:6px;flex-wrap:wrap;">
+                    <button id="tq-edit" class="btn btn-sm btn-secondary" onclick="" style="flex:1;min-width:100px;">✏️ Edit Tenant</button>
+                    <button id="tq-payment" class="btn btn-sm btn-success" onclick="" style="flex:1;min-width:100px;">💰 + Payment</button>
+                    <button id="tq-charge" class="btn btn-sm btn-warning" onclick="" style="flex:1;min-width:90px;">💵 + Charge</button>
+                    <button id="tq-delete" class="btn btn-sm btn-danger" onclick="" style="flex:1;min-width:70px;">🗑️ Del</button>
+                </div>
             </div>
             <div class="modal-body" id="tenant-detail-content">
             </div>
         </div>
     </div>
+    </div>
 
     <!-- Credit Detail Modal -->
     <div class="modal-overlay" id="credit-detail-modal">
-        <div class="modal">
-            <div class="modal-header">
-                <h3 id="credit-detail-name">Credit Details</h3>
-                <button class="modal-close" onclick="hideModal('credit-detail-modal')">&times;</button>
+        <div class="modal" style="max-width:520px;">
+            <div class="modal-header" style="flex-direction:column;align-items:stretch;gap:8px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <h3 id="credit-detail-name" style="margin:0;">Credit Details</h3>
+                    <button class="modal-close" onclick="hideModal('credit-detail-modal')">&times;</button>
+                </div>
+                <div id="credit-quick-bar" style="display:none;gap:6px;flex-wrap:wrap;">
+                    <button id="cq-edit" class="btn btn-sm btn-secondary" onclick="" style="flex:1;min-width:100px;">✏️ Edit Debtor</button>
+                    <button id="cq-payment" class="btn btn-sm btn-success" onclick="" style="flex:1;min-width:100px;">💰 + Payment</button>
+                    <button id="cq-charge" class="btn btn-sm btn-warning" onclick="" style="flex:1;min-width:90px;">💵 + Charge</button>
+                    <button id="cq-delete" class="btn btn-sm btn-danger" onclick="" style="flex:1;min-width:70px;">🗑️ Del</button>
+                </div>
             </div>
             <div class="modal-body" id="credit-detail-content">
             </div>
         </div>
+    </div>
     </div>
 
     <!-- Other Income Sources Modal -->
@@ -5705,9 +5756,15 @@
     <!-- Water Customer Detail Modal -->
     <div class="modal-overlay" id="water-customer-detail-modal">
         <div class="modal">
-            <div class="modal-header">
-                <h3>💧 Customer Details</h3>
-                <button class="modal-close" onclick="hideModal('water-customer-detail-modal')">&times;</button>
+            <div class="modal-header" style="flex-direction:column;align-items:stretch;gap:8px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <h3 style="margin:0;">💧 Customer Details</h3>
+                    <button class="modal-close" onclick="hideModal('water-customer-detail-modal')">&times;</button>
+                </div>
+                <div id="water-cust-quick-bar" style="display:none;gap:6px;">
+                    <button id="wcq-edit" class="btn btn-sm btn-secondary" onclick="" style="flex:1;">✏️ Edit Customer</button>
+                    <button id="wcq-delete" class="btn btn-sm btn-danger" onclick="" style="flex:1;">🗑️ Delete</button>
+                </div>
             </div>
             <div class="modal-body" id="water-customer-detail-content">
             </div>
@@ -9633,8 +9690,8 @@
                 if (!matchesSearch) return false;
 
                 // Status filter
-                const tenantPayments = payments.filter(p => p.tenantId === tenant.id && p.type === 'rent');
-                const paidThisMonth = tenantPayments.some(p => p.monthCovered === currentMonth);
+                const tenantPayments = payments.filter(p => p.tenantId === tenant.id && (p.type === 'rent' || p.type === undefined || !p.type));
+                const paidThisMonth = tenantPayments.some(p => p.monthCovered && (p.monthCovered === currentMonth || p.monthCovered.startsWith(currentMonth)));
                 const isOverdue = !paidThisMonth && now.getDate() > 5;
 
                 if (tenantFilter === 'paid') return paidThisMonth;
@@ -10344,7 +10401,7 @@
 
             container.innerHTML = tenants.map(tenant => {
                 const property = properties.find(p => p.id === tenant.propertyId);
-                const tenantPayments = payments.filter(p => p.tenantId === tenant.id && p.type === 'rent');
+                const tenantPayments = payments.filter(p => p.tenantId === tenant.id && (p.type === 'rent' || !p.type));
 
                 // Calculate months since move-in
                 const moveInDate = new Date(tenant.moveIn);
@@ -10513,14 +10570,30 @@
                     <button class="btn btn-secondary" onclick="showStatementOfAccount(${id}, 'tenant')">📊 Statement</button>
                     <button class="btn btn-info" onclick="printTenantReport(${id})">🖨️ Print</button>
                     ${currentAppUser && currentAppUser.role !== 'cashier' ? `
+                        <button class="btn btn-secondary" onclick="editTenant(${id})">✏️ Edit Tenant</button>
                         <button class="btn btn-warning" onclick="addChargeToClient('tenant', ${id})">💵 Add Charge</button>
-                        <button class="btn btn-danger" onclick="deleteTenant(${id})">Delete</button>
+                        <button class="btn btn-danger" onclick="deleteTenant(${id})">🗑️ Delete</button>
                     ` : `
                         <button class="btn btn-primary" onclick="quickEndorse('sales', '🏠 Rent payment recorded for tenant. Admin please review.')">📋 Endorse to Admin</button>
                     `}
                 </div>
             `;
 
+
+            // Wire quick-action bar
+            const tBar = document.getElementById('tenant-quick-bar');
+            if (tBar) {
+                const isAdmin = currentAppUser && currentAppUser.role !== 'cashier';
+                tBar.style.display = isAdmin ? 'flex' : 'none';
+                const tqEdit   = document.getElementById('tq-edit');
+                const tqPay    = document.getElementById('tq-payment');
+                const tqCharge = document.getElementById('tq-charge');
+                const tqDel    = document.getElementById('tq-delete');
+                if (tqEdit)   tqEdit.onclick   = () => { hideModal('tenant-detail-modal'); editTenant(id); };
+                if (tqPay)    tqPay.onclick     = () => showTenantPaymentModal(id);
+                if (tqCharge) tqCharge.onclick  = () => addChargeToClient('tenant', id);
+                if (tqDel)    tqDel.onclick     = () => deleteTenant(id);
+            }
             showModal('tenant-detail-modal');
         }
 
@@ -12352,9 +12425,7 @@ async function loadWaterCustomers() {
                 content += '<p style="color: var(--text-secondary);">No transactions yet.</p>';
             } else {
                 customerSales.forEach(s => {
-                    const statusBadge = s.status === 'paid' ? '<span class="badge badge-success">Paid</span>' : 
-                                       s.status === 'partial' ? '<span class="badge badge-warning">Partial</span>' : 
-                                       '<span class="badge badge-danger">Credit</span>';
+                    const statusBadge = (s.balance <= 0 || s.status === 'paid') ? '<span class="badge badge-success">Paid</span>' : s.status === 'partial' ? '<span class="badge badge-warning">Partial</span>' : '<span class="badge badge-danger">Credit</span>';
                     content += `
                         <div class="list-item">
                             <div class="list-item-content" style="flex:1;">
@@ -12384,6 +12455,18 @@ async function loadWaterCustomers() {
             `;
             
             document.getElementById('water-customer-detail-content').innerHTML = content;
+
+            // Wire quick-action bar
+            const wBar = document.getElementById('water-cust-quick-bar');
+            if (wBar) {
+                const isAdmin = currentAppUser && currentAppUser.role !== 'cashier';
+                wBar.style.display = isAdmin ? 'flex' : 'none';
+                const weBtn = document.getElementById('wcq-edit');
+                const wdBtn = document.getElementById('wcq-delete');
+                if (weBtn) weBtn.onclick = () => { hideModal('water-customer-detail-modal'); editWaterCustomer(id); };
+                if (wdBtn) wdBtn.onclick = () => deleteWaterCustomer(id);
+            }
+
             showModal('water-customer-detail-modal');
         }
 
@@ -14471,14 +14554,30 @@ async function showPayrollSummary() {
                     <button class="btn btn-secondary" onclick="showStatementOfAccount(${id}, 'credit')">📊 Statement</button>
                     <button class="btn btn-info" onclick="printCreditReport(${id})">🖨️ Print</button>
                     ${currentAppUser && currentAppUser.role !== 'cashier' ? `
+                        <button class="btn btn-secondary" onclick="editCredit(${id})">✏️ Edit Debtor</button>
                         <button class="btn btn-warning" onclick="addChargeToClient('credit', ${id})">💵 Add Charge</button>
-                        <button class="btn btn-danger" onclick="deleteCredit(${id})">Delete Credit</button>
+                        <button class="btn btn-danger" onclick="deleteCredit(${id})">🗑️ Delete</button>
                     ` : `
                         <button class="btn btn-primary" onclick="quickEndorse('credit', '💳 Credit account needs admin attention: ' + '${credit.debtor}' + ' — Balance: ₱' + balance.toLocaleString())">📋 Endorse to Admin</button>
                     `}
                 </div>
             `;
 
+
+            // Wire quick-action bar
+            const cBar = document.getElementById('credit-quick-bar');
+            if (cBar) {
+                const isAdmin = currentAppUser && currentAppUser.role !== 'cashier';
+                cBar.style.display = isAdmin ? 'flex' : 'none';
+                const cqEdit   = document.getElementById('cq-edit');
+                const cqPay    = document.getElementById('cq-payment');
+                const cqCharge = document.getElementById('cq-charge');
+                const cqDel    = document.getElementById('cq-delete');
+                if (cqEdit)   cqEdit.onclick   = () => { hideModal('credit-detail-modal'); editCredit(id); };
+                if (cqPay)    cqPay.onclick     = () => showCreditPaymentModal(id);
+                if (cqCharge) cqCharge.onclick  = () => addChargeToClient('credit', id);
+                if (cqDel)    cqDel.onclick     = () => deleteCredit(id);
+            }
             showModal('credit-detail-modal');
         }
 
@@ -16351,6 +16450,23 @@ async function showPayrollSummary() {
         // =====================================================
         // DASHBOARD
         // =====================================================
+        
+        // ─── Date normalization helper ─────────────────────────────────────
+        function normalizeDate(dateVal) {
+            if (!dateVal) return '';
+            if (typeof dateVal === 'object' && dateVal.toDate) {
+                // Firebase Timestamp
+                return dateVal.toDate().toISOString().slice(0, 10);
+            }
+            const d = new Date(dateVal);
+            if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+            return String(dateVal).slice(0, 10);
+        }
+        function dateMatchesMonth(dateVal, year, month) {
+            const d = new Date(normalizeDate(dateVal));
+            return !isNaN(d.getTime()) && d.getFullYear() === year && d.getMonth() === month;
+        }
+
         async function loadDashboard() {
             const properties = await dbGetAll('properties');
             const tenants = await dbGetAll('tenants');
@@ -16392,11 +16508,11 @@ async function showPayrollSummary() {
             
             // Check tenants
             tenants.forEach(tenant => {
-                const tenantPayments = payments.filter(p => p.tenantId === tenant.id && p.type === 'rent');
-                const paidThisMonth = tenantPayments.some(p => p.monthCovered === currentMonth);
+                const tenantPayments = payments.filter(p => p.tenantId === tenant.id && (p.type === 'rent' || !p.type));
+                const paidThisMonth = tenantPayments.some(p => p.monthCovered && (p.monthCovered === currentMonth || p.monthCovered.startsWith(currentMonth)));
                 const property = properties.find(p => p.id === tenant.propertyId);
                 
-                if (!paidThisMonth) {
+                if (!paidThisMonth && (tenant.rent || 0) > 0) {
                     if (dayOfMonth > 5) {
                         // Overdue - past due date (5th)
                         overdueCount++;
@@ -16480,7 +16596,9 @@ async function showPayrollSummary() {
             renderNotificationsBanner();
 
             // Monthly rent collection
-            const monthlyPayments = payments.filter(p => p.type === 'rent' && p.date.startsWith(currentMonth));
+            const nowMonth = now.getMonth();
+            const nowYear = now.getFullYear();
+            const monthlyPayments = payments.filter(p => dateMatchesMonth(p.date, nowYear, nowMonth));
             const collected = monthlyPayments.reduce((sum, p) => sum + p.amount, 0);
             const expectedRent = tenants.reduce((sum, t) => sum + t.rent, 0);
 
@@ -16498,7 +16616,7 @@ async function showPayrollSummary() {
 
             // Overall rent collection
             let overallRentExpected = 0;
-            let overallRentCollected = payments.filter(p => p.type === 'rent').reduce((sum, p) => sum + p.amount, 0);
+            let overallRentCollected = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
             
             tenants.forEach(tenant => {
                 const moveInDate = new Date(tenant.moveIn);
@@ -16542,7 +16660,7 @@ async function showPayrollSummary() {
             }
 
             // Credit repaid this month
-            const monthlyCreditPayments = creditPayments.filter(p => p.date && p.date.startsWith(currentMonth));
+            const monthlyCreditPayments = creditPayments.filter(p => dateMatchesMonth(p.date, nowYear, nowMonth));
             const creditRepaid = monthlyCreditPayments.reduce((sum, p) => sum + p.amount, 0);
             safeSetText('stat-credit-repaid', '₱' + creditRepaid.toLocaleString());
 
@@ -17810,7 +17928,7 @@ async function showPayrollSummary() {
 
             for (const tenant of tenants) {
                 const property = properties.find(p => p.id === tenant.propertyId);
-                const tenantPayments = payments.filter(p => p.tenantId === tenant.id && p.type === 'rent');
+                const tenantPayments = payments.filter(p => p.tenantId === tenant.id && (p.type === 'rent' || !p.type));
                 const totalPaid = tenantPayments.reduce((sum, p) => sum + p.amount, 0);
 
                 const now = new Date();
@@ -18677,7 +18795,7 @@ Lender/Manager
                                         <div class="item-info">
                                             <strong>${tenant ? tenant.name : 'Unknown'}</strong>
                                             <div style="font-size: 0.85rem; color: var(--text-secondary);">
-                                                ${new Date(p.date).toLocaleDateString()} • ${p.method || 'Cash'}
+                                                ${new Date(p.date).toLocaleDateString()} • ${p.paymentMethod || p.method || 'Cash'}
                                             </div>
                                         </div>
                                         <span class="badge badge-success">₱${p.amount.toLocaleString()}</span>
@@ -24114,7 +24232,7 @@ async function loadCashierDashboard() {
         ]);
 
         // Filter today only
-        const todayRent    = payments.filter(p => p.date === today && p.type === 'rent');
+        const todayRent    = payments.filter(p => p.date === today && (p.type === 'rent' || p.tenantId));
         const todayCredit  = creditPayments.filter(p => p.date === today);
         const todayWater   = waterSales.filter(s => s.date === today && !s.voided);
         const todayExp     = expenses.filter(e => e.date === today);
