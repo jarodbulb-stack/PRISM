@@ -4,7 +4,7 @@
 ║              PRISM — Property Rental Income Sales Mgmt           ║
 ║                  OMNIGRID ONLINE © 2026                          ║
 ╠══════════════════════════════════════════════════════════════════╣
-║  Version  : PRISM-v4.5.20260227 "IRONCLAD-FIX5"                         ║
+║  Version  : PRISM-v4.7.20260227 "IRONCLAD-DEBUG"                         ║
 ║  Released : 2026-02-27                                           ║
 ║  Lines    : 25,390                                            ║
 ║  Size     : 1785.5 KB                                            ║
@@ -25028,8 +25028,11 @@ async function mtAppLogout() {
 
 // ---- Main Init ----
 async function mtInit() {
+    console.log('[MT] mtInit() starting...');
+    try {
     // Show landing immediately — don't wait for Firebase
     mtHideLoading();
+    console.log('[MT] mtHideLoading() done');
     
     // Restore session immediately if local data exists (prevents flash of landing page)
     const savedUser = localStorage.getItem('carent_current_user');
@@ -25064,6 +25067,7 @@ async function mtInit() {
             }
         } catch(e) { mtShowLanding(); }
     } else {
+        console.log('[MT] No saved session — showing landing');
         mtShowLanding();
     }
 
@@ -25292,7 +25296,34 @@ window.addEventListener('DOMContentLoaded', () => {
     };
     
     // Start MT init
-    mtInit();
+    mtInit().catch(err => {
+        console.error('[MT] FATAL: mtInit crashed:', err);
+        // Emergency fallback — show landing page directly
+        try {
+            ['mt-landing','mt-auth','mt-setup','mt-superadmin'].forEach(s => {
+                const el = document.getElementById(s);
+                if (el) el.classList.remove('active');
+            });
+            const landing = document.getElementById('mt-landing');
+            if (landing) landing.classList.add('active');
+            console.log('[MT] Emergency landing shown');
+        } catch(e2) { console.error('[MT] Emergency fallback also failed:', e2); }
+    });
+
+    // FAILSAFE: If nothing is visible after 2s, force show landing page
+    setTimeout(() => {
+        const screens = ['mt-landing','mt-auth','mt-setup','mt-superadmin'];
+        const appWrapper = document.querySelector('.prism-app-wrapper');
+        const anyVisible = screens.some(id => {
+            const el = document.getElementById(id);
+            return el && el.classList.contains('active');
+        }) || (appWrapper && appWrapper.classList.contains('mt-active'));
+        
+        if (!anyVisible) {
+            console.warn('[PRISM] Failsafe: No screen visible — showing landing page');
+            mtShowLanding();
+        }
+    }, 2000);
 });
 
 
