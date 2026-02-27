@@ -4,7 +4,7 @@
 ║              PRISM — Property Rental Income Sales Mgmt           ║
 ║                  OMNIGRID ONLINE © 2026                          ║
 ╠══════════════════════════════════════════════════════════════════╣
-║  Version  : PRISM-v4.3.20260227 "IRONCLAD-FIX3"                         ║
+║  Version  : PRISM-v4.5.20260227 "IRONCLAD-FIX5"                         ║
 ║  Released : 2026-02-27                                           ║
 ║  Lines    : 25,390                                            ║
 ║  Size     : 1785.5 KB                                            ║
@@ -7002,6 +7002,9 @@
                     if (user) {
                         console.log('[Auth] User signed in:', user.email);
                         updateSyncStatus('syncing');
+                        // CRITICAL: Wait for IndexedDB to be ready before syncing
+                        // (auth fires before init() completes initDB)
+                        try { await ensureDB(); } catch(e) {}
                         // Push local data first, then pull from cloud
                         try { await syncToFirebase(); } catch(e) {}
                         await syncFromFirebase();
@@ -7385,6 +7388,8 @@
         }
 
         async function syncFromFirebase() {
+            // Ensure IndexedDB is ready before pulling from Firebase
+            try { await ensureDB(); } catch(e) { console.warn('[Sync] DB init failed:', e); }
             const cu = currentUser || (typeof MT !== 'undefined' && MT.currentUser);
             const dbRef = window.db || firestore;
             if (!dbRef || !cu) return;
@@ -7511,13 +7516,8 @@
         }
 
         async function syncCollectionToLocal(storeName, data) {
-            // Wait up to 5s for IndexedDB to be ready before syncing
-            if (!db) {
-                for (let i = 0; i < 25; i++) {
-                    await new Promise(r => setTimeout(r, 200));
-                    if (db) break;
-                }
-            }
+            // Ensure DB is ready
+            if (!db || !dbReady) { try { await ensureDB(); } catch(e) {} }
             if (!db) { console.warn('[Sync] DB not ready:', storeName); return; }
             return new Promise((resolve, reject) => {
                 const transaction = db.transaction([storeName], 'readwrite');
@@ -7554,6 +7554,8 @@
         }
 
         async function loadAllData() {
+            // Ensure IndexedDB is ready before loading
+            try { await ensureDB(); } catch(e) {}
             await loadProperties();
             await loadTenants();
             await loadCredits();
