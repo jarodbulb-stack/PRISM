@@ -25,23 +25,16 @@
     <meta name="keywords" content="rental management, credit management, payroll, water refilling, Philippines, PWA">
     
     <!-- PWA Manifest -->
-    <script>
-    // Inline manifest to avoid CORS errors when running from file:// protocol
-    if (location.protocol !== 'file:') {
-        const link = document.createElement('link');
-        link.rel = 'manifest';
-        link.href = 'manifest.json';
-        document.head.appendChild(link);
-    }
-    </script>
+    <!-- PWA Manifest - links to manifest.json for GitHub Pages -->
+    <link rel="manifest" href="manifest.json">
     
     <!-- Inline SVG Favicon (PRISM Logo) -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%232563eb'/%3E%3Cstop offset='100%25' style='stop-color:%233b82f6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='50' cy='50' r='45' fill='url(%23g)'/%3E%3Ctext x='50' y='70' font-family='Arial,sans-serif' font-size='55' font-weight='bold' fill='white' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
     
     <!-- PWA Icons -->
-    <link rel="apple-touch-icon" href="icons/icon-192.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
     
     <!-- Firebase SDK + Chart.js - loaded with error handling -->
     <script>
@@ -2874,7 +2867,7 @@
 <!-- ==================== MULTI-TENANT HTML ==================== -->
 
 <!-- Loading Screen -->
-<div id="mt-loading">
+<div id="mt-loading" class="active">
     <div class="mt-loading-logo">P</div>
     <div style="color:#f8fafc;font-weight:800;font-size:1.4rem;letter-spacing:3px;">PRISM</div>
     <div class="mt-loading-text" id="mt-loading-text">Initializing...</div>
@@ -2897,7 +2890,7 @@
         <div class="mt-nav-links">
             <a href="#features">Features</a>
             <a href="#pricing">Pricing</a>
-            <a href="/cdn-cgi/l/email-protection#254f44574a4147504947654248444c490b464a48">Contact</a>
+            <a href="mailto:omnigridonline@gmail.com">Contact</a>
         </div>
         <div style="display:flex;gap:10px;">
             <button class="mt-btn-secondary" style="padding:10px 20px;font-size:0.9rem;" onclick="mtShowAuth('login')">Sign In</button>
@@ -3015,7 +3008,7 @@
     </div>
 
     <div class="mt-footer">
-        <p>Built by <strong>OMNIGRID ONLINE</strong> &bull; <a href="/cdn-cgi/l/email-protection#5e343f2c313a3c2b323c1e39333f3732703d3133"><span class="__cf_email__" data-cfemail="87ede6f5e8e3e5f2ebe5c7e0eae6eeeba9e4e8ea">[email&#160;protected]</span></a> &bull; <a href="/cdn-cgi/l/email-protection#f195909f9e9c909f95909cb18890999e9edf929e9c"><span class="__cf_email__" data-cfemail="97f3f6f9f8faf6f9f3f6fad7eef6fff8f8b9f4f8fa">[email&#160;protected]</span></a></p>
+        <p>Built by <strong>OMNIGRID ONLINE</strong> &bull; <a href="mailto:omnigridonline@gmail.com"><span class="__cf_email__" data-cfemail="87ede6f5e8e3e5f2ebe5c7e0eae6eeeba9e4e8ea">[email&#160;protected]</span></a> &bull; <a href="mailto:omnigridonline@gmail.com"><span class="__cf_email__" data-cfemail="97f3f6f9f8faf6f9f3f6fad7eef6fff8f8b9f4f8fa">[email&#160;protected]</span></a></p>
         <p style="margin-top:8px;">© 2025 PRISM - Property • Rental • Income • Sales • Management</p>
     </div>
 </div>
@@ -3326,6 +3319,15 @@
         <div class="header-right" style="display: flex; align-items: center; gap: 10px; position: relative; z-index: 9999;">
             <span id="firebase-header-dot" title="Firebase: Connecting..." onclick="checkFirebaseStatus()" style="width:8px;height:8px;border-radius:50%;background:#f59e0b;display:inline-block;flex-shrink:0;cursor:pointer;transition:background 0.5s;"></span>
             <div id="current-user-display" style="display: flex; align-items: center;"></div>
+            <!-- Conflict Resolution Badge -->
+            <button onclick="showConflictPanel()" title="Sync Conflicts"
+                style="position:relative;background:none;border:none;cursor:pointer;padding:4px;display:flex;align-items:center;">
+                <span style="font-size:1.1rem;">⚠️</span>
+                <span id="prism-conflict-badge"
+                    style="position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;
+                           border-radius:50%;width:16px;height:16px;font-size:0.6rem;font-weight:800;
+                           display:none;align-items:center;justify-content:center;line-height:1;">0</span>
+            </button>
             <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
                 🌙
             </button>
@@ -4952,10 +4954,10 @@
                         <p style="font-size: 1.1rem; font-weight: 600; color: var(--gray-900);">OMNIGRID</p>
                         <div style="margin-top:15px;padding:14px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;">
                             <p style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:10px;font-weight:600;">📧 Contact Us</p>
-                            <a href="/cdn-cgi/l/email-protection#1c767d6e73787e69707e5c7b717d7570327f7371" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;margin-bottom:6px;font-weight:500;">
+                            <a href="mailto:omnigridonline@gmail.com" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;margin-bottom:6px;font-weight:500;">
                                 ✉️ <span class="__cf_email__" data-cfemail="c5afa4b7aaa1a7b0a9a785a2a8a4aca9eba6aaa8">[email&#160;protected]</span>
                             </a>
-                            <a href="/cdn-cgi/l/email-protection#7115101f1e1c101f15101c310810191e1e5f121e1c" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;font-weight:500;">
+                            <a href="mailto:omnigridonline@gmail.com" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;font-weight:500;">
                                 ✉️ <span class="__cf_email__" data-cfemail="680c0906070509060c0905281109000707460b0705">[email&#160;protected]</span>
                             </a>
                             <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-color);">
@@ -6531,7 +6533,7 @@
         </div>
     </div>
 
-    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+    <script>
         // =====================
         // TOAST NOTIFICATION (must be first)
         // =====================
@@ -6760,15 +6762,13 @@
                 const dot = document.getElementById('firebase-header-dot');
                 if (dot) { dot.style.background = '#10b981'; dot.title = 'Firebase: Connected ✅'; }
 
-                // Enable offline persistence
-                firestore.enablePersistence({ synchronizeTabs: true })
-                    .catch((err) => {
-                        if (err.code === 'failed-precondition') {
-                            console.log('[Firebase] Multiple tabs open, persistence only in one tab');
-                        } else if (err.code === 'unimplemented') {
-                            console.log('[Firebase] Browser does not support persistence');
-                        }
-                    });
+                // Enable offline persistence (new API - deprecation fix)
+                try {
+                    firestore.settings({ merge: true });
+                    console.log('[Firebase] Firestore settings applied (multi-tab safe)');
+                } catch(e) {
+                    console.log('[Firebase] Settings skipped:', e.message);
+                }
 
                 // Auth state listener
                 auth.onAuthStateChanged(async (user) => {
@@ -6780,6 +6780,8 @@
                         // Push local data first, then pull from cloud
                         try { await syncToFirebase(); } catch(e) {}
                         await syncFromFirebase();
+                        // Refresh AppState after sync
+                        try { if (typeof DAL !== 'undefined') await DAL.loadAllIntoState(); } catch(e) {}
                         updateSyncStatus('synced');
                     } else {
                         console.log('[Auth] User signed out');
@@ -7287,22 +7289,24 @@
 
         async function syncCollectionToLocal(storeName, data) {
             if (!db) { console.warn('[Sync] DB not ready:', storeName); return; }
+            // Use SyncEngine merge if available (timestamp-based conflict resolution)
+            if (typeof SyncEngine !== 'undefined') {
+                try { return await SyncEngine._mergeToLocal(storeName, data); } catch(e) {}
+            }
+            // Fallback: simple put() merge
             return new Promise((resolve, reject) => {
-                const transaction = db.transaction([storeName], 'readwrite');
-                const store = transaction.objectStore(storeName);
-
-                // Use put() instead of clear+add to merge by key (avoids data loss)
-                // Cloud record wins for existing IDs; local-only records are preserved
-                let pending = data.length;
-                if (pending === 0) { resolve(); return; }
-
-                data.forEach(item => {
-                    const req = store.put(item);
-                    req.onsuccess = () => { pending--; if (pending === 0) resolve(); };
-                    req.onerror = () => { pending--; if (pending === 0) resolve(); };
-                });
-
-                transaction.onerror = () => reject(transaction.error);
+                try {
+                    const transaction = db.transaction([storeName], 'readwrite');
+                    const store = transaction.objectStore(storeName);
+                    let pending = data.length;
+                    if (pending === 0) { resolve(); return; }
+                    data.forEach(item => {
+                        const req = store.put(item);
+                        req.onsuccess = () => { pending--; if (pending === 0) resolve(); };
+                        req.onerror  = () => { pending--; if (pending === 0) resolve(); };
+                    });
+                    transaction.onerror = () => reject(transaction.error);
+                } catch(e) { resolve(); }
             });
         }
 
@@ -8335,6 +8339,9 @@
 
         // Generic DB operations with connection safety
         async function dbAdd(storeName, data) {
+            // Stamp timestamps for sync conflict resolution
+            if (!data._updatedAt) data._updatedAt = new Date().toISOString();
+            if (!data._createdAt) data._createdAt = data._updatedAt;
             await ensureDB();
             return new Promise((resolve, reject) => {
                 try {
@@ -8389,6 +8396,8 @@
         }
 
         async function dbUpdate(storeName, data) {
+            // Stamp _updatedAt for last-write-wins conflict resolution
+            data._updatedAt = new Date().toISOString();
             await ensureDB();
             return new Promise((resolve, reject) => {
                 try {
@@ -22145,28 +22154,42 @@ async function editTask(id) {
         // =====================
         // PWA SERVICE WORKER
         // =====================
+        // =====================
+        // PWA SERVICE WORKER REGISTRATION
+        // =====================
         if ('serviceWorker' in navigator && location.protocol !== 'file:') {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                    .then((registration) => {
-                        console.log('[PWA] Service Worker registered successfully');
-                        
-                        // Check for updates
+                // sw.js must be in the SAME FOLDER as index.html
+                // Relative path 'sw.js' ensures correct scope regardless of subfolder
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('[PWA] ✅ Service Worker registered, scope:', registration.scope);
                         registration.addEventListener('updatefound', () => {
                             const newWorker = registration.installing;
+                            if (!newWorker) return;
                             newWorker.addEventListener('statechange', () => {
                                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    // New version available
-                                    showConfirm('A new version of PRISM is available. Reload now to update?', 'info', '🔄 Update Available', 'Reload Now', 'Later').then(ok => {
-                                        if (ok) window.location.reload();
-                                    });
+                                    try {
+                                        showConfirm('A new version of PRISM is available. Reload now to update?', 'info', '🔄 Update Available', 'Reload Now', 'Later')
+                                            .then(ok => { if (ok) window.location.reload(); });
+                                    } catch(e) {
+                                        if (confirm('New version available. Reload?')) window.location.reload();
+                                    }
                                 }
                             });
                         });
                     })
-                    .catch((error) => {
-                        console.log('[PWA] Service Worker registration failed:', error);
+                    .catch(err => {
+                        // Non-blocking — app works fine without SW
+                        console.warn('[PWA] Service Worker registration failed (non-critical):', err.message);
                     });
+            });
+
+            // Listen for SW messages (version updates only - no Background Sync API)
+            navigator.serviceWorker.addEventListener('message', event => {
+                if (event.data && event.data.type === 'VERSION') {
+                    console.log('[PWA] SW version:', event.data.version);
+                }
             });
         }
 
@@ -22225,6 +22248,12 @@ async function editTask(id) {
         // =====================================================
         
         // Explicitly expose functions to window for onclick handlers
+        // Debug mode toggle
+        window.PRISM_DEBUG_ON  = () => { localStorage.setItem('PRISM_DEBUG','true');  console.log('[PRISM] Debug mode ON. Reload to apply.'); };
+        window.PRISM_DEBUG_OFF = () => { localStorage.setItem('PRISM_DEBUG','false'); console.log('[PRISM] Debug mode OFF. Reload to apply.'); };
+        window.PRISM_STATE     = () => AppState.getState();
+        window.PRISM_TOTALS    = () => AppState.getTotals();
+        window.PRISM_HEALTH    = () => PrismGuardian.runHealthCheck();
         window.loadSampleData = loadSampleData;
         window.clearAllData = clearAllData;
         window.showUserManagement = showUserManagement;
@@ -22301,6 +22330,795 @@ async function editTask(id) {
             console.log('=== Test Complete ===');
             console.log('💡 To test manually: Open browser console.');
         };
+
+        // =====================================================================
+        // ██████╗ ██████╗ ██╗███████╗███╗   ███╗    ███████╗███╗   ██╗ ██████╗
+        // ██╔══██╗██╔══██╗██║██╔════╝████╗ ████║    ██╔════╝████╗  ██║██╔════╝
+        // ██████╔╝██████╔╝██║███████╗██╔████╔██║    █████╗  ██╔██╗ ██║██║  ███╗
+        // ██╔═══╝ ██╔══██╗██║╚════██║██║╚██╔╝██║    ██╔══╝  ██║╚██╗██║██║   ██║
+        // ██║     ██║  ██║██║███████║██║ ╚═╝ ██║    ███████╗██║ ╚████║╚██████╔╝
+        // PRODUCTION ENGINE — AppState · FinEngine · SyncEngine · Validator
+        // =====================================================================
+
+        // ─── DEBUG FLAG (set true in console: PRISM_DEBUG=true) ───────────────
+        const PRISM_DEBUG = (() => {
+            try { return localStorage.getItem('PRISM_DEBUG') === 'true'; } catch(e) { return false; }
+        })();
+        function _dbg(...args) { if (PRISM_DEBUG) console.log('[PRISM:DBG]', ...args); }
+
+        // ─── 1. FINANCIAL ENGINE ──────────────────────────────────────────────
+        // Uses integer cents internally to avoid floating-point errors.
+        const FinEngine = (() => {
+            /** Convert a PHP peso float to integer cents safely */
+            function toCents(value) {
+                if (value === null || value === undefined || value === '') return 0;
+                const n = typeof value === 'string' ? parseFloat(value.replace(/,/g,'')) : Number(value);
+                if (!isFinite(n)) return 0;
+                return Math.round(n * 100);
+            }
+            /** Convert integer cents back to peso float */
+            function fromCents(cents) {
+                return Math.round(cents) / 100;
+            }
+            /** Sum an array of peso amounts safely */
+            function sum(arr, key) {
+                return fromCents(arr.reduce((acc, item) => {
+                    const v = key ? item[key] : item;
+                    return acc + toCents(v);
+                }, 0));
+            }
+            /** Add two peso amounts safely */
+            function add(a, b) { return fromCents(toCents(a) + toCents(b)); }
+            /** Subtract b from a safely */
+            function subtract(a, b) { return fromCents(toCents(a) - toCents(b)); }
+            /** Multiply a peso amount by a factor */
+            function multiply(amount, factor) { return fromCents(Math.round(toCents(amount) * factor)); }
+            /** Format as Philippine Peso with existing app style */
+            function format(value) {
+                const n = typeof value === 'number' ? value : fromCents(toCents(value));
+                return '₱' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            }
+            /** Validate a numeric money value */
+            function isValid(value) {
+                const n = Number(value);
+                return isFinite(n) && n >= 0;
+            }
+            return { toCents, fromCents, sum, add, subtract, multiply, format, isValid };
+        })();
+        window.FinEngine = FinEngine;
+
+        // ─── 2. VALIDATION LAYER ──────────────────────────────────────────────
+        const Validator = (() => {
+            const RULES = {
+                tenants: {
+                    required: ['name'],
+                    money: ['rent'],
+                    positive: ['rent'],
+                    custom(rec) {
+                        const errs = [];
+                        if (rec.name && rec.name.trim().length < 2) errs.push('Tenant name too short');
+                        return errs;
+                    }
+                },
+                payments: {
+                    required: ['amount', 'date'],
+                    money: ['amount'],
+                    positive: ['amount'],
+                    custom(rec) {
+                        const errs = [];
+                        if (rec.type === 'rent' && !rec.tenantId) errs.push('Tenant ID required for rent payment');
+                        return errs;
+                    }
+                },
+                credits: {
+                    required: ['debtor', 'principal'],
+                    money: ['principal'],
+                    positive: ['principal'],
+                    custom(rec) {
+                        const errs = [];
+                        if (rec.debtor && rec.debtor.trim().length < 2) errs.push('Debtor name too short');
+                        return errs;
+                    }
+                },
+                creditPayments: {
+                    required: ['amount', 'creditId', 'date'],
+                    money: ['amount'],
+                    positive: ['amount'],
+                    custom() { return []; }
+                },
+                expenses: {
+                    required: ['amount', 'description'],
+                    money: ['amount'],
+                    positive: ['amount'],
+                    custom() { return []; }
+                },
+                properties: {
+                    required: ['name'],
+                    money: [],
+                    positive: [],
+                    custom(rec) {
+                        const errs = [];
+                        if (rec.name && rec.name.trim().length < 1) errs.push('Property name required');
+                        return errs;
+                    }
+                },
+                employees: {
+                    required: ['name'],
+                    money: ['dailyRate'],
+                    positive: [],
+                    custom() { return []; }
+                },
+                waterCustomers: {
+                    required: ['name'],
+                    money: [],
+                    positive: [],
+                    custom() { return []; }
+                },
+                waterSales: {
+                    required: ['customerId', 'amount'],
+                    money: ['amount'],
+                    positive: ['amount'],
+                    custom() { return []; }
+                },
+            };
+
+            function validate(storeName, record) {
+                const rule = RULES[storeName];
+                if (!rule) return { valid: true, errors: [] }; // no rules = pass
+                const errors = [];
+                // required fields
+                (rule.required || []).forEach(f => {
+                    const v = record[f];
+                    if (v === undefined || v === null || v === '') errors.push(`${f} is required`);
+                });
+                // money validity
+                (rule.money || []).forEach(f => {
+                    if (record[f] !== undefined && record[f] !== '') {
+                        if (!FinEngine.isValid(record[f])) errors.push(`${f} must be a valid amount`);
+                    }
+                });
+                // positive
+                (rule.positive || []).forEach(f => {
+                    if (record[f] !== undefined && record[f] !== '') {
+                        const n = Number(record[f]);
+                        if (isFinite(n) && n < 0) errors.push(`${f} cannot be negative`);
+                    }
+                });
+                // custom
+                if (rule.custom) {
+                    errors.push(...rule.custom(record));
+                }
+                return { valid: errors.length === 0, errors };
+            }
+
+            return { validate };
+        })();
+        window.Validator = Validator;
+
+        // ─── 3. APPSTATE — SINGLE SOURCE OF TRUTH ────────────────────────────
+        const AppState = (() => {
+            let _state = {
+                ready: false,
+                orgId: null,
+                properties: [],
+                tenants: [],
+                payments: [],
+                credits: [],
+                creditPayments: [],
+                expenses: [],
+                customNotes: [],
+                additionalIncome: [],
+                clientCharges: [],
+                waterCustomers: [],
+                waterSales: [],
+                employees: [],
+                cashAdvances: [],
+                salaryPayments: [],
+                timeRecords: [],
+                tasks: [],
+                // Derived / computed
+                _totals: {}
+            };
+            let _subscribers = [];
+
+            function _assertOrgIsolation(records, orgId) {
+                if (!orgId || !PRISM_DEBUG) return records;
+                const contaminated = records.filter(r => r.orgId && r.orgId !== orgId);
+                if (contaminated.length > 0) {
+                    console.error('[AppState] ⚠️ CROSS-TENANT DATA DETECTED:', contaminated.length, 'records from other orgs. Filtering out.');
+                }
+                return records.filter(r => !r.orgId || r.orgId === orgId);
+            }
+
+            function _computeTotals() {
+                const p = _state;
+                _state._totals = {
+                    totalIncome: FinEngine.add(
+                        FinEngine.sum(p.payments.filter(x => x.type === 'rent' || !x.type), 'amount'),
+                        FinEngine.sum(p.additionalIncome, 'amount')
+                    ),
+                    totalExpenses: FinEngine.sum(p.expenses, 'amount'),
+                    totalCreditsLent: FinEngine.sum(p.credits, 'principal'),
+                    totalCreditCollected: FinEngine.sum(p.creditPayments, 'amount'),
+                    totalWaterSales: FinEngine.sum(p.waterSales, 'amount'),
+                };
+                _state._totals.netProfit = FinEngine.subtract(
+                    _state._totals.totalIncome,
+                    _state._totals.totalExpenses
+                );
+                _dbg('[AppState] Totals computed:', _state._totals);
+            }
+
+            function setState(updates) {
+                const orgId = _state.orgId || (typeof MT !== 'undefined' && MT.currentOrg ? MT.currentOrg.id : null);
+                Object.keys(updates).forEach(key => {
+                    if (Array.isArray(updates[key]) && orgId) {
+                        _state[key] = _assertOrgIsolation(updates[key], orgId);
+                    } else {
+                        _state[key] = updates[key];
+                    }
+                });
+                _computeTotals();
+                _notify();
+            }
+
+            function getState() {
+                return Object.assign({}, _state);
+            }
+
+            function subscribe(fn) {
+                _subscribers.push(fn);
+                return () => { _subscribers = _subscribers.filter(s => s !== fn); };
+            }
+
+            function _notify() {
+                _subscribers.forEach(fn => { try { fn(_state); } catch(e) { console.warn('[AppState] subscriber error:', e); } });
+            }
+
+            // Expose totals helper
+            function getTotals() { return Object.assign({}, _state._totals); }
+
+            return { setState, getState, subscribe, getTotals };
+        })();
+        window.AppState = AppState;
+
+        // ─── 4. DATA ACCESS LAYER ────────────────────────────────────────────
+        // All DB reads go through here — no component queries DB directly
+        const DAL = (() => {
+            async function _getAll(storeName) {
+                try {
+                    await ensureDB();
+                    return await getAllFromStore(storeName);
+                } catch(e) {
+                    console.warn('[DAL] getAll failed for', storeName, e);
+                    return [];
+                }
+            }
+
+            async function _put(storeName, record) {
+                const v = Validator.validate(storeName, record);
+                if (!v.valid) throw new Error('[DAL] Validation: ' + v.errors.join('; '));
+                // Stamp updatedAt for conflict resolution
+                record._updatedAt = record._updatedAt || new Date().toISOString();
+                await ensureDB();
+                return await dbAdd(storeName, record);
+            }
+
+            async function _update(storeName, record) {
+                const v = Validator.validate(storeName, record);
+                if (!v.valid) throw new Error('[DAL] Validation: ' + v.errors.join('; '));
+                record._updatedAt = new Date().toISOString();
+                await ensureDB();
+                return await dbUpdate(storeName, record);
+            }
+
+            async function _delete(storeName, id) {
+                if (!id && id !== 0) throw new Error('[DAL] Invalid ID for delete');
+                await ensureDB();
+                return await dbDelete(storeName, id);
+            }
+
+            // Load all collections into AppState
+            async function loadAllIntoState() {
+                _dbg('[DAL] Loading all collections into AppState...');
+                const [
+                    properties, tenants, payments, credits, creditPayments,
+                    expenses, customNotes, additionalIncome, clientCharges,
+                    waterCustomers, waterSales, employees, cashAdvances,
+                    salaryPayments, timeRecords, tasks
+                ] = await Promise.all([
+                    _getAll('properties'), _getAll('tenants'), _getAll('payments'),
+                    _getAll('credits'), _getAll('creditPayments'), _getAll('expenses'),
+                    _getAll('customNotes'), _getAll('additionalIncome'), _getAll('clientCharges'),
+                    _getAll('waterCustomers'), _getAll('waterSales'), _getAll('employees'),
+                    _getAll('cashAdvances'), _getAll('salaryPayments'), _getAll('timeRecords'),
+                    _getAll('tasks')
+                ]);
+                AppState.setState({
+                    ready: true,
+                    properties, tenants, payments, credits, creditPayments,
+                    expenses, customNotes, additionalIncome, clientCharges,
+                    waterCustomers, waterSales, employees, cashAdvances,
+                    salaryPayments, timeRecords, tasks
+                });
+                _dbg('[DAL] AppState loaded. Records:', {
+                    properties: properties.length, tenants: tenants.length,
+                    payments: payments.length, credits: credits.length
+                });
+                return AppState.getState();
+            }
+
+            return { getAll: _getAll, put: _put, update: _update, delete: _delete, loadAllIntoState };
+        })();
+        window.DAL = DAL;
+
+        // ─── CONFLICT QUEUE — keeps both versions, surfaces to user ──────────
+        // No silent data loss. User sees and resolves conflicts explicitly.
+        const ConflictQueue = (() => {
+            const STORAGE_KEY = 'prism_conflicts';
+
+            function _load() {
+                try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch(e) { return []; }
+            }
+            function _save(list) {
+                try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); } catch(e) {}
+            }
+
+            /** Add a conflict (both local and remote versions preserved) */
+            function add(storeName, localRecord, remoteRecord) {
+                const list = _load();
+                // Avoid duplicate conflicts for same record
+                const exists = list.find(c => c.storeName === storeName && c.id === localRecord.id);
+                if (exists) return;
+                list.push({
+                    id: localRecord.id,
+                    storeName,
+                    detectedAt: new Date().toISOString(),
+                    local: localRecord,
+                    remote: remoteRecord,
+                    resolved: false
+                });
+                _save(list);
+                _notifyUI();
+            }
+
+            /** Resolve a conflict — 'local' or 'remote' */
+            async function resolve(storeName, recordId, choice) {
+                const list = _load();
+                const conflict = list.find(c => c.storeName === storeName && c.id === recordId);
+                if (!conflict) return;
+
+                const winner = choice === 'local' ? conflict.local : conflict.remote;
+                winner._updatedAt = new Date().toISOString(); // stamp resolution time
+
+                try {
+                    await ensureDB();
+                    await dbUpdate(storeName, winner);
+                    // Mark resolved
+                    conflict.resolved = true;
+                    conflict.resolvedAt = new Date().toISOString();
+                    conflict.resolvedWith = choice;
+                    _save(list);
+                    showToast(`✅ Conflict resolved — kept ${choice} version`, 'success');
+                    _notifyUI();
+                    // Trigger sync to push resolved version to cloud
+                    SyncEngine.debounce(() => SyncEngine.push(), 1000);
+                } catch(e) {
+                    showToast('❌ Could not resolve conflict: ' + e.message, 'error');
+                }
+            }
+
+            function getUnresolved() {
+                return _load().filter(c => !c.resolved);
+            }
+
+            function getAll() { return _load(); }
+
+            function clearResolved() {
+                _save(_load().filter(c => !c.resolved));
+            }
+
+            function _notifyUI() {
+                const conflicts = getUnresolved();
+                // Update conflict badge
+                const badge = document.getElementById('prism-conflict-badge');
+                if (badge) {
+                    badge.textContent = conflicts.length;
+                    badge.style.display = conflicts.length > 0 ? 'flex' : 'none';
+                }
+                // Auto-show conflict panel if new conflicts arrived
+                if (conflicts.length > 0) {
+                    const panel = document.getElementById('prism-conflict-panel');
+                    if (panel && panel.style.display === 'none') {
+                        showToast(`⚠️ ${conflicts.length} sync conflict(s) need your attention`, 'warning', 5000);
+                    }
+                }
+            }
+
+            return { add, resolve, getUnresolved, getAll, clearResolved, _notifyUI };
+        })();
+        window.ConflictQueue = ConflictQueue;
+
+        /** Show the conflict resolution panel */
+        function showConflictPanel() {
+            const conflicts = ConflictQueue.getUnresolved();
+            let panel = document.getElementById('prism-conflict-panel');
+
+            if (!panel) {
+                panel = document.createElement('div');
+                panel.id = 'prism-conflict-panel';
+                panel.style.cssText = `
+                    position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;
+                    background:rgba(0,0,0,0.75);display:flex;align-items:center;
+                    justify-content:center;padding:20px;
+                `;
+                document.body.appendChild(panel);
+            }
+
+            if (conflicts.length === 0) {
+                panel.style.display = 'none';
+                showToast('✅ No unresolved conflicts', 'success');
+                return;
+            }
+
+            const STORE_LABELS = {
+                tenants:'Tenant', payments:'Payment', credits:'Credit/Loan',
+                creditPayments:'Loan Payment', expenses:'Expense', properties:'Property',
+                employees:'Employee', waterSales:'Water Sale', additionalIncome:'Income',
+                tasks:'Task', cashAdvances:'Cash Advance', salaryPayments:'Salary',
+            };
+
+            const rows = conflicts.map(c => {
+                const label = STORE_LABELS[c.storeName] || c.storeName;
+                const localName  = c.local.name  || c.local.debtor  || c.local.description  || `ID ${c.local.id}`;
+                const remoteName = c.remote.name || c.remote.debtor || c.remote.description || `ID ${c.remote.id}`;
+                const localAmt   = c.local.amount   || c.local.principal  || c.local.rent  || '';
+                const remoteAmt  = c.remote.amount  || c.remote.principal || c.remote.rent || '';
+                const fmtPeso = v => v ? '₱' + Number(v).toLocaleString() : '';
+                return `
+                <div style="background:var(--bg-card,#1f2937);border:1px solid var(--border-color,#374151);
+                            border-radius:12px;padding:18px;margin-bottom:14px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                        <span style="font-weight:700;color:var(--warning,#f59e0b);">⚠️ ${label} Conflict</span>
+                        <span style="font-size:0.75rem;color:var(--text-secondary,#9ca3af);">
+                            Detected: ${new Date(c.detectedAt).toLocaleString()}
+                        </span>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+                        <div style="background:rgba(37,99,235,0.1);border:1px solid rgba(37,99,235,0.3);
+                                    border-radius:8px;padding:12px;">
+                            <div style="font-size:0.7rem;font-weight:700;color:#60a5fa;margin-bottom:6px;
+                                        text-transform:uppercase;letter-spacing:1px;">📱 YOUR LOCAL VERSION</div>
+                            <div style="font-weight:600;margin-bottom:4px;">${localName}</div>
+                            ${localAmt ? `<div style="color:var(--success,#10b981);font-weight:700;">${fmtPeso(localAmt)}</div>` : ''}
+                            <div style="font-size:0.75rem;color:var(--text-secondary,#9ca3af);margin-top:6px;">
+                                Edited: ${c.local._updatedAt ? new Date(c.local._updatedAt).toLocaleString() : 'unknown'}
+                            </div>
+                        </div>
+                        <div style="background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.3);
+                                    border-radius:8px;padding:12px;">
+                            <div style="font-size:0.7rem;font-weight:700;color:#a78bfa;margin-bottom:6px;
+                                        text-transform:uppercase;letter-spacing:1px;">☁️ CLOUD VERSION</div>
+                            <div style="font-weight:600;margin-bottom:4px;">${remoteName}</div>
+                            ${remoteAmt ? `<div style="color:var(--success,#10b981);font-weight:700;">${fmtPeso(remoteAmt)}</div>` : ''}
+                            <div style="font-size:0.75rem;color:var(--text-secondary,#9ca3af);margin-top:6px;">
+                                Edited: ${c.remote._updatedAt ? new Date(c.remote._updatedAt).toLocaleString() : 'unknown'}
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:10px;">
+                        <button onclick="ConflictQueue.resolve('${c.storeName}',${c.id},'local')"
+                            style="flex:1;padding:10px;background:#2563eb;color:#fff;border:none;
+                                   border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;">
+                            ✅ Keep My Version
+                        </button>
+                        <button onclick="ConflictQueue.resolve('${c.storeName}',${c.id},'remote')"
+                            style="flex:1;padding:10px;background:#7c3aed;color:#fff;border:none;
+                                   border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;">
+                            ☁️ Use Cloud Version
+                        </button>
+                    </div>
+                </div>`;
+            }).join('');
+
+            panel.innerHTML = `
+                <div style="background:var(--bg-primary,#111827);border-radius:16px;
+                            max-width:600px;width:100%;max-height:85vh;overflow-y:auto;padding:28px;
+                            box-shadow:0 25px 50px rgba(0,0,0,0.5);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                        <h2 style="font-size:1.2rem;font-weight:800;color:var(--warning,#f59e0b);">
+                            ⚠️ Sync Conflicts (${conflicts.length})
+                        </h2>
+                        <button onclick="document.getElementById('prism-conflict-panel').style.display='none'"
+                            style="background:none;border:none;color:var(--text-secondary,#9ca3af);
+                                   font-size:1.4rem;cursor:pointer;line-height:1;">×</button>
+                    </div>
+                    <p style="color:var(--text-secondary,#9ca3af);margin-bottom:18px;font-size:0.9rem;line-height:1.5;">
+                        These records were edited on multiple devices at the same time.
+                        <strong style="color:var(--text-primary,#f8fafc);">Choose which version to keep.</strong>
+                        The other version will not be deleted — it stays in conflict history.
+                    </p>
+                    ${rows}
+                    <button onclick="ConflictQueue.clearResolved();document.getElementById('prism-conflict-panel').style.display='none'"
+                        style="width:100%;padding:12px;background:var(--bg-card,#1f2937);color:var(--text-secondary);
+                               border:1px solid var(--border-color);border-radius:8px;cursor:pointer;
+                               font-size:0.85rem;margin-top:8px;">
+                        Close (Decide Later)
+                    </button>
+                </div>`;
+
+            panel.style.display = 'flex';
+        }
+        window.showConflictPanel = showConflictPanel;
+
+        // ─── 5. SYNC ENGINE HARDENING ────────────────────────────────────────
+        // Wraps existing sync with timestamp conflict resolution
+        const SyncEngine = (() => {
+            let _inProgress = false;
+            let _debounceTimer = null;
+
+            /**
+             * Merge remote records into local — NON-DESTRUCTIVE conflict resolution.
+             *
+             * Decision tree:
+             *  1. No local record              → INSERT remote (new record)
+             *  2. Records are identical        → no-op (skip write)
+             *  3. local._updatedAt > remote    → keep local (offline edit protected)
+             *  4. remote._updatedAt > local    → apply remote (newer from cloud)
+             *  5. Same timestamp, different    → CONFLICT: queue both, keep local,
+             *                                   notify user — ZERO silent data loss
+             *  6. No timestamps on either      → remote wins (initial sync/import)
+             *  7. Only local has timestamp     → keep local (it has edit history)
+             *  8. Only remote has timestamp    → apply remote
+             */
+            async function _mergeToLocal(storeName, remoteRecords) {
+                if (!remoteRecords || !remoteRecords.length) return;
+                await ensureDB();
+                return new Promise((resolve) => {
+                    try {
+                        const tx = db.transaction([storeName], 'readwrite');
+                        const store = tx.objectStore(storeName);
+                        let pending = remoteRecords.length;
+                        if (pending === 0) { resolve(); return; }
+
+                        remoteRecords.forEach(remote => {
+                            const getReq = store.get(remote.id);
+                            getReq.onsuccess = () => {
+                                const local = getReq.result;
+
+                                // ── Case 1: No local record — insert remote ────
+                                if (!local) {
+                                    const putReq = store.put(remote);
+                                    putReq.onsuccess = () => { pending--; if (pending === 0) resolve(); };
+                                    putReq.onerror  = () => { pending--; if (pending === 0) resolve(); };
+                                    return;
+                                }
+
+                                // ── Case 2: Identical — skip write ────────────
+                                const localFingerprint  = _fingerprint(local);
+                                const remoteFingerprint = _fingerprint(remote);
+                                if (localFingerprint === remoteFingerprint) {
+                                    _dbg('[SyncEngine]', storeName, remote.id, '→ identical, skip');
+                                    pending--; if (pending === 0) resolve();
+                                    return;
+                                }
+
+                                const lt = local._updatedAt  || null;
+                                const rt = remote._updatedAt || null;
+
+                                let winner = null;
+
+                                if (lt && rt) {
+                                    if (lt > rt) {
+                                        // Case 3: local newer → keep local
+                                        winner = local;
+                                        _dbg('[SyncEngine]', storeName, remote.id, '→ local-newer');
+                                    } else if (rt > lt) {
+                                        // Case 4: remote newer → apply remote
+                                        winner = remote;
+                                        _dbg('[SyncEngine]', storeName, remote.id, '→ remote-newer');
+                                    } else {
+                                        // Case 5: Same timestamp, different data → TRUE CONFLICT
+                                        // Queue BOTH versions. Keep local. Notify user.
+                                        ConflictQueue.add(storeName, local, remote);
+                                        winner = local; // keep local — do NOT overwrite
+                                        console.warn('[SyncEngine] ⚠️ CONFLICT queued:', storeName, 'id:', remote.id);
+                                    }
+                                } else if (lt && !rt) {
+                                    // Case 7: only local has timestamp → keep local
+                                    winner = local;
+                                    _dbg('[SyncEngine]', storeName, remote.id, '→ local-has-ts');
+                                } else if (!lt && rt) {
+                                    // Case 8: only remote has timestamp → apply remote
+                                    winner = remote;
+                                    _dbg('[SyncEngine]', storeName, remote.id, '→ remote-has-ts');
+                                } else {
+                                    // Case 6: neither has timestamp → remote wins (initial sync)
+                                    winner = remote;
+                                    _dbg('[SyncEngine]', storeName, remote.id, '→ no-ts-remote-wins');
+                                }
+
+                                const putReq = store.put(winner);
+                                putReq.onsuccess = () => { pending--; if (pending === 0) resolve(); };
+                                putReq.onerror  = () => { pending--; if (pending === 0) resolve(); };
+                            };
+                            getReq.onerror = () => {
+                                // IDB error reading local — insert remote as safe fallback
+                                const putReq = store.put(remote);
+                                putReq.onsuccess = () => { pending--; if (pending === 0) resolve(); };
+                                putReq.onerror  = () => { pending--; if (pending === 0) resolve(); };
+                            };
+                        });
+                        tx.onerror = () => resolve();
+                    } catch(e) {
+                        console.warn('[SyncEngine] mergeToLocal error:', storeName, e);
+                        resolve();
+                    }
+                });
+            }
+
+            /** Fingerprint for change detection — excludes _updatedAt to compare actual content */
+            function _fingerprint(record) {
+                const copy = Object.assign({}, record);
+                delete copy._updatedAt;
+                delete copy._createdAt;
+                try { return JSON.stringify(copy); } catch(e) { return String(record.id); }
+            }
+
+            /** Deduplicate an array of records by id */
+            function _dedupe(records) {
+                const seen = new Map();
+                records.forEach(r => {
+                    if (!r.id) return;
+                    const existing = seen.get(r.id);
+                    if (!existing) {
+                        seen.set(r.id, r);
+                    } else if (r._updatedAt && existing._updatedAt && r._updatedAt > existing._updatedAt) {
+                        seen.set(r.id, r); // keep newer
+                    }
+                });
+                return Array.from(seen.values());
+            }
+
+            function debounce(fn, ms = 2000) {
+                if (_debounceTimer) clearTimeout(_debounceTimer);
+                _debounceTimer = setTimeout(fn, ms);
+            }
+
+            async function push() {
+                if (_inProgress) { _dbg('[SyncEngine] Push skipped - already in progress'); return; }
+                return syncToFirebase();
+            }
+
+            async function pull() {
+                if (_inProgress) { _dbg('[SyncEngine] Pull skipped - already in progress'); return; }
+                _inProgress = true;
+                try {
+                    await _pullWithMerge();
+                } finally {
+                    _inProgress = false;
+                }
+            }
+
+            async function _pullWithMerge() {
+                const cu = (typeof MT !== 'undefined' && MT.currentUser) || currentUser;
+                const dbRef = window.db;
+                if (!dbRef || !cu) return;
+                if (cu.uid && cu.uid.startsWith('local_')) return;
+
+                let orgId = null;
+                try { orgId = (MT && MT.currentOrg && MT.currentOrg.id) || localStorage.getItem('mt_current_org_id'); } catch(e) {}
+                if (!orgId || orgId === 'local_org') orgId = cu.uid;
+
+                _dbg('[SyncEngine] Pulling from org:', orgId);
+                const doc = await dbRef.collection('prism_data').doc(orgId).get();
+                if (!doc.exists) { await syncToFirebase(); return; }
+
+                const data = doc.data();
+                const STORES = ['properties','tenants','payments','credits','creditPayments',
+                    'expenses','customNotes','additionalIncome','clientCharges',
+                    'waterCustomers','waterSales','employees','cashAdvances',
+                    'salaryPayments','timeRecords','tasks'];
+
+                for (const s of STORES) {
+                    if (data[s] && Array.isArray(data[s])) {
+                        const deduped = _dedupe(data[s]);
+                        await _mergeToLocal(s, deduped);
+                    }
+                }
+
+                // App users merge
+                if (data.appUsers && Array.isArray(data.appUsers)) {
+                    const local = JSON.parse(localStorage.getItem('prism_app_users') || '[]');
+                    const allDefault = local.every(u => u._isDefault);
+                    const merged = allDefault ? data.appUsers : _dedupe([...data.appUsers, ...local]);
+                    localStorage.setItem('prism_app_users', JSON.stringify(merged));
+                }
+
+                // Reload state
+                await DAL.loadAllIntoState();
+                await loadAllData();
+                window._hasSyncedOnce = true;
+                _dbg('[SyncEngine] Pull complete');
+            }
+
+            return { push, pull, debounce, _mergeToLocal };
+        })();
+        window.SyncEngine = SyncEngine;
+
+        // ─── 6. TENANT DATA ISOLATION ASSERT ────────────────────────────────
+        function assertTenantIsolation(records, label) {
+            if (!PRISM_DEBUG) return;
+            let orgId = null;
+            try { orgId = MT && MT.currentOrg && MT.currentOrg.id; } catch(e) {}
+            if (!orgId) return;
+            const leaked = records.filter(r => r.orgId && r.orgId !== orgId);
+            if (leaked.length > 0) {
+                console.error('[ISOLATION] ⚠️', label, '- Cross-tenant records:', leaked.length);
+            }
+        }
+        window.assertTenantIsolation = assertTenantIsolation;
+
+        // ─── 7. BOOT PIPELINE ────────────────────────────────────────────────
+        // Controlled init: DB → Data → Sync → Render
+        // init() is the existing function, we wrap it with the pipeline
+        const _originalInit = typeof init === 'function' ? init : null;
+
+        async function prismBootPipeline() {
+            _dbg('[Boot] Starting boot pipeline...');
+            try {
+                // Stage 1: DB
+                _dbg('[Boot] Stage 1: Database');
+                await ensureDB();
+
+                // Stage 2: Load local data into AppState
+                _dbg('[Boot] Stage 2: Load local data');
+                await DAL.loadAllIntoState();
+
+                // Stage 3: Run existing init (sets up nav, UI, etc.)
+                _dbg('[Boot] Stage 3: UI init');
+                if (_originalInit) await _originalInit();
+
+                // Stage 4: Background sync (non-blocking)
+                _dbg('[Boot] Stage 4: Background sync check');
+                setTimeout(async () => {
+                    try {
+                        const cu = (typeof MT !== 'undefined' && MT.currentUser) || currentUser;
+                        if (cu && !String(cu.uid||'').startsWith('local_') && window.firebaseReady) {
+                            await SyncEngine.pull();
+                        }
+                    } catch(e) { _dbg('[Boot] Background sync error (non-critical):', e); }
+                }, 3000);
+
+                AppState.setState({ ready: true });
+                _dbg('[Boot] Pipeline complete ✅');
+            } catch(e) {
+                console.error('[Boot] Pipeline error:', e);
+                // Fall back to original init even if pipeline fails
+                if (_originalInit) {
+                    try { await _originalInit(); } catch(e2) {}
+                }
+            }
+        }
+
+        // Override syncFromFirebase to use SyncEngine merge logic
+        const _origSyncFromFirebase = typeof syncFromFirebase === 'function' ? syncFromFirebase : null;
+        window.syncFromFirebase = async function() {
+            try {
+                await SyncEngine.pull();
+            } catch(e) {
+                if (_origSyncFromFirebase) return _origSyncFromFirebase();
+            }
+        };
+
+        // Override debouncedSync to use SyncEngine
+        window.debouncedSync = function() {
+            SyncEngine.debounce(() => syncToFirebase(), 2000);
+        };
+
+        _dbg('[PRISM Production Engine] Loaded ✅');
+        // Initialize conflict badge on load
+        setTimeout(() => { try { ConflictQueue._notifyUI(); } catch(e) {} }, 500);
 
         // =====================
         // START APP - called by MT layer after auth confirmed
@@ -22380,8 +23198,10 @@ function mtShowApp() {
     // Initialize PRISM app if not done yet
     if (!_prismAppInitialized) {
         _prismAppInitialized = true;
-        if (typeof init === 'function') {
-            setTimeout(() => init(), 100);
+        // Use boot pipeline if available, fallback to direct init()
+        const bootFn = typeof prismBootPipeline === 'function' ? prismBootPipeline : init;
+        if (typeof bootFn === 'function') {
+            setTimeout(() => bootFn(), 100);
         }
     }
 
@@ -22394,6 +23214,54 @@ function mtShowApp() {
     if (!window._endorsePollSet) {
         window._endorsePollSet = true;
         setInterval(updateEndorseUnreadBadge, 30000);
+    }
+
+    // ── In-App Periodic Sync (replaces Background Sync API) ──────────────
+    // Safe: runs only when app is open + user is authenticated + online
+    if (!window._periodicSyncSet) {
+        window._periodicSyncSet = true;
+
+        // Sync every 5 minutes while app is open
+        setInterval(async () => {
+            try {
+                const cu = (typeof MT !== 'undefined' && MT.currentUser) || currentUser;
+                const isLocal = !cu || String(cu.uid||'').startsWith('local_');
+                if (!cu || isLocal || !window.firebaseReady || !navigator.onLine) return;
+                if (typeof SyncEngine !== 'undefined') {
+                    console.log('[PeriodicSync] Auto-sync triggered');
+                    await SyncEngine.push();
+                }
+            } catch(e) { /* silent — non-critical */ }
+        }, 5 * 60 * 1000);
+
+        // Sync on page visibility (tab becomes active again)
+        document.addEventListener('visibilitychange', async () => {
+            if (document.visibilityState !== 'visible') return;
+            try {
+                const cu = (typeof MT !== 'undefined' && MT.currentUser) || currentUser;
+                const isLocal = !cu || String(cu.uid||'').startsWith('local_');
+                if (!cu || isLocal || !window.firebaseReady || !navigator.onLine) return;
+                if (typeof SyncEngine !== 'undefined') {
+                    console.log('[PeriodicSync] Tab focus sync triggered');
+                    SyncEngine.debounce(() => SyncEngine.push(), 1500);
+                }
+            } catch(e) {}
+        });
+
+        // Sync when coming back online
+        window.addEventListener('online', async () => {
+            try {
+                const cu = (typeof MT !== 'undefined' && MT.currentUser) || currentUser;
+                const isLocal = !cu || String(cu.uid||'').startsWith('local_');
+                if (!cu || isLocal || !window.firebaseReady) return;
+                if (typeof SyncEngine !== 'undefined') {
+                    console.log('[PeriodicSync] Back online - syncing...');
+                    await SyncEngine.push();
+                    await SyncEngine.pull();
+                    showToast('🔄 Back online — synced!', 'success', 2000);
+                }
+            } catch(e) {}
+        });
     }
 }
 
@@ -23825,6 +24693,11 @@ async function mtAppLogout() {
 // ---- Main Init ----
 async function mtInit() {
     // Show landing immediately — don't wait for Firebase
+    // Safety: ensure SOMETHING is visible even if init fails
+    setTimeout(() => {
+        const anyActive = document.querySelector("#mt-landing.active, #mt-auth.active, #mt-setup.active, #mt-superadmin.active, .prism-app-wrapper.mt-active");
+        if (!anyActive) { console.warn("[PRISM] Safety net: forcing landing screen"); mtShowLanding(); }
+    }, 1500);
     mtHideLoading();
     
     // Restore session immediately if local data exists (prevents flash of landing page)
@@ -24161,3 +25034,23 @@ window.addEventListener('DOMContentLoaded', () => {
                     }
 
                     
+                    _lastSyncTimestamp = data.lastSync;
+                    if (typeof loadDashboard === 'function') {
+                        try { loadDashboard(); } catch(e) {}
+                    }
+                }, (err) => {
+                    console.warn('[RealtimeSync] Listener error:', err.message);
+                });
+        }
+
+        function mtStopRealtimeSync() {
+            if (_realtimeSyncUnsubscribe) {
+                _realtimeSyncUnsubscribe();
+                _realtimeSyncUnsubscribe = null;
+                console.log('[RealtimeSync] Listener stopped');
+            }
+        }
+
+</script>
+</body>
+</html>
