@@ -24,26 +24,32 @@
     <meta name="author" content="OMNIGRID ONLINE">
     <meta name="keywords" content="rental management, credit management, payroll, water refilling, Philippines, PWA">
     
-    <!-- PWA Manifest -->
-    <!-- PWA Manifest: manifest.json with inline blob fallback on 404 -->
-    <link rel="manifest" id="pwa-manifest-link" href="manifest.json">
+    <!-- PWA Manifest — inline blob, no external file needed, no 404 -->
+    <link rel="manifest" id="pwa-manifest-link">
     <script>
     (function(){
-        fetch('manifest.json',{method:'HEAD'}).catch(function(){
-            // manifest.json not found — inject inline blob
-            var d={name:'PRISM - Business Manager',short_name:'PRISM',
-                description:'Property, Rental, Income & Sales Management',
-                start_url:'./',scope:'./',display:'standalone',
-                background_color:'#0f172a',theme_color:'#667eea',orientation:'any',
-                icons:[{src:'icon-192.png',sizes:'192x192',type:'image/png',purpose:'any maskable'},
-                       {src:'icon-512.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
-            try{
-                var b=new Blob([JSON.stringify(d)],{type:'application/json'});
-                var u=URL.createObjectURL(b);
-                var l=document.getElementById('pwa-manifest-link');
-                if(l)l.href=u;
-            }catch(e){}
-        });
+        // Inject manifest as a blob URL synchronously — browser never requests manifest.json
+        var d={name:'PRISM - Business Manager',short_name:'PRISM',
+            description:'Property, Rental, Income & Sales Management System by OMNIGRID ONLINE',
+            start_url:'./',scope:'./',display:'standalone',
+            background_color:'#0f172a',theme_color:'#667eea',orientation:'any',
+            categories:['business','finance','productivity'],
+            icons:[
+                {src:'icon-192.png',sizes:'192x192',type:'image/png',purpose:'any maskable'},
+                {src:'icon-512.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}
+            ],
+            screenshots:[],
+            shortcuts:[
+                {name:'Dashboard',url:'./#dashboard',description:'View dashboard'},
+                {name:'Properties', url:'./#properties',description:'Manage properties'},
+                {name:'Staff',url:'./#staff',description:'Manage employees'}
+            ]
+        };
+        try{
+            var b=new Blob([JSON.stringify(d)],{type:'application/json'});
+            var u=URL.createObjectURL(b);
+            document.getElementById('pwa-manifest-link').href=u;
+        }catch(e){}
     })();
     // END SCRIPT BLOCK — DO NOT REMOVE CLOSING TAG
 </script>
@@ -16009,7 +16015,12 @@ async function showPayrollSummary() {
                     .filter(e => { if (!_safeDate(e.date)) { console.warn('[TrendChart] Skipping malformed expense:', e); return false; } return e.date.startsWith(m.key); })
                     .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
                 const monthCreditsReleased = credits
-                    .filter(c => { if (!_safeDate(c.dateLent)) { console.warn('[TrendChart] Skipping malformed credit:', c); return false; } return c.dateLent.startsWith(m.key); })
+                    .filter(c => {
+                        // Accept both 'dateLent' (real schema) and 'date' (legacy sample data)
+                        const creditDate = c.dateLent || c.date || null;
+                        if (!_safeDate(creditDate)) return false; // silently skip, no spam warning
+                        return creditDate.startsWith(m.key);
+                    })
                     .reduce((sum, c) => sum + (Number(c.principal) || 0), 0);
                 const totalExpenses = monthExpenses + monthCreditsReleased;
 
@@ -21549,452 +21560,289 @@ async function editTask(id) {
         // =====================
         async function loadSampleData() {
             console.log('🎯 loadSampleData() called');
-            
-            if (!await showConfirm('This will add sample properties, tenants, employees, credits, and water customers. Your existing data will NOT be deleted.', 'info', '📦 Load Sample Data', 'Yes, Load Samples')) {
-                console.log('User cancelled sample data load');
-                return;
-            }
-            
-            console.log('User confirmed - starting sample data load...');
-            
+
+            if (!await showConfirm(
+                'This will add rich sample data across ALL modules so you can explore every feature.\n\nYour existing records will NOT be deleted.',
+                'info', '📦 Load Sample Data', 'Yes, Load Samples'
+            )) return;
+
             try {
-                const today = new Date();
-                const thisMonth = today.getMonth();
-                const thisYear = today.getFullYear();
-                const dateStr = (day) => `${thisYear}-${String(thisMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                
-                console.log('Starting to add properties...');
-                // ===== PROPERTIES =====
-                const properties = [
-                    { name: 'Lot 1 - Poblacion', type: 'lot', address: 'Purok 1, Poblacion', rent: 3000, status: 'occupied', createdAt: new Date().toISOString() },
-                    { name: 'Lot 2 - Riverside', type: 'lot', address: 'Riverside Subd', rent: 3500, status: 'vacant', createdAt: new Date().toISOString() },
-                    { name: 'Apartment Unit A', type: 'apartment', address: 'Main Street', rent: 5000, status: 'occupied', createdAt: new Date().toISOString() },
-                    { name: 'Apartment Unit B', type: 'apartment', address: 'Main Street', rent: 5000, status: 'vacant', createdAt: new Date().toISOString() },
-                    { name: 'Room 1 - Boarding', type: 'room', address: 'Near Market', rent: 2000, status: 'occupied', createdAt: new Date().toISOString() },
-                    { name: 'Room 2 - Boarding', type: 'room', address: 'Near Market', rent: 2000, status: 'vacant', createdAt: new Date().toISOString() },
-                    { name: 'Commercial Space', type: 'commercial', address: 'Highway', rent: 8000, status: 'vacant', createdAt: new Date().toISOString() },
+                const today      = new Date();
+                const thisMonth  = today.getMonth();
+                const thisYear   = today.getFullYear();
+                const lastMonth  = thisMonth === 0 ? 11 : thisMonth - 1;
+                const lastYear   = thisMonth === 0 ? thisYear - 1 : thisYear;
+
+                // Helper: date string in current month
+                const d  = (day) => `${thisYear}-${String(thisMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                // Helper: date string in last month
+                const dl = (day) => `${lastYear}-${String(lastMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                // Helper: stagger timestamps to avoid fingerprint collisions
+                let _ts = Date.now() - 5000;
+                const ts = () => new Date(_ts += 37).toISOString();
+
+                // ── PROPERTIES (7) ──────────────────────────────────────────────
+                const propDefs = [
+                    { name:'Lot 1 - Poblacion',    type:'lot',        address:'Purok 1, Poblacion, Matalam',  rent:3000, status:'occupied',  notes:'Corner lot, good road frontage' },
+                    { name:'Lot 2 - Riverside',    type:'lot',        address:'Riverside Subd, Matalam',      rent:3500, status:'vacant',    notes:'Near river, good for commercial' },
+                    { name:'Apartment Unit A',     type:'apartment',  address:'Main Street, Matalam',         rent:5000, status:'occupied',  notes:'2BR, fully furnished' },
+                    { name:'Apartment Unit B',     type:'apartment',  address:'Main Street, Matalam',         rent:5000, status:'vacant',    notes:'2BR, partially furnished' },
+                    { name:'Room 1 - Boarding',    type:'room',       address:'Near Public Market, Matalam',  rent:2000, status:'occupied',  notes:'Single room, shared bathroom' },
+                    { name:'Room 2 - Boarding',    type:'room',       address:'Near Public Market, Matalam',  rent:2000, status:'occupied',  notes:'Single room with CR' },
+                    { name:'Commercial Space',     type:'commercial', address:'National Highway, Matalam',    rent:8000, status:'vacant',    notes:'Good foot traffic, 60sqm' },
                 ];
-                
-                for (const p of properties) {
-                    await dbAdd('properties', p);
-                }
-                
-                // Get the added properties to get their IDs
+                for (const p of propDefs) await dbAdd('properties', { ...p, createdAt: ts(), _updatedAt: ts() });
+                console.log('✅ Properties added');
+
                 const allProperties = await dbGetAll('properties');
-                const prop1 = allProperties.find(p => p.name === 'Lot 1 - Poblacion');
-                const prop3 = allProperties.find(p => p.name === 'Apartment Unit A');
-                const prop5 = allProperties.find(p => p.name === 'Room 1 - Boarding');
-                
-                // ===== TENANTS =====
-                const tenants = [
-                    { name: 'Juan Dela Cruz', phone: '09171234567', propertyId: prop1 ? prop1.id : null, rent: 3000, dueDay: 5, status: 'active', moveIn: '2024-06-01', createdAt: new Date().toISOString() },
-                    { name: 'Maria Santos', phone: '09189876543', propertyId: prop3 ? prop3.id : null, rent: 5000, dueDay: 10, status: 'active', moveIn: '2024-08-15', createdAt: new Date().toISOString() },
-                    { name: 'Pedro Reyes', phone: '09201112233', propertyId: prop5 ? prop5.id : null, rent: 2000, dueDay: 1, status: 'active', moveIn: '2024-09-01', createdAt: new Date().toISOString() },
-                    { name: 'Ana Garcia', phone: '09223334455', propertyId: null, rent: 0, dueDay: 0, status: 'inactive', moveIn: '2024-01-01', createdAt: new Date().toISOString() },
+                const [prop1,prop2,prop3,prop4,prop5,prop6] = ['Lot 1 - Poblacion','Lot 2 - Riverside',
+                    'Apartment Unit A','Apartment Unit B','Room 1 - Boarding','Room 2 - Boarding']
+                    .map(n => allProperties.find(p => p.name === n));
+
+                // ── TENANTS (6) ──────────────────────────────────────────────────
+                const tenantDefs = [
+                    { name:'Juan Dela Cruz',    phone:'09171234567', propertyId: prop1?.id, rent:3000, dueDay:5,  status:'active',   moveIn:'2024-06-01', deposit:6000, leaseEnd:'2025-06-01', notes:'Good payer, 2 yrs' },
+                    { name:'Maria Santos',      phone:'09189876543', propertyId: prop3?.id, rent:5000, dueDay:10, status:'active',   moveIn:'2024-08-15', deposit:10000,leaseEnd:'2025-08-15', notes:'Monthly GCash payment' },
+                    { name:'Pedro Reyes',       phone:'09201112233', propertyId: prop5?.id, rent:2000, dueDay:1,  status:'active',   moveIn:'2024-09-01', deposit:4000, leaseEnd:'2025-09-01', notes:'On-time payment' },
+                    { name:'Josie Bautista',    phone:'09214445566', propertyId: prop6?.id, rent:2000, dueDay:1,  status:'active',   moveIn:'2025-01-15', deposit:4000, leaseEnd:'2026-01-15', notes:'New tenant' },
+                    { name:'Ana Garcia',        phone:'09223334455', propertyId: null,      rent:0,    dueDay:0,  status:'inactive', moveIn:'2024-01-01', deposit:0,    leaseEnd:'',           notes:'Moved out Jan 2025' },
+                    { name:'Rodel Castillo',    phone:'09231234500', propertyId: prop2?.id, rent:3500, dueDay:15, status:'active',   moveIn:'2025-02-01', deposit:7000, leaseEnd:'2026-02-01', notes:'Business tenant, Lot 2' },
                 ];
-                
-                for (const t of tenants) {
-                    await dbAdd('tenants', t);
-                }
-                
-                // Get tenant IDs for payments
+                for (const t of tenantDefs) await dbAdd('tenants', { ...t, createdAt: ts(), _updatedAt: ts() });
+                console.log('✅ Tenants added');
+
                 const allTenants = await dbGetAll('tenants');
-                const tenant1 = allTenants.find(t => t.name === 'Juan Dela Cruz');
-                const tenant2 = allTenants.find(t => t.name === 'Maria Santos');
-                
-                // ===== PAYMENTS =====
-                if (tenant1) {
-                    await dbAdd('payments', { tenantId: tenant1.id, amount: 3000, method: 'cash', date: dateStr(5), forMonth: dateStr(1).substring(0, 7), createdAt: new Date().toISOString() });
-                }
-                if (tenant2) {
-                    await dbAdd('payments', { tenantId: tenant2.id, amount: 5000, method: 'gcash', date: dateStr(10), forMonth: dateStr(1).substring(0, 7), createdAt: new Date().toISOString() });
-                }
-                
-                // ===== CREDITS/LOANS =====
-                const credits = [
-                    { borrowerName: 'Roberto Fernandez', borrowerPhone: '09151234567', principal: 10000, interest: 1000, interestRate: 10, date: '2024-10-01', dueDate: '2025-01-01', notes: 'Personal loan', createdAt: new Date().toISOString() },
-                    { borrowerName: 'Liza Mendoza', borrowerPhone: '09162345678', principal: 5000, interest: 500, interestRate: 10, date: '2024-11-15', dueDate: '2025-02-15', notes: 'Emergency loan', createdAt: new Date().toISOString() },
-                    { borrowerName: 'Carlos Rivera', borrowerPhone: '09173456789', principal: 15000, interest: 2250, interestRate: 15, date: '2024-09-01', dueDate: '2024-12-01', notes: 'Business loan', createdAt: new Date().toISOString() },
+                const [t1,t2,t3,t4,,t6] = ['Juan Dela Cruz','Maria Santos','Pedro Reyes','Josie Bautista','Ana Garcia','Rodel Castillo']
+                    .map(n => allTenants.find(t => t.name === n));
+
+                // ── PAYMENTS — this month + last month (10) ──────────────────────
+                const payDefs = [
+                    // this month
+                    { tenantId:t1?.id, amount:3000, method:'cash',  date:d(5),  forMonth:d(1).slice(0,7), notes:'' },
+                    { tenantId:t2?.id, amount:5000, method:'gcash', date:d(10), forMonth:d(1).slice(0,7), notes:'GCash ref 12345' },
+                    { tenantId:t3?.id, amount:2000, method:'cash',  date:d(1),  forMonth:d(1).slice(0,7), notes:'' },
+                    { tenantId:t4?.id, amount:2000, method:'bank',  date:d(3),  forMonth:d(1).slice(0,7), notes:'BDO transfer' },
+                    { tenantId:t6?.id, amount:3500, method:'cash',  date:d(15), forMonth:d(1).slice(0,7), notes:'' },
+                    // last month
+                    { tenantId:t1?.id, amount:3000, method:'cash',  date:dl(5),  forMonth:dl(1).slice(0,7), notes:'' },
+                    { tenantId:t2?.id, amount:5000, method:'gcash', date:dl(10), forMonth:dl(1).slice(0,7), notes:'' },
+                    { tenantId:t3?.id, amount:2000, method:'cash',  date:dl(1),  forMonth:dl(1).slice(0,7), notes:'' },
+                    { tenantId:t4?.id, amount:2000, method:'cash',  date:dl(2),  forMonth:dl(1).slice(0,7), notes:'' },
+                    { tenantId:t6?.id, amount:3500, method:'cash',  date:dl(15), forMonth:dl(1).slice(0,7), notes:'' },
                 ];
-                
-                for (const c of credits) {
-                    await dbAdd('credits', c);
-                }
-                
-                // Get credit IDs for payments
+                for (const p of payDefs) if (p.tenantId) await dbAdd('payments', { ...p, createdAt: ts(), _updatedAt: ts() });
+                console.log('✅ Payments added');
+
+                // ── CREDITS / LOANS (5) ──────────────────────────────────────────
+                const creditDefs = [
+                    { borrowerName:'Roberto Fernandez', borrowerPhone:'09151234567', principal:10000, interest:1000, interestRate:10, dateLent:'2024-10-01', dueDate:'2025-04-01', status:'active',   notes:'Personal loan' },
+                    { borrowerName:'Liza Mendoza',      borrowerPhone:'09162345678', principal:5000,  interest:500,  interestRate:10, dateLent:'2024-11-15', dueDate:'2025-05-15', status:'active',   notes:'Emergency loan' },
+                    { borrowerName:'Carlos Rivera',     borrowerPhone:'09173456789', principal:15000, interest:2250, interestRate:15, dateLent:'2024-09-01', dueDate:'2024-12-01', status:'overdue',  notes:'Business loan — overdue' },
+                    { borrowerName:'Elena Soriano',     borrowerPhone:'09184567890', principal:8000,  interest:800,  interestRate:10, dateLent:'2025-01-01', dueDate:'2025-07-01', status:'active',   notes:'Salary loan' },
+                    { borrowerName:'Danilo Cruz',       borrowerPhone:'09195678901', principal:20000, interest:4000, interestRate:20, dateLent:'2024-08-01', dueDate:'2025-02-01', status:'settled',  notes:'Fully paid' },
+                ];
+                for (const c of creditDefs) await dbAdd('credits', { ...c, createdAt: ts(), _updatedAt: ts() });
+                console.log('✅ Credits added');
+
                 const allCredits = await dbGetAll('credits');
-                const credit1 = allCredits.find(c => c.borrowerName === 'Roberto Fernandez');
-                const credit3 = allCredits.find(c => c.borrowerName === 'Carlos Rivera');
-                
-                // ===== CREDIT PAYMENTS =====
-                if (credit1) {
-                    await dbAdd('creditPayments', { creditId: credit1.id, amount: 3000, date: dateStr(1), notes: 'Partial payment', createdAt: new Date().toISOString() });
-                }
-                if (credit3) {
-                    await dbAdd('creditPayments', { creditId: credit3.id, amount: 5000, date: dateStr(5), notes: 'Partial payment', createdAt: new Date().toISOString() });
-                }
-                
-                // ===== EMPLOYEES =====
-                const employees = [
-                    { name: 'Roger Ellioso', position: 'Staff', dailyRate: 300, payFrequency: 'weekly', phone: '09181234567', otRate: 47, workDays: { mon: true, tue: true, wed: true, thu: true, fri: true, sat: true, sun: false }, createdAt: new Date().toISOString() },
-                    { name: 'Cenia Ellioso', position: 'Cashier', dailyRate: 280, payFrequency: 'weekly', phone: '09182345678', otRate: 44, workDays: { mon: true, tue: true, wed: true, thu: true, fri: true, sat: true, sun: false }, createdAt: new Date().toISOString() },
-                    { name: 'Mario Delos Santos', position: 'Helper', dailyRate: 250, payFrequency: 'daily', phone: '09183456789', otRate: 39, workDays: { mon: true, tue: true, wed: true, thu: true, fri: true, sat: true, sun: false }, createdAt: new Date().toISOString() },
+                const [cr1,cr2,cr3,cr4,cr5] = ['Roberto Fernandez','Liza Mendoza','Carlos Rivera','Elena Soriano','Danilo Cruz']
+                    .map(n => allCredits.find(c => c.borrowerName === n));
+
+                // ── CREDIT PAYMENTS (6) ──────────────────────────────────────────
+                const cpDefs = [
+                    { creditId:cr1?.id, amount:3000, date:d(5),   notes:'Partial - cash' },
+                    { creditId:cr1?.id, amount:2000, date:dl(10),  notes:'Partial - last month' },
+                    { creditId:cr2?.id, amount:5500, date:d(8),   notes:'Full settlement + interest' },
+                    { creditId:cr3?.id, amount:5000, date:dl(5),   notes:'Partial - last month' },
+                    { creditId:cr4?.id, amount:2000, date:d(3),   notes:'Monthly installment' },
+                    { creditId:cr5?.id, amount:24000,date:dl(20),  notes:'Full payment + interest' },
                 ];
-                
-                for (const e of employees) {
-                    await dbAdd('employees', e);
-                }
-                
-                // Get employee IDs for time records
+                for (const cp of cpDefs) if (cp.creditId) await dbAdd('creditPayments', { ...cp, createdAt: ts(), _updatedAt: ts() });
+                console.log('✅ Credit payments added');
+
+                // ── EMPLOYEES (3) ────────────────────────────────────────────────
+                const empDefs = [
+                    { name:'Roger Ellioso',      position:'Staff',   dailyRate:300, payFrequency:'weekly', phone:'09181234567', otRate:47, workDays:{mon:true,tue:true,wed:true,thu:true,fri:true,sat:true,sun:false}, hireDate:'2023-01-15', sssNo:'12-3456789-0',   philhealthNo:'12-345678901-2', pagibigNo:'1234-5678-9012', notes:'Hardware store staff' },
+                    { name:'Cenia Ellioso',      position:'Cashier', dailyRate:280, payFrequency:'weekly', phone:'09182345678', otRate:44, workDays:{mon:true,tue:true,wed:true,thu:true,fri:true,sat:true,sun:false}, hireDate:'2023-03-01', sssNo:'12-3456789-1',   philhealthNo:'12-345678901-3', pagibigNo:'1234-5678-9013', notes:'Water station cashier' },
+                    { name:'Mario Delos Santos', position:'Helper',  dailyRate:250, payFrequency:'daily',  phone:'09183456789', otRate:39, workDays:{mon:true,tue:true,wed:true,thu:true,fri:true,sat:true,sun:false}, hireDate:'2024-06-01', sssNo:'12-3456789-2',   philhealthNo:'12-345678901-4', pagibigNo:'1234-5678-9014', notes:'General helper / delivery' },
+                ];
+                for (const e of empDefs) await dbAdd('employees', { ...e, createdAt: ts(), _updatedAt: ts() });
+                console.log('✅ Employees added');
+
                 const allEmployees = await dbGetAll('employees');
-                
-                // ===== TIME RECORDS (attendance for past 6 days) =====
-                for (const emp of allEmployees) {
-                    if (!emp.name.startsWith('Roger') && !emp.name.startsWith('Cenia') && !emp.name.startsWith('Mario')) continue;
-                    
-                    for (let d = 1; d <= 6; d++) {
-                        const recordDate = new Date();
-                        recordDate.setDate(recordDate.getDate() - d);
-                        if (recordDate.getDay() === 0) continue; // Skip Sunday
-                        
-                        const record = {
-                            employeeId: emp.id,
-                            date: recordDate.toISOString().split('T')[0],
-                            status: d === 5 ? 'halfday' : 'present',
-                            lateDeduction: d === 3 ? 20 : 0,
-                            otHours: d === 2 ? 2 : 0,
-                            bonus: d === 1 ? 50 : 0,
-                            notes: '',
-                            paid: false,
-                            createdAt: new Date().toISOString()
-                        };
-                        await dbAdd('timeRecords', record);
+                const [emp1,emp2,emp3] = ['Roger Ellioso','Cenia Ellioso','Mario Delos Santos']
+                    .map(n => allEmployees.find(e => e.name === n));
+
+                // ── TIME RECORDS — 18 entries (6 days × 3 employees) ─────────────
+                for (const emp of [emp1,emp2,emp3].filter(Boolean)) {
+                    for (let dayBack = 1; dayBack <= 6; dayBack++) {
+                        const rd = new Date();
+                        rd.setDate(rd.getDate() - dayBack);
+                        if (rd.getDay() === 0) continue; // skip Sunday
+                        await dbAdd('timeRecords', {
+                            employeeId:    emp.id,
+                            date:          rd.toISOString().split('T')[0],
+                            status:        dayBack === 4 ? 'halfday' : dayBack === 6 ? 'absent' : 'present',
+                            lateDeduction: dayBack === 3 ? 25 : 0,
+                            otHours:       dayBack === 2 ? 2 : 0,
+                            overtimeRate:  emp.otRate || 0,
+                            overtime:      dayBack === 2 ? (emp.otRate||0)*2 : 0,
+                            bonus:         dayBack === 1 ? 50 : 0,
+                            incentive:     0,
+                            paid:          false,
+                            notes:         dayBack === 4 ? 'Half day - medical' : '',
+                            createdAt:     ts(),
+                            _updatedAt:    ts(),
+                        });
                     }
                 }
-                
-                // ===== CASH ADVANCES =====
-                const roger = allEmployees.find(e => e.name === 'Roger Ellioso');
-                if (roger) {
-                    await dbAdd('cashAdvances', { employeeId: roger.id, amount: 200, date: today.toISOString().split('T')[0], reason: 'Emergency', deducted: false, createdAt: new Date().toISOString() });
-                }
-                
-                // ===== WATER CUSTOMERS =====
-                const waterCustomers = [
-                    { name: 'Aling Nena Store', phone: '09191234567', address: 'Purok 2', balance: 0, totalPurchases: 500, createdAt: new Date().toISOString() },
-                    { name: 'Mang Tony', phone: '09192345678', address: 'Riverside', balance: 75, totalPurchases: 300, createdAt: new Date().toISOString() },
-                    { name: 'Ate Luz Carinderia', phone: '09193456789', address: 'Market', balance: 150, totalPurchases: 800, createdAt: new Date().toISOString() },
-                    { name: 'Barangay Hall', phone: '09194567890', address: 'Poblacion', balance: 0, totalPurchases: 1200, createdAt: new Date().toISOString() },
-                    { name: 'Kuya Ben', phone: '09195678901', address: 'Highway', balance: 50, totalPurchases: 250, createdAt: new Date().toISOString() },
+                console.log('✅ Time records added');
+
+                // ── CASH ADVANCES (3) ─────────────────────────────────────────────
+                const caDefs = [
+                    { employeeId:emp1?.id, amount:500,  date:d(3),  reason:'Personal emergency',    deducted:false },
+                    { employeeId:emp2?.id, amount:300,  date:d(5),  reason:'Medicine',              deducted:false },
+                    { employeeId:emp3?.id, amount:200,  date:dl(20),reason:'Transport fare',         deducted:true  },
                 ];
-                
-                for (const wc of waterCustomers) {
-                    await dbAdd('waterCustomers', wc);
-                }
-                
-                // Get water customer IDs
-                const allWaterCustomers = await dbGetAll('waterCustomers');
-                
-                // ===== WATER SALES =====
-                const todayStr = today.toISOString().split('T')[0];
-                for (let i = 0; i < allWaterCustomers.length && i < 4; i++) {
-                    const cust = allWaterCustomers[i];
-                    const gallons = [5, 3, 10, 20][i] || 5;
-                    const total = gallons * 25;
-                    const paymentTypes = ['cash', 'credit', 'partial', 'cash'];
-                    const amountsPaid = [125, 0, 100, 500];
-                    
-                    await dbAdd('waterSales', {
-                        customerId: cust.id,
-                        customerName: cust.name,
-                        gallons: gallons,
-                        pricePerGallon: 25,
-                        total: total,
-                        amountPaid: amountsPaid[i] || total,
-                        balance: total - (amountsPaid[i] || total),
-                        paymentType: paymentTypes[i] || 'cash',
-                        date: todayStr,
-                        createdAt: new Date().toISOString()
-                    });
-                }
-                
-                // ===== EXPENSES =====
-                const expenses = [
-                    { description: 'Electricity Bill', category: 'utilities', amount: 2500, date: dateStr(1), createdAt: new Date().toISOString() },
-                    { description: 'Water Bill', category: 'utilities', amount: 800, date: dateStr(1), createdAt: new Date().toISOString() },
-                    { description: 'Property Repair - Lot 1', category: 'maintenance', amount: 1500, date: dateStr(3), createdAt: new Date().toISOString() },
-                    { description: 'Office Supplies', category: 'supplies', amount: 350, date: dateStr(5), createdAt: new Date().toISOString() },
+                for (const ca of caDefs) if (ca.employeeId) await dbAdd('cashAdvances', { ...ca, createdAt: ts(), _updatedAt: ts() });
+                console.log('✅ Cash advances added');
+
+                // ── SALARY PAYMENTS (2) ───────────────────────────────────────────
+                const spDefs = [
+                    { employeeId:emp1?.id, employeeName:'Roger Ellioso', periodStart:dl(1), periodEnd:dl(7),  grossPay:1800, deductions:200, netPay:1600, paidDate:dl(8),  method:'cash', notes:'Week 1 last month' },
+                    { employeeId:emp2?.id, employeeName:'Cenia Ellioso', periodStart:dl(1), periodEnd:dl(7),  grossPay:1680, deductions:150, netPay:1530, paidDate:dl(8),  method:'cash', notes:'Week 1 last month' },
                 ];
-                
-                for (const exp of expenses) {
-                    await dbAdd('expenses', exp);
-                }
-                
+                for (const sp of spDefs) if (sp.employeeId) await dbAdd('salaryPayments', { ...sp, createdAt: ts(), _updatedAt: ts() });
+                console.log('✅ Salary payments added');
+
+                // ── WATER CUSTOMERS (5) ───────────────────────────────────────────
+                const wcDefs = [
+                    { name:'Aling Nena Store',   phone:'09191234567', address:'Purok 2, Matalam',   balance:0,   totalPurchases:500,  route:'Morning',   containerCount:2 },
+                    { name:'Mang Tony',          phone:'09192345678', address:'Riverside, Matalam', balance:75,  totalPurchases:300,  route:'Afternoon', containerCount:1 },
+                    { name:'Ate Luz Carinderia', phone:'09193456789', address:'Public Market',      balance:150, totalPurchases:800,  route:'Morning',   containerCount:3 },
+                    { name:'Barangay Hall',      phone:'09194567890', address:'Poblacion, Matalam', balance:0,   totalPurchases:1200, route:'Afternoon', containerCount:5 },
+                    { name:'Kuya Ben',           phone:'09195678901', address:'National Highway',   balance:50,  totalPurchases:250,  route:'Morning',   containerCount:1 },
+                ];
+                for (const wc of wcDefs) await dbAdd('waterCustomers', { ...wc, createdAt: ts(), _updatedAt: ts() });
+                console.log('✅ Water customers added');
+
+                const allWC = await dbGetAll('waterCustomers');
+                const [wc1,wc2,wc3,wc4,wc5] = ['Aling Nena Store','Mang Tony','Ate Luz Carinderia','Barangay Hall','Kuya Ben']
+                    .map(n => allWC.find(w => w.name === n));
+
+                // ── WATER SALES (8) ───────────────────────────────────────────────
+                const wsDefs = [
+                    { customerId:wc1?.id, customerName:'Aling Nena Store',   gallons:5,  pricePerGallon:25, total:125,  amountPaid:125,  balance:0,   paymentType:'cash',    date:d(1) },
+                    { customerId:wc2?.id, customerName:'Mang Tony',          gallons:3,  pricePerGallon:25, total:75,   amountPaid:0,    balance:75,  paymentType:'credit',  date:d(1) },
+                    { customerId:wc3?.id, customerName:'Ate Luz Carinderia', gallons:10, pricePerGallon:25, total:250,  amountPaid:100,  balance:150, paymentType:'partial', date:d(2) },
+                    { customerId:wc4?.id, customerName:'Barangay Hall',      gallons:20, pricePerGallon:25, total:500,  amountPaid:500,  balance:0,   paymentType:'cash',    date:d(2) },
+                    { customerId:wc5?.id, customerName:'Kuya Ben',           gallons:2,  pricePerGallon:25, total:50,   amountPaid:0,    balance:50,  paymentType:'credit',  date:d(3) },
+                    { customerId:wc1?.id, customerName:'Aling Nena Store',   gallons:5,  pricePerGallon:25, total:125,  amountPaid:125,  balance:0,   paymentType:'cash',    date:dl(28) },
+                    { customerId:wc3?.id, customerName:'Ate Luz Carinderia', gallons:8,  pricePerGallon:25, total:200,  amountPaid:200,  balance:0,   paymentType:'cash',    date:dl(25) },
+                    { customerId:wc4?.id, customerName:'Barangay Hall',      gallons:15, pricePerGallon:25, total:375,  amountPaid:375,  balance:0,   paymentType:'cash',    date:dl(22) },
+                ];
+                for (const ws of wsDefs) if (ws.customerId) await dbAdd('waterSales', { ...ws, createdAt: ts(), _updatedAt: ts() });
+                console.log('✅ Water sales added');
+
+                // ── EXPENSES (12) ─────────────────────────────────────────────────
+                const expDefs = [
+                    // this month
+                    { description:'Electricity Bill',                category:'utilities',  amount:2500,  date:d(1),  notes:'NAPOCOR — March 2026' },
+                    { description:'Water Bill',                      category:'utilities',  amount:800,   date:d(1),  notes:'MWSS — March 2026' },
+                    { description:'Property Repair - Lot 1',         category:'maintenance',amount:1500,  date:d(3),  notes:'Perimeter fence repair' },
+                    { description:'Office Supplies',                 category:'supplies',   amount:350,   date:d(5),  notes:'Ballpen, folders, receipts' },
+                    { description:'Hardware Store Restocking',       category:'inventory',  amount:15000, date:d(2),  notes:'Cement bags, GI sheets, paint' },
+                    { description:'Employee Salaries - Week 1',      category:'payroll',    amount:8400,  date:d(7),  notes:'3 staff × weekly wages' },
+                    { description:'Vehicle Fuel',                    category:'transport',  amount:1200,  date:d(4),  notes:'Delivery truck — March' },
+                    { description:'Water Station Filter Replacement',category:'maintenance',amount:2800,  date:d(6),  notes:'UV + carbon filter set' },
+                    // last month
+                    { description:'Electricity Bill',                category:'utilities',  amount:2350,  date:dl(1), notes:'NAPOCOR — Feb 2026' },
+                    { description:'Hardware Store Restocking',       category:'inventory',  amount:12000, date:dl(5), notes:'Monthly inventory' },
+                    { description:'Employee Salaries - Week 1',      category:'payroll',    amount:8400,  date:dl(7), notes:'3 staff × weekly wages' },
+                    { description:'Internet / Wifi Bill',            category:'utilities',  amount:1800,  date:dl(2), notes:'PLDT Fiber 100Mbps' },
+                ];
+                for (const exp of expDefs) await dbAdd('expenses', { ...exp, createdAt: ts(), _updatedAt: ts() });
                 console.log('✅ Expenses added');
-                
-                // ===== TASKS =====
-                const tasks = [
-                    { 
-                        title: 'Collect rent from Tenant A', 
-                        description: 'Monthly rent collection for March', 
-                        category: 'collection', 
-                        priority: 'high', 
-                        dueDate: dateStr(5), 
-                        status: 'pending', 
-                        assignedTo: 'Admin',
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString()
-                    },
-                    { 
-                        title: 'Fix leaking faucet - Apartment Unit A', 
-                        description: 'Tenant reported water leak in bathroom', 
-                        category: 'maintenance', 
-                        priority: 'high', 
-                        dueDate: dateStr(2), 
-                        status: 'in-progress', 
-                        assignedTo: 'Maintenance Staff',
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString()
-                    },
-                    { 
-                        title: 'Follow up with overdue debtor', 
-                        description: 'Call Pedro Santos about payment', 
-                        category: 'follow-up', 
-                        priority: 'medium', 
-                        dueDate: dateStr(3), 
-                        status: 'pending', 
-                        assignedTo: 'Collections Team',
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString()
-                    },
-                    { 
-                        title: 'Process monthly payroll', 
-                        description: 'Calculate and pay employee salaries', 
-                        category: 'admin', 
-                        priority: 'high', 
-                        dueDate: dateStr(15), 
-                        status: 'pending', 
-                        assignedTo: 'HR Department',
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString()
-                    },
-                    { 
-                        title: 'Inspect vacant properties', 
-                        description: 'Check condition of Lot 2 and Commercial Space', 
-                        category: 'property', 
-                        priority: 'low', 
-                        dueDate: dateStr(10), 
-                        status: 'pending', 
-                        assignedTo: 'Property Manager',
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString()
-                    },
-                    { 
-                        title: 'Update rental contracts', 
-                        description: 'Renew contracts for expiring tenants', 
-                        category: 'admin', 
-                        priority: 'medium', 
-                        dueDate: dateStr(20), 
-                        status: 'completed', 
-                        assignedTo: 'Admin',
-                        createdAt: new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-                        updatedAt: new Date().toISOString()
-                    },
-                    { 
-                        title: 'Restock water refilling supplies', 
-                        description: 'Order new bottles and filters', 
-                        category: 'other', 
-                        priority: 'medium', 
-                        dueDate: dateStr(8), 
-                        status: 'in-progress', 
-                        assignedTo: 'Water Station Manager',
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString()
-                    },
-                    { 
-                        title: 'OVERDUE: Pay property tax', 
-                        description: 'Annual property tax payment', 
-                        category: 'admin', 
-                        priority: 'high', 
-                        dueDate: dateStr(-5), // 5 days ago
-                        status: 'pending', 
-                        assignedTo: 'Finance',
-                        createdAt: new Date(today.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-                        updatedAt: new Date().toISOString()
-                    }
+
+                // ── ADDITIONAL INCOME (10) ────────────────────────────────────────
+                const incDefs = [
+                    // this month
+                    { description:'Hardware Store Sales - Week 1', category:'store',    amount:12500, date:d(7),  notes:'Cement, nails, paints' },
+                    { description:'Hardware Store Sales - Week 2', category:'store',    amount:9800,  date:d(14), notes:'Tools and electrical' },
+                    { description:'Water Station Sales - Week 1',  category:'water',    amount:4200,  date:d(7),  notes:'168 gallons @ ₱25' },
+                    { description:'Interest Income - Loans',       category:'interest', amount:3750,  date:d(1),  notes:'Monthly interest collection' },
+                    { description:'Parking Fee - Monthly',         category:'parking',  amount:1500,  date:d(1),  notes:'3 vehicles @ ₱500' },
+                    { description:'Late Payment Fee - Juan DC',    category:'fees',     amount:200,   date:d(8),  notes:'5% late fee — March rent' },
+                    // last month
+                    { description:'Hardware Store Sales - Week 1', category:'store',    amount:11000, date:dl(7), notes:'Feb Week 1' },
+                    { description:'Hardware Store Sales - Week 2', category:'store',    amount:8500,  date:dl(14),notes:'Feb Week 2' },
+                    { description:'Water Station Sales - Week 1',  category:'water',    amount:3900,  date:dl(7), notes:'Feb Week 1' },
+                    { description:'Billboard Rental Income',       category:'other',    amount:3000,  date:dl(1), notes:'Monthly billboard rent — Highway' },
                 ];
-                
-                for (const task of tasks) {
-                    await dbAdd('tasks', task);
-                }
-                
+                for (const inc of incDefs) await dbAdd('additionalIncome', { ...inc, createdAt: ts(), _updatedAt: ts() });
+                console.log('✅ Income added');
+
+                // ── TASKS (8) ─────────────────────────────────────────────────────
+                const taskDefs = [
+                    { title:'Collect March rent',              description:'Monthly rent collection for March — follow up on pending.',  category:'collection',  priority:'high',   dueDate:d(5),   status:'in-progress', assignedTo:'Admin' },
+                    { title:'Fix leaking faucet - Unit A',     description:'Tenant Maria reported water leak in bathroom.',              category:'maintenance', priority:'high',   dueDate:d(2),   status:'in-progress', assignedTo:'Maintenance Staff' },
+                    { title:'Follow up: Carlos Rivera loan',   description:'Overdue business loan since Dec 2024. Call 09173456789.',    category:'follow-up',   priority:'high',   dueDate:d(3),   status:'pending',     assignedTo:'Collections Team' },
+                    { title:'Process monthly payroll',         description:'Calculate and release weekly wages for 3 staff.',           category:'admin',       priority:'high',   dueDate:d(15),  status:'pending',     assignedTo:'HR / Admin' },
+                    { title:'Inspect vacant properties',       description:'Check condition of Lot 2, Apt Unit B and Commercial Space.', category:'property',    priority:'low',    dueDate:d(10),  status:'pending',     assignedTo:'Property Manager' },
+                    { title:'Update rental contracts',         description:'Renew lease contracts for tenants expiring this quarter.',   category:'admin',       priority:'medium', dueDate:d(20),  status:'completed',   assignedTo:'Admin' },
+                    { title:'Restock water refilling supplies',description:'Order new bottles, filters, and caps from supplier.',        category:'other',       priority:'medium', dueDate:d(8),   status:'in-progress', assignedTo:'Water Station Manager' },
+                    { title:'⚠️ OVERDUE: Pay property tax',    description:'Annual RPT payment — deadline already passed.',             category:'admin',       priority:'high',   dueDate:d(-5),  status:'pending',     assignedTo:'Finance' },
+                ];
+                for (const task of taskDefs) await dbAdd('tasks', { ...task, createdAt: ts(), updatedAt: ts(), _updatedAt: ts() });
                 console.log('✅ Tasks added');
-                
-                // ===== NOTES =====
-                const notes = [
-                    {
-                        title: 'Tenant Complaint - Unit A',
-                        content: 'Noise complaint from neighbor. Need to send warning letter to tenant.',
-                        category: 'client',
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString()
-                    },
-                    {
-                        title: 'Property Maintenance Schedule',
-                        content: 'Q1 2026:\n- Paint exterior walls (Lot 1)\n- Clean drainage system (All properties)\n- Replace old light fixtures (Commercial Space)',
-                        category: 'general',
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString()
-                    },
-                    {
-                        title: 'Water Station - Peak Hours',
-                        content: 'Busiest times: 7-9 AM and 5-7 PM. Consider adding extra staff during these hours.',
-                        category: 'area',
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString()
-                    },
-                    {
-                        title: 'REMINDER: Annual Property Inspection',
-                        content: 'Schedule inspection with Building Official by March 31st. Required documents ready.',
-                        category: 'reminder',
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString()
-                    },
-                    {
-                        title: 'New Tenant Application - Maria Cruz',
-                        content: 'Interested in Room 2. Good references from previous landlord. Income: ₱15,000/month. Schedule interview.',
-                        category: 'client',
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString()
-                    }
+
+                // ── NOTES (5) ─────────────────────────────────────────────────────
+                const noteDefs = [
+                    { title:'Tenant Complaint — Unit A',         content:'Noise complaint from Lot 1 neighbor. Need to send warning letter to Maria Santos (Unit A) regarding late-night noise.',                                        category:'client',   pinned:false },
+                    { title:'Property Maintenance Schedule Q1',  content:'Q1 2026 Schedule:\n• Paint exterior walls — Lot 1 (March)\n• Clean drainage — All Properties (February)\n• Replace light fixtures — Commercial Space (April)', category:'general',  pinned:true  },
+                    { title:'Water Station Peak Hours',          content:'Peak: 7–9 AM and 5–7 PM daily.\nConsider adding extra staff during these hours. Suggest hiring part-time helper on weekdays.',                                   category:'area',     pinned:false },
+                    { title:'⚠️ REMINDER: Property Inspection',  content:'Schedule annual building inspection with Building Official by March 31, 2026.\nRequired docs: Title, tax receipts, previous inspection clearance.',            category:'reminder', pinned:true  },
+                    { title:'New Tenant Inquiry — Maria Cruz',   content:'Interested in Room 2 - Boarding. Good refs from prev landlord. Monthly income ₱15,000. Contact: 09278889900. Schedule Sat AM viewing.',                        category:'client',   pinned:false },
                 ];
-                
-                for (const note of notes) {
-                    await dbAdd('customNotes', note);
-                }
-                
+                for (const note of noteDefs) await dbAdd('customNotes', { ...note, createdAt: ts(), updatedAt: ts(), _updatedAt: ts() });
                 console.log('✅ Notes added');
-                
-                // ===== CLIENT CHARGES =====
-                const chargeTenant = allTenants.find(t => t.name === 'Juan Dela Cruz');
-                const chargeWaterCust = allWaterCustomers.find(c => c.name === 'Maria Santos');
-                
-                const clientCharges = [
-                    {
-                        clientType: 'tenant',
-                        clientId: chargeTenant ? chargeTenant.id : 1,
-                        clientName: 'Juan Dela Cruz',
-                        description: 'Damaged window glass',
-                        amount: 800,
-                        status: 'pending',
-                        dateIssued: dateStr(2),
-                        createdAt: new Date().toISOString()
-                    },
-                    {
-                        clientType: 'waterCustomer',
-                        clientId: chargeWaterCust ? chargeWaterCust.id : 1,
-                        clientName: 'Maria Santos',
-                        description: 'Lost water container deposit',
-                        amount: 150,
-                        status: 'paid',
-                        dateIssued: dateStr(1),
-                        datePaid: dateStr(3),
-                        createdAt: new Date().toISOString()
-                    }
+
+                // ── CLIENT CHARGES (4) ────────────────────────────────────────────
+                const chargeWC = allWC.find(c => c.name === 'Ate Luz Carinderia');
+                const chargeDefs = [
+                    { clientType:'tenant',        clientId:t1?.id,       clientName:'Juan Dela Cruz',    chargeType:'damage',    chargeLabel:'Property Damage',  amount:800,  date:d(2),   description:'Broken window glass — living room',      status:'pending' },
+                    { clientType:'tenant',        clientId:t2?.id,       clientName:'Maria Santos',      chargeType:'penalty',   chargeLabel:'Penalty Fee',      amount:500,  date:d(5),   description:'Late payment penalty — March',           status:'pending' },
+                    { clientType:'waterCustomer', clientId:wc2?.id,      clientName:'Mang Tony',         chargeType:'deposit',   chargeLabel:'Container Deposit',amount:150,  date:d(1),   description:'Lost water container deposit',           status:'pending' },
+                    { clientType:'waterCustomer', clientId:chargeWC?.id, clientName:'Ate Luz Carinderia',chargeType:'overcharge', chargeLabel:'Balance Charge',   amount:200,  date:dl(28), description:'Unpaid balance from Feb delivery',       status:'paid', paidDate:d(3) },
                 ];
-                
-                for (const charge of clientCharges) {
-                    await dbAdd('clientCharges', charge);
-                }
-                
+                for (const ch of chargeDefs) if (ch.clientId) await dbAdd('clientCharges', { ...ch, createdAt: ts(), _updatedAt: ts() });
                 console.log('✅ Client charges added');
-                
-                // ===== ADDITIONAL INCOME =====
-                const additionalIncomes = [
-                    {
-                        description: 'Parking Fee - Tenant A',
-                        category: 'parking',
-                        amount: 500,
-                        date: dateStr(1),
-                        createdAt: new Date().toISOString()
-                    },
-                    {
-                        description: 'Late Payment Fee - Juan Dela Cruz',
-                        category: 'fees',
-                        amount: 200,
-                        date: dateStr(8),
-                        createdAt: new Date().toISOString()
-                    },
-                    {
-                        description: 'Billboard Rental Income',
-                        category: 'other',
-                        amount: 3000,
-                        date: dateStr(1),
-                        createdAt: new Date().toISOString()
-                    }
-                ];
-                
-                for (const income of additionalIncomes) {
-                    await dbAdd('additionalIncome', income);
-                }
-                
-                console.log('✅ Additional income added');
-                
-                // ===== SAMPLE APP USERS (for Manage Users demo) =====
+
+                // ── APP USERS (4) — for Manage Users demo ─────────────────────────
                 const existingUsers = JSON.parse(localStorage.getItem('prism_app_users') || '[]');
-                if (existingUsers.length === 0) {
-                    const sampleUsers = [
-                        { id: 1, username: 'admin', fullname: 'Administrator', role: 'admin', password: 'admin123', email: 'admin@rlm.com', phone: '09171234567', createdAt: new Date().toISOString() },
-                        { id: 2, username: 'cashier1', fullname: 'Cenia Ellioso', role: 'cashier', password: 'cashier123', email: 'cenia@rlm.com', phone: '09182345678', createdAt: new Date().toISOString() },
-                        { id: 3, username: 'cashier2', fullname: 'Roger Ellioso', role: 'cashier', password: 'cashier123', email: 'roger@rlm.com', phone: '09181234567', createdAt: new Date().toISOString() },
-                        { id: 4, username: 'manager1', fullname: 'Maria Santos', role: 'manager', password: 'manager123', email: 'maria@rlm.com', phone: '09189876543', createdAt: new Date().toISOString() },
-                    ];
-                    localStorage.setItem('prism_app_users', JSON.stringify(sampleUsers));
+                if (existingUsers.length < 2) {
+                    localStorage.setItem('prism_app_users', JSON.stringify([
+                        { id:1, username:'admin',    fullname:'Administrator',    role:'admin',   password:'admin123',   email:'admin@rlm.com',   phone:'09171234567', createdAt: ts() },
+                        { id:2, username:'cashier1', fullname:'Cenia Ellioso',    role:'cashier', password:'cashier123', email:'cenia@rlm.com',   phone:'09182345678', createdAt: ts() },
+                        { id:3, username:'cashier2', fullname:'Roger Ellioso',    role:'cashier', password:'cashier123', email:'roger@rlm.com',   phone:'09181234567', createdAt: ts() },
+                        { id:4, username:'encoder1', fullname:'Mario Delos Santos',role:'encoder',password:'encoder123',email:'mario@rlm.com',   phone:'09183456789', createdAt: ts() },
+                    ]));
                 }
 
-                // ===== SAMPLE ENDORSEMENTS (Cashier → Admin inbox demo) =====
+                // ── ENDORSEMENTS — cashier inbox demo ─────────────────────────────
                 const existingEndorse = JSON.parse(localStorage.getItem('prism_endorsements') || '[]');
-                if (existingEndorse.length === 0) {
-                    const todayStr2 = today.toISOString().split('T')[0];
-                    const sampleEndorse = [
-                        { id: 'end_1', type: 'sales', message: '🏠 Rent Payment Recorded:\n• Tenant: Juan Dela Cruz\n• Amount: ₱3,000\n• Method: Cash\n• Date: ' + todayStr2 + '\nRecorded by: Cenia Ellioso', from: 'cashier1', fromName: 'Cenia Ellioso', timestamp: new Date(today.getTime() - 2*60*60*1000).toISOString(), read: false },
-                        { id: 'end_2', type: 'water', message: '💧 Water Sale — CASH:\n• Customer: Aling Nena Store\n• Gallons: 5\n• Total: ₱125\n• Date: ' + todayStr2 + '\nRecorded by: Cenia Ellioso', from: 'cashier1', fromName: 'Cenia Ellioso', timestamp: new Date(today.getTime() - 1*60*60*1000).toISOString(), read: false },
-                        { id: 'end_3', type: 'credit', message: '💳 Loan Payment Recorded:\n• Borrower: Roberto Fernandez\n• Amount: ₱2,000\n• Date: ' + todayStr2 + '\nRecorded by: Roger Ellioso', from: 'cashier2', fromName: 'Roger Ellioso', timestamp: new Date(today.getTime() - 30*60*1000).toISOString(), read: false },
-                        { id: 'end_4', type: 'expense', message: '💸 Expense Recorded:\n• Description: Office Supplies\n• Amount: ₱350\n• Date: ' + todayStr2 + '\nRecorded by: Cenia Ellioso', from: 'cashier1', fromName: 'Cenia Ellioso', timestamp: new Date(today.getTime() - 3*60*60*1000).toISOString(), read: true },
-                        { id: 'end_5', type: 'income', message: '💰 Income Recorded:\n• Source: Parking Fee\n• Amount: ₱500\n• Date: ' + todayStr2 + '\nRecorded by: Roger Ellioso', from: 'cashier2', fromName: 'Roger Ellioso', timestamp: new Date(today.getTime() - 4*60*60*1000).toISOString(), read: true },
-                    ];
-                    localStorage.setItem('prism_endorsements', JSON.stringify(sampleEndorse));
+                if (existingEndorse.length < 2) {
+                    const todStr = today.toISOString().split('T')[0];
+                    localStorage.setItem('prism_endorsements', JSON.stringify([
+                        { id:'end_1', type:'sales',   message:'🏠 Rent Payment Recorded:\n• Tenant: Juan Dela Cruz\n• Amount: ₱3,000\n• Method: Cash\n• Date: '+todStr+'\nRecorded by: Cenia Ellioso',      from:'cashier1', fromName:'Cenia Ellioso',     timestamp: new Date(today.getTime()-2*3600*1000).toISOString(), read:false },
+                        { id:'end_2', type:'water',   message:'💧 Water Sale — CASH:\n• Customer: Aling Nena Store\n• Gallons: 5\n• Total: ₱125\n• Date: '+todStr+'\nRecorded by: Cenia Ellioso',          from:'cashier1', fromName:'Cenia Ellioso',     timestamp: new Date(today.getTime()-1*3600*1000).toISOString(), read:false },
+                        { id:'end_3', type:'credit',  message:'💳 Loan Payment:\n• Borrower: Roberto Fernandez\n• Amount: ₱3,000\n• Date: '+todStr+'\nRecorded by: Roger Ellioso',                         from:'cashier2', fromName:'Roger Ellioso',     timestamp: new Date(today.getTime()-0.5*3600*1000).toISOString(),read:false },
+                        { id:'end_4', type:'expense', message:'💸 Expense Recorded:\n• Description: Office Supplies\n• Amount: ₱350\n• Date: '+todStr+'\nRecorded by: Cenia Ellioso',                       from:'cashier1', fromName:'Cenia Ellioso',     timestamp: new Date(today.getTime()-3*3600*1000).toISOString(), read:true  },
+                        { id:'end_5', type:'income',  message:'💰 Income Recorded:\n• Source: Parking Fee\n• Amount: ₱500\n• Date: '+todStr+'\nRecorded by: Roger Ellioso',                                 from:'cashier2', fromName:'Roger Ellioso',     timestamp: new Date(today.getTime()-4*3600*1000).toISOString(), read:true  },
+                    ]));
                 }
 
-                // ===== MORE INCOME for this month (so income section shows data) =====
-                const existingIncome = await dbGetAll('additionalIncome');
-                if (existingIncome.length < 5) {
-                    const moreIncome = [
-                        { description: 'Hardware Store Sales - Week 1', category: 'store', amount: 12500, date: dateStr(3), notes: 'Cement, nails, paints', createdAt: new Date().toISOString() },
-                        { description: 'Hardware Store Sales - Week 2', category: 'store', amount: 9800, date: dateStr(10), notes: 'Tools and electrical', createdAt: new Date().toISOString() },
-                        { description: 'Interest Income - Loans', category: 'interest', amount: 3750, date: dateStr(1), notes: 'Monthly interest collection', createdAt: new Date().toISOString() },
-                        { description: 'Water Station Sales - Week 1', category: 'water', amount: 4200, date: dateStr(5), notes: '168 gallons @ ₱25', createdAt: new Date().toISOString() },
-                        { description: 'Parking Fee - Monthly', category: 'parking', amount: 1500, date: dateStr(1), notes: '3 vehicles @ ₱500', createdAt: new Date().toISOString() },
-                    ];
-                    for (const inc of moreIncome) {
-                        await dbAdd('additionalIncome', inc);
-                    }
-                }
-
-                // ===== MORE EXPENSES this month =====
-                const existingExp = await dbGetAll('expenses');
-                if (existingExp.length < 6) {
-                    const moreExp = [
-                        { description: 'Hardware Store Restocking', category: 'inventory', amount: 15000, date: dateStr(2), notes: 'Cement bags, GI sheets', createdAt: new Date().toISOString() },
-                        { description: 'Employee Salaries', category: 'payroll', amount: 8400, date: dateStr(7), notes: 'Weekly payroll 3 staff', createdAt: new Date().toISOString() },
-                        { description: 'Vehicle Fuel', category: 'transport', amount: 1200, date: dateStr(4), notes: 'Delivery truck', createdAt: new Date().toISOString() },
-                        { description: 'Water Station Filter Replacement', category: 'maintenance', amount: 2800, date: dateStr(6), notes: 'UV filter + carbon filter', createdAt: new Date().toISOString() },
-                    ];
-                    for (const exp of moreExp) {
-                        await dbAdd('expenses', exp);
-                    }
-                }
-
-                // ===== RELOAD ALL SECTIONS =====
+                // ── RELOAD ALL SECTIONS ────────────────────────────────────────────
                 console.log('Reloading all sections...');
                 await loadDashboard();
                 await loadProperties();
@@ -22007,22 +21855,13 @@ async function editTask(id) {
                 await loadNotes();
                 if (typeof loadIncome === 'function') await loadIncome();
                 if (typeof updateEndorseUnreadBadge === 'function') updateEndorseUnreadBadge();
-                
+
                 debouncedSync();
-                
-                showToast('s', 'info');
-                
-                
-                
+                showToast('✅ Sample data loaded across all modules!', 'success', 4000);
+
             } catch (error) {
                 console.error('Error loading sample data:', error);
-                
-                // Check if it's a constraint error
-                if (error.message && error.message.includes('uniqueness')) {
-                    showToast('❌ Database Index Error — Settings → Clear All Data → Reload. Error: ' + error.message, 'error', 8000);
-                } else {
-                    showToast('❌ Error loading sample data: ' + error.message, 'error', 6000);
-                }
+                showToast('❌ Error: ' + error.message, 'error', 6000);
             }
         }
         
@@ -22744,20 +22583,33 @@ async function editTask(id) {
                 _save(_load().filter(c => !c.resolved));
             }
 
+            let _notifyTimer = null;
+            let _lastNotifiedCount = 0;
             function _notifyUI() {
                 const conflicts = getUnresolved();
-                // Update conflict badge
+                // Update conflict badge immediately
                 const badge = document.getElementById('prism-conflict-badge');
                 if (badge) {
                     badge.textContent = conflicts.length;
                     badge.style.display = conflicts.length > 0 ? 'flex' : 'none';
                 }
-                // Auto-show conflict panel if new conflicts arrived
-                if (conflicts.length > 0) {
-                    const panel = document.getElementById('prism-conflict-panel');
-                    if (panel && panel.style.display === 'none') {
-                        showToast(`⚠️ ${conflicts.length} sync conflict(s) need your attention`, 'warning', 5000);
-                    }
+                // Debounce the toast — fire ONCE after all conflicts are queued,
+                // not once per conflict (prevents cascading ⚠️ toasts during bulk sync).
+                if (conflicts.length > 0 && conflicts.length !== _lastNotifiedCount) {
+                    clearTimeout(_notifyTimer);
+                    _notifyTimer = setTimeout(() => {
+                        const final = getUnresolved();
+                        if (final.length > 0 && final.length !== _lastNotifiedCount) {
+                            _lastNotifiedCount = final.length;
+                            const panel = document.getElementById('prism-conflict-panel');
+                            if (panel && panel.style.display === 'none') {
+                                showToast(`⚠️ ${final.length} sync conflict(s) need your attention`, 'warning', 5000);
+                            }
+                        }
+                    }, 800); // wait 800ms for all conflicts to queue before showing toast
+                } else if (conflicts.length === 0) {
+                    _lastNotifiedCount = 0;
+                    clearTimeout(_notifyTimer);
                 }
             }
 
@@ -22781,6 +22633,7 @@ async function editTask(id) {
                     } catch(e) {}
                 });
                 _save(list);
+                _lastNotifiedCount = 0; // reset so badge recomputes correctly
                 _notifyUI();
                 if (dismissed > 0) showToast('🧹 Dismissed ' + dismissed + ' identical false conflict(s).', 'success', 4000);
                 return dismissed;
