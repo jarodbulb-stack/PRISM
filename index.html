@@ -23136,6 +23136,409 @@ async function editTask(id) {
         // init() is called by mtInit() after org/auth is set up
         // Do NOT call init() here directly - MT layer controls startup
 
+
+        // ═══════════════════════════════════════════════════════════════════
+        // PRISM ADMIN FEATURES — ADDITIVE MODULE v1
+        // Archive-instead-of-delete · Change log · Staff adjustments (ext)
+        // Client charges (water) · Retention lifecycle
+        // All code is additive. No existing functions modified.
+        // ═══════════════════════════════════════════════════════════════════
+
+        // ── CHANGE LOG ───────────────────────────────────────────────────────
+        async function logChange(storeName, recordId, oldValues, newValues) {
+            try {
+                await dbAdd('changeLog', {
+                    storeName,
+                    recordId,
+                    editedBy:  (currentAppUser && currentAppUser.username) || 'system',
+                    editedAt:  new Date().toISOString(),
+                    oldValues: JSON.parse(JSON.stringify(oldValues || {})),
+                    newValues: JSON.parse(JSON.stringify(newValues || {})),
+                    orgId: (typeof MT !== 'undefined' && MT.currentOrg && MT.currentOrg.id) ||
+                           localStorage.getItem('mt_current_org_id') || null
+                });
+            } catch(e) { _dbg('[ChangeLog] non-fatal:', e.message); }
+        }
+        window.logChange = logChange;
+
+        // Wrap dbUpdate to auto-log changes (non-destructive — same signature)
+        const _origDbUpdate = dbUpdate;
+        window.dbUpdate = async function dbUpdate(storeName, data) {
+            if (storeName !== 'changeLog') {
+                try {
+                    const existing = await dbGet(storeName, data.id || data.Id);
+                    await logChange(storeName, data.id, existing, data);
+                } catch(e) {}
+            }
+            return _origDbUpdate(storeName, data);
+        };
+
+        // ── ARCHIVE SYSTEM ────────────────────────────────────────────────────
+        async function archiveRecord(storeName, id, reloadFn) {
+            if (currentAppUser && currentAppUser.role === 'cashier') {
+                showToast('⛔ Cashiers cannot archive records. Contact admin.', 'error');
+                return false;
+            }
+            const record = await dbGet(storeName, id);
+            if (!record) { showToast('Record not found.', 'error'); return false; }
+            if (!await showConfirm(
+                'This record will be archived (hidden from active lists)\nand auto-deleted after 60 days.\nYou can restore it before then.',
+                'warning', '📦 Archive Record', 'Archive'
+            )) return false;
+            const old = JSON.parse(JSON.stringify(record));
+            record.archived   = true;
+            record.archivedAt = new Date().toISOString();
+            record.archivedBy = (currentAppUser && currentAppUser.username) || 'admin';
+            await _origDbUpdate(storeName, record);
+            await logChange(storeName, id, old, record);
+            showToast('📦 Archived. Auto-deletes after 60 days.', 'success', 4000);
+            if (typeof reloadFn === 'function') reloadFn();
+            debouncedSync();
+            return true;
+        }
+        window.archiveRecord = archiveRecord;
+
+        async function restoreRecord(storeName, id, reloadFn) {
+            if (currentAppUser && currentAppUser.role === 'cashier') {
+                showToast('⛔ Cashiers cannot restore records.', 'error'); return false;
+            }
+            const record = await dbGet(storeName, id);
+            if (!record) return false;
+            const old = JSON.parse(JSON.stringify(record));
+            delete record.archived;
+            delete record.archivedAt;
+            delete record.archivedBy;
+            record._updatedAt = new Date().toISOString();
+            await _origDbUpdate(storeName, record);
+            await logChange(storeName, id, old, record);
+            showToast('✅ Record restored to active list.', 'success');
+            if (typeof reloadFn === 'function') reloadFn();
+            debouncedSync();
+            return true;
+        }
+        window.restoreRecord = restoreRecord;
+
+        // Wrap dbGetAll to filter archived records from normal queries
+        const _origDbGetAll = dbGetAll;
+        window.dbGetAll = async function dbGetAll(storeName, options) {
+            const results = await _origDbGetAll(storeName);
+            if (options && options._includeArchived) return results;
+            return results.filter(r => !r.archived);
+        };
+
+        async function getArchivedRecords(storeName) {
+            const all = await _origDbGetAll(storeName);
+            return all.filter(r => r.archived);
+        }
+        window.getArchivedRecords = getArchivedRecords;
+
+        // Per-store archive helpers (mirror existing delete helpers)
+        async function archiveProperty(id)      { if (await archiveRecord('properties',      id, loadProperties))    hideModal(); }
+        async function archiveTenant(id)        { if (await archiveRecord('tenants',         id, loadTenants))       hideModal(); }
+        async function archiveExpense(id)       { if (await archiveRecord('expenses',        id, loadExpenses))      hideModal('expense-detail-modal'); }
+        async function archiveNote(id)          { if (await archiveRecord('customNotes',     id, loadNotes))         hideModal('note-detail-modal'); }
+        async function archiveCredit(id)        { if (await archiveRecord('credits',         id, loadCredits))       hideModal(); }
+        async function archiveTask(id)          { if (await archiveRecord('tasks',           id, loadTasks))         hideModal(); }
+        async function archiveIncome(id)        { if (await archiveRecord('additionalIncome',id, loadIncome))        hideModal(); }
+        async function archiveEmployee(id)      { if (await archiveRecord('employees',       id, loadEmployees))     hideModal(); }
+        async function archiveWaterCustomer(id) { if (await archiveRecord('waterCustomers',  id, loadWaterCustomers))hideModal(); }
+        async function archiveWaterSale(id)     {     await archiveRecord('waterSales',       id, loadWaterCustomers); }
+
+        window.archiveProperty = archiveProperty; window.archiveTenant = archiveTenant;
+        window.archiveExpense  = archiveExpense;  window.archiveNote   = archiveNote;
+        window.archiveCredit   = archiveCredit;   window.archiveTask   = archiveTask;
+        window.archiveIncome   = archiveIncome;   window.archiveEmployee = archiveEmployee;
+        window.archiveWaterCustomer = archiveWaterCustomer; window.archiveWaterSale = archiveWaterSale;
+
+        // ── RETENTION CLEANUP (60-day auto-delete) ────────────────────────────
+        const _RETENTION_STORES = [
+            'properties','tenants','payments','credits','creditPayments','expenses',
+            'customNotes','tasks','additionalIncome','clientCharges',
+            'waterCustomers','waterSales','employees','cashAdvances','salaryPayments','timeRecords'
+        ];
+        async function runRetentionCleanup() {
+            const now   = Date.now();
+            const LIMIT = 60 * 24 * 60 * 60 * 1000;
+            const stale = [];
+            for (const store of _RETENTION_STORES) {
+                try {
+                    const recs = await _origDbGetAll(store);
+                    recs.filter(r => r.archived && r.archivedAt &&
+                        (now - new Date(r.archivedAt).getTime()) > LIMIT
+                    ).forEach(r => stale.push({ store, id: r.id,
+                        label: r.name || r.description || r.title || ('#' + r.id) }));
+                } catch(e) {}
+            }
+            if (stale.length === 0) return;
+            if (!await showConfirm(
+                stale.length + ' archived record(s) older than 60 days will be permanently deleted.\n\nContinue?',
+                'danger', '🗑️ Retention Cleanup', 'Yes, Delete Permanently'
+            )) return;
+            for (const item of stale) {
+                try { await dbDelete(item.store, item.id); } catch(e) {}
+            }
+            showToast('🗑️ Deleted ' + stale.length + ' expired archived records.', 'info', 5000);
+            debouncedSync();
+        }
+        window.runRetentionCleanup = runRetentionCleanup;
+
+        // Hook boot pipeline for auto-cleanup (non-blocking, 10s after boot)
+        const _origBootPipeline = typeof prismBootPipeline === 'function' ? prismBootPipeline : null;
+        if (_origBootPipeline) {
+            window.prismBootPipeline = async function() {
+                await _origBootPipeline();
+                setTimeout(() => runRetentionCleanup().catch(() => {}), 10000);
+            };
+        }
+
+        // ── EXTENDED STAFF ADJUSTMENTS ────────────────────────────────────────
+        // New types: penalty, late_deduction, additional_charge
+        // Stored as separate timeRecord ledger entries (same as existing types)
+        function showStaffAdjustmentModal(empId, empName, type) {
+            const extTypes = {
+                penalty:           { title:'⚠️ Add Penalty',        color:'#ef4444', deductLabel:'(deduction)' },
+                late_deduction:    { title:'🕐 Late Deduction',      color:'#f59e0b', deductLabel:'(deduction)' },
+                additional_charge: { title:'💸 Additional Charge',   color:'#6b7280', deductLabel:'(deduction)' }
+            };
+            const builtIn = ['bonus','overtime','incentive'];
+            if (builtIn.includes(type)) {
+                if (typeof _showPayrollAdjustModal === 'function') _showPayrollAdjustModal(empId, empName, type);
+                return;
+            }
+            const cfg = extTypes[type];
+            if (!cfg) { showToast('Unknown type: ' + type, 'error'); return; }
+            const today = new Date().toISOString().split('T')[0];
+            const ex = document.getElementById('payroll-adjust-modal');
+            if (ex) ex.remove();
+            const modal = document.createElement('div');
+            modal.id = 'payroll-adjust-modal';
+            modal.className = 'modal-overlay show';
+            modal.onclick = e => { if (e.target === modal) modal.remove(); };
+            modal.innerHTML = `
+                <div class="modal" style="max-width:360px;">
+                    <div class="modal-header">
+                        <h3 class="modal-title" style="color:${cfg.color};">${cfg.title}</h3>
+                        <button class="modal-close" onclick="document.getElementById('payroll-adjust-modal').remove()">×</button>
+                    </div>
+                    <div class="modal-body" style="padding-bottom:20px;">
+                        <div style="background:var(--bg-primary);border-radius:8px;padding:10px;margin-bottom:14px;text-align:center;">
+                            <div style="font-weight:700;color:var(--text-primary);">👤 ${empName}</div>
+                            <div style="font-size:0.78rem;color:${cfg.color};margin-top:2px;">${cfg.deductLabel}</div>
+                        </div>
+                        <div class="form-group"><label>Date</label>
+                            <input type="date" id="adj-date" class="form-control" value="${today}"></div>
+                        <div class="form-group"><label>Amount (₱)</label>
+                            <input type="number" id="adj-amount" class="form-control" value="0" min="0"></div>
+                        <div class="form-group"><label>Reason / Note</label>
+                            <input type="text" id="adj-note" class="form-control" placeholder="e.g. 45min late, damaged item..."></div>
+                        <div id="adj-error" style="display:none;color:#ef4444;font-size:0.82rem;margin-bottom:8px;"></div>
+                        <button class="btn btn-block" style="background:${cfg.color};color:#fff;margin-top:8px;"
+                            onclick="saveExtendedAdjustment(${empId},'${type}','${empName.replace(/'/g,"\\'")}')">
+                            💾 Save</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
+        }
+        window.showStaffAdjustmentModal  = showStaffAdjustmentModal;
+        window.showPenaltyModal          = (id,n) => showStaffAdjustmentModal(id,n,'penalty');
+        window.showLateDeductionModal    = (id,n) => showStaffAdjustmentModal(id,n,'late_deduction');
+        window.showAdditionalChargeModal = (id,n) => showStaffAdjustmentModal(id,n,'additional_charge');
+
+        async function saveExtendedAdjustment(empId, type, empName) {
+            const date   = document.getElementById('adj-date')?.value;
+            const amount = parseFloat(document.getElementById('adj-amount')?.value) || 0;
+            const note   = document.getElementById('adj-note')?.value || '';
+            const errEl  = document.getElementById('adj-error');
+            if (!date)       { if(errEl){errEl.textContent='Select a date.';errEl.style.display='block';} return; }
+            if (amount <= 0) { if(errEl){errEl.textContent='Enter a valid amount.';errEl.style.display='block';} return; }
+            const labels = { penalty:'Penalty', late_deduction:'Late Deduction', additional_charge:'Additional Charge' };
+            await dbAdd('timeRecords', {
+                employeeId: empId, employeeName: empName || String(empId),
+                date, status: 'adjustment', adjustmentType: type,
+                deduction: amount, bonus: 0, overtime: 0, incentive: 0,
+                adjustmentNote: (labels[type]||type) + ': ₱' + amount + ' — ' + note,
+                createdBy: (currentAppUser && currentAppUser.username) || 'admin',
+                createdAt: new Date().toISOString(),
+                orgId: (typeof MT!=='undefined'&&MT.currentOrg&&MT.currentOrg.id)||null
+            });
+            document.getElementById('payroll-adjust-modal').remove();
+            showToast('✅ ' + (labels[type]||type) + ' of ₱' + amount.toLocaleString() + ' recorded.', 'success');
+            loadEmployees();
+            debouncedSync();
+        }
+        window.saveExtendedAdjustment = saveExtendedAdjustment;
+
+        // ── WATER CUSTOMER — ADD CHARGE BUTTON ────────────────────────────────
+        function showAddChargeModalForWater(customerId, customerName) {
+            if (currentAppUser && currentAppUser.role === 'cashier') {
+                showToast('⛔ Cashiers cannot add charges.', 'error'); return;
+            }
+            if (typeof showAddChargeModal === 'function') {
+                showAddChargeModal('waterCustomer', customerId, customerName);
+            }
+        }
+        window.showAddChargeModalForWater = showAddChargeModalForWater;
+
+        // Wrap viewWaterCustomerDetails to append charges section + Add Charge button
+        const _origViewWCD = typeof viewWaterCustomerDetails === 'function' ? viewWaterCustomerDetails : null;
+        if (_origViewWCD) {
+            window.viewWaterCustomerDetails = async function(id) {
+                await _origViewWCD(id);
+                setTimeout(async () => {
+                    try {
+                        const mb = document.querySelector('#water-detail-modal .modal-body, #water-customer-modal .modal-body');
+                        if (!mb || mb.querySelector('.prism-water-charges')) return;
+                        const chargesHtml = await renderClientCharges('waterCustomer', id);
+                        const wrap = document.createElement('div');
+                        wrap.className = 'prism-water-charges';
+                        wrap.innerHTML = chargesHtml || '';
+                        if (!currentAppUser || currentAppUser.role !== 'cashier') {
+                            const cust = await dbGet('waterCustomers', id);
+                            const nm   = (cust && cust.name) ? cust.name.replace(/'/g,"\'") : '';
+                            wrap.insertAdjacentHTML('beforeend', `
+                                <div style="margin-top:10px;">
+                                    <button class="btn btn-secondary btn-sm"
+                                        onclick="showAddChargeModalForWater(${id},'${nm}')">
+                                        💳 Add Charge
+                                    </button>
+                                </div>`);
+                        }
+                        mb.appendChild(wrap);
+                    } catch(e) { _dbg('[WaterCharges]', e.message); }
+                }, 80);
+            };
+        }
+
+        // ── ARCHIVE PANEL ─────────────────────────────────────────────────────
+        async function showArchivePanel() {
+            if (currentAppUser && currentAppUser.role === 'cashier') {
+                showToast('⛔ Archive panel is admin-only.', 'error'); return;
+            }
+            const STORES = {
+                'Properties':'properties','Tenants':'tenants','Expenses':'expenses',
+                'Notes':'customNotes','Credits':'credits','Tasks':'tasks',
+                'Income':'additionalIncome','Employees':'employees',
+                'Water Customers':'waterCustomers'
+            };
+            let rows = ''; let total = 0;
+            const now = Date.now(); const LIMIT = 60*24*60*60*1000;
+            for (const [label,store] of Object.entries(STORES)) {
+                const arch = await getArchivedRecords(store);
+                if (!arch.length) continue;
+                total += arch.length;
+                rows += `<div style="margin-bottom:14px;">
+                    <div style="font-weight:700;font-size:0.8rem;color:var(--text-secondary);
+                                text-transform:uppercase;margin-bottom:6px;">${label}</div>
+                    ${arch.map(r=>{
+                        const dLeft = Math.max(0,Math.ceil((LIMIT-(now-new Date(r.archivedAt||r._updatedAt).getTime()))/86400000));
+                        return `<div style="display:flex;justify-content:space-between;align-items:center;
+                                            padding:8px 10px;background:var(--bg-card);border-radius:8px;
+                                            margin-bottom:5px;border:1px solid var(--border-color);">
+                            <div>
+                                <div style="font-weight:600;font-size:0.9rem;">${r.name||r.title||r.description||('#'+r.id)}</div>
+                                <div style="font-size:0.75rem;color:${dLeft===0?'#ef4444':'var(--text-secondary)'};">
+                                    ${r.archivedAt?new Date(r.archivedAt).toLocaleDateString():''} · ${dLeft===0?'<strong>Expired</strong>':(dLeft+'d left')}
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:6px;">
+                                <button class="btn btn-sm btn-success"
+                                    onclick="restoreRecord('${store}',${r.id},()=>showArchivePanel())">↩</button>
+                                <button class="btn btn-sm btn-danger"
+                                    onclick="confirmPermanentDelete('${store}',${r.id},()=>showArchivePanel())">🗑</button>
+                            </div>
+                        </div>`;
+                    }).join('')}
+                </div>`;
+            }
+            if (!total) rows = '<p style="color:var(--text-secondary);text-align:center;padding:20px;">No archived records.</p>';
+            const ex = document.getElementById('prism-archive-panel-modal');
+            if (ex) ex.remove();
+            const modal = document.createElement('div');
+            modal.id = 'prism-archive-panel-modal'; modal.className = 'modal-overlay show';
+            modal.onclick = e=>{ if(e.target===modal) modal.remove(); };
+            modal.innerHTML = `
+                <div class="modal" style="max-width:540px;max-height:82vh;overflow-y:auto;">
+                    <div class="modal-header">
+                        <h3 class="modal-title">📦 Archive (${total})</h3>
+                        <button class="modal-close" onclick="document.getElementById('prism-archive-panel-modal').remove()">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <p style="font-size:0.83rem;color:var(--text-secondary);margin-bottom:14px;">
+                            Records are hidden from active lists and permanently deleted after 60 days.
+                        </p>${rows}
+                        ${total?`<button class="btn btn-danger btn-block" style="margin-top:10px;"
+                            onclick="runRetentionCleanup().then(()=>document.getElementById('prism-archive-panel-modal')?.remove())">
+                            🗑️ Delete All Expired Now</button>`:''}
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
+        }
+        window.showArchivePanel = showArchivePanel;
+
+        async function confirmPermanentDelete(storeName, id, onDone) {
+            if (!await showConfirm('Permanently delete this record? Cannot be undone.','danger','🗑️ Permanent Delete','Yes, Delete')) return;
+            await dbDelete(storeName, id);
+            showToast('🗑️ Permanently deleted.','success');
+            if (typeof onDone==='function') onDone();
+            debouncedSync();
+        }
+        window.confirmPermanentDelete = confirmPermanentDelete;
+
+        // ── CHANGE LOG VIEWER ─────────────────────────────────────────────────
+        async function showChangeLogPanel(storeName, recordId) {
+            if (currentAppUser && currentAppUser.role === 'cashier') {
+                showToast('⛔ Change log is admin-only.', 'error'); return;
+            }
+            let logs = [];
+            try {
+                const all = await _origDbGetAll('changeLog');
+                logs = all.filter(l =>
+                    (!storeName || l.storeName===storeName) &&
+                    (!recordId  || l.recordId===recordId)
+                ).sort((a,b)=>new Date(b.editedAt)-new Date(a.editedAt)).slice(0,50);
+            } catch(e){}
+            const rows = !logs.length
+                ? '<p style="color:var(--text-secondary);text-align:center;padding:20px;">No entries yet.</p>'
+                : logs.map(l=>{
+                    const keys  = new Set([...Object.keys(l.oldValues||{}),...Object.keys(l.newValues||{})]);
+                    const diffs = [...keys].filter(k=>!['_updatedAt','_createdAt','archived','archivedAt'].includes(k)&&
+                        JSON.stringify(l.oldValues?.[k])!==JSON.stringify(l.newValues?.[k]));
+                    return `<div style="padding:10px;background:var(--bg-card);border-radius:8px;
+                                margin-bottom:8px;border:1px solid var(--border-color);font-size:0.84rem;">
+                        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                            <strong>${l.storeName} #${l.recordId}</strong>
+                            <span style="color:var(--text-secondary);">${new Date(l.editedAt).toLocaleString()}</span>
+                        </div>
+                        <div style="color:var(--text-secondary);">By: ${l.editedBy}</div>
+                        ${diffs.map(k=>`<div style="margin-top:3px;">
+                            <span style="color:#f59e0b;">${k}:</span>
+                            <span style="color:#ef4444;"> ${JSON.stringify(l.oldValues?.[k])}</span>
+                            <span style="color:var(--text-secondary);"> → </span>
+                            <span style="color:#10b981;">${JSON.stringify(l.newValues?.[k])}</span>
+                        </div>`).join('')}
+                        ${!diffs.length?'<div style="color:var(--text-secondary);">No field changes.</div>':''}
+                    </div>`;
+                }).join('');
+            const ex = document.getElementById('prism-changelog-modal');
+            if (ex) ex.remove();
+            const modal = document.createElement('div');
+            modal.id = 'prism-changelog-modal'; modal.className = 'modal-overlay show';
+            modal.onclick = e=>{ if(e.target===modal) modal.remove(); };
+            modal.innerHTML = `
+                <div class="modal" style="max-width:580px;max-height:80vh;overflow-y:auto;">
+                    <div class="modal-header">
+                        <h3 class="modal-title">📋 Change Log${storeName?' — '+storeName:''}</h3>
+                        <button class="modal-close" onclick="document.getElementById('prism-changelog-modal').remove()">×</button>
+                    </div>
+                    <div class="modal-body">${rows}</div>
+                </div>`;
+            document.body.appendChild(modal);
+        }
+        window.showChangeLogPanel = showChangeLogPanel;
+
+        _dbg('[PRISM Admin Features] Additive module v1 loaded ✅');
+        // END ADDITIVE MODULE
+
         // END SCRIPT BLOCK — DO NOT REMOVE CLOSING TAG
 </script>
 </div><!-- /prism-app-wrapper -->
