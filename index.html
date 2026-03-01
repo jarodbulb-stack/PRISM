@@ -9553,9 +9553,14 @@
                             <h4>${prop.name}</h4>
                             <p>${prop.type} ${prop.address ? '• ' + prop.address : ''}</p>
                         </div>
-                        <div class="item-amount">
+                        <div class="item-amount" style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
                             <div class="amount">₱${prop.rent.toLocaleString()}/mo</div>
                             <span class="badge ${statusBadge}">${statusText}</span>
+                            ${!currentAppUser || currentAppUser.role !== 'cashier' ? `
+                            <div style="display:flex;gap:4px;" onclick="event.stopPropagation()">
+                                <button class="btn btn-sm btn-secondary" onclick="editProperty(${prop.id})" title="Edit property" style="padding:2px 8px;font-size:0.75rem;">✏️</button>
+                                <button class="btn btn-sm" onclick="deleteProperty(${prop.id})" title="Delete property" style="padding:2px 8px;font-size:0.75rem;background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.4);color:#f87171;">🗑</button>
+                            </div>` : ''}
                         </div>
                     </div>
                 `;
@@ -9622,7 +9627,9 @@
                 </div>
 
                 <div class="action-buttons">
-                    <button class="btn btn-danger" onclick="deleteProperty(${id})">Delete Property</button>
+                    <button class="btn btn-secondary" onclick="editProperty(${id})" style="margin-right:4px;">✏️ Edit</button>
+                    <button class="btn btn-secondary" onclick="archiveProperty(${id})" title="Move to archive (recoverable for 60 days)" style="background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.4);color:#f59e0b;">🗂 Archive</button>
+                    <button class="btn btn-danger" onclick="deleteProperty(${id})">🗑 Delete</button>
                 </div>
             `;
 
@@ -10076,10 +10083,15 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="item-amount">
+                        <div class="item-amount" style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
                             <span class="badge ${currentMonthProgress >= 100 ? 'badge-success' : 'badge-warning'}">
                                 ${currentMonthProgress >= 100 ? 'Paid' : Math.round(currentMonthProgress) + '%'}
                             </span>
+                            ${!currentAppUser || currentAppUser.role !== 'cashier' ? `
+                            <div style="display:flex;gap:4px;" onclick="event.stopPropagation()">
+                                <button class="btn btn-sm btn-secondary" onclick="editTenant(${tenant.id})" title="Edit tenant" style="padding:2px 8px;font-size:0.75rem;">✏️</button>
+                                <button class="btn btn-sm" onclick="deleteTenant(${tenant.id})" title="Delete tenant" style="padding:2px 8px;font-size:0.75rem;background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.4);color:#f87171;">🗑</button>
+                            </div>` : ''}
                         </div>
                     </div>
                 `;
@@ -10214,7 +10226,8 @@
                     <button class="btn btn-info" onclick="printTenantReport(${id})">🖨️ Print</button>
                     ${currentAppUser && currentAppUser.role !== 'cashier' ? `
                         <button class="btn btn-warning" onclick="addChargeToClient('tenant', ${id})">💵 Add Charge</button>
-                        <button class="btn btn-danger" onclick="deleteTenant(${id})">Delete</button>
+                        <button class="btn btn-secondary" onclick="archiveTenant(${id})" title="Move to archive (recoverable for 60 days)" style="background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.4);color:#f59e0b;">🗂 Archive</button>
+                        <button class="btn btn-danger" onclick="deleteTenant(${id})">🗑 Delete</button>
                     ` : `
                         <button class="btn btn-primary" onclick="quickEndorse('sales', '🏠 Rent payment recorded for tenant. Admin please review.')">📋 Endorse to Admin</button>
                     `}
@@ -11654,8 +11667,13 @@ async function loadWaterCustomers() {
                         <div class="list-item-title">💧 ${c.name}</div>
                         <div class="list-item-subtitle">${c.phone || 'No phone'} • ${c.address || 'No address'}</div>
                     </div>
-                    <div style="text-align: right;">
+                    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
                         ${c.balance > 0 ? `<div class="badge badge-warning">₱${c.balance.toLocaleString()} credit</div>` : '<div class="badge badge-success">Paid</div>'}
+                        ${!currentAppUser || currentAppUser.role !== 'cashier' ? `
+                        <div style="display:flex;gap:4px;" onclick="event.stopPropagation()">
+                            <button class="btn btn-sm btn-secondary" onclick="editWaterCustomer(${c.id})" title="Edit customer" style="padding:2px 8px;font-size:0.75rem;">✏️</button>
+                            <button class="btn btn-sm" onclick="deleteWaterCustomer(${c.id})" title="Delete customer" style="padding:2px 8px;font-size:0.75rem;background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.4);color:#f87171;">🗑</button>
+                        </div>` : ''}
                     </div>
                 </div>
             `).join('');
@@ -11874,6 +11892,7 @@ async function loadWaterCustomers() {
                 <div style="margin-top: 20px; display: flex; gap: 10px;">
                     ${currentAppUser && currentAppUser.role !== 'cashier' ? `
                         <button class="btn btn-secondary" onclick="editWaterCustomer(${id})" style="flex:1;">✏️ Edit</button>
+                        <button class="btn btn-secondary" onclick="archiveWaterCustomer(${id})" title="Move to archive (recoverable for 60 days)" style="flex:1;background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.4);color:#f59e0b;">🗂 Archive</button>
                         <button class="btn btn-danger" onclick="deleteWaterCustomer(${id})" style="flex:1;">🗑️ Delete</button>
                     ` : `
                         <button class="btn btn-primary btn-block" onclick="quickEndorse('water', '💧 Water customer update needed. Admin please review.')">📋 Endorse to Admin</button>
@@ -12079,9 +12098,15 @@ async function loadWaterCustomers() {
                         <div class="list-item-title">👷 ${e.name}</div>
                         <div class="list-item-subtitle">${e.position || 'Staff'}</div>
                     </div>
-                    <div style="text-align: right;">
-                        ${e.unpaidDays > 0 ? `<div class="badge badge-primary" style="margin-bottom: 4px;">${e.unpaidDays} unpaid days</div>` : ''}
-                        ${e.unpaidAdvances > 0 ? `<div class="badge badge-warning">Advance pending</div>` : ''}
+                    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+                        <div>
+                            ${e.unpaidDays > 0 ? `<div class="badge badge-primary" style="margin-bottom: 4px;">${e.unpaidDays} unpaid days</div>` : ''}
+                            ${e.unpaidAdvances > 0 ? `<div class="badge badge-warning">Advance pending</div>` : ''}
+                        </div>
+                        <div style="display:flex;gap:4px;" onclick="event.stopPropagation()">
+                            <button class="btn btn-sm btn-secondary" onclick="editEmployee(${e.id})" title="Edit employee" style="padding:2px 8px;font-size:0.75rem;">✏️</button>
+                            <button class="btn btn-sm" onclick="deleteEmployee(${e.id})" title="Delete employee" style="padding:2px 8px;font-size:0.75rem;background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.4);color:#f87171;">🗑</button>
+                        </div>
                     </div>
                 </div>
             `).join('');
@@ -12302,6 +12327,7 @@ async function loadWaterCustomers() {
                 <div style="display: flex; gap: 10px;">
                     <button class="btn btn-secondary" onclick="editEmployee(${id})" style="flex: 1;">✏️ Edit</button>
                     <button class="btn btn-primary" onclick="hideModal('employee-detail-modal');showPayrollForEmployee(${id});" style="flex: 1;">💵 Payroll</button>
+                    <button class="btn btn-secondary" onclick="archiveEmployee(${id})" title="Move to archive (recoverable for 60 days)" style="flex:1;background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.4);color:#f59e0b;">🗂 Archive</button>
                     <button class="btn btn-danger" onclick="deleteEmployee(${id})" style="flex: 1;">🗑️ Delete</button>
                 </div>
             `;
@@ -13420,9 +13446,14 @@ async function showPayrollSummary() {
                                 </div>
                             </div>
                         </div>
-                        <div class="item-amount">
+                        <div class="item-amount" style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
                             <div class="amount ${balance > 0 ? 'due' : ''}">₱${Math.abs(balance).toLocaleString()}</div>
                             <span class="badge ${balance <= 0 ? 'badge-success' : 'badge-danger'}">${balance <= 0 ? 'Paid' : 'Balance'}</span>
+                            ${!currentAppUser || currentAppUser.role !== 'cashier' ? `
+                            <div style="display:flex;gap:4px;" onclick="event.stopPropagation()">
+                                <button class="btn btn-sm btn-secondary" onclick="editCredit(${credit.id})" title="Edit debtor" style="padding:2px 8px;font-size:0.75rem;">✏️</button>
+                                <button class="btn btn-sm" onclick="deleteCredit(${credit.id})" title="Delete debtor" style="padding:2px 8px;font-size:0.75rem;background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.4);color:#f87171;">🗑</button>
+                            </div>` : ''}
                         </div>
                     </div>
                 `;
@@ -13801,7 +13832,8 @@ async function showPayrollSummary() {
                     <button class="btn btn-secondary" onclick="showStatementOfAccount(${id}, 'credit')">📊 Statement</button>
                     <button class="btn btn-info" onclick="printCreditReport(${id})">🖨️ Print</button>
                     ${currentAppUser && currentAppUser.role !== 'cashier' ? `
-                        <button class="btn btn-danger" onclick="deleteCredit(${id})">Delete Credit</button>
+                        <button class="btn btn-secondary" onclick="archiveCredit(${id})" title="Move to archive (recoverable for 60 days)" style="background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.4);color:#f59e0b;">🗂 Archive</button>
+                        <button class="btn btn-danger" onclick="deleteCredit(${id})">🗑 Delete</button>
                     ` : `
                         <button class="btn btn-primary" onclick="quickEndorse('credit', '💳 Credit account needs admin attention: ' + '${credit.debtor}' + ' — Balance: ₱' + balance.toLocaleString())">📋 Endorse to Admin</button>
                     `}
@@ -14348,17 +14380,38 @@ async function showPayrollSummary() {
                 general: '📋 General'
             };
 
-            container.innerHTML = notes.sort((a, b) => new Date(b.date) - new Date(a.date)).map(note => {
+            // Sort: pinned first, then by date desc
+            const sorted = [...notes].sort((a, b) => {
+                if (a.pinned && !b.pinned) return -1;
+                if (!a.pinned && b.pinned) return 1;
+                return new Date(b.date) - new Date(a.date);
+            });
+
+            container.innerHTML = sorted.map(note => {
+                const canEdit = !currentAppUser || currentAppUser.role !== 'cashier';
                 return `
-                    <div class="note-card" onclick="viewNoteDetails(${note.id})">
+                    <div class="note-card${note.pinned ? ' pinned-note' : ''}" onclick="viewNoteDetails(${note.id})"
+                         style="${note.pinned ? 'border-left:3px solid #f59e0b;' : ''}">
                         <div class="note-header">
-                            <h4 class="note-title">${note.title}</h4>
-                            <span class="note-category ${note.category}">${categoryLabels[note.category] || note.category}</span>
+                            <h4 class="note-title">
+                                ${note.pinned ? '<span title="Pinned" style="color:#f59e0b;margin-right:4px;">📌</span>' : ''}${note.title}
+                            </h4>
+                            <div style="display:flex;align-items:center;gap:6px;">
+                                <span class="note-category ${note.category}">${categoryLabels[note.category] || note.category}</span>
+                                ${canEdit ? `
+                                <div style="display:flex;gap:3px;" onclick="event.stopPropagation()">
+                                    <button class="btn btn-sm" onclick="toggleNotePin(${note.id},${!!note.pinned})" title="${note.pinned ? 'Unpin' : 'Pin'} note" style="padding:2px 7px;font-size:0.72rem;line-height:1.4;background:${note.pinned ? 'rgba(245,158,11,0.25)' : 'rgba(100,116,139,0.1)'};border-color:rgba(245,158,11,0.4);color:#f59e0b;">📌</button>
+                                    <button class="btn btn-sm btn-secondary" onclick="editNote(${note.id})" title="Edit note" style="padding:2px 7px;font-size:0.72rem;line-height:1.4;">✏️</button>
+                                    <button class="btn btn-sm" onclick="archiveNote(${note.id})" title="Archive note" style="padding:2px 7px;font-size:0.72rem;line-height:1.4;background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.4);color:#f59e0b;">🗂</button>
+                                    <button class="btn btn-sm" onclick="deleteNote(${note.id})" title="Delete note" style="padding:2px 7px;font-size:0.72rem;line-height:1.4;background:rgba(239,68,68,0.12);border-color:rgba(239,68,68,0.35);color:#f87171;">🗑</button>
+                                </div>` : ''}
+                            </div>
                         </div>
                         <p class="note-preview">${note.description}</p>
                         <div class="note-meta">
                             <span>${note.date}</span>
                             ${note.photo ? '<span class="has-photo">📷 Has photo</span>' : ''}
+                            ${note.pinned ? '<span style="color:#f59e0b;font-size:0.75rem;">📌 Pinned</span>' : ''}
                         </div>
                     </div>
                 `;
@@ -14548,7 +14601,10 @@ async function showPayrollSummary() {
                 <div class="card">
                     <div class="card-header">
                         <span class="note-category ${note.category}">${categoryLabels[note.category] || note.category}</span>
-                        <button class="btn btn-sm btn-secondary" onclick="editNote(${id})">Edit</button>
+                        <div style="display:flex;gap:4px;">
+                            <button class="btn btn-sm" onclick="toggleNotePin(${id}, ${!!note.pinned})" title="${note.pinned ? 'Unpin' : 'Pin'} note" style="background:${note.pinned ? 'rgba(245,158,11,0.25)' : 'rgba(100,116,139,0.1)'};border-color:rgba(245,158,11,0.4);color:#f59e0b;padding:3px 8px;font-size:0.78rem;">📌 ${note.pinned ? 'Unpin' : 'Pin'}</button>
+                            <button class="btn btn-sm btn-secondary" onclick="editNote(${id})">✏️ Edit</button>
+                        </div>
                     </div>
                     <p><strong>Date:</strong> ${note.date}</p>
                     <div style="margin-top: 12px; padding: 12px; background: var(--gray-50); border-radius: 8px;">
@@ -14563,7 +14619,8 @@ async function showPayrollSummary() {
                 </div>
 
                 <div class="action-buttons">
-                    <button class="btn btn-danger" onclick="deleteNote(${id})">Delete Note</button>
+                    <button class="btn btn-secondary" onclick="archiveNote(${id})" style="background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.4);color:#f59e0b;">🗂 Archive</button>
+                    <button class="btn btn-danger" onclick="deleteNote(${id})">🗑 Delete Note</button>
                 </div>
             `;
 
@@ -14608,11 +14665,33 @@ async function showPayrollSummary() {
             }
             if (!await showConfirm('This note will be permanently deleted.', 'danger', '🗑️ Delete Note', 'Yes, Delete')) return;
 
-            await ensureNotesStore();
-            await dbDelete('customNotes', id);
-            hideModal('note-detail-modal');
-            loadNotes();
-            debouncedSync();
+            try {
+                await ensureNotesStore();
+                await dbDelete('customNotes', id);
+                hideModal('note-detail-modal');
+                loadNotes();
+                debouncedSync();
+                showToast('🗑️ Note deleted', 'success');
+            } catch (error) {
+                console.error('Error deleting note:', error);
+                showToast('❌ Error deleting note: ' + error.message, 'error');
+            }
+        }
+
+        async function toggleNotePin(id, currentlyPinned) {
+            try {
+                await ensureNotesStore();
+                const note = await dbGet('customNotes', id);
+                if (!note) return;
+                note.pinned = !currentlyPinned;
+                note.updatedAt = new Date().toISOString();
+                await dbUpdate('customNotes', note);
+                loadNotes();
+                debouncedSync();
+                showToast(note.pinned ? '📌 Note pinned' : '📌 Note unpinned', 'success');
+            } catch (error) {
+                showToast('❌ Error: ' + error.message, 'error');
+            }
         }
 
         // =====================
@@ -15083,8 +15162,13 @@ async function showPayrollSummary() {
                             <h4>${expense.description} ${hasPhoto}</h4>
                             <p>${expense.date} • ${categoryLabels[expense.category] || expense.category}${areaLabel ? ' • ' + areaLabel : ''}</p>
                         </div>
-                        <div class="item-amount">
+                        <div class="item-amount" style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
                             <div class="amount due">₱${expense.amount.toLocaleString()}</div>
+                            ${!currentAppUser || currentAppUser.role !== 'cashier' ? `
+                            <div style="display:flex;gap:4px;" onclick="event.stopPropagation()">
+                                <button class="btn btn-sm btn-secondary" onclick="editExpense(${expense.id})" title="Edit expense" style="padding:2px 8px;font-size:0.75rem;">✏️</button>
+                                <button class="btn btn-sm" onclick="deleteExpense(${expense.id})" title="Delete expense" style="padding:2px 8px;font-size:0.75rem;background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.4);color:#f87171;">🗑</button>
+                            </div>` : ''}
                         </div>
                     </div>
                 `;
@@ -15140,7 +15224,9 @@ async function showPayrollSummary() {
                 </div>
 
                 <div class="action-buttons">
-                    <button class="btn btn-danger" onclick="deleteExpense(${id})">Delete Expense</button>
+                    <button class="btn btn-secondary" onclick="editExpense(${id})" style="margin-right:4px;">✏️ Edit</button>
+                    <button class="btn btn-secondary" onclick="archiveExpense(${id})" title="Move to archive (recoverable for 60 days)" style="background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.4);color:#f59e0b;">🗂 Archive</button>
+                    <button class="btn btn-danger" onclick="deleteExpense(${id})">🗑 Delete</button>
                 </div>
             `;
 
@@ -21385,14 +21471,18 @@ function initReportsPage() {
                             </div>
                             ${task.description ? `<p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 5px;">${task.description}</p>` : ''}
                         </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <div style="width: 12px; height: 12px; border-radius: 50%; background: ${priorityColor};" title="${task.priority} priority"></div>
-                            <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); toggleTaskStatus(${task.id})" title="Toggle status" style="padding: 4px 8px; font-size: 0.75rem;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <div style="width: 10px; height: 10px; border-radius: 50%; flex-shrink:0; background: ${priorityColor};" title="${task.priority} priority"></div>
+                            <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); toggleTaskStatus(${task.id})" title="Toggle status" style="padding: 3px 7px; font-size: 0.72rem;">
                                 ${task.status === 'completed' ? '↩️' : task.status === 'in-progress' ? '✅' : '▶️'}
                             </button>
-                            <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); deleteTask(${task.id})" title="Delete task" style="padding: 4px 8px; font-size: 0.75rem;">
-                                🗑️
-                            </button>
+                            ${!currentAppUser || currentAppUser.role !== 'cashier' ? `
+                            <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); editTask(${task.id})" title="Edit task" style="padding: 3px 7px; font-size: 0.72rem;">✏️</button>
+                            <button class="btn btn-sm" onclick="event.stopPropagation(); archiveTask(${task.id})" title="Archive task" style="padding: 3px 7px; font-size: 0.72rem;background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.4);color:#f59e0b;">🗂</button>
+                            <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); deleteTask(${task.id})" title="Delete task" style="padding: 3px 7px; font-size: 0.72rem;">🗑️</button>
+                            ` : `
+                            <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); deleteTask(${task.id})" title="Delete task" style="padding: 3px 7px; font-size: 0.72rem;">🗑️</button>
+                            `}
                         </div>
                     </div>
                 `;
@@ -22161,6 +22251,7 @@ async function editTask(id) {
         window.setNoteFilter = setNoteFilter;
         window.openNoteWithCategory = openNoteWithCategory;
         window.filterNotes = filterNotes;
+        window.toggleNotePin = toggleNotePin;
         window.showAddNoteModal = showAddNoteModal;
         window.saveNote = saveNote;
         window.editNote = editNote;
@@ -23171,7 +23262,7 @@ async function editTask(id) {
         window.getArchivedRecords = getArchivedRecords;
 
         // Per-store archive helpers (mirror existing delete helpers)
-        async function archiveProperty(id)      { if (await archiveRecord('properties',      id, loadProperties))    hideModal(); }
+        async function archiveProperty(id) { if (await archiveRecord('properties',      id, loadProperties))    hideModal(); }
         async function archiveTenant(id)        { if (await archiveRecord('tenants',         id, loadTenants))       hideModal(); }
         async function archiveExpense(id)       { if (await archiveRecord('expenses',        id, loadExpenses))      hideModal('expense-detail-modal'); }
         async function archiveNote(id)          { if (await archiveRecord('customNotes',     id, loadNotes))         hideModal('note-detail-modal'); }
@@ -24399,52 +24490,130 @@ function mtSATab(tab, btn) {
         if (el) el.style.display = 'none';
     });
     document.querySelectorAll('.mt-sa-nav-btn').forEach(b => b.classList.remove('active'));
-    
+
     const target = document.getElementById(`mt-sa-${tab}`);
     if (target) target.style.display = 'block';
     if (btn) btn.classList.add('active');
+
+    // Reload data on tab switch so users/orgs always reflect current state
+    mtLoadSAData();
 }
 
 async function mtLoadSAData() {
     if (!window.db) {
-        // Load from localStorage
+        // Offline: load from localStorage
         const orgs = JSON.parse(localStorage.getItem('mt_user_orgs') || '[]');
         mtRenderSAOrgs(orgs);
-        document.getElementById('sa-total-orgs').textContent = orgs.length;
-        document.getElementById('sa-active-orgs').textContent = orgs.filter(o => o.status === 'active').length;
-        document.getElementById('sa-total-users').textContent = orgs.length;
-        const planPrices = { basic: 299, standard: 599, enterprise: 999 };
-        const revenue = orgs.reduce((sum, o) => sum + (planPrices[o.plan] || 299), 0);
-        document.getElementById('sa-total-revenue').textContent = '₱' + revenue.toLocaleString();
+        mtRenderSAUsers([], orgs);
+        const setEl = (id, v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+        setEl('sa-total-orgs', orgs.length);
+        setEl('sa-active-orgs', orgs.filter(o => (o.status||'active') === 'active').length);
+        setEl('sa-total-users', orgs.length);
+        const planPrices = { basic:299, standard:599, enterprise:999 };
+        setEl('sa-total-revenue', '₱' + orgs.reduce((s,o) => s + (planPrices[o.plan]||299), 0).toLocaleString());
         return;
     }
-    // Wait for Firebase auth to be ready before querying
+
     const _waitForAuth = () => new Promise(res => {
         if (window.auth && window.auth.currentUser) return res();
-        const unsub = window.auth.onAuthStateChanged(u => { unsub(); res(); });
+        const unsub = window.auth.onAuthStateChanged(() => { unsub(); res(); });
     });
+
     try {
         await _waitForAuth();
-        const _uid = window.auth && window.auth.currentUser ? window.auth.currentUser.uid : 'none';
-        mtToast('🔍 Loading orgs for: ' + _uid.substring(0,8) + '...', 'info', 4000);
+        const setEl = (id, v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+
+        // ── Load organizations ──────────────────────────────────────────────
         const orgsSnap = await window.db.collection(MT.ORGS_COL).get();
-        mtToast('📦 Found ' + orgsSnap.size + ' org(s) in Firestore', orgsSnap.size > 0 ? 'success' : 'warning', 5000);
         const orgs = orgsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        // Back-fill status if missing (legacy orgs created before status field was added)
+        for (const org of orgs) {
+            if (!org.status) {
+                org.status = 'active';
+                try { await window.db.collection(MT.ORGS_COL).doc(org.id).update({ status: 'active' }); } catch(e) {}
+            }
+        }
+
         mtRenderSAOrgs(orgs);
-        document.getElementById('sa-total-orgs').textContent = orgs.length;
-        document.getElementById('sa-active-orgs').textContent = orgs.filter(o => o.status === 'active').length;
-        
-        const usersSnap = await window.db.collection(MT.ORG_MEMBERS_COL).get();
-        document.getElementById('sa-total-users').textContent = usersSnap.size;
-        
-        const planPrices = { basic: 299, standard: 599, enterprise: 999 };
-        const revenue = orgs.reduce((sum, o) => sum + (planPrices[o.plan] || 299), 0);
-        document.getElementById('sa-total-revenue').textContent = '₱' + revenue.toLocaleString();
+        setEl('sa-total-orgs', orgs.length);
+        setEl('sa-active-orgs', orgs.filter(o => (o.status||'active') === 'active').length);
+
+        // ── Load all org members → populate All Users tab ──────────────────
+        const membersSnap = await window.db.collection(MT.ORG_MEMBERS_COL).get();
+        const members = membersSnap.docs.map(d => ({ _docId: d.id, ...d.data() }));
+
+        setEl('sa-total-users', members.length);
+
+        // Build org lookup map for display
+        const orgMap = {};
+        orgs.forEach(o => { orgMap[o.id] = o; });
+
+        mtRenderSAUsers(members, orgs, orgMap);
+
+        // ── Revenue ─────────────────────────────────────────────────────────
+        const planPrices = { basic:299, standard:599, enterprise:999 };
+        const revenue = orgs.reduce((s,o) => s + (planPrices[o.plan]||299), 0);
+        setEl('sa-total-revenue', '₱' + revenue.toLocaleString());
+
+        mtToast('✅ SA data loaded — ' + orgs.length + ' org(s), ' + members.length + ' member(s)', 'success', 3000);
+
     } catch (e) {
         mtToast('❌ SA load error: ' + (e.message || e), 'error', 8000);
         console.warn('SA data load error:', e);
-        setTimeout(() => mtLoadSAData(), 2000);
+        setTimeout(() => mtLoadSAData(), 3000);
     }
+}
+
+function mtRenderSAUsers(members, orgs, orgMap) {
+    const tbody = document.getElementById('mt-sa-users-tbody');
+    if (!tbody) return;
+
+    orgMap = orgMap || {};
+    orgs = orgs || [];
+
+    if (!members || members.length === 0) {
+        // Fallback: show org owners from orgs list
+        if (orgs.length > 0) {
+            tbody.innerHTML = orgs.map(org => `
+                <tr>
+                    <td style="font-weight:600;">${org.ownerName || org.ownerEmail?.split('@')[0] || 'Owner'}</td>
+                    <td style="color:#94a3b8;">${org.ownerEmail || '—'}</td>
+                    <td>
+                        <span style="font-size:0.8rem;color:#60a5fa;">${org.name || org.id}</span>
+                    </td>
+                    <td><span style="background:rgba(234,179,8,0.15);color:#fbbf24;padding:2px 8px;border-radius:4px;font-size:0.78rem;font-weight:700;">Owner</span></td>
+                    <td style="color:#64748b;font-size:0.82rem;">${org.createdAt ? new Date(org.createdAt).toLocaleDateString() : '—'}</td>
+                </tr>`).join('');
+        } else {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#64748b;padding:30px;">No users found</td></tr>';
+        }
+        return;
+    }
+
+    tbody.innerHTML = members.map(m => {
+        const org = orgMap[m.orgId] || orgs.find(o => o.id === m.orgId) || {};
+        const roleBadgeColor = {
+            owner: 'rgba(234,179,8,0.15);color:#fbbf24',
+            admin: 'rgba(59,130,246,0.15);color:#60a5fa',
+            member: 'rgba(16,185,129,0.15);color:#34d399',
+            cashier: 'rgba(168,85,247,0.15);color:#c084fc',
+        }[m.role] || 'rgba(100,116,139,0.15);color:#94a3b8';
+        return `
+            <tr>
+                <td style="font-weight:600;">${m.userName || m.userEmail?.split('@')[0] || '—'}</td>
+                <td style="color:#94a3b8;font-size:0.85rem;">${m.userEmail || '—'}</td>
+                <td>
+                    <span style="font-size:0.82rem;color:#60a5fa;">${m.orgName || org.name || m.orgId || '—'}</span>
+                </td>
+                <td>
+                    <span style="background:${roleBadgeColor};padding:2px 8px;border-radius:4px;font-size:0.78rem;font-weight:700;text-transform:uppercase;">
+                        ${m.role || 'member'}
+                    </span>
+                </td>
+                <td style="color:#64748b;font-size:0.82rem;">${m.joinedAt ? new Date(m.joinedAt).toLocaleDateString() : '—'}</td>
+            </tr>`;
+    }).join('');
 }
 
 function mtRenderSAOrgs(orgs) {
