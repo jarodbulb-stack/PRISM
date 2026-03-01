@@ -15016,7 +15016,7 @@ async function showPayrollSummary() {
             // Calculate stats
             const now = new Date();
             const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-            const monthlyExpenses = expenses.filter(e => e.date.startsWith(currentMonth));
+            const monthlyExpenses = expenses.filter(e => e.date && typeof e.date === 'string' && e.date.startsWith(currentMonth));
             const monthlyTotal = monthlyExpenses.reduce((sum, e) => sum + e.amount, 0);
             const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
 
@@ -15803,7 +15803,7 @@ async function showPayrollSummary() {
             }
 
             // Credit repaid this month
-            const monthlyCreditPayments = creditPayments.filter(p => p.date.startsWith(currentMonth));
+            const monthlyCreditPayments = creditPayments.filter(p => p.date && typeof p.date === 'string' && p.date.startsWith(currentMonth));
             const creditRepaid = monthlyCreditPayments.reduce((sum, p) => sum + p.amount, 0);
             safeSetText('stat-credit-repaid', '₱' + creditRepaid.toLocaleString());
 
@@ -15813,7 +15813,7 @@ async function showPayrollSummary() {
             try {
                 const additionalIncome = await dbGetAll('additionalIncome');
                 otherIncomeThisMonth = additionalIncome
-                    .filter(i => i.date.startsWith(currentMonth))
+                    .filter(i => i.date && typeof i.date === 'string' && i.date.startsWith(currentMonth))
                     .reduce((sum, i) => sum + i.amount, 0);
             } catch (e) {}
             
@@ -15868,7 +15868,7 @@ async function showPayrollSummary() {
             safeSetText('stat-outstanding', '₱' + (overallCreditDue - overallCreditCollected).toLocaleString());
 
             // Monthly expenses and net income
-            const monthlyExpenses = expenses.filter(e => e.date.startsWith(currentMonth));
+            const monthlyExpenses = expenses.filter(e => e.date && typeof e.date === 'string' && e.date.startsWith(currentMonth));
             const totalExpenses = monthlyExpenses.reduce((sum, e) => sum + e.amount, 0);
             const netIncome = collected + creditRepaid - totalExpenses;
             
@@ -15968,6 +15968,12 @@ async function showPayrollSummary() {
 
         // Render Monthly Trend Chart (simple canvas-based)
         function renderTrendChart(payments, creditPayments, expenses, credits) {
+            // Guard: ensure all inputs are arrays — crash if any is undefined/null
+            payments       = Array.isArray(payments)       ? payments       : [];
+            creditPayments = Array.isArray(creditPayments) ? creditPayments : [];
+            expenses       = Array.isArray(expenses)       ? expenses       : [];
+            credits        = Array.isArray(credits)        ? credits        : [];
+
             const canvas = document.getElementById('trend-chart');
             if (!canvas) return;
 
@@ -15988,13 +15994,23 @@ async function showPayrollSummary() {
             }
 
             // Calculate income and expenses per month
+            // Defensive: skip malformed records to prevent .startsWith() crash
+            const _safeDate = r => typeof r === 'string' && r.length >= 7;
             const data = months.map(m => {
-                const rentIncome = payments.filter(p => p.date.startsWith(m.key)).reduce((sum, p) => sum + p.amount, 0);
-                const creditIncome = creditPayments.filter(p => p.date.startsWith(m.key)).reduce((sum, p) => sum + p.amount, 0);
+                const rentIncome = payments
+                    .filter(p => { if (!_safeDate(p.date)) { console.warn('[TrendChart] Skipping malformed payment:', p); return false; } return p.date.startsWith(m.key); })
+                    .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+                const creditIncome = creditPayments
+                    .filter(p => { if (!_safeDate(p.date)) { console.warn('[TrendChart] Skipping malformed creditPayment:', p); return false; } return p.date.startsWith(m.key); })
+                    .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
                 const totalIncome = rentIncome + creditIncome;
 
-                const monthExpenses = expenses.filter(e => e.date.startsWith(m.key)).reduce((sum, e) => sum + e.amount, 0);
-                const monthCreditsReleased = credits.filter(c => c.dateLent.startsWith(m.key)).reduce((sum, c) => sum + c.principal, 0);
+                const monthExpenses = expenses
+                    .filter(e => { if (!_safeDate(e.date)) { console.warn('[TrendChart] Skipping malformed expense:', e); return false; } return e.date.startsWith(m.key); })
+                    .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+                const monthCreditsReleased = credits
+                    .filter(c => { if (!_safeDate(c.dateLent)) { console.warn('[TrendChart] Skipping malformed credit:', c); return false; } return c.dateLent.startsWith(m.key); })
+                    .reduce((sum, c) => sum + (Number(c.principal) || 0), 0);
                 const totalExpenses = monthExpenses + monthCreditsReleased;
 
                 return { label: m.label, income: totalIncome, expenses: totalExpenses };
@@ -16204,8 +16220,8 @@ async function showPayrollSummary() {
             const currentMonthStr = `${year}-${String(month + 1).padStart(2, '0')}`;
             
             // Get payment data for this month
-            const monthPayments = payments.filter(p => p.date.startsWith(currentMonthStr));
-            const monthCreditPayments = creditPayments.filter(p => p.date.startsWith(currentMonthStr));
+            const monthPayments = payments.filter(p => p.date && typeof p.date === 'string' && p.date.startsWith(currentMonthStr));
+            const monthCreditPayments = creditPayments.filter(p => p.date && typeof p.date === 'string' && p.date.startsWith(currentMonthStr));
             
             // Build schedule data
             const scheduleData = {};
@@ -22745,7 +22761,32 @@ async function editTask(id) {
                 }
             }
 
-            return { add, resolve, getUnresolved, getAll, clearResolved, _notifyUI };
+            /** Dismiss all conflicts where both sides have identical data.
+             *  These are false conflicts caused by field-order differences (now fixed). */
+            function dismissIdentical() {
+                const list = _load();
+                let dismissed = 0;
+                list.forEach(c => {
+                    if (c.resolved) return;
+                    try {
+                        const lCopy = Object.assign({}, c.local);  delete lCopy._updatedAt; delete lCopy._createdAt;
+                        const rCopy = Object.assign({}, c.remote); delete rCopy._updatedAt; delete rCopy._createdAt;
+                        const sortKeys = obj => { const s={}; Object.keys(obj).sort().forEach(k=>{s[k]=obj[k];}); return s; };
+                        if (JSON.stringify(sortKeys(lCopy)) === JSON.stringify(sortKeys(rCopy))) {
+                            c.resolved = true;
+                            c.resolvedAt = new Date().toISOString();
+                            c.resolvedWith = 'identical-dismissed';
+                            dismissed++;
+                        }
+                    } catch(e) {}
+                });
+                _save(list);
+                _notifyUI();
+                if (dismissed > 0) showToast('🧹 Dismissed ' + dismissed + ' identical false conflict(s).', 'success', 4000);
+                return dismissed;
+            }
+
+            return { add, resolve, getUnresolved, getAll, clearResolved, _notifyUI, dismissIdentical };
         })();
         window.ConflictQueue = ConflictQueue;
 
@@ -22777,6 +22818,16 @@ async function editTask(id) {
                 employees:'Employee', waterSales:'Water Sale', additionalIncome:'Income',
                 tasks:'Task', cashAdvances:'Cash Advance', salaryPayments:'Salary',
             };
+
+            // Count conflicts where both sides have identical content (false conflicts)
+            const identicalCount = conflicts.filter(c => {
+                try {
+                    const lCopy = Object.assign({}, c.local);  delete lCopy._updatedAt; delete lCopy._createdAt;
+                    const rCopy = Object.assign({}, c.remote); delete rCopy._updatedAt; delete rCopy._createdAt;
+                    const sortKeys = obj => { const s={}; Object.keys(obj).sort().forEach(k=>{s[k]=obj[k];}); return s; };
+                    return JSON.stringify(sortKeys(lCopy)) === JSON.stringify(sortKeys(rCopy));
+                } catch(e) { return false; }
+            }).length;
 
             const rows = conflicts.map(c => {
                 const label = STORE_LABELS[c.storeName] || c.storeName;
@@ -22848,6 +22899,25 @@ async function editTask(id) {
                         <strong style="color:var(--text-primary,#f8fafc);">Choose which version to keep.</strong>
                         The other version will not be deleted — it stays in conflict history.
                     </p>
+                    ${identicalCount > 0 ? `
+                    <div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.4);
+                                border-radius:10px;padding:14px;margin-bottom:16px;display:flex;
+                                justify-content:space-between;align-items:center;">
+                        <div>
+                            <div style="font-weight:700;color:#10b981;margin-bottom:2px;">
+                                ✅ ${identicalCount} conflict(s) have identical data on both sides
+                            </div>
+                            <div style="font-size:0.8rem;color:var(--text-secondary,#9ca3af);">
+                                These are false conflicts caused by field ordering differences. Safe to dismiss.
+                            </div>
+                        </div>
+                        <button onclick="ConflictQueue.dismissIdentical();showConflictPanel();"
+                            style="padding:8px 16px;background:#10b981;color:#fff;border:none;
+                                   border-radius:8px;cursor:pointer;font-weight:700;white-space:nowrap;
+                                   margin-left:12px;font-size:0.85rem;">
+                            🧹 Dismiss All Identical
+                        </button>
+                    </div>` : ''}
                     ${rows}
                     <button onclick="ConflictQueue.clearResolved();document.getElementById('prism-conflict-panel').style.display='none'"
                         style="width:100%;padding:12px;background:var(--bg-card,#1f2937);color:var(--text-secondary);
@@ -22969,10 +23039,18 @@ async function editTask(id) {
 
             /** Fingerprint for change detection — excludes _updatedAt to compare actual content */
             function _fingerprint(record) {
+                // Sort keys before stringifying — Firestore returns fields in
+                // alphabetical order while IndexedDB preserves insert order.
+                // Without sorting, identical records produce different JSON strings
+                // and falsely trigger Case 5 (conflict) for every synced record.
                 const copy = Object.assign({}, record);
                 delete copy._updatedAt;
                 delete copy._createdAt;
-                try { return JSON.stringify(copy); } catch(e) { return String(record.id); }
+                try {
+                    const sorted = {};
+                    Object.keys(copy).sort().forEach(k => { sorted[k] = copy[k]; });
+                    return JSON.stringify(sorted);
+                } catch(e) { return String(record.id); }
             }
 
             /** Deduplicate an array of records by id */
@@ -23221,7 +23299,14 @@ async function editTask(id) {
         // Wrap dbGetAll to filter archived records from normal queries
         const _origDbGetAll = dbGetAll;
         window.dbGetAll = async function dbGetAll(storeName, options) {
-            const results = await _origDbGetAll(storeName);
+            let results;
+            try {
+                results = await _origDbGetAll(storeName);
+            } catch(e) {
+                _dbg('[dbGetAll] Store read error for', storeName, '— returning []:', e.message);
+                return [];
+            }
+            if (!Array.isArray(results)) return [];
             if (options && options._includeArchived) return results;
             return results.filter(r => !r.archived);
         };
@@ -23257,6 +23342,14 @@ async function editTask(id) {
             'waterCustomers','waterSales','employees','cashAdvances','salaryPayments','timeRecords'
         ];
         async function runRetentionCleanup() {
+            // Safety: do NOT run retention cleanup while sync conflicts are unresolved
+            if (typeof ConflictQueue !== 'undefined') {
+                const activeConflicts = ConflictQueue.getUnresolved();
+                if (activeConflicts.length > 0) {
+                    _dbg('[Retention] Skipped — ' + activeConflicts.length + ' unresolved conflicts. Resolve conflicts first.');
+                    return;
+                }
+            }
             const now   = Date.now();
             const LIMIT = 60 * 24 * 60 * 60 * 1000;
             const stale = [];
