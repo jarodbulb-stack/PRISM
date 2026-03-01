@@ -25,8 +25,28 @@
     <meta name="keywords" content="rental management, credit management, payroll, water refilling, Philippines, PWA">
     
     <!-- PWA Manifest -->
-    <!-- PWA Manifest - links to manifest.json for GitHub Pages -->
-    <link rel="manifest" href="manifest.json">
+    <!-- PWA Manifest: manifest.json with inline blob fallback on 404 -->
+    <link rel="manifest" id="pwa-manifest-link" href="manifest.json">
+    <script>
+    (function(){
+        fetch('manifest.json',{method:'HEAD'}).catch(function(){
+            // manifest.json not found — inject inline blob
+            var d={name:'PRISM - Business Manager',short_name:'PRISM',
+                description:'Property, Rental, Income & Sales Management',
+                start_url:'./',scope:'./',display:'standalone',
+                background_color:'#0f172a',theme_color:'#667eea',orientation:'any',
+                icons:[{src:'icon-192.png',sizes:'192x192',type:'image/png',purpose:'any maskable'},
+                       {src:'icon-512.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
+            try{
+                var b=new Blob([JSON.stringify(d)],{type:'application/json'});
+                var u=URL.createObjectURL(b);
+                var l=document.getElementById('pwa-manifest-link');
+                if(l)l.href=u;
+            }catch(e){}
+        });
+    })();
+    // END SCRIPT BLOCK — DO NOT REMOVE CLOSING TAG
+</script>
     
     <!-- Inline SVG Favicon (PRISM Logo) -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%232563eb'/%3E%3Cstop offset='100%25' style='stop-color:%233b82f6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='50' cy='50' r='45' fill='url(%23g)'/%3E%3Ctext x='50' y='70' font-family='Arial,sans-serif' font-size='55' font-weight='bold' fill='white' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
@@ -78,7 +98,8 @@
         // Expose load status for diagnostics
         window._firebaseLoadStatus = loaded;
     })();
-    </script>
+    // END SCRIPT BLOCK — DO NOT REMOVE CLOSING TAG
+</script>
     
     <title>PRISM - Property, Rental, Income & Sales Manager</title>
     <style>
@@ -2890,7 +2911,7 @@
         <div class="mt-nav-links">
             <a href="#features">Features</a>
             <a href="#pricing">Pricing</a>
-            <a href="mailto:omnigridonline@gmail.com">Contact</a>
+            <a href="/cdn-cgi/l/email-protection#d7b8bab9beb0a5beb3b8b9bbbeb9b297b0bab6bebbf9b4b8ba">Contact</a>
         </div>
         <div style="display:flex;gap:10px;">
             <button class="mt-btn-secondary" style="padding:10px 20px;font-size:0.9rem;" onclick="mtShowAuth('login')">Sign In</button>
@@ -3008,7 +3029,7 @@
     </div>
 
     <div class="mt-footer">
-        <p>Built by <strong>OMNIGRID ONLINE</strong> &bull; <a href="mailto:omnigridonline@gmail.com"><span class="__cf_email__" data-cfemail="87ede6f5e8e3e5f2ebe5c7e0eae6eeeba9e4e8ea">[email&#160;protected]</span></a> &bull; <a href="mailto:omnigridonline@gmail.com"><span class="__cf_email__" data-cfemail="97f3f6f9f8faf6f9f3f6fad7eef6fff8f8b9f4f8fa">[email&#160;protected]</span></a></p>
+        <p>Built by <strong>OMNIGRID ONLINE</strong> &bull; <a href="/cdn-cgi/l/email-protection#4a252724232d38232e25242623242f0a2d272b232664292527"><span class="__cf_email__" data-cfemail="87ede6f5e8e3e5f2ebe5c7e0eae6eeeba9e4e8ea">[email&#160;protected]</span></a> &bull; <a href="/cdn-cgi/l/email-protection#85eae8ebece2f7ece1eaebe9ecebe0c5e2e8e4ece9abe6eae8"><span class="__cf_email__" data-cfemail="97f3f6f9f8faf6f9f3f6fad7eef6fff8f8b9f4f8fa">[email&#160;protected]</span></a></p>
         <p style="margin-top:8px;">© 2025 PRISM - Property • Rental • Income • Sales • Management</p>
     </div>
 </div>
@@ -4954,10 +4975,10 @@
                         <p style="font-size: 1.1rem; font-weight: 600; color: var(--gray-900);">OMNIGRID</p>
                         <div style="margin-top:15px;padding:14px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;">
                             <p style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:10px;font-weight:600;">📧 Contact Us</p>
-                            <a href="mailto:omnigridonline@gmail.com" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;margin-bottom:6px;font-weight:500;">
+                            <a href="/cdn-cgi/l/email-protection#deb1b3b0b7b9acb7bab1b0b2b7b0bb9eb9b3bfb7b2f0bdb1b3" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;margin-bottom:6px;font-weight:500;">
                                 ✉️ <span class="__cf_email__" data-cfemail="c5afa4b7aaa1a7b0a9a785a2a8a4aca9eba6aaa8">[email&#160;protected]</span>
                             </a>
-                            <a href="mailto:omnigridonline@gmail.com" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;font-weight:500;">
+                            <a href="/cdn-cgi/l/email-protection#a5cac8cbccc2d7ccc1cacbc9cccbc0e5c2c8c4ccc98bc6cac8" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;font-weight:500;">
                                 ✉️ <span class="__cf_email__" data-cfemail="680c0906070509060c0905281109000707460b0705">[email&#160;protected]</span>
                             </a>
                             <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-color);">
@@ -6533,7 +6554,7 @@
         </div>
     </div>
 
-    <script>
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
         // =====================
         // TOAST NOTIFICATION (must be first)
         // =====================
@@ -11527,17 +11548,6 @@ async function recordTenantPayment(tenantId) {
 
                     <scr` + `ipt>window.onload = function() { window.print(); }<\/scr` + `ipt>
                 
-    <!-- ========== CUSTOM CONFIRM MODAL ========== -->
-    <div id="prism-confirm-overlay">
-        <div id="prism-confirm-box">
-            <div id="prism-confirm-icon">❓</div>
-            <div id="prism-confirm-title">Confirm</div>
-            <div id="prism-confirm-message"></div>
-            <div id="prism-confirm-buttons">
-                <button id="prism-confirm-cancel" onclick="prismConfirmResolve(false)">Cancel</button>
-                <button id="prism-confirm-ok" class="danger" onclick="prismConfirmResolve(true)">Confirm</button>
-            </div>
-        </div>
     </div>
 
 </body>
@@ -23126,9 +23136,59 @@ async function editTask(id) {
         // init() is called by mtInit() after org/auth is set up
         // Do NOT call init() here directly - MT layer controls startup
 
-        </script>
+        // END SCRIPT BLOCK — DO NOT REMOVE CLOSING TAG
+</script>
 </div><!-- /prism-app-wrapper -->
 <script>
+// ═══════════════════════════════════════════════════════════════════════════
+// DOM INTEGRITY GUARD — regression prevention patch
+// Verifies critical elements exist at startup. If missing, installs native
+// dialog fallbacks so the app never crashes on missing DOM elements.
+// ═══════════════════════════════════════════════════════════════════════════
+
+(function installDOMGuard() {
+    // The IDs this guard checks — includes both old and new naming
+    const CRITICAL_IDS = [
+        'prism-confirm-overlay',    // main confirm modal wrapper
+        'prism-confirm-message',    // message text element
+        'prism-confirm-cancel',     // cancel button (id: prism-confirm-no alias)
+        'prism-confirm-ok',         // ok button    (id: prism-confirm-yes alias)
+    ];
+
+    function verifyCriticalDOM() {
+        const missing = [];
+        for (const id of CRITICAL_IDS) {
+            if (!document.getElementById(id)) {
+                missing.push(id);
+                console.error('[PRISM] Missing critical DOM element:', id);
+            }
+        }
+
+        if (missing.length > 0) {
+            // ── Emergency fallback: replace showConfirm with native dialog ──
+            console.warn('[PRISM] DOM integrity check FAILED for:', missing.join(', '));
+            console.warn('[PRISM] Installing emergency native-dialog fallback for showConfirm');
+            window.showConfirm = function(msg) {
+                return Promise.resolve(window.confirm(msg));
+            };
+        } else {
+            console.log('[PRISM] DOM integrity check passed ✅');
+        }
+    }
+
+    // Run after DOM is fully parsed
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', verifyCriticalDOM);
+    } else {
+        // DOM already ready (script runs after </body>)
+        verifyCriticalDOM();
+    }
+
+    // Expose for manual re-check from console
+    window.verifyCriticalDOM = verifyCriticalDOM;
+})();
+
+
 // ================================================================
 // PRISM MULTI-TENANT LAYER
 // ================================================================
@@ -23234,9 +23294,13 @@ function mtShowApp() {
             } catch(e) { /* silent — non-critical */ }
         }, 5 * 60 * 1000);
 
-        // Sync on page visibility (tab becomes active again)
+        // Sync on tab focus — throttled: max once per 90 seconds
+        let _lastFocusSyncMs = 0;
         document.addEventListener('visibilitychange', async () => {
             if (document.visibilityState !== 'visible') return;
+            const now = Date.now();
+            if (now - _lastFocusSyncMs < 90000) return; // 90s minimum between focus syncs
+            _lastFocusSyncMs = now;
             try {
                 const cu = (typeof MT !== 'undefined' && MT.currentUser) || currentUser;
                 const isLocal = !cu || String(cu.uid||'').startsWith('local_');
@@ -24943,42 +25007,80 @@ window.addEventListener('DOMContentLoaded', () => {
         // ========== CUSTOM CONFIRM MODAL SYSTEM ==========
         window.prismConfirmResolve = null;
 
-        function showConfirm(message, type = 'danger', title = null, okLabel = null, cancelLabel = 'Cancel') {
-            return new Promise(resolve => {
-                window.prismConfirmResolve = (result) => {
-                    document.getElementById('prism-confirm-overlay').classList.remove('show');
+        // ── safeGet: null-safe getElementById with console warning ──────────
+        function safeGet(id) {
+            const el = document.getElementById(id);
+            if (!el) console.warn('[PRISM] Missing DOM element:', id);
+            return el;
+        }
+        window.safeGet = safeGet;
+
+        // ── showConfirm: robust confirm dialog, never throws ──────────────────
+        // Reads from real DOM elements injected at bottom of <body> (outside all wrappers).
+        // Falls back to native window.confirm() if elements are missing for any reason.
+        function showConfirm(message, type, title, okLabel, cancelLabel) {
+            type        = type        || 'danger';
+            title       = title       || null;
+            okLabel     = okLabel     || null;
+            cancelLabel = cancelLabel || 'Cancel';
+
+            var icons    = { danger:'🗑️', warning:'⚠️', success:'✅', info:'ℹ️' };
+            var titles   = { danger:'Are you sure?', warning:'Warning', success:'Confirm', info:'Confirm' };
+            var okLabels = { danger:'Delete', warning:'Proceed', success:'Confirm', info:'OK' };
+            var okColors = { danger:'#ef4444', warning:'#f59e0b', success:'#10b981', info:'#2563eb' };
+
+            // Grab all required elements up front
+            var overlay  = document.getElementById('prism-confirm-overlay');
+            var iconEl   = document.getElementById('prism-confirm-icon');
+            var titleEl  = document.getElementById('prism-confirm-title');
+            var msgEl    = document.getElementById('prism-confirm-message');
+            var cancelEl = document.getElementById('prism-confirm-cancel');
+            var okEl     = document.getElementById('prism-confirm-ok');
+
+            // ── Null-safe fallback: if ANY element is missing use native confirm ──
+            if (!overlay || !iconEl || !titleEl || !msgEl || !cancelEl || !okEl) {
+                console.warn('[showConfirm] Modal elements not in DOM — using native confirm(). Missing:',
+                    [['overlay',overlay],['icon',iconEl],['title',titleEl],
+                     ['msg',msgEl],['cancel',cancelEl],['ok',okEl]]
+                    .filter(function(p){return !p[1];}).map(function(p){return p[0];}).join(', '));
+                return Promise.resolve(window.confirm(message));
+            }
+
+            return new Promise(function(resolve) {
+                // Cleanup helper
+                function close(result) {
+                    overlay.style.display = 'none';
                     window.prismConfirmResolve = null;
+                    document.removeEventListener('keydown', escHandler);
                     resolve(result);
-                };
+                }
 
-                // Icons per type
-                const icons = { danger:'🗑️', warning:'⚠️', success:'✅', info:'ℹ️' };
-                const titles = { danger:'Are you sure?', warning:'Warning', success:'Confirm', info:'Confirm' };
-                const okLabels = { danger:'Delete', warning:'Proceed', success:'Confirm', info:'OK' };
+                window.prismConfirmResolve = close;
 
-                document.getElementById('prism-confirm-icon').textContent = icons[type] || '❓';
-                document.getElementById('prism-confirm-title').textContent = title || titles[type] || 'Confirm';
-                document.getElementById('prism-confirm-message').textContent = message;
-                document.getElementById('prism-confirm-cancel').textContent = cancelLabel;
-                document.getElementById('prism-confirm-ok').textContent = okLabel || okLabels[type] || 'OK';
-                document.getElementById('prism-confirm-ok').className = type;
+                // Populate content
+                iconEl.textContent    = icons[type]    || '❓';
+                titleEl.textContent   = title           || titles[type]   || 'Confirm';
+                msgEl.textContent     = message;
+                cancelEl.textContent  = cancelLabel;
+                okEl.textContent      = okLabel         || okLabels[type] || 'OK';
+                okEl.style.background = okColors[type]  || '#2563eb';
 
-                document.getElementById('prism-confirm-overlay').classList.add('show');
+                // Show
+                overlay.style.display = 'flex';
 
-                // Close on overlay click
-                document.getElementById('prism-confirm-overlay').onclick = (e) => {
-                    if (e.target === document.getElementById('prism-confirm-overlay')) {
-                        if (window.prismConfirmResolve) window.prismConfirmResolve(false);
-                    }
+                // Button handlers (set directly — no event listener leaks)
+                okEl.onclick     = function() { close(true);  };
+                cancelEl.onclick = function() { close(false); };
+
+                // Overlay backdrop click
+                overlay.onclick = function(e) {
+                    if (e.target === overlay) close(false);
                 };
 
                 // ESC key
-                const escHandler = (e) => {
-                    if (e.key === 'Escape') {
-                        document.removeEventListener('keydown', escHandler);
-                        if (window.prismConfirmResolve) window.prismConfirmResolve(false);
-                    }
-                };
+                function escHandler(e) {
+                    if (e.key === 'Escape') close(false);
+                }
                 document.addEventListener('keydown', escHandler);
             });
         }
@@ -25051,6 +25153,62 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+// ---- mtInit (main entry point) ----
+// Called by Firebase auth listener after everything is ready
+// Already defined earlier in this script block
+
+// ---- App startup ----
+// mtInit() is called in the Firebase auth onAuthStateChanged listener above
+// which was already set up earlier in this script block
+
+// END SCRIPT BLOCK — DO NOT REMOVE CLOSING TAG
 </script>
+
+<!-- ======================================================
+     GLOBAL MODALS — outside all wrappers, always in DOM
+     ====================================================== -->
+<!-- ================================================================
+     PERMANENT GLOBAL MODALS
+     These are OUTSIDE prism-app-wrapper so they are ALWAYS in DOM,
+     visible regardless of app state, login state, or any wrapper visibility.
+     showConfirm() and ConflictQueue depend on these IDs.
+     ================================================================ -->
+
+<!-- Confirm Dialog Modal -->
+<div id="prism-confirm-overlay"
+     style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65);
+            z-index:2147483647; align-items:center; justify-content:center; padding:20px;">
+    <div id="prism-confirm-box"
+         style="background:#1f2937; border:1px solid #374151; border-radius:16px;
+                max-width:420px; width:100%; padding:32px;
+                box-shadow:0 25px 60px rgba(0,0,0,0.6);">
+        <div id="prism-confirm-icon"
+             style="font-size:2.4rem; text-align:center; margin-bottom:10px;">❓</div>
+        <div id="prism-confirm-title"
+             style="font-size:1.1rem; font-weight:800; text-align:center;
+                    margin-bottom:10px; color:#f9fafb;">Confirm</div>
+        <div id="prism-confirm-message"
+             style="color:#9ca3af; text-align:center; margin-bottom:24px;
+                    line-height:1.6; font-size:0.95rem; white-space:pre-line;"></div>
+        <div style="display:flex; gap:10px;">
+            <button id="prism-confirm-cancel"
+                    onclick="if(window.prismConfirmResolve) window.prismConfirmResolve(false)"
+                    style="flex:1; padding:12px; background:rgba(255,255,255,0.07); color:#f9fafb;
+                           border:1px solid #374151; border-radius:9px; cursor:pointer;
+                           font-weight:600; font-size:0.9rem;">Cancel</button>
+            <button id="prism-confirm-ok"
+                    onclick="if(window.prismConfirmResolve) window.prismConfirmResolve(true)"
+                    style="flex:1; padding:12px; background:#ef4444; color:#fff; border:none;
+                           border-radius:9px; cursor:pointer; font-weight:700; font-size:0.9rem;">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<!-- Conflict Resolution Panel (populated dynamically by ConflictQueue.showConflictPanel) -->
+<div id="prism-conflict-panel"
+     style="display:none; position:fixed; inset:0; z-index:2147483646;
+            background:rgba(0,0,0,0.75); align-items:center; justify-content:center; padding:20px;">
+</div>
+
 </body>
 </html>
