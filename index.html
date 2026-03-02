@@ -24,15 +24,20 @@
     <meta name="author" content="OMNIGRID ONLINE">
     <meta name="keywords" content="rental management, credit management, payroll, water refilling, Philippines, PWA">
     
-    <!-- PWA Manifest -->
+    <!-- PWA Manifest — injected safely; 404 is non-fatal -->
     <script>
-    // Inline manifest to avoid CORS errors when running from file:// protocol
-    if (location.protocol !== 'file:') {
-        const link = document.createElement('link');
-        link.rel = 'manifest';
-        link.href = 'manifest.json';
-        document.head.appendChild(link);
-    }
+    try {
+        if (location.protocol !== 'file:') {
+            const link = document.createElement('link');
+            link.rel = 'manifest';
+            link.href = './manifest.json';
+            link.onerror = function() {
+                console.warn('[PWA] manifest.json not found — PWA install disabled, app still works.');
+                link.remove();
+            };
+            document.head.appendChild(link);
+        }
+    } catch(e) { console.warn('[PWA] Manifest inject skipped:', e); }
     </script>
     
     <!-- Inline SVG Favicon (PRISM Logo) -->
@@ -49,46 +54,34 @@
     (function() {
         var FIREBASE_VER = '10.7.1';
         var BASE = 'https://www.gstatic.com/firebasejs/' + FIREBASE_VER + '/';
-
-        var proto = location.protocol;
-        var host  = location.hostname;
-        // Detect local file, localhost, and sandboxed/preview environments
+        var proto = location.protocol, host = location.hostname;
         var isLocal   = (proto === 'file:' || host === 'localhost' || host === '127.0.0.1' || host === '');
         var isPreview = (proto === 'null:' || proto === 'about:' || !host);
         var skipFirebase = isLocal || isPreview;
-
-        window._isLocalMode      = isLocal;
-        window._isPreviewMode    = isPreview;
-        window._skipFirebase     = skipFirebase;
-        window._firebaseScriptFailed = false;
-
+        window._isLocalMode = isLocal; window._isPreviewMode = isPreview;
+        window._skipFirebase = skipFirebase; window._firebaseScriptFailed = false;
         var loaded = { app: false, auth: false, firestore: false };
         window._firebaseLoadStatus = loaded;
-
         function loadScript(src, key, onLoad) {
             var s = document.createElement('script');
-            s.src   = src;
-            s.async = true;
-            if (!skipFirebase) s.crossOrigin = 'anonymous'; // CORS only needed online
+            s.src = src; s.async = true;
+            if (!skipFirebase) s.crossOrigin = 'anonymous';
             s.onload = function() { if (key) loaded[key] = true; if (onLoad) onLoad(); };
             s.onerror = function() {
-                console.warn('[PRISM] Firebase script failed — offline mode:', src);
-                window._firebaseScriptFailed = true; // initFirebase will bail immediately
+                console.warn('[PRISM] Firebase script failed — going offline:', src);
+                window._firebaseScriptFailed = true;
             };
             document.head.appendChild(s);
         }
-
         if (skipFirebase) {
-            console.log('[PRISM] Local/preview — skipping Firebase SDK, running offline (IndexedDB only)');
+            console.log('[PRISM] Local/preview — skipping Firebase, running offline (IndexedDB only)');
             window._firebaseScriptFailed = true;
         } else {
             loadScript(BASE + 'firebase-app-compat.js', 'app', function() {
-                loadScript(BASE + 'firebase-auth-compat.js',      'auth');
+                loadScript(BASE + 'firebase-auth-compat.js', 'auth');
                 loadScript(BASE + 'firebase-firestore-compat.js', 'firestore');
             });
         }
-
-        // Chart.js — always load (independent of Firebase)
         loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js', null);
     })();
     </script>
@@ -6537,7 +6530,7 @@
         </div>
     </div>
 
-    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+    <!-- Cloudflare email-decode removed: not available on GitHub Pages --><script>
         // =====================
         // TOAST NOTIFICATION (must be first)
         // =====================
@@ -6713,20 +6706,18 @@
             
             // Check firebase base SDK is available
             if (typeof firebase === 'undefined') {
-                // Bail immediately if script load failed or we're in local/preview mode
+                // Bail immediately in local/preview/offline mode
                 if (window._firebaseScriptFailed || window._skipFirebase) {
-                    console.log('[Firebase] Offline/local mode — skipping Firebase, running on IndexedDB only');
+                    console.log('[Firebase] Offline/local/preview — skipping, using IndexedDB only');
                     const fsMsgFail = document.getElementById('firebase-status-msg');
                     if (fsMsgFail) { fsMsgFail.textContent = '📁 Offline mode — data saved locally'; fsMsgFail.style.color = '#f59e0b'; }
                     const dotFail = document.getElementById('firebase-header-dot');
-                    if (dotFail) { dotFail.style.background = '#6b7280'; dotFail.title = 'Offline mode — no cloud sync'; }
-                    return; // done — app continues normally with IndexedDB
+                    if (dotFail) { dotFail.style.background = '#6b7280'; dotFail.title = 'Offline mode'; }
+                    return;
                 }
                 if (firebaseInitAttempts >= FIREBASE_MAX_ATTEMPTS) {
-                    // Script hasn't failed yet but exceeded wait — keep trying briefly
                     if (firebaseInitAttempts < 600 && !window._firebaseScriptFailed) {
-                        setTimeout(initFirebase, 50);
-                        return;
+                        setTimeout(initFirebase, 50); return;
                     }
                     console.log('[Firebase] SDK not available - Running in OFFLINE MODE (IndexedDB only)');
                     const fsMsgFail = document.getElementById('firebase-status-msg');
@@ -8190,14 +8181,14 @@
         window._dbReadyPromise = null;
         window._dbReadyResolve = null;
         window._dbReadyPromise = new Promise(resolve => { window._dbReadyResolve = resolve; });
-        // Safety timeout — if DB never opens (sandboxed env), resolve after 3s so nothing hangs
+        // Safety timeout — resolves if IndexedDB never fires (sandboxed/preview env)
+        // 8s is generous: real IndexedDB opens in <200ms, sandbox never opens at all
         setTimeout(() => {
             if (window._dbReadyResolve) {
-                console.warn('[DB] _dbReadyPromise timed out — resolving to unblock app');
-                window._dbReadyResolve();
-                window._dbReadyResolve = null;
+                console.warn('[DB] _dbReadyPromise timed out (8s) — unblocking app');
+                window._dbReadyResolve(); window._dbReadyResolve = null;
             }
-        }, 3000);
+        }, 8000);
 
         // Ensure database is open and ready
         async function ensureDB() {
@@ -8209,39 +8200,23 @@
 
         function initDB() {
             return new Promise((resolve, reject) => {
-                // Check if IndexedDB is available at all (blocked in some sandboxes/previews)
-                if (typeof indexedDB === 'undefined' || !indexedDB) {
-                    console.warn('[DB] IndexedDB not available — running in memory-only mode');
-                    dbReady = false;
-                    // Resolve _dbReadyPromise so nothing waits forever
-                    if (window._dbReadyResolve) { window._dbReadyResolve(); window._dbReadyResolve = null; }
-                    resolve(null);
-                    return;
-                }
-
                 // Close existing connection if any
                 if (db) {
-                    try { db.close(); } catch (e) {}
+                    try {
+                        db.close();
+                    } catch (e) {
+                        // Ignore close errors
+                    }
                     db = null;
                     dbReady = false;
                 }
 
-                let dbOpenRequest;
-                try {
-                    dbOpenRequest = indexedDB.open(DB_NAME, DB_VERSION);
-                } catch(e) {
-                    console.warn('[DB] indexedDB.open() threw — running in memory-only mode:', e);
-                    if (window._dbReadyResolve) { window._dbReadyResolve(); window._dbReadyResolve = null; }
-                    resolve(null);
-                    return;
-                }
-                const request = dbOpenRequest;
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
 
                 request.onerror = (event) => {
-                    console.warn('[DB] Database error — running in memory-only mode:', event.target.error);
-                    // Resolve (not reject) so app continues without DB
+                    console.warn('[DB] Open error — memory-only mode:', event.target.error);
                     if (window._dbReadyResolve) { window._dbReadyResolve(); window._dbReadyResolve = null; }
-                    resolve(null);
+                    resolve(null); // resolve not reject — app continues without DB
                 };
 
                 request.onsuccess = (event) => {
@@ -22197,29 +22172,30 @@ async function editTask(id) {
         }
 
         // =====================
-        // PWA SERVICE WORKER
+        // PWA SERVICE WORKER  (safe mode — 404 is silent, never blocks app)
         // =====================
         if ('serviceWorker' in navigator && location.protocol !== 'file:') {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
+                navigator.serviceWorker.register('./sw.js')
                     .then((registration) => {
                         console.log('[PWA] Service Worker registered successfully');
-                        
-                        // Check for updates
                         registration.addEventListener('updatefound', () => {
                             const newWorker = registration.installing;
+                            if (!newWorker) return;
                             newWorker.addEventListener('statechange', () => {
                                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    // New version available
-                                    showConfirm('A new version of PRISM is available. Reload now to update?', 'info', '🔄 Update Available', 'Reload Now', 'Later').then(ok => {
-                                        if (ok) window.location.reload();
-                                    });
+                                    try {
+                                        showConfirm('A new version of PRISM is available. Reload now to update?', 'info', '🔄 Update Available', 'Reload Now', 'Later').then(ok => {
+                                            if (ok) window.location.reload();
+                                        });
+                                    } catch(e) {}
                                 }
                             });
                         });
                     })
-                    .catch((error) => {
-                        console.log('[PWA] Service Worker registration failed:', error);
+                    .catch((err) => {
+                        // sw.js missing — app works fine without it
+                        console.warn('[PWA] SW not registered (sw.js missing?). App continues normally.', err.message);
                     });
             });
         }
@@ -23879,10 +23855,10 @@ async function mtAppLogout() {
 
 // ---- Main Init ----
 async function mtInit() {
-    // Hide loading screen FIRST — must happen before anything else
+    // Show landing immediately — don't wait for Firebase
     mtHideLoading();
     
-    // Restore session immediately if local data exists
+    // Restore session immediately if local data exists (prevents flash of landing page)
     const savedUser = localStorage.getItem('carent_current_user');
     const savedOrg  = localStorage.getItem('mt_current_org');
     if (savedUser && savedOrg) {
@@ -23890,6 +23866,8 @@ async function mtInit() {
             const u = JSON.parse(savedUser);
             const o = JSON.parse(savedOrg);
             if (u && o && o.name) {
+                // Don't auto-restore if this looks like a super admin session —
+                // let Firebase onAuthStateChanged handle navigation to SA panel
                 const isSAEmail = MT.SUPER_ADMINS.map(e=>e.toLowerCase()).includes((u.email||'').toLowerCase());
                 if (isSAEmail) {
                     mtShowLanding(); // wait for Firebase to confirm SA identity
@@ -23907,24 +23885,20 @@ async function mtInit() {
                         if (typeof loadDashboard === 'function') loadDashboard();
                     }, 300);
                 }
-            } else {
-                mtShowLanding();
             }
         } catch(e) { mtShowLanding(); }
     } else {
         mtShowLanding();
     }
 
-    // In offline/local/preview mode — skip Firebase polling loops entirely
+    // In offline/local/preview mode — skip all Firebase polling loops entirely
     if (window._skipFirebase || window._firebaseScriptFailed) {
-        console.log('[MT] Offline mode — skipping Firebase auth listener setup');
-        // Update status UI once
         const el = document.getElementById('firebase-status-msg-auth');
         if (el) { el.textContent = '📁 Offline mode — local data only'; el.style.color = '#f59e0b'; }
-        return; // ← EXIT EARLY — no polling loops
+        return; // EXIT EARLY — no polling loops
     }
 
-    // Online mode: update auth page status when Firebase becomes ready
+    // Online only: update auth status when Firebase becomes ready
     const updateAuthStatus = () => {
         if (window.firebaseReady && window.auth) {
             const el = document.getElementById('firebase-status-msg-auth');
