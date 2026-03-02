@@ -45,45 +45,51 @@
     
     <!-- Firebase SDK + Chart.js - loaded with error handling -->
     <script>
-    // OPTIMIZED Firebase loading - preload all 3 scripts in parallel, then init in order
+    // Firebase loading — skips automatically on local/preview, non-blocking everywhere
     (function() {
         var FIREBASE_VER = '10.7.1';
         var BASE = 'https://www.gstatic.com/firebasejs/' + FIREBASE_VER + '/';
-        
-        // Track loading state
+
+        var proto = location.protocol;
+        var host  = location.hostname;
+        // Detect local file, localhost, and sandboxed/preview environments
+        var isLocal   = (proto === 'file:' || host === 'localhost' || host === '127.0.0.1' || host === '');
+        var isPreview = (proto === 'null:' || proto === 'about:' || !host);
+        var skipFirebase = isLocal || isPreview;
+
+        window._isLocalMode      = isLocal;
+        window._isPreviewMode    = isPreview;
+        window._skipFirebase     = skipFirebase;
+        window._firebaseScriptFailed = false;
+
         var loaded = { app: false, auth: false, firestore: false };
-        var scriptErrors = {};
-        
-        function loadScript(src, key, onLoad, onError) {
+        window._firebaseLoadStatus = loaded;
+
+        function loadScript(src, key, onLoad) {
             var s = document.createElement('script');
-            s.src = src;
-            s.async = true; // non-blocking
-            s.crossOrigin = 'anonymous';
-            s.onload = function() {
-                if (key) loaded[key] = true;
-                if (onLoad) onLoad();
-            };
+            s.src   = src;
+            s.async = true;
+            if (!skipFirebase) s.crossOrigin = 'anonymous'; // CORS only needed online
+            s.onload = function() { if (key) loaded[key] = true; if (onLoad) onLoad(); };
             s.onerror = function() {
-                if (key) scriptErrors[key] = true;
-                console.warn('[PRISM] Firebase script failed:', src);
-                if (onError) onError();
+                console.warn('[PRISM] Firebase script failed — offline mode:', src);
+                window._firebaseScriptFailed = true; // initFirebase will bail immediately
             };
             document.head.appendChild(s);
-            return s;
         }
-        
-        // Step 1: Load firebase-app first (required base)
-        loadScript(BASE + 'firebase-app-compat.js', 'app', function() {
-            // Step 2: Load auth + firestore IN PARALLEL once app is ready
-            loadScript(BASE + 'firebase-auth-compat.js', 'auth');
-            loadScript(BASE + 'firebase-firestore-compat.js', 'firestore');
-        });
-        
-        // Load Chart.js in parallel (independent)
+
+        if (skipFirebase) {
+            console.log('[PRISM] Local/preview — skipping Firebase SDK, running offline (IndexedDB only)');
+            window._firebaseScriptFailed = true;
+        } else {
+            loadScript(BASE + 'firebase-app-compat.js', 'app', function() {
+                loadScript(BASE + 'firebase-auth-compat.js',      'auth');
+                loadScript(BASE + 'firebase-firestore-compat.js', 'firestore');
+            });
+        }
+
+        // Chart.js — always load (independent of Firebase)
         loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js', null);
-        
-        // Expose load status for diagnostics
-        window._firebaseLoadStatus = loaded;
     })();
     </script>
     
@@ -2874,7 +2880,7 @@
 <!-- ==================== MULTI-TENANT HTML ==================== -->
 
 <!-- Loading Screen -->
-<div id="mt-loading">
+<div id="mt-loading" class="active">
     <div class="mt-loading-logo">P</div>
     <div style="color:#f8fafc;font-weight:800;font-size:1.4rem;letter-spacing:3px;">PRISM</div>
     <div class="mt-loading-text" id="mt-loading-text">Initializing...</div>
@@ -6707,16 +6713,24 @@
             
             // Check firebase base SDK is available
             if (typeof firebase === 'undefined') {
+                // Bail immediately if script load failed or we're in local/preview mode
+                if (window._firebaseScriptFailed || window._skipFirebase) {
+                    console.log('[Firebase] Offline/local mode — skipping Firebase, running on IndexedDB only');
+                    const fsMsgFail = document.getElementById('firebase-status-msg');
+                    if (fsMsgFail) { fsMsgFail.textContent = '📁 Offline mode — data saved locally'; fsMsgFail.style.color = '#f59e0b'; }
+                    const dotFail = document.getElementById('firebase-header-dot');
+                    if (dotFail) { dotFail.style.background = '#6b7280'; dotFail.title = 'Offline mode — no cloud sync'; }
+                    return; // done — app continues normally with IndexedDB
+                }
                 if (firebaseInitAttempts >= FIREBASE_MAX_ATTEMPTS) {
-                    // If online but still failing, keep trying (don't give up)
-                    if (navigator.onLine && firebaseInitAttempts < 600) { // up to 30 seconds if online
+                    // Script hasn't failed yet but exceeded wait — keep trying briefly
+                    if (firebaseInitAttempts < 600 && !window._firebaseScriptFailed) {
                         setTimeout(initFirebase, 50);
                         return;
                     }
                     console.log('[Firebase] SDK not available - Running in OFFLINE MODE (IndexedDB only)');
-                    console.log('[App] ✅ App fully functional without Firebase');
                     const fsMsgFail = document.getElementById('firebase-status-msg');
-                    if (fsMsgFail) { fsMsgFail.textContent = '⚠️ Firebase SDK could not load. Try refreshing the page.'; fsMsgFail.style.color = '#f59e0b'; }
+                    if (fsMsgFail) { fsMsgFail.textContent = '⚠️ Firebase SDK could not load. Try refreshing.'; fsMsgFail.style.color = '#f59e0b'; }
                     const dotFail = document.getElementById('firebase-header-dot');
                     if (dotFail) { dotFail.style.background = '#ef4444'; dotFail.title = 'Firebase: SDK load failed — try refreshing'; }
                     return;
@@ -8176,6 +8190,14 @@
         window._dbReadyPromise = null;
         window._dbReadyResolve = null;
         window._dbReadyPromise = new Promise(resolve => { window._dbReadyResolve = resolve; });
+        // Safety timeout — if DB never opens (sandboxed env), resolve after 3s so nothing hangs
+        setTimeout(() => {
+            if (window._dbReadyResolve) {
+                console.warn('[DB] _dbReadyPromise timed out — resolving to unblock app');
+                window._dbReadyResolve();
+                window._dbReadyResolve = null;
+            }
+        }, 3000);
 
         // Ensure database is open and ready
         async function ensureDB() {
@@ -8187,22 +8209,39 @@
 
         function initDB() {
             return new Promise((resolve, reject) => {
+                // Check if IndexedDB is available at all (blocked in some sandboxes/previews)
+                if (typeof indexedDB === 'undefined' || !indexedDB) {
+                    console.warn('[DB] IndexedDB not available — running in memory-only mode');
+                    dbReady = false;
+                    // Resolve _dbReadyPromise so nothing waits forever
+                    if (window._dbReadyResolve) { window._dbReadyResolve(); window._dbReadyResolve = null; }
+                    resolve(null);
+                    return;
+                }
+
                 // Close existing connection if any
                 if (db) {
-                    try {
-                        db.close();
-                    } catch (e) {
-                        // Ignore close errors
-                    }
+                    try { db.close(); } catch (e) {}
                     db = null;
                     dbReady = false;
                 }
 
-                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                let dbOpenRequest;
+                try {
+                    dbOpenRequest = indexedDB.open(DB_NAME, DB_VERSION);
+                } catch(e) {
+                    console.warn('[DB] indexedDB.open() threw — running in memory-only mode:', e);
+                    if (window._dbReadyResolve) { window._dbReadyResolve(); window._dbReadyResolve = null; }
+                    resolve(null);
+                    return;
+                }
+                const request = dbOpenRequest;
 
                 request.onerror = (event) => {
-                    console.error('Database error:', event.target.error);
-                    reject(event.target.error);
+                    console.warn('[DB] Database error — running in memory-only mode:', event.target.error);
+                    // Resolve (not reject) so app continues without DB
+                    if (window._dbReadyResolve) { window._dbReadyResolve(); window._dbReadyResolve = null; }
+                    resolve(null);
                 };
 
                 request.onsuccess = (event) => {
@@ -23840,10 +23879,10 @@ async function mtAppLogout() {
 
 // ---- Main Init ----
 async function mtInit() {
-    // Show landing immediately — don't wait for Firebase
+    // Hide loading screen FIRST — must happen before anything else
     mtHideLoading();
     
-    // Restore session immediately if local data exists (prevents flash of landing page)
+    // Restore session immediately if local data exists
     const savedUser = localStorage.getItem('carent_current_user');
     const savedOrg  = localStorage.getItem('mt_current_org');
     if (savedUser && savedOrg) {
@@ -23851,8 +23890,6 @@ async function mtInit() {
             const u = JSON.parse(savedUser);
             const o = JSON.parse(savedOrg);
             if (u && o && o.name) {
-                // Don't auto-restore if this looks like a super admin session —
-                // let Firebase onAuthStateChanged handle navigation to SA panel
                 const isSAEmail = MT.SUPER_ADMINS.map(e=>e.toLowerCase()).includes((u.email||'').toLowerCase());
                 if (isSAEmail) {
                     mtShowLanding(); // wait for Firebase to confirm SA identity
@@ -23870,13 +23907,24 @@ async function mtInit() {
                         if (typeof loadDashboard === 'function') loadDashboard();
                     }, 300);
                 }
+            } else {
+                mtShowLanding();
             }
         } catch(e) { mtShowLanding(); }
     } else {
         mtShowLanding();
     }
 
-    // Update auth page status when Firebase becomes ready
+    // In offline/local/preview mode — skip Firebase polling loops entirely
+    if (window._skipFirebase || window._firebaseScriptFailed) {
+        console.log('[MT] Offline mode — skipping Firebase auth listener setup');
+        // Update status UI once
+        const el = document.getElementById('firebase-status-msg-auth');
+        if (el) { el.textContent = '📁 Offline mode — local data only'; el.style.color = '#f59e0b'; }
+        return; // ← EXIT EARLY — no polling loops
+    }
+
+    // Online mode: update auth page status when Firebase becomes ready
     const updateAuthStatus = () => {
         if (window.firebaseReady && window.auth) {
             const el = document.getElementById('firebase-status-msg-auth');
@@ -24088,8 +24136,21 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    // Start MT init
-    mtInit();
+    // Start MT init — safety net ensures loading screen never stays stuck
+    try {
+        mtInit();
+    } catch(e) {
+        console.error('[PRISM] mtInit crashed — forcing landing', e);
+        try { mtHideLoading(); } catch(e2) {}
+        setTimeout(() => {
+            try { mtShowLanding(); } catch(e3) {
+                const ld = document.getElementById('mt-loading');
+                if (ld) ld.classList.remove('active');
+                const ln = document.getElementById('mt-landing');
+                if (ln) ln.classList.add('active');
+            }
+        }, 50);
+    }
 });
 
 
