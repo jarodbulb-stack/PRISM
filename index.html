@@ -26,28 +26,13 @@
     
     <!-- PWA Manifest -->
     <script>
-    // Inline manifest as data URI — no external manifest.json file needed
-    (function() {
-        const manifest = {
-            name: 'PRISM — Business Manager',
-            short_name: 'PRISM',
-            description: 'Property, Rental, Income & Sales Management System',
-            start_url: '.',
-            display: 'standalone',
-            background_color: '#0f172a',
-            theme_color: '#2563eb',
-            icons: [
-                { src: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ccircle cx=\'50\' cy=\'50\' r=\'45\' fill=\'%232563eb\'/%3E%3Ctext x=\'50\' y=\'70\' font-family=\'Arial\' font-size=\'55\' font-weight=\'bold\' fill=\'white\' text-anchor=\'middle\'%3EP%3C/text%3E%3C/svg%3E', sizes: '192x192', type: 'image/svg+xml' },
-                { src: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ccircle cx=\'50\' cy=\'50\' r=\'45\' fill=\'%232563eb\'/%3E%3Ctext x=\'50\' y=\'70\' font-family=\'Arial\' font-size=\'55\' font-weight=\'bold\' fill=\'white\' text-anchor=\'middle\'%3EP%3C/text%3E%3C/svg%3E', sizes: '512x512', type: 'image/svg+xml' }
-            ]
-        };
-        const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
-        const url = URL.createObjectURL(blob);
+    // Inline manifest to avoid CORS errors when running from file:// protocol
+    if (location.protocol !== 'file:') {
         const link = document.createElement('link');
         link.rel = 'manifest';
-        link.href = url;
+        link.href = 'manifest.json';
         document.head.appendChild(link);
-    })();
+    }
     </script>
     
     <!-- Inline SVG Favicon (PRISM Logo) -->
@@ -3144,6 +3129,10 @@
                     <span class="icon">🏪</span>Retail / Store
                     <span style="position:absolute;top:8px;right:8px;font-size:0.7rem;">✅</span>
                 </div>
+                <div class="mt-biz-type selected" onclick="mtToggleBizModule('hardware', this)">
+                    <span class="icon">🔧</span>Hardware Store
+                    <span style="position:absolute;top:8px;right:8px;font-size:0.7rem;">✅</span>
+                </div>
                 <div class="mt-biz-type selected" onclick="mtToggleBizModule('employees', this)">
                     <span class="icon">👷</span>Staff / Payroll
                     <span style="position:absolute;top:8px;right:8px;font-size:0.7rem;">✅</span>
@@ -3157,11 +3146,11 @@
         <div class="mt-step-panel" id="mt-step-2">
             <div class="mt-form-group">
                 <label>Organization / Business Name *</label>
-                <input type="text" class="mt-form-input" id="mt-setup-orgname" placeholder="e.g. My Rental Business">
+                <input type="text" class="mt-form-input" id="mt-setup-orgname" placeholder="e.g. RLM Hardware Store">
             </div>
             <div class="mt-form-group">
                 <label>Address</label>
-                <input type="text" class="mt-form-input" id="mt-setup-address" placeholder="e.g. Your City, Province">
+                <input type="text" class="mt-form-input" id="mt-setup-address" placeholder="e.g. Matalam, North Cotabato">
             </div>
             <div class="mt-form-group">
                 <label>Contact Number</label>
@@ -4971,7 +4960,7 @@
                             </a>
                             <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-color);">
                                 <p style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:6px;font-weight:600;">🌐 For licensing & inquiries:</p>
-                                <p style="font-size:0.78rem;color:var(--text-secondary);">PRISM is available for rental businesses, lending/credit operations, and water stations. Contact us to get your own copy.</p>
+                                <p style="font-size:0.78rem;color:var(--text-secondary);">PRISM is available for other rental businesses, hardware stores, and water stations. Contact us to get your own copy.</p>
                             </div>
                         </div>
                     </div>
@@ -5373,15 +5362,15 @@
                             <option value="Cleaning Fee">
                             <option value="Key Replacement">
                             <option value="Printing/Photocopy">
-                            <option value="Store Sales">
-                            <option value="Store Sales - Week 1">
-                            <option value="Store Sales - Week 2">
-                            <option value="Business Sales">
-                            <option value="Service Income">
-                            <option value="Product Sales">
-                            <option value="Side Business Income">
-                            <option value="Freelance Income">
-                            <option value="Online Sales">
+                            <option value="Hardware Store Sales">
+                            <option value="Hardware Store - Cement">
+                            <option value="Hardware Store - Nails/Screws">
+                            <option value="Hardware Store - Electrical">
+                            <option value="Hardware Store - Plumbing">
+                            <option value="Hardware Store - Paint">
+                            <option value="Hardware Store - Tools">
+                            <option value="Hardware Store - GI Sheets">
+                            <option value="Hardware Store - Lumber">
                             <option value="Delivery Fee">
                             <option value="Loan Interest">
                             <option value="Contract Payment">
@@ -6022,14 +6011,14 @@
                                 <option value="capital_reserve">🏠 Capital Reserve</option>
                                 <option value="owners_draw">👤 Owner's Draw</option>
                             </optgroup>
-                            <optgroup label="🏪 Other Business">
-                                <option value="biz_supplies">📦 Business Supplies</option>
-                                <option value="biz_stock">🧱 Stock / Materials</option>
-                                <option value="biz_electrical">⚡ Electrical Supplies</option>
-                                <option value="biz_plumbing">🔧 Plumbing Materials</option>
-                                <option value="biz_tools">🛠️ Tools & Equipment</option>
-                                <option value="biz_paint">🎨 Paint & Finishing</option>
-                                <option value="biz_delivery">🚚 Delivery Costs</option>
+                            <optgroup label="🏪 Hardware Store">
+                                <option value="hw_inventory">📦 Inventory Restocking</option>
+                                <option value="hw_cement">🧱 Cement & Construction</option>
+                                <option value="hw_electrical">⚡ Electrical Supplies</option>
+                                <option value="hw_plumbing">🔧 Plumbing Materials</option>
+                                <option value="hw_tools">🛠️ Tools & Equipment</option>
+                                <option value="hw_paint">🎨 Paint & Finishing</option>
+                                <option value="hw_delivery">🚚 Delivery Costs</option>
                             </optgroup>
                             <optgroup label="💧 Water Station">
                                 <option value="ws_filter">🔵 Filter Replacement</option>
@@ -6542,7 +6531,7 @@
         </div>
     </div>
 
-    <script>
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
         // =====================
         // TOAST NOTIFICATION (must be first)
         // =====================
@@ -6732,8 +6721,7 @@
                     if (dotFail) { dotFail.style.background = '#ef4444'; dotFail.title = 'Firebase: SDK load failed — try refreshing'; }
                     return;
                 }
-                if (firebaseInitAttempts % 10 === 1) // log only 1st, 11th, 21st... to reduce console spam
-                    console.log(`[Firebase] SDK not loaded yet, retry ${firebaseInitAttempts}/${FIREBASE_MAX_ATTEMPTS}...`);
+                console.log(`[Firebase] SDK not loaded yet, retry ${firebaseInitAttempts}/${FIREBASE_MAX_ATTEMPTS}...`);
                 setTimeout(initFirebase, 50);
                 return;
             }
@@ -6772,14 +6760,13 @@
                 const dot = document.getElementById('firebase-header-dot');
                 if (dot) { dot.style.background = '#10b981'; dot.title = 'Firebase: Connected ✅'; }
 
-                // Enable offline persistence (compat SDK v10.7.1)
+                // Enable offline persistence
                 firestore.enablePersistence({ synchronizeTabs: true })
                     .catch((err) => {
                         if (err.code === 'failed-precondition') {
-                            // Multiple tabs open — persistence active in first tab only
-                            firestore.enablePersistence().catch(() => {});
+                            console.log('[Firebase] Multiple tabs open, persistence only in one tab');
                         } else if (err.code === 'unimplemented') {
-                            // Browser doesn't support persistence — silently continue
+                            console.log('[Firebase] Browser does not support persistence');
                         }
                     });
 
@@ -7097,6 +7084,8 @@
         }
 
         async function syncToFirebase() {
+            // STARTUP FIX: Wait for IndexedDB to be ready before syncing
+            if (window._dbReadyPromise) await window._dbReadyPromise;
             const db = window.db || firestore;
             const cu = currentUser || (typeof MT !== 'undefined' ? MT.currentUser : null);
             if (!db || !cu) return;
@@ -7173,6 +7162,8 @@
         }
 
         async function syncFromFirebase() {
+            // STARTUP FIX: Wait for IndexedDB to be ready before syncing
+            if (window._dbReadyPromise) await window._dbReadyPromise;
             const cu = currentUser || (typeof MT !== 'undefined' && MT.currentUser);
             const dbRef = window.db || firestore;
             if (!dbRef || !cu) return;
@@ -7299,7 +7290,12 @@
         }
 
         async function syncCollectionToLocal(storeName, data) {
-            if (!db) { console.warn('[Sync] DB not ready:', storeName); return; }
+            // Wait for DB to be ready instead of bailing — fixes startup race condition
+            if (!db || !dbReady) {
+                console.log('[Sync] DB not ready for', storeName, '— waiting...');
+                await ensureDB();
+            }
+            if (!db) { console.warn('[Sync] DB still not ready after wait:', storeName); return; }
             return new Promise((resolve, reject) => {
                 const transaction = db.transaction([storeName], 'readwrite');
                 const store = transaction.objectStore(storeName);
@@ -8176,6 +8172,10 @@
         const DB_VERSION = 9;  // v9: Added Task Management System
         let db = null;
         let dbReady = false;
+        // Global promise that resolves when IndexedDB is ready — sync functions wait on this
+        window._dbReadyPromise = null;
+        window._dbReadyResolve = null;
+        window._dbReadyPromise = new Promise(resolve => { window._dbReadyResolve = resolve; });
 
         // Ensure database is open and ready
         async function ensureDB() {
@@ -8208,6 +8208,8 @@
                 request.onsuccess = (event) => {
                     db = event.target.result;
                     dbReady = true;
+                    // Signal all waiting sync functions that DB is ready
+                    if (window._dbReadyResolve) { window._dbReadyResolve(); window._dbReadyResolve = null; }
 
                     // Handle connection closing unexpectedly
                     db.onclose = () => {
@@ -21947,8 +21949,8 @@ async function editTask(id) {
                 const existingIncome = await dbGetAll('additionalIncome');
                 if (existingIncome.length < 5) {
                     const moreIncome = [
-                        { description: 'Store Sales - Week 1', category: 'store', amount: 12500, date: dateStr(3), notes: 'Weekly store sales', createdAt: new Date().toISOString() },
-                        { description: 'Store Sales - Week 2', category: 'store', amount: 9800, date: dateStr(10), notes: 'Weekly store sales', createdAt: new Date().toISOString() },
+                        { description: 'Hardware Store Sales - Week 1', category: 'store', amount: 12500, date: dateStr(3), notes: 'Cement, nails, paints', createdAt: new Date().toISOString() },
+                        { description: 'Hardware Store Sales - Week 2', category: 'store', amount: 9800, date: dateStr(10), notes: 'Tools and electrical', createdAt: new Date().toISOString() },
                         { description: 'Interest Income - Loans', category: 'interest', amount: 3750, date: dateStr(1), notes: 'Monthly interest collection', createdAt: new Date().toISOString() },
                         { description: 'Water Station Sales - Week 1', category: 'water', amount: 4200, date: dateStr(5), notes: '168 gallons @ ₱25', createdAt: new Date().toISOString() },
                         { description: 'Parking Fee - Monthly', category: 'parking', amount: 1500, date: dateStr(1), notes: '3 vehicles @ ₱500', createdAt: new Date().toISOString() },
@@ -21962,7 +21964,7 @@ async function editTask(id) {
                 const existingExp = await dbGetAll('expenses');
                 if (existingExp.length < 6) {
                     const moreExp = [
-                        { description: 'Business Supplies', category: 'biz_supplies', amount: 15000, date: dateStr(2), notes: 'Monthly supplies restocking', createdAt: new Date().toISOString() },
+                        { description: 'Hardware Store Restocking', category: 'inventory', amount: 15000, date: dateStr(2), notes: 'Cement bags, GI sheets', createdAt: new Date().toISOString() },
                         { description: 'Employee Salaries', category: 'payroll', amount: 8400, date: dateStr(7), notes: 'Weekly payroll 3 staff', createdAt: new Date().toISOString() },
                         { description: 'Vehicle Fuel', category: 'transport', amount: 1200, date: dateStr(4), notes: 'Delivery truck', createdAt: new Date().toISOString() },
                         { description: 'Water Station Filter Replacement', category: 'maintenance', amount: 2800, date: dateStr(6), notes: 'UV filter + carbon filter', createdAt: new Date().toISOString() },
@@ -22156,43 +22158,30 @@ async function editTask(id) {
         }
 
         // =====================
-        // PWA SERVICE WORKER (inline — no sw.js file needed)
+        // PWA SERVICE WORKER
         // =====================
-        if ('serviceWorker' in navigator) {
+        if ('serviceWorker' in navigator && location.protocol !== 'file:') {
             window.addEventListener('load', () => {
-                // Inline SW as blob — works without a separate sw.js file
-                const swCode = `
-const CACHE = 'prism-v1';
-self.addEventListener('install', e => {
-    self.skipWaiting();
-});
-self.addEventListener('activate', e => {
-    e.waitUntil(clients.claim());
-});
-self.addEventListener('fetch', e => {
-    // Cache-first for same-origin, network-only for Firebase/external
-    if (e.request.url.startsWith(self.location.origin) && !e.request.url.includes('firebase')) {
-        e.respondWith(
-            caches.open(CACHE).then(cache =>
-                cache.match(e.request).then(cached =>
-                    cached || fetch(e.request).then(resp => {
-                        cache.put(e.request, resp.clone());
-                        return resp;
+                navigator.serviceWorker.register('sw.js')
+                    .then((registration) => {
+                        console.log('[PWA] Service Worker registered successfully');
+                        
+                        // Check for updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // New version available
+                                    showConfirm('A new version of PRISM is available. Reload now to update?', 'info', '🔄 Update Available', 'Reload Now', 'Later').then(ok => {
+                                        if (ok) window.location.reload();
+                                    });
+                                }
+                            });
+                        });
                     })
-                )
-            ).catch(() => fetch(e.request))
-        );
-    }
-});`;
-                try {
-                    const blob = new Blob([swCode], { type: 'application/javascript' });
-                    const swUrl = URL.createObjectURL(blob);
-                    navigator.serviceWorker.register(swUrl, { scope: './' })
-                        .then(() => console.log('[PWA] Service Worker registered (inline)'))
-                        .catch(err => console.log('[PWA] SW registration skipped:', err.message));
-                } catch(e) {
-                    // SW not supported or blocked — silently continue
-                }
+                    .catch((error) => {
+                        console.log('[PWA] Service Worker registration failed:', error);
+                    });
             });
         }
 
@@ -22407,7 +22396,8 @@ function mtShowApp() {
     if (!_prismAppInitialized) {
         _prismAppInitialized = true;
         if (typeof init === 'function') {
-            setTimeout(() => init(), 100);
+            // Await init so IndexedDB is ready before any sync calls that follow
+            init().catch(e => console.error('[PRISM] init() failed:', e));
         }
     }
 
@@ -22852,7 +22842,7 @@ function mtDemoLogin() {
         name: 'Demo Business',
         bizType: 'mixed',
         plan: 'standard',
-        address: 'Your City, Province',
+        address: 'Matalam, North Cotabato',
         phone: '09xx-xxx-xxxx',
         ownerId: 'demo_user',
         createdAt: new Date().toISOString()
@@ -22933,7 +22923,7 @@ function mtSetupNext(step) {
         const address = document.getElementById('mt-setup-address')?.value || '-';
         const phone = document.getElementById('mt-setup-phone')?.value || '-';
         const planNames = { basic:'Basic (₱299/mo)', standard:'Standard (₱599/mo)', enterprise:'Enterprise (₱999/mo)' };
-        const bizNames = { property:'Property Rental', lending:'Lending/Credit', water:'Water Station', retail:'Retail Store', mixed:'Mixed Business' };
+        const bizNames = { property:'Property Rental', lending:'Lending/Credit', water:'Water Station', retail:'Retail Store', hardware:'Hardware Store', mixed:'Mixed Business' };
         document.getElementById('mt-setup-summary').innerHTML = `
             <div><b>🏢 Business:</b> ${orgName}</div>
             <div><b>🏭 Type:</b> ${bizNames[MT.selectedBizType] || MT.selectedBizType}</div>
@@ -23105,7 +23095,7 @@ function mtOpenOrgSwitcher() {
     const orgs = JSON.parse(localStorage.getItem('mt_user_orgs') || '[]');
     list.innerHTML = orgs.map(org => `
         <li class="${org.id === MT.currentOrg?.id ? 'current' : ''}" onclick="mtSwitchOrg('${org.id}')">
-            <div class="org-icon">${org.bizType === 'water' ? '💧' : org.bizType === 'property' ? '🏠' : '🏢'}</div>
+            <div class="org-icon">${org.bizType === 'hardware' ? '🔧' : org.bizType === 'water' ? '💧' : org.bizType === 'property' ? '🏠' : '🏢'}</div>
             <div>
                 <div style="font-weight:600;">${org.name}</div>
                 <div style="font-size:0.75rem;color:#64748b;text-transform:uppercase;">${org.plan} plan</div>
@@ -23873,8 +23863,10 @@ async function mtInit() {
                     MT.currentUser  = { uid: 'local_' + (u.id||1), email: u.email||'local@prism.app', displayName: u.fullname };
                     mtShowApp();
                     mtUpdateOrgBadge();
-                    setTimeout(() => {
+                    setTimeout(async () => {
                         if (typeof updateUserDisplay === 'function') updateUserDisplay();
+                        // Wait for DB ready before loading dashboard
+                        if (window._dbReadyPromise) await window._dbReadyPromise;
                         if (typeof loadDashboard === 'function') loadDashboard();
                     }, 300);
                 }
@@ -24001,20 +23993,25 @@ async function mtInit() {
                     setTimeout(() => {
                         if (typeof updateUserDisplay === 'function') updateUserDisplay();
                         if (typeof loadDashboard === 'function') loadDashboard();
-                        // Push current data first (ensures cloud has latest appUsers)
-                        if (typeof syncToFirebase === 'function') {
-                            syncToFirebase().catch(e => {});
-                        }
-                        // Pull from cloud on load (catches up mobile/fresh device)
-                        if (typeof syncFromFirebase === 'function') {
-                            setTimeout(() => {
-                                syncFromFirebase().then(() => {
-                                    if (typeof loadDashboard === 'function') loadDashboard();
-                                }).catch(e => console.warn('[MT] Sync on load failed:', e));
-                            }, 1500); // wait 1.5s after push before pulling
-                        }
-                        // Start real-time listener for live cross-device sync
-                        mtStartRealtimeSync();
+                        // Wait for DB ready before any Firebase sync
+                        const _runSyncAfterDB = async () => {
+                            if (window._dbReadyPromise) await window._dbReadyPromise;
+                            // Push current data first (ensures cloud has latest appUsers)
+                            if (typeof syncToFirebase === 'function') {
+                                syncToFirebase().catch(e => {});
+                            }
+                            // Pull from cloud after push (catches up mobile/fresh device)
+                            if (typeof syncFromFirebase === 'function') {
+                                setTimeout(() => {
+                                    syncFromFirebase().then(() => {
+                                        if (typeof loadDashboard === 'function') loadDashboard();
+                                    }).catch(e => console.warn('[MT] Sync on load failed:', e));
+                                }, 1500); // wait 1.5s after push before pulling
+                            }
+                            // Start real-time listener for live cross-device sync
+                            mtStartRealtimeSync();
+                        };
+                        _runSyncAfterDB();
                     }, 500);
 
                 } else {
@@ -24043,7 +24040,10 @@ async function mtInit() {
                                 localStorage.setItem('mt_current_org_id', org.id);
                                 mtShowApp();
                                 mtUpdateOrgBadge();
-                                setTimeout(() => { if (typeof syncFromFirebase === 'function') syncFromFirebase(); }, 500);
+                                setTimeout(async () => {
+                                    if (window._dbReadyPromise) await window._dbReadyPromise;
+                                    if (typeof syncFromFirebase === 'function') syncFromFirebase();
+                                }, 500);
                                 return;
                             }
                         }
