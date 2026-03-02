@@ -26,13 +26,28 @@
     
     <!-- PWA Manifest -->
     <script>
-    // Inline manifest to avoid CORS errors when running from file:// protocol
-    if (location.protocol !== 'file:') {
+    // Inline manifest as data URI — no external manifest.json file needed
+    (function() {
+        const manifest = {
+            name: 'PRISM — Business Manager',
+            short_name: 'PRISM',
+            description: 'Property, Rental, Income & Sales Management System',
+            start_url: '.',
+            display: 'standalone',
+            background_color: '#0f172a',
+            theme_color: '#2563eb',
+            icons: [
+                { src: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ccircle cx=\'50\' cy=\'50\' r=\'45\' fill=\'%232563eb\'/%3E%3Ctext x=\'50\' y=\'70\' font-family=\'Arial\' font-size=\'55\' font-weight=\'bold\' fill=\'white\' text-anchor=\'middle\'%3EP%3C/text%3E%3C/svg%3E', sizes: '192x192', type: 'image/svg+xml' },
+                { src: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ccircle cx=\'50\' cy=\'50\' r=\'45\' fill=\'%232563eb\'/%3E%3Ctext x=\'50\' y=\'70\' font-family=\'Arial\' font-size=\'55\' font-weight=\'bold\' fill=\'white\' text-anchor=\'middle\'%3EP%3C/text%3E%3C/svg%3E', sizes: '512x512', type: 'image/svg+xml' }
+            ]
+        };
+        const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
         const link = document.createElement('link');
         link.rel = 'manifest';
-        link.href = 'manifest.json';
+        link.href = url;
         document.head.appendChild(link);
-    }
+    })();
     </script>
     
     <!-- Inline SVG Favicon (PRISM Logo) -->
@@ -6757,20 +6772,14 @@
                 const dot = document.getElementById('firebase-header-dot');
                 if (dot) { dot.style.background = '#10b981'; dot.title = 'Firebase: Connected ✅'; }
 
-                // Enable offline persistence (Firestore 10.7.1+ recommended approach)
-                try {
-                    firestore.settings({
-                        cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED,
-                        ignoreUndefinedProperties: true
-                    });
-                } catch(e) {} // settings already applied — safe to ignore
-                firestore.enableMultiTabIndexedDbPersistence()
+                // Enable offline persistence (compat SDK v10.7.1)
+                firestore.enablePersistence({ synchronizeTabs: true })
                     .catch((err) => {
                         if (err.code === 'failed-precondition') {
-                            // Multiple tabs: fall back to single-tab persistence
-                            firestore.enableIndexedDbPersistence().catch(() => {});
+                            // Multiple tabs open — persistence active in first tab only
+                            firestore.enablePersistence().catch(() => {});
                         } else if (err.code === 'unimplemented') {
-                            console.log('[Firebase] Browser does not support persistence');
+                            // Browser doesn't support persistence — silently continue
                         }
                     });
 
@@ -22147,30 +22156,43 @@ async function editTask(id) {
         }
 
         // =====================
-        // PWA SERVICE WORKER
+        // PWA SERVICE WORKER (inline — no sw.js file needed)
         // =====================
-        if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+        if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                    .then((registration) => {
-                        console.log('[PWA] Service Worker registered successfully');
-                        
-                        // Check for updates
-                        registration.addEventListener('updatefound', () => {
-                            const newWorker = registration.installing;
-                            newWorker.addEventListener('statechange', () => {
-                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    // New version available
-                                    showConfirm('A new version of PRISM is available. Reload now to update?', 'info', '🔄 Update Available', 'Reload Now', 'Later').then(ok => {
-                                        if (ok) window.location.reload();
-                                    });
-                                }
-                            });
-                        });
+                // Inline SW as blob — works without a separate sw.js file
+                const swCode = `
+const CACHE = 'prism-v1';
+self.addEventListener('install', e => {
+    self.skipWaiting();
+});
+self.addEventListener('activate', e => {
+    e.waitUntil(clients.claim());
+});
+self.addEventListener('fetch', e => {
+    // Cache-first for same-origin, network-only for Firebase/external
+    if (e.request.url.startsWith(self.location.origin) && !e.request.url.includes('firebase')) {
+        e.respondWith(
+            caches.open(CACHE).then(cache =>
+                cache.match(e.request).then(cached =>
+                    cached || fetch(e.request).then(resp => {
+                        cache.put(e.request, resp.clone());
+                        return resp;
                     })
-                    .catch((error) => {
-                        console.log('[PWA] Service Worker registration failed:', error);
-                    });
+                )
+            ).catch(() => fetch(e.request))
+        );
+    }
+});`;
+                try {
+                    const blob = new Blob([swCode], { type: 'application/javascript' });
+                    const swUrl = URL.createObjectURL(blob);
+                    navigator.serviceWorker.register(swUrl, { scope: './' })
+                        .then(() => console.log('[PWA] Service Worker registered (inline)'))
+                        .catch(err => console.log('[PWA] SW registration skipped:', err.message));
+                } catch(e) {
+                    // SW not supported or blocked — silently continue
+                }
             });
         }
 
