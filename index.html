@@ -2869,28 +2869,16 @@
 </style>
 
 <script>
-/* ── PRISM: Global function stubs ──────────────────────────────
-   Defined here, in the earliest possible script block, so that
-   inline onclick handlers NEVER throw "not defined" regardless
-   of when the main script loads, crashes, or is cached.
-   The main MT script overwrites these with real implementations.
-──────────────────────────────────────────────────────────────── */
+/* PRISM: Global stubs — ensure onclick never crashes before real impl loads */
 (function() {
-  var noop = function(){};
-  var fns = [
-    'mtShowAuth','mtShowLanding','mtShowSetup','mtShowApp',
-    'mtLocalLogin','mtLocalLoginSubmit','mtLogin','mtRegister',
-    'mtGoogleLogin','mtTogglePass','mtSwitchTab','mtSetupNext',
-    'mtToggleBizModule','mtLaunchOrg','mtOpenOrgSwitcher',
-    'mtSwitchOrg','mtAppLogout','mtSuperAdminLogout',
-    'mtSATab','mtSAGoToApp','mtSADeleteOrg','mtSAToggleOrgStatus',
-    'mtShowLogin','mtShowRegister','showConfirm'
-  ];
-  fns.forEach(function(name) {
-    if (typeof window[name] === 'undefined') {
-      window[name] = function() {
-        console.warn('[PRISM] stub called: ' + name + ' — real impl not loaded yet');
-      };
+  var fns = ['mtShowAuth','mtShowLanding','mtShowSetup','mtShowApp','mtLocalLogin',
+    'mtLocalLoginSubmit','mtLogin','mtRegister','mtGoogleLogin','mtTogglePass',
+    'mtSwitchTab','mtSetupNext','mtToggleBizModule','mtLaunchOrg','mtOpenOrgSwitcher',
+    'mtSwitchOrg','mtAppLogout','mtSuperAdminLogout','mtSATab','mtSAGoToApp',
+    'mtSADeleteOrg','mtSAToggleOrgStatus','mtShowLogin','mtShowRegister'];
+  fns.forEach(function(n) {
+    if (typeof window[n] === 'undefined') {
+      window[n] = function() { console.warn('[PRISM] stub: ' + n); };
     }
   });
 })();
@@ -7106,6 +7094,7 @@
 
         async function syncToFirebase() {
             // STARTUP FIX: Wait for IndexedDB to be ready before syncing
+            if (window._dbReadyPromise) await window._dbReadyPromise;
             const db = window.db || firestore;
             const cu = currentUser || (typeof MT !== 'undefined' ? MT.currentUser : null);
             if (!db || !cu) return;
@@ -7183,6 +7172,7 @@
 
         async function syncFromFirebase() {
             // STARTUP FIX: Wait for IndexedDB to be ready before syncing
+            if (window._dbReadyPromise) await window._dbReadyPromise;
             const cu = currentUser || (typeof MT !== 'undefined' && MT.currentUser);
             const dbRef = window.db || firestore;
             if (!dbRef || !cu) return;
@@ -8195,7 +8185,6 @@
         window._dbReadyPromise = null;
         window._dbReadyResolve = null;
         window._dbReadyPromise = new Promise(resolve => { window._dbReadyResolve = resolve; });
-        setTimeout(function(){if(window._dbReadyResolve){window._dbReadyResolve();window._dbReadyResolve=null;}},5000);
 
         // Ensure database is open and ready
         async function ensureDB() {
@@ -8222,8 +8211,7 @@
 
                 request.onerror = (event) => {
                     console.error('Database error:', event.target.error);
-                    if(window._dbReadyResolve){window._dbReadyResolve();window._dbReadyResolve=null;}
-                    resolve(null);
+                    reject(event.target.error);
                 };
 
                 request.onsuccess = (event) => {
@@ -8363,8 +8351,8 @@
                 };
 
                 request.onblocked = () => {
-                    if(window._dbReadyResolve){window._dbReadyResolve();window._dbReadyResolve=null;}
-                    try{showToast('⚠️ Close other PRISM tabs.','warning');}catch(e){}
+                    console.warn('Database blocked - close other tabs using this app');
+                    showToast('⚠️ Please close other tabs using PRISM and refresh.', 'warning');
                 };
             });
         }
@@ -23887,6 +23875,8 @@ async function mtInit() {
                     mtUpdateOrgBadge();
                     setTimeout(async () => {
                         if (typeof updateUserDisplay === 'function') updateUserDisplay();
+                        // Wait for DB ready before loading dashboard
+                        if (window._dbReadyPromise) await window._dbReadyPromise;
                         if (typeof loadDashboard === 'function') loadDashboard();
                     }, 300);
                 }
@@ -24015,6 +24005,7 @@ async function mtInit() {
                         if (typeof loadDashboard === 'function') loadDashboard();
                         // Wait for DB ready before any Firebase sync
                         const _runSyncAfterDB = async () => {
+                            if (window._dbReadyPromise) await window._dbReadyPromise;
                             // Push current data first (ensures cloud has latest appUsers)
                             if (typeof syncToFirebase === 'function') {
                                 syncToFirebase().catch(e => {});
@@ -24059,7 +24050,8 @@ async function mtInit() {
                                 localStorage.setItem('mt_current_org_id', org.id);
                                 mtShowApp();
                                 mtUpdateOrgBadge();
-                                setTimeout(() => {
+                                setTimeout(async () => {
+                                    if (window._dbReadyPromise) await window._dbReadyPromise;
                                     if (typeof syncFromFirebase === 'function') syncFromFirebase();
                                 }, 500);
                                 return;
@@ -24096,7 +24088,7 @@ async function mtInit() {
     setupFirebaseAuth();
 }
 
-// ── Final window assignments — real impls overwrite stubs ──
+// ── Overwrite stubs with real implementations ──
 window.mtShowApp          = mtShowApp;
 window.mtLocalLoginSubmit = mtLocalLoginSubmit;
 window.mtLogin            = mtLogin;
@@ -24223,5 +24215,16 @@ window.addEventListener('DOMContentLoaded', () => {
                         });
                         localStorage.setItem('prism_app_users', JSON.stringify(merged));
                     }
+                });  // end onSnapshot
+        }  // end mtStartRealtimeSync
 
-                    
+        function mtStopRealtimeSync() {
+            if (_realtimeSyncUnsubscribe) {
+                _realtimeSyncUnsubscribe();
+                _realtimeSyncUnsubscribe = null;
+            }
+        }
+
+</script>
+</body>
+</html>
