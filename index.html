@@ -2,18 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <!-- Firebase Performance: DNS prefetch + preconnect -->
+    <!-- Firebase Performance: DNS prefetch only (safe on all protocols) -->
     <link rel="dns-prefetch" href="//www.gstatic.com">
     <link rel="dns-prefetch" href="//firestore.googleapis.com">
     <link rel="dns-prefetch" href="//identitytoolkit.googleapis.com">
     <link rel="dns-prefetch" href="//securetoken.googleapis.com">
-    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
-    <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
-    <!-- Preload Firebase scripts to start download ASAP -->
-    <link rel="preload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js" as="script" crossorigin>
-    <link rel="preload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js" as="script" crossorigin>
-    <link rel="preload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js" as="script" crossorigin>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -24,20 +17,16 @@
     <meta name="author" content="OMNIGRID ONLINE">
     <meta name="keywords" content="rental management, credit management, payroll, water refilling, Philippines, PWA">
     
-    <!-- PWA Manifest — injected safely; 404 is non-fatal -->
+    <!-- PWA Manifest — silent on 404 -->
     <script>
     try {
         if (location.protocol !== 'file:') {
             const link = document.createElement('link');
-            link.rel = 'manifest';
-            link.href = './manifest.json';
-            link.onerror = function() {
-                console.warn('[PWA] manifest.json not found — PWA install disabled, app still works.');
-                link.remove();
-            };
+            link.rel = 'manifest'; link.href = './manifest.json';
+            link.onerror = function() { link.remove(); };
             document.head.appendChild(link);
         }
-    } catch(e) { console.warn('[PWA] Manifest inject skipped:', e); }
+    } catch(e) {}
     </script>
     
     <!-- Inline SVG Favicon (PRISM Logo) -->
@@ -48,9 +37,8 @@
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
     
-    <!-- Firebase SDK + Chart.js - loaded with error handling -->
+    <!-- Firebase SDK + Chart.js — skips on local/preview, non-blocking everywhere -->
     <script>
-    // Firebase loading — skips automatically on local/preview, non-blocking everywhere
     (function() {
         var FIREBASE_VER = '10.7.1';
         var BASE = 'https://www.gstatic.com/firebasejs/' + FIREBASE_VER + '/';
@@ -74,7 +62,7 @@
             document.head.appendChild(s);
         }
         if (skipFirebase) {
-            console.log('[PRISM] Local/preview — skipping Firebase, running offline (IndexedDB only)');
+            console.log('[PRISM] Local/preview — skipping Firebase, running offline');
             window._firebaseScriptFailed = true;
         } else {
             loadScript(BASE + 'firebase-app-compat.js', 'app', function() {
@@ -2789,12 +2777,13 @@
 
 /* ---- LOADING SCREEN ---- */
 #mt-loading {
-    display: none;
+    display: flex; /* visible by default — JS adds .hidden to dismiss */
     position: fixed; inset: 0; z-index: 9999;
     background: #0f172a;
     align-items: center; justify-content: center; flex-direction: column;
 }
 #mt-loading.active { display: flex; }
+#mt-loading.hidden { display: none !important; }
 .mt-loading-logo {
     width: 70px; height: 70px;
     background: linear-gradient(135deg, #6366f1, #8b5cf6);
@@ -2873,7 +2862,7 @@
 <!-- ==================== MULTI-TENANT HTML ==================== -->
 
 <!-- Loading Screen -->
-<div id="mt-loading" class="active">
+<div id="mt-loading">
     <div class="mt-loading-logo">P</div>
     <div style="color:#f8fafc;font-weight:800;font-size:1.4rem;letter-spacing:3px;">PRISM</div>
     <div class="mt-loading-text" id="mt-loading-text">Initializing...</div>
@@ -6530,7 +6519,7 @@
         </div>
     </div>
 
-    <!-- Cloudflare email-decode removed: not available on GitHub Pages --><script>
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
         // =====================
         // TOAST NOTIFICATION (must be first)
         // =====================
@@ -6706,9 +6695,9 @@
             
             // Check firebase base SDK is available
             if (typeof firebase === 'undefined') {
-                // Bail immediately in local/preview/offline mode
+                // Bail instantly in offline/local/preview mode
                 if (window._firebaseScriptFailed || window._skipFirebase) {
-                    console.log('[Firebase] Offline/local/preview — skipping, using IndexedDB only');
+                    console.log('[Firebase] Offline/local/preview — using IndexedDB only');
                     const fsMsgFail = document.getElementById('firebase-status-msg');
                     if (fsMsgFail) { fsMsgFail.textContent = '📁 Offline mode — data saved locally'; fsMsgFail.style.color = '#f59e0b'; }
                     const dotFail = document.getElementById('firebase-header-dot');
@@ -6716,14 +6705,12 @@
                     return;
                 }
                 if (firebaseInitAttempts >= FIREBASE_MAX_ATTEMPTS) {
-                    if (firebaseInitAttempts < 600 && !window._firebaseScriptFailed) {
-                        setTimeout(initFirebase, 50); return;
-                    }
-                    console.log('[Firebase] SDK not available - Running in OFFLINE MODE (IndexedDB only)');
+                    if (firebaseInitAttempts < 600 && !window._firebaseScriptFailed) { setTimeout(initFirebase, 50); return; }
+                    console.log('[Firebase] SDK not available - OFFLINE MODE');
                     const fsMsgFail = document.getElementById('firebase-status-msg');
-                    if (fsMsgFail) { fsMsgFail.textContent = '⚠️ Firebase SDK could not load. Try refreshing.'; fsMsgFail.style.color = '#f59e0b'; }
+                    if (fsMsgFail) { fsMsgFail.textContent = '⚠️ Firebase unavailable. Try refreshing.'; fsMsgFail.style.color = '#f59e0b'; }
                     const dotFail = document.getElementById('firebase-header-dot');
-                    if (dotFail) { dotFail.style.background = '#ef4444'; dotFail.title = 'Firebase: SDK load failed — try refreshing'; }
+                    if (dotFail) { dotFail.style.background = '#ef4444'; dotFail.title = 'Firebase load failed'; }
                     return;
                 }
                 console.log(`[Firebase] SDK not loaded yet, retry ${firebaseInitAttempts}/${FIREBASE_MAX_ATTEMPTS}...`);
@@ -8181,8 +8168,7 @@
         window._dbReadyPromise = null;
         window._dbReadyResolve = null;
         window._dbReadyPromise = new Promise(resolve => { window._dbReadyResolve = resolve; });
-        // Safety timeout — resolves if IndexedDB never fires (sandboxed/preview env)
-        // 8s is generous: real IndexedDB opens in <200ms, sandbox never opens at all
+        // Safety: if IndexedDB never fires (sandboxed env), unblock after 8s
         setTimeout(() => {
             if (window._dbReadyResolve) {
                 console.warn('[DB] _dbReadyPromise timed out (8s) — unblocking app');
@@ -8214,7 +8200,7 @@
                 const request = indexedDB.open(DB_NAME, DB_VERSION);
 
                 request.onerror = (event) => {
-                    console.warn('[DB] Open error — memory-only mode:', event.target.error);
+                    console.error('Database error:', event.target.error);
                     if (window._dbReadyResolve) { window._dbReadyResolve(); window._dbReadyResolve = null; }
                     resolve(null); // resolve not reject — app continues without DB
                 };
@@ -22172,30 +22158,29 @@ async function editTask(id) {
         }
 
         // =====================
-        // PWA SERVICE WORKER  (safe mode — 404 is silent, never blocks app)
+        // PWA SERVICE WORKER
         // =====================
         if ('serviceWorker' in navigator && location.protocol !== 'file:') {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
                     .then((registration) => {
                         console.log('[PWA] Service Worker registered successfully');
+                        
+                        // Check for updates
                         registration.addEventListener('updatefound', () => {
                             const newWorker = registration.installing;
-                            if (!newWorker) return;
                             newWorker.addEventListener('statechange', () => {
                                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    try {
-                                        showConfirm('A new version of PRISM is available. Reload now to update?', 'info', '🔄 Update Available', 'Reload Now', 'Later').then(ok => {
-                                            if (ok) window.location.reload();
-                                        });
-                                    } catch(e) {}
+                                    // New version available
+                                    showConfirm('A new version of PRISM is available. Reload now to update?', 'info', '🔄 Update Available', 'Reload Now', 'Later').then(ok => {
+                                        if (ok) window.location.reload();
+                                    });
                                 }
                             });
                         });
                     })
                     .catch((err) => {
-                        // sw.js missing — app works fine without it
-                        console.warn('[PWA] SW not registered (sw.js missing?). App continues normally.', err.message);
+                        console.warn('[PWA] SW not registered (sw.js missing?) — app continues normally.');
                     });
             });
         }
@@ -22443,7 +22428,7 @@ function mtShowLoading(text = 'Loading...') {
 }
 function mtHideLoading() {
     const el = document.getElementById('mt-loading');
-    if (el) el.classList.remove('active');
+    if (el) { el.classList.remove('active'); el.classList.add('hidden'); }
 }
 
 // ---- Auth tabs ----
@@ -22505,11 +22490,13 @@ function mtTogglePass(inputId, btn) {
 // ---- Firebase wait helper (used by all auth functions) ----
 async function _mtWaitForAuth(maxMs = 20000) {
     if (window.auth) return window.auth;
+    // Offline/local/preview: Firebase is not available — return null immediately, no waiting
+    if (window._skipFirebase || window._firebaseScriptFailed) return null;
     // Try direct init first
     if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
         try { window.auth = firebase.auth(); return window.auth; } catch(e) {}
     }
-    // Wait for initFirebase() to set window.auth
+    // Online: wait for initFirebase() to set window.auth
     return new Promise(resolve => {
         let waited = 0;
         const check = setInterval(() => {
@@ -22532,7 +22519,13 @@ async function mtLogin() {
 
     // Ensure Firebase is ready
     const auth = await _mtWaitForAuth();
-    if (!auth) { mtShowAuthError('Cannot connect to server. Please refresh and try again.'); setBusy(false); return; }
+    if (!auth) {
+        // Firebase not available (offline/local mode) — fall through to local login
+        setBusy(false);
+        mtClearAuthMessages();
+        mtLocalLogin(); // opens local username/password modal
+        return;
+    }
 
     try {
         const loginCred = await auth.signInWithEmailAndPassword(email, password);
@@ -22598,7 +22591,11 @@ async function mtRegister() {
     mtClearAuthMessages();
 
     const auth = await _mtWaitForAuth();
-    if (!auth) { mtShowAuthError('Cannot connect to server. Please refresh and try again.'); setBusy(false); return; }
+    if (!auth) {
+        // Firebase not available — inform user they need to use local login
+        mtShowAuthError('⚠️ Cloud accounts are unavailable offline. Use the “Local Login” button below instead.');
+        setBusy(false); return;
+    }
 
     try {
         const userCred = await auth.createUserWithEmailAndPassword(email, password);
@@ -23891,14 +23888,14 @@ async function mtInit() {
         mtShowLanding();
     }
 
-    // In offline/local/preview mode — skip all Firebase polling loops entirely
+    // Offline/local/preview: skip all Firebase polling loops
     if (window._skipFirebase || window._firebaseScriptFailed) {
         const el = document.getElementById('firebase-status-msg-auth');
-        if (el) { el.textContent = '📁 Offline mode — local data only'; el.style.color = '#f59e0b'; }
+        if (el) { el.textContent = '📁 Offline mode — use Local Login below'; el.style.color = '#f59e0b'; }
         return; // EXIT EARLY — no polling loops
     }
 
-    // Online only: update auth status when Firebase becomes ready
+    // Online only: update Firebase auth status
     const updateAuthStatus = () => {
         if (window.firebaseReady && window.auth) {
             const el = document.getElementById('firebase-status-msg-auth');
@@ -24110,20 +24107,17 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    // Start MT init — safety net ensures loading screen never stays stuck
+    // Start MT init — safety net so loading screen never gets stuck
     try {
         mtInit();
     } catch(e) {
         console.error('[PRISM] mtInit crashed — forcing landing', e);
-        try { mtHideLoading(); } catch(e2) {}
-        setTimeout(() => {
-            try { mtShowLanding(); } catch(e3) {
-                const ld = document.getElementById('mt-loading');
-                if (ld) ld.classList.remove('active');
-                const ln = document.getElementById('mt-landing');
-                if (ln) ln.classList.add('active');
-            }
-        }, 50);
+        try { mtHideLoading(); mtShowLanding(); } catch(e2) {
+            const ld = document.getElementById('mt-loading');
+            const ln = document.getElementById('mt-landing');
+            if (ld) { ld.classList.add('hidden'); ld.classList.remove('active'); }
+            if (ln) ln.classList.add('active');
+        }
     }
 });
 
