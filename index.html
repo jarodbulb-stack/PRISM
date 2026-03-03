@@ -27,10 +27,12 @@
     <!-- PWA Manifest -->
     <script>
     if (location.protocol !== 'file:') {
-        const link = document.createElement('link');
-        link.rel = 'manifest'; link.href = './manifest.json';
-        link.onerror = function() { link.remove(); };
-        document.head.appendChild(link);
+        fetch('./manifest.json', { method: 'HEAD' })
+            .then(r => { if (r.ok) {
+                const l = document.createElement('link');
+                l.rel = 'manifest'; l.href = './manifest.json';
+                document.head.appendChild(l);
+            }}).catch(() => {});
     }
     </script>
     
@@ -44,28 +46,25 @@
     
     <!-- Firebase SDK + Chart.js - loaded with error handling -->
     <script>
-    // Firebase loader — auto-skips on local/preview (file://, null:, no hostname)
     (function() {
         var FIREBASE_VER = '10.7.1';
         var BASE = 'https://www.gstatic.com/firebasejs/' + FIREBASE_VER + '/';
         var proto = location.protocol, host = location.hostname;
-        var isLocal   = (proto === 'file:' || host === 'localhost' || host === '127.0.0.1' || host === '');
-        var isPreview = (proto === 'null:' || proto === 'about:' || !host);
-        window._skipFirebase         = isLocal || isPreview;
-        window._firebaseScriptFailed = window._skipFirebase;
+        var skip = (proto === 'file:' || proto === 'null:' || proto === 'about:' ||
+                    host === 'localhost' || host === '127.0.0.1' || host === '' || !host);
+        window._skipFirebase = skip;
+        window._firebaseScriptFailed = skip;
         var loaded = { app: false, auth: false, firestore: false };
-        window._firebaseLoadStatus   = loaded;
+        window._firebaseLoadStatus = loaded;
         function loadScript(src, key, onLoad) {
             var s = document.createElement('script');
             s.src = src; s.async = true;
-            if (!window._skipFirebase) s.crossOrigin = 'anonymous';
+            if (!skip) s.crossOrigin = 'anonymous';
             s.onload = function() { if (key) loaded[key] = true; if (onLoad) onLoad(); };
             s.onerror = function() { window._firebaseScriptFailed = true; };
             document.head.appendChild(s);
         }
-        if (window._skipFirebase) {
-            console.log('[PRISM] Offline/preview — skipping Firebase');
-        } else {
+        if (!skip) {
             loadScript(BASE + 'firebase-app-compat.js', 'app', function() {
                 loadScript(BASE + 'firebase-auth-compat.js', 'auth');
                 loadScript(BASE + 'firebase-firestore-compat.js', 'firestore');
@@ -2778,7 +2777,7 @@
 
 /* ---- LOADING SCREEN ---- */
 #mt-loading {
-    display: flex; /* ALWAYS visible until JS adds .hidden */
+    display: flex; /* visible by default — JS adds .hidden to dismiss */
     position: fixed; inset: 0; z-index: 9999;
     background: #0f172a;
     align-items: center; justify-content: center; flex-direction: column;
@@ -6696,13 +6695,9 @@
             
             // Check firebase base SDK is available
             if (typeof firebase === 'undefined') {
-                if (window._firebaseScriptFailed || window._skipFirebase) {
-                    console.log('[Firebase] Offline/preview — skipping');
-                    return;
-                }
+                if (window._firebaseScriptFailed || window._skipFirebase) { return; }
                 if (firebaseInitAttempts >= FIREBASE_MAX_ATTEMPTS) {
-                    if (firebaseInitAttempts < 600) { setTimeout(initFirebase, 50); return; }
-                    console.log('[Firebase] SDK unavailable — offline mode');
+                    if (firebaseInitAttempts < 400) { setTimeout(initFirebase, 50); return; }
                     const fsMsgFail = document.getElementById('firebase-status-msg');
                     if (fsMsgFail) { fsMsgFail.textContent = '⚠️ Firebase unavailable.'; fsMsgFail.style.color = '#f59e0b'; }
                     return;
@@ -6746,12 +6741,11 @@
                 const dot = document.getElementById('firebase-header-dot');
                 if (dot) { dot.style.background = '#10b981'; dot.title = 'Firebase: Connected ✅'; }
 
-                // Enable offline persistence (modern API — no deprecation warning)
                 try {
                     if (firebase.firestore.persistentLocalCache) {
-                        firestore.settings({ localCache: firebase.firestore.persistentLocalCache(
-                            { tabManager: firebase.firestore.persistentMultipleTabManager() }
-                        )});
+                        firestore.settings({ localCache: firebase.firestore.persistentLocalCache({
+                            tabManager: firebase.firestore.persistentMultipleTabManager()
+                        })});
                     } else {
                         firestore.enablePersistence({ synchronizeTabs: true }).catch(() => {});
                     }
@@ -8163,12 +8157,13 @@
         window._dbReadyPromise = null;
         window._dbReadyResolve = null;
         window._dbReadyPromise = new Promise(resolve => { window._dbReadyResolve = resolve; });
+        // CRITICAL: timeout so a DB failure can never hang the app forever
         setTimeout(function() {
             if (window._dbReadyResolve) {
-                console.warn('[DB] _dbReadyPromise timed out — unblocking');
+                console.warn('[DB] _dbReadyPromise timed out — unblocking app');
                 window._dbReadyResolve(); window._dbReadyResolve = null;
             }
-        }, 30000);
+        }, 10000);
 
         // Ensure database is open and ready
         async function ensureDB() {
@@ -8180,13 +8175,12 @@
 
         function initDB() {
             return new Promise((resolve, reject) => {
+                // Refresh DB_NAME from current org — set at parse time before login
+                DB_NAME = getMTDbName();
+
                 // Close existing connection if any
                 if (db) {
-                    try {
-                        db.close();
-                    } catch (e) {
-                        // Ignore close errors
-                    }
+                    try { db.close(); } catch (e) {}
                     db = null;
                     dbReady = false;
                 }
@@ -8195,6 +8189,7 @@
 
                 request.onerror = (event) => {
                     console.error('Database error:', event.target.error);
+                    // Unblock anything waiting on DB — app continues without it
                     if (window._dbReadyResolve) { window._dbReadyResolve(); window._dbReadyResolve = null; }
                     resolve(null);
                 };
@@ -8337,7 +8332,9 @@
 
                 request.onblocked = () => {
                     console.warn('Database blocked - close other tabs using this app');
-                    showToast('⚠️ Please close other tabs using PRISM and refresh.', 'warning');
+                    // Unblock app so it doesn't hang — data may not sync but UI still works
+                    if (window._dbReadyResolve) { window._dbReadyResolve(); window._dbReadyResolve = null; }
+                    try { showToast('⚠️ Please close other tabs using PRISM and refresh.', 'warning'); } catch(e) {}
                 };
             });
         }
@@ -22484,7 +22481,6 @@ function mtTogglePass(inputId, btn) {
 // ---- Firebase wait helper (used by all auth functions) ----
 async function _mtWaitForAuth(maxMs = 20000) {
     if (window.auth) return window.auth;
-    // Offline/preview: return null instantly — no 20s wait
     if (window._skipFirebase || window._firebaseScriptFailed) return null;
     if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
         try { window.auth = firebase.auth(); return window.auth; } catch(e) {}
@@ -22509,15 +22505,8 @@ async function mtLogin() {
     setBusy(true);
     mtClearAuthMessages();
 
-    // Ensure Firebase is ready
     const auth = await _mtWaitForAuth();
-    if (!auth) {
-        // Offline — open local login modal immediately instead of showing error
-        setBusy(false);
-        mtClearAuthMessages();
-        mtLocalLogin();
-        return;
-    }
+    if (!auth) { setBusy(false); mtClearAuthMessages(); mtLocalLogin(); return; }
 
     try {
         const loginCred = await auth.signInWithEmailAndPassword(email, password);
@@ -23876,11 +23865,10 @@ async function mtInit() {
         mtShowLanding();
     }
 
-    // Offline/preview: skip all Firebase polling loops
     if (window._skipFirebase || window._firebaseScriptFailed) {
         const el = document.getElementById('firebase-status-msg-auth');
         if (el) { el.textContent = '📁 Offline — use Local Login'; el.style.color = '#f59e0b'; }
-        return; // no polling loops
+        return;
     }
     const updateAuthStatus = () => {
         if (window.firebaseReady && window.auth) {
@@ -24091,7 +24079,6 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    // Start MT init — safety net: loading screen can never stay stuck
     try {
         mtInit();
     } catch(e) {
