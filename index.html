@@ -26,32 +26,12 @@
     
     <!-- PWA Manifest -->
     <script>
-    // Inline PWA manifest as a blob — no network request, no 404, no retries
-    (function() {
-        if (location.protocol === 'file:') return;
-        try {
-            var manifest = {
-                name: 'PRISM Business Manager',
-                short_name: 'PRISM',
-                description: 'All-in-one business management app',
-                start_url: './',
-                display: 'standalone',
-                background_color: '#0f172a',
-                theme_color: '#6366f1',
-                icons: [{
-                    src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%236366f1'/%3E%3Ctext x='50' y='72' font-family='Arial' font-size='60' font-weight='bold' fill='white' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E",
-                    sizes: 'any',
-                    type: 'image/svg+xml',
-                    purpose: 'any maskable'
-                }]
-            };
-            var blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
-            var link = document.createElement('link');
-            link.rel = 'manifest';
-            link.href = URL.createObjectURL(blob);
-            document.head.appendChild(link);
-        } catch(e) {}
-    })();
+    if (location.protocol !== 'file:') {
+        const link = document.createElement('link');
+        link.rel = 'manifest'; link.href = './manifest.json';
+        link.onerror = function() { link.remove(); };
+        document.head.appendChild(link);
+    }
     </script>
     
     <!-- Inline SVG Favicon (PRISM Logo) -->
@@ -64,45 +44,34 @@
     
     <!-- Firebase SDK + Chart.js - loaded with error handling -->
     <script>
-    // OPTIMIZED Firebase loading - preload all 3 scripts in parallel, then init in order
+    // Firebase loader — auto-skips on local/preview (file://, null:, no hostname)
     (function() {
         var FIREBASE_VER = '10.7.1';
         var BASE = 'https://www.gstatic.com/firebasejs/' + FIREBASE_VER + '/';
-        
-        // Track loading state
+        var proto = location.protocol, host = location.hostname;
+        var isLocal   = (proto === 'file:' || host === 'localhost' || host === '127.0.0.1' || host === '');
+        var isPreview = (proto === 'null:' || proto === 'about:' || !host);
+        window._skipFirebase         = isLocal || isPreview;
+        window._firebaseScriptFailed = window._skipFirebase;
         var loaded = { app: false, auth: false, firestore: false };
-        var scriptErrors = {};
-        
-        function loadScript(src, key, onLoad, onError) {
+        window._firebaseLoadStatus   = loaded;
+        function loadScript(src, key, onLoad) {
             var s = document.createElement('script');
-            s.src = src;
-            s.async = true; // non-blocking
-            s.crossOrigin = 'anonymous';
-            s.onload = function() {
-                if (key) loaded[key] = true;
-                if (onLoad) onLoad();
-            };
-            s.onerror = function() {
-                if (key) scriptErrors[key] = true;
-                console.warn('[PRISM] Firebase script failed:', src);
-                if (onError) onError();
-            };
+            s.src = src; s.async = true;
+            if (!window._skipFirebase) s.crossOrigin = 'anonymous';
+            s.onload = function() { if (key) loaded[key] = true; if (onLoad) onLoad(); };
+            s.onerror = function() { window._firebaseScriptFailed = true; };
             document.head.appendChild(s);
-            return s;
         }
-        
-        // Step 1: Load firebase-app first (required base)
-        loadScript(BASE + 'firebase-app-compat.js', 'app', function() {
-            // Step 2: Load auth + firestore IN PARALLEL once app is ready
-            loadScript(BASE + 'firebase-auth-compat.js', 'auth');
-            loadScript(BASE + 'firebase-firestore-compat.js', 'firestore');
-        });
-        
-        // Load Chart.js in parallel (independent)
+        if (window._skipFirebase) {
+            console.log('[PRISM] Offline/preview — skipping Firebase');
+        } else {
+            loadScript(BASE + 'firebase-app-compat.js', 'app', function() {
+                loadScript(BASE + 'firebase-auth-compat.js', 'auth');
+                loadScript(BASE + 'firebase-firestore-compat.js', 'firestore');
+            });
+        }
         loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js', null);
-        
-        // Expose load status for diagnostics
-        window._firebaseLoadStatus = loaded;
     })();
     </script>
     
@@ -2809,12 +2778,13 @@
 
 /* ---- LOADING SCREEN ---- */
 #mt-loading {
-    display: none;
+    display: flex; /* ALWAYS visible until JS adds .hidden */
     position: fixed; inset: 0; z-index: 9999;
     background: #0f172a;
     align-items: center; justify-content: center; flex-direction: column;
 }
 #mt-loading.active { display: flex; }
+#mt-loading.hidden { display: none !important; }
 .mt-loading-logo {
     width: 70px; height: 70px;
     background: linear-gradient(135deg, #6366f1, #8b5cf6);
@@ -6726,18 +6696,15 @@
             
             // Check firebase base SDK is available
             if (typeof firebase === 'undefined') {
+                if (window._firebaseScriptFailed || window._skipFirebase) {
+                    console.log('[Firebase] Offline/preview — skipping');
+                    return;
+                }
                 if (firebaseInitAttempts >= FIREBASE_MAX_ATTEMPTS) {
-                    // If online but still failing, keep trying (don't give up)
-                    if (navigator.onLine && firebaseInitAttempts < 600) { // up to 30 seconds if online
-                        setTimeout(initFirebase, 50);
-                        return;
-                    }
-                    console.log('[Firebase] SDK not available - Running in OFFLINE MODE (IndexedDB only)');
-                    console.log('[App] ✅ App fully functional without Firebase');
+                    if (firebaseInitAttempts < 600) { setTimeout(initFirebase, 50); return; }
+                    console.log('[Firebase] SDK unavailable — offline mode');
                     const fsMsgFail = document.getElementById('firebase-status-msg');
-                    if (fsMsgFail) { fsMsgFail.textContent = '⚠️ Firebase SDK could not load. Try refreshing the page.'; fsMsgFail.style.color = '#f59e0b'; }
-                    const dotFail = document.getElementById('firebase-header-dot');
-                    if (dotFail) { dotFail.style.background = '#ef4444'; dotFail.title = 'Firebase: SDK load failed — try refreshing'; }
+                    if (fsMsgFail) { fsMsgFail.textContent = '⚠️ Firebase unavailable.'; fsMsgFail.style.color = '#f59e0b'; }
                     return;
                 }
                 console.log(`[Firebase] SDK not loaded yet, retry ${firebaseInitAttempts}/${FIREBASE_MAX_ATTEMPTS}...`);
@@ -6779,15 +6746,16 @@
                 const dot = document.getElementById('firebase-header-dot');
                 if (dot) { dot.style.background = '#10b981'; dot.title = 'Firebase: Connected ✅'; }
 
-                // Enable offline persistence
-                firestore.enablePersistence({ synchronizeTabs: true })
-                    .catch((err) => {
-                        if (err.code === 'failed-precondition') {
-                            console.log('[Firebase] Multiple tabs open, persistence only in one tab');
-                        } else if (err.code === 'unimplemented') {
-                            console.log('[Firebase] Browser does not support persistence');
-                        }
-                    });
+                // Enable offline persistence (modern API — no deprecation warning)
+                try {
+                    if (firebase.firestore.persistentLocalCache) {
+                        firestore.settings({ localCache: firebase.firestore.persistentLocalCache(
+                            { tabManager: firebase.firestore.persistentMultipleTabManager() }
+                        )});
+                    } else {
+                        firestore.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+                    }
+                } catch(e) {}
 
                 // Auth state listener
                 auth.onAuthStateChanged(async (user) => {
@@ -8195,10 +8163,9 @@
         window._dbReadyPromise = null;
         window._dbReadyResolve = null;
         window._dbReadyPromise = new Promise(resolve => { window._dbReadyResolve = resolve; });
-        // Safety valve — if IndexedDB never fires for any reason, unblock after 30s
         setTimeout(function() {
             if (window._dbReadyResolve) {
-                console.warn('[DB] _dbReadyPromise timed out (30s) — unblocking app');
+                console.warn('[DB] _dbReadyPromise timed out — unblocking');
                 window._dbReadyResolve(); window._dbReadyResolve = null;
             }
         }, 30000);
@@ -8229,7 +8196,7 @@
                 request.onerror = (event) => {
                     console.error('Database error:', event.target.error);
                     if (window._dbReadyResolve) { window._dbReadyResolve(); window._dbReadyResolve = null; }
-                    resolve(null); // resolve not reject — app continues without DB
+                    resolve(null);
                 };
 
                 request.onsuccess = (event) => {
@@ -22455,7 +22422,7 @@ function mtShowLoading(text = 'Loading...') {
 }
 function mtHideLoading() {
     const el = document.getElementById('mt-loading');
-    if (el) el.classList.remove('active');
+    if (el) { el.classList.remove('active'); el.classList.add('hidden'); }
 }
 
 // ---- Auth tabs ----
@@ -22517,11 +22484,11 @@ function mtTogglePass(inputId, btn) {
 // ---- Firebase wait helper (used by all auth functions) ----
 async function _mtWaitForAuth(maxMs = 20000) {
     if (window.auth) return window.auth;
-    // Try direct init first
+    // Offline/preview: return null instantly — no 20s wait
+    if (window._skipFirebase || window._firebaseScriptFailed) return null;
     if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
         try { window.auth = firebase.auth(); return window.auth; } catch(e) {}
     }
-    // Wait for initFirebase() to set window.auth
     return new Promise(resolve => {
         let waited = 0;
         const check = setInterval(() => {
@@ -22544,7 +22511,13 @@ async function mtLogin() {
 
     // Ensure Firebase is ready
     const auth = await _mtWaitForAuth();
-    if (!auth) { mtShowAuthError('Cannot connect to server. Please refresh and try again.'); setBusy(false); return; }
+    if (!auth) {
+        // Offline — open local login modal immediately instead of showing error
+        setBusy(false);
+        mtClearAuthMessages();
+        mtLocalLogin();
+        return;
+    }
 
     try {
         const loginCred = await auth.signInWithEmailAndPassword(email, password);
@@ -23903,7 +23876,12 @@ async function mtInit() {
         mtShowLanding();
     }
 
-    // Update auth page status when Firebase becomes ready
+    // Offline/preview: skip all Firebase polling loops
+    if (window._skipFirebase || window._firebaseScriptFailed) {
+        const el = document.getElementById('firebase-status-msg-auth');
+        if (el) { el.textContent = '📁 Offline — use Local Login'; el.style.color = '#f59e0b'; }
+        return; // no polling loops
+    }
     const updateAuthStatus = () => {
         if (window.firebaseReady && window.auth) {
             const el = document.getElementById('firebase-status-msg-auth');
@@ -23911,9 +23889,7 @@ async function mtInit() {
                 el.textContent = '✅ Firebase ready — click to sign in';
                 el.style.color = '#10b981';
             }
-        } else {
-            setTimeout(updateAuthStatus, 500);
-        }
+        } else { setTimeout(updateAuthStatus, 500); }
     };
     updateAuthStatus();
 
@@ -24115,8 +24091,18 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    // Start MT init
-    mtInit();
+    // Start MT init — safety net: loading screen can never stay stuck
+    try {
+        mtInit();
+    } catch(e) {
+        console.error('[PRISM] mtInit failed:', e);
+        try { mtHideLoading(); mtShowLanding(); } catch(e2) {
+            const ld = document.getElementById('mt-loading');
+            const ln = document.getElementById('mt-landing');
+            if (ld) { ld.classList.add('hidden'); ld.classList.remove('active'); }
+            if (ln) ln.classList.add('active');
+        }
+    }
 });
 
 
