@@ -22165,10 +22165,9 @@ async function editTask(id) {
                             newWorker.addEventListener('statechange', () => {
                                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                                     // New version available
-                                    if (typeof showConfirm === 'function') {
-                                        showConfirm('A new version of PRISM is available. Reload now to update?', 'info', '🔄 Update Available', 'Reload Now', 'Later').then(ok => {
-                                            if (ok) window.location.reload();
-                                        });
+                                    var _sc = window.showConfirm || (typeof showConfirm === 'function' ? showConfirm : null);
+                                    if (_sc) {
+                                        _sc('A new version of PRISM is available. Reload now to update?', 'info', '🔄 Update Available', 'Reload Now', 'Later').then(ok => { if (ok) window.location.reload(); });
                                     } else {
                                         if (confirm('New PRISM version available. Reload now?')) window.location.reload();
                                     }
@@ -22329,6 +22328,32 @@ async function editTask(id) {
 // All org/auth management. Injected before existing app init.
 // ================================================================
 
+// ── STUB GLOBALS: ensure onclick never crashes during script parse ──
+// These are overwritten with real implementations below.
+window.mtShowAuth         = function(t){ console.warn('[MT] stub mtShowAuth'); };
+window.mtShowLanding      = function(){ console.warn('[MT] stub mtShowLanding'); };
+window.mtShowSetup        = function(){ console.warn('[MT] stub mtShowSetup'); };
+window.mtShowApp          = function(){ console.warn('[MT] stub mtShowApp'); };
+window.mtLocalLogin       = function(){ console.warn('[MT] stub mtLocalLogin'); };
+window.mtLocalLoginSubmit = function(){ console.warn('[MT] stub mtLocalLoginSubmit'); };
+window.mtLogin            = function(){ console.warn('[MT] stub mtLogin'); };
+window.mtRegister         = function(){ console.warn('[MT] stub mtRegister'); };
+window.mtGoogleLogin      = function(){ console.warn('[MT] stub mtGoogleLogin'); };
+window.mtTogglePass       = function(i,b){ console.warn('[MT] stub mtTogglePass'); };
+window.mtSwitchTab        = function(t){ console.warn('[MT] stub mtSwitchTab'); };
+window.mtSetupNext        = function(s){ console.warn('[MT] stub mtSetupNext'); };
+window.mtToggleBizModule  = function(t,e){ console.warn('[MT] stub mtToggleBizModule'); };
+window.mtLaunchOrg        = function(){ console.warn('[MT] stub mtLaunchOrg'); };
+window.mtOpenOrgSwitcher  = function(){ console.warn('[MT] stub mtOpenOrgSwitcher'); };
+window.mtSwitchOrg        = function(id){ console.warn('[MT] stub mtSwitchOrg'); };
+window.mtAppLogout        = function(){ console.warn('[MT] stub mtAppLogout'); };
+window.mtSuperAdminLogout = function(){ console.warn('[MT] stub mtSuperAdminLogout'); };
+window.mtSATab            = function(t,b){ console.warn('[MT] stub mtSATab'); };
+window.mtSAGoToApp        = function(){ console.warn('[MT] stub mtSAGoToApp'); };
+window.mtSADeleteOrg      = function(id,n){ console.warn('[MT] stub mtSADeleteOrg'); };
+window.mtSAToggleOrgStatus = function(id,s){ console.warn('[MT] stub mtSAToggleOrgStatus'); };
+// ── END STUBS ──
+
 const MT = {
     // Super admin emails - only these see the SA panel
     SUPER_ADMINS: ['jarodbulb@gmail.com', 'danomandam@yahoo.com'],
@@ -22368,15 +22393,15 @@ function mtShowScreen(id) {
 }
 
 function mtShowLanding() { mtShowScreen('mt-landing'); }
+window.mtShowLanding = mtShowLanding;
 function mtShowSetup() { mtShowScreen('mt-setup'); mtResetSetup(); }
+window.mtShowSetup = mtShowSetup;
 
 function mtShowAuth(tab = 'login') {
     mtShowScreen('mt-auth');
     mtSwitchTab(tab);
 }
-window.mtShowAuth    = mtShowAuth;
-window.mtShowLanding = mtShowLanding;
-window.mtShowSetup   = mtShowSetup;
+window.mtShowAuth = mtShowAuth; // overwrite stub with real implementation
 
 let _prismAppInitialized = false;
 function mtShowApp() {
@@ -22734,7 +22759,6 @@ function mtLocalLogin() {
         });
     }, 100);
 }
-window.mtLocalLogin = mtLocalLogin;
 
 function mtLocalLoginSubmit() {
     const username = (document.getElementById('mt-local-username')?.value || '').trim();
@@ -23860,7 +23884,7 @@ async function mtInit() {
                     MT.currentUser  = { uid: 'local_' + (u.id||1), email: u.email||'local@prism.app', displayName: u.fullname };
                     mtShowApp();
                     mtUpdateOrgBadge();
-                    setTimeout(async () => {
+                    setTimeout(() => {
                         if (typeof updateUserDisplay === 'function') updateUserDisplay();
                         if (typeof loadDashboard === 'function') loadDashboard();
                     }, 300);
@@ -24034,8 +24058,7 @@ async function mtInit() {
                                 localStorage.setItem('mt_current_org_id', org.id);
                                 mtShowApp();
                                 mtUpdateOrgBadge();
-                                setTimeout(async () => {
-                                    if (window._dbReadyPromise) await window._dbReadyPromise;
+                                setTimeout(() => {
                                     if (typeof syncFromFirebase === 'function') syncFromFirebase();
                                 }, 500);
                                 return;
@@ -24072,8 +24095,9 @@ async function mtInit() {
     setupFirebaseAuth();
 }
 
-// ---- Expose all MT functions to window for inline onclick handlers ----
+// ── Overwrite stubs with real implementations ──
 window.mtShowApp          = mtShowApp;
+window.mtLocalLogin       = mtLocalLogin;
 window.mtLocalLoginSubmit = mtLocalLoginSubmit;
 window.mtLogin            = mtLogin;
 window.mtRegister         = mtRegister;
@@ -24091,6 +24115,7 @@ window.mtSATab            = mtSATab;
 window.mtSAGoToApp        = mtSAGoToApp;
 window.mtSADeleteOrg      = mtSADeleteOrg;
 window.mtSAToggleOrgStatus = mtSAToggleOrgStatus;
+window.showConfirm        = (typeof showConfirm !== 'undefined') ? showConfirm : window.showConfirm;
 
 // ---- Intercept existing appLogout to use MT logout ----
 window.addEventListener('DOMContentLoaded', () => {
@@ -24149,7 +24174,6 @@ window.addEventListener('DOMContentLoaded', () => {
                 document.addEventListener('keydown', escHandler);
             });
         }
-        window.showConfirm = showConfirm;
         // ========== END CONFIRM MODAL SYSTEM ==========
 
         
