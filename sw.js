@@ -1,32 +1,45 @@
-// PRISM Service Worker — minimal, safe, offline-first
-const CACHE_NAME = 'prism-v1';
+const CACHE_NAME = 'prism-v2';
+const ASSETS = ['./'];
 
-self.addEventListener('install', event => {
+self.addEventListener('install', e => {
+    e.waitUntil(
+        caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS))
+    );
     self.skipWaiting();
 });
 
-self.addEventListener('activate', event => {
-    event.waitUntil(
+self.addEventListener('activate', e => {
+    e.waitUntil(
         caches.keys().then(keys =>
             Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-        ).then(() => self.clients.claim())
+        )
     );
+    self.clients.claim();
 });
 
 self.addEventListener('fetch', event => {
-    // Cache-first for same-origin, network-first for everything else
-    if (event.request.url.startsWith(self.location.origin)) {
-        event.respondWith(
-            caches.match(event.request).then(cached => {
-                if (cached) return cached;
-                return fetch(event.request).then(response => {
-                    if (response && response.status === 200 && response.type === 'basic') {
-                        const clone = response.clone();
-                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-                    }
-                    return response;
-                }).catch(() => cached);
-            })
-        );
+    // Only cache GET requests — HEAD/POST etc pass through directly
+    if (event.request.method !== 'GET') {
+        event.respondWith(fetch(event.request));
+        return;
     }
+
+    // Skip cross-origin requests
+    if (!event.request.url.startsWith(self.location.origin)) {
+        return;
+    }
+
+    event.respondWith(
+        caches.match(event.request).then(cached => {
+            if (cached) return cached;
+            return fetch(event.request).then(response => {
+                if (!response || response.status !== 200 || response.type !== 'basic') {
+                    return response;
+                }
+                const clone = response.clone();
+                caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                return response;
+            }).catch(() => cached);
+        })
+    );
 });

@@ -7079,7 +7079,7 @@
         }
 
         async function syncToFirebase() {
-            if (typeof db === 'undefined' || !db || !dbReady) return;
+            // STARTUP FIX: Wait for IndexedDB to be ready before syncing
             const db = window.db || firestore;
             const cu = currentUser || (typeof MT !== 'undefined' ? MT.currentUser : null);
             if (!db || !cu) return;
@@ -7156,7 +7156,7 @@
         }
 
         async function syncFromFirebase() {
-            if (typeof db === 'undefined' || !db || !dbReady) return;
+            // STARTUP FIX: Wait for IndexedDB to be ready before syncing
             const cu = currentUser || (typeof MT !== 'undefined' && MT.currentUser);
             const dbRef = window.db || firestore;
             if (!dbRef || !cu) return;
@@ -8337,9 +8337,8 @@
                 };
 
                 request.onblocked = () => {
-                    console.warn('[DB] Blocked — another tab has it open');
                     if(window._dbReadyResolve){window._dbReadyResolve();window._dbReadyResolve=null;}
-                    try{showToast('⚠️ Close other PRISM tabs for best performance.','warning');}catch(e){}
+                    try{showToast('⚠️ Close other PRISM tabs.','warning');}catch(e){}
                 };
             });
         }
@@ -22367,12 +22366,15 @@ function mtShowScreen(id) {
 }
 
 function mtShowLanding() { mtShowScreen('mt-landing'); }
+window.mtShowLanding = mtShowLanding;
 function mtShowSetup() { mtShowScreen('mt-setup'); mtResetSetup(); }
+window.mtShowSetup = mtShowSetup;
 
 function mtShowAuth(tab = 'login') {
     mtShowScreen('mt-auth');
     mtSwitchTab(tab);
 }
+window.mtShowAuth = mtShowAuth;
 
 let _prismAppInitialized = false;
 function mtShowApp() {
@@ -22448,6 +22450,7 @@ function mtSwitchTab(tab) {
     }
     mtClearAuthMessages();
 }
+window.mtSwitchTab = mtSwitchTab;
 
 function mtShowAuthError(msg) {
     const el = document.getElementById('mt-auth-error');
@@ -22472,7 +22475,8 @@ function mtTogglePass(inputId, btn) {
     if (input.type === 'password') {
         input.type = 'text';
         btn.textContent = '🙈';
-    } else {
+    }
+window.mtTogglePass = mtTogglePass; else {
         input.type = 'password';
         btn.textContent = '👁️';
     }
@@ -22730,6 +22734,7 @@ function mtLocalLogin() {
         });
     }, 100);
 }
+window.mtLocalLogin = mtLocalLogin;
 
 function mtLocalLoginSubmit() {
     const username = (document.getElementById('mt-local-username')?.value || '').trim();
@@ -22797,6 +22802,7 @@ function mtLocalLoginSubmit() {
         }
     }
 }
+window.mtLocalLoginSubmit = mtLocalLoginSubmit;
 
 function _doLocalAdminLogin() {
     const orgId = localStorage.getItem('mt_current_org_id') || 'local_org_' + Date.now();
@@ -22884,6 +22890,7 @@ function mtToggleBizModule(type, el) {
     // Always mixed since multiple can be selected
     MT.selectedBizType = 'mixed';
 }
+window.mtToggleBizModule = mtToggleBizModule;
 
 function mtResetSetup() {
     MT.currentSetupStep = 1;
@@ -23098,6 +23105,7 @@ function mtOpenOrgSwitcher() {
     
     modal.classList.add('active');
 }
+window.mtOpenOrgSwitcher = mtOpenOrgSwitcher;
 
 function mtSwitchOrg(orgId) {
     const orgs = JSON.parse(localStorage.getItem('mt_user_orgs') || '[]');
@@ -23118,6 +23126,7 @@ function mtSwitchOrg(orgId) {
         if (typeof loadDashboard === 'function') loadDashboard();
     }, 300);
 }
+window.mtSwitchOrg = mtSwitchOrg;
 
 // ---- Super Admin ----
 function mtSATab(tab, btn) {
@@ -23131,6 +23140,7 @@ function mtSATab(tab, btn) {
     if (target) target.style.display = 'block';
     if (btn) btn.classList.add('active');
 }
+window.mtSATab = mtSATab;
 
 async function mtLoadSAData() {
     if (!window.db) {
@@ -24066,27 +24076,16 @@ async function mtInit() {
     setupFirebaseAuth();
 }
 
-// ---- Expose all MT functions to global scope for inline onclick handlers ----
-window.mtShowAuth         = mtShowAuth;
-window.mtShowLanding      = mtShowLanding;
-window.mtShowLogin        = mtShowLogin;
-window.mtShowRegister     = mtShowRegister;
-window.mtLocalLogin       = mtLocalLogin;
-window.mtLocalLoginSubmit = mtLocalLoginSubmit;
+// ---- Expose remaining async MT functions to global window ----
 window.mtLogin            = mtLogin;
 window.mtRegister         = mtRegister;
 window.mtGoogleLogin      = mtGoogleLogin;
 window.mtShowApp          = mtShowApp;
-window.mtShowSetup        = mtShowSetup;
-window.mtSetupNext        = mtSetupNext;
-window.mtToggleBizModule  = mtToggleBizModule;
+window.mtShowScreen       = mtShowScreen;
 window.mtLaunchOrg        = mtLaunchOrg;
-window.mtOpenOrgSwitcher  = mtOpenOrgSwitcher;
-window.mtSwitchOrg        = mtSwitchOrg;
-window.mtTogglePass       = mtTogglePass;
+window.mtSetupNext        = mtSetupNext;
 window.mtAppLogout        = mtAppLogout;
 window.mtSuperAdminLogout = mtSuperAdminLogout;
-window.mtSATab            = mtSATab;
 window.mtSAGoToApp        = mtSAGoToApp;
 window.mtSADeleteOrg      = mtSADeleteOrg;
 window.mtSAToggleOrgStatus = mtSAToggleOrgStatus;
