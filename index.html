@@ -27,7 +27,9 @@
     <!-- PWA Manifest -->
     <script>
     if (location.protocol !== 'file:') {
-        fetch('./manifest.json', {method:'HEAD'}).then(r=>{if(r.ok){const l=document.createElement('link');l.rel='manifest';l.href='./manifest.json';document.head.appendChild(l);}}).catch(()=>{});
+        fetch('./manifest.json', {method:'HEAD'})
+            .then(r => { if(r.ok){ const l=document.createElement('link'); l.rel='manifest'; l.href='./manifest.json'; document.head.appendChild(l); }})
+            .catch(()=>{});
     }
     </script>
     
@@ -2347,7 +2349,7 @@
 
 /* ---- LANDING PAGE ---- */
 #mt-landing {
-    display: block; /* ALWAYS visible — no white flash */
+    display: block; /* ALWAYS visible — no white flash, no JS needed */
     min-height: 100vh;
     font-family: 'Segoe UI', system-ui, sans-serif;
     background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 40%, #0f172a 100%);
@@ -7077,8 +7079,8 @@
         }
 
         async function syncToFirebase() {
-            // STARTUP FIX: Wait for IndexedDB to be ready before syncing
-            if (window._dbReadyPromise) await window._dbReadyPromise;
+            // DB check: skip if not ready, don't block
+            if (!window.db || !window.dbReady) return;
             const db = window.db || firestore;
             const cu = currentUser || (typeof MT !== 'undefined' ? MT.currentUser : null);
             if (!db || !cu) return;
@@ -7155,8 +7157,8 @@
         }
 
         async function syncFromFirebase() {
-            // STARTUP FIX: Wait for IndexedDB to be ready before syncing
-            if (window._dbReadyPromise) await window._dbReadyPromise;
+            // DB check: skip if not ready, don't block
+            if (!window.db || !window.dbReady) return;
             const cu = currentUser || (typeof MT !== 'undefined' && MT.currentUser);
             const dbRef = window.db || firestore;
             if (!dbRef || !cu) return;
@@ -8166,10 +8168,14 @@
         let db = null;
         let dbReady = false;
         // Global promise that resolves when IndexedDB is ready — sync functions wait on this
+        // _dbReadyPromise kept for compatibility but UI never awaits it at startup
         window._dbReadyPromise = null;
         window._dbReadyResolve = null;
         window._dbReadyPromise = new Promise(resolve => { window._dbReadyResolve = resolve; });
-        setTimeout(function(){if(window._dbReadyResolve){window._dbReadyResolve();window._dbReadyResolve=null;}},15000);
+        // Auto-resolve after 5s max — DB runs in background, never blocks UI
+        setTimeout(function(){
+            if(window._dbReadyResolve){ window._dbReadyResolve(); window._dbReadyResolve=null; }
+        }, 5000);
 
         // Ensure database is open and ready
         async function ensureDB() {
@@ -8197,7 +8203,7 @@
                 request.onerror = (event) => {
                     console.error('Database error:', event.target.error);
                     if(window._dbReadyResolve){window._dbReadyResolve();window._dbReadyResolve=null;}
-                    resolve(null);
+                    resolve(null); // never crash, app continues without DB
                 };
 
                 request.onsuccess = (event) => {
@@ -8337,8 +8343,9 @@
                 };
 
                 request.onblocked = () => {
-                    console.warn('Database blocked - close other tabs using this app');
-                    showToast('⚠️ Please close other tabs using PRISM and refresh.', 'warning');
+                    console.warn('[DB] Blocked — another tab has it open');
+                    if(window._dbReadyResolve){window._dbReadyResolve();window._dbReadyResolve=null;}
+                    try{ showToast('⚠️ Close other PRISM tabs for best performance.', 'warning'); }catch(e){}
                 };
             });
         }
@@ -23854,10 +23861,8 @@ async function mtInit() {
                     MT.currentUser  = { uid: 'local_' + (u.id||1), email: u.email||'local@prism.app', displayName: u.fullname };
                     mtShowApp();
                     mtUpdateOrgBadge();
-                    setTimeout(async () => {
+                    setTimeout(() => {
                         if (typeof updateUserDisplay === 'function') updateUserDisplay();
-                        // Wait for DB ready before loading dashboard
-                        if (window._dbReadyPromise) await window._dbReadyPromise;
                         if (typeof loadDashboard === 'function') loadDashboard();
                     }, 300);
                 }
@@ -23984,9 +23989,8 @@ async function mtInit() {
                     setTimeout(() => {
                         if (typeof updateUserDisplay === 'function') updateUserDisplay();
                         if (typeof loadDashboard === 'function') loadDashboard();
-                        // Wait for DB ready before any Firebase sync
+                        // Run sync after short delay — DB blocking removed
                         const _runSyncAfterDB = async () => {
-                            if (window._dbReadyPromise) await window._dbReadyPromise;
                             // Push current data first (ensures cloud has latest appUsers)
                             if (typeof syncToFirebase === 'function') {
                                 syncToFirebase().catch(e => {});
@@ -24031,8 +24035,7 @@ async function mtInit() {
                                 localStorage.setItem('mt_current_org_id', org.id);
                                 mtShowApp();
                                 mtUpdateOrgBadge();
-                                setTimeout(async () => {
-                                    if (window._dbReadyPromise) await window._dbReadyPromise;
+                                setTimeout(() => {
                                     if (typeof syncFromFirebase === 'function') syncFromFirebase();
                                 }, 500);
                                 return;
