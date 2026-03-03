@@ -27,12 +27,7 @@
     <!-- PWA Manifest -->
     <script>
     if (location.protocol !== 'file:') {
-        fetch('./manifest.json', { method: 'HEAD' })
-            .then(r => { if (r.ok) {
-                const l = document.createElement('link');
-                l.rel = 'manifest'; l.href = './manifest.json';
-                document.head.appendChild(l);
-            }}).catch(() => {});
+        fetch('./manifest.json', {method:'HEAD'}).then(r=>{if(r.ok){const l=document.createElement('link');l.rel='manifest';l.href='./manifest.json';document.head.appendChild(l);}}).catch(()=>{});
     }
     </script>
     
@@ -2352,7 +2347,7 @@
 
 /* ---- LANDING PAGE ---- */
 #mt-landing {
-    display: block; /* visible by DEFAULT — no JS needed, no white flash */
+    display: block; /* ALWAYS visible — no white flash */
     min-height: 100vh;
     font-family: 'Segoe UI', system-ui, sans-serif;
     background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 40%, #0f172a 100%);
@@ -6764,12 +6759,8 @@
 
                 try {
                     if (firebase.firestore.persistentLocalCache) {
-                        firestore.settings({ localCache: firebase.firestore.persistentLocalCache({
-                            tabManager: firebase.firestore.persistentMultipleTabManager()
-                        })});
-                    } else {
-                        firestore.enablePersistence({ synchronizeTabs: true }).catch(() => {});
-                    }
+                        firestore.settings({localCache:firebase.firestore.persistentLocalCache({tabManager:firebase.firestore.persistentMultipleTabManager()})});
+                    } else { firestore.enablePersistence({synchronizeTabs:true}).catch(()=>{}); }
                 } catch(e) {}
 
                 // Auth state listener
@@ -8178,6 +8169,7 @@
         window._dbReadyPromise = null;
         window._dbReadyResolve = null;
         window._dbReadyPromise = new Promise(resolve => { window._dbReadyResolve = resolve; });
+        setTimeout(function(){if(window._dbReadyResolve){window._dbReadyResolve();window._dbReadyResolve=null;}},15000);
 
         // Ensure database is open and ready
         async function ensureDB() {
@@ -8204,7 +8196,8 @@
 
                 request.onerror = (event) => {
                     console.error('Database error:', event.target.error);
-                    reject(event.target.error);
+                    if(window._dbReadyResolve){window._dbReadyResolve();window._dbReadyResolve=null;}
+                    resolve(null);
                 };
 
                 request.onsuccess = (event) => {
