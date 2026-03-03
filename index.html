@@ -7079,8 +7079,8 @@
         }
 
         async function syncToFirebase() {
-            // DB check: skip if not ready, don't block
-            if (!window.db || !window.dbReady) return;
+            // DB check: skip gracefully if IndexedDB not ready yet
+            if (typeof db === 'undefined' || !db || !dbReady) return;
             const db = window.db || firestore;
             const cu = currentUser || (typeof MT !== 'undefined' ? MT.currentUser : null);
             if (!db || !cu) return;
@@ -7157,8 +7157,8 @@
         }
 
         async function syncFromFirebase() {
-            // DB check: skip if not ready, don't block
-            if (!window.db || !window.dbReady) return;
+            // DB check: skip gracefully if IndexedDB not ready yet
+            if (typeof db === 'undefined' || !db || !dbReady) return;
             const cu = currentUser || (typeof MT !== 'undefined' && MT.currentUser);
             const dbRef = window.db || firestore;
             if (!dbRef || !cu) return;
