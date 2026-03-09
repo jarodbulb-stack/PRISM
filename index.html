@@ -3059,6 +3059,9 @@
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </button>
             <p class="prism-hint">Tap anywhere to continue</p>
+            <button onclick="prismOpenDemo()" style="margin-top:16px;padding:10px 28px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);border-radius:50px;color:rgba(255,255,255,0.7);font-size:0.82rem;font-weight:600;cursor:pointer;letter-spacing:0.1em;backdrop-filter:blur(10px);transition:all 0.3s;" onmouseover="this.style.background='rgba(99,102,241,0.2)';this.style.borderColor='rgba(99,102,241,0.5)';this.style.color='#a5b4fc'" onmouseout="this.style.background='rgba(255,255,255,0.06)';this.style.borderColor='rgba(255,255,255,0.15)';this.style.color='rgba(255,255,255,0.7)'">
+                ✦ See What's Inside
+            </button>
         </div>
     </div>
 
@@ -3128,6 +3131,97 @@
         </div>
     </div>
 
+</div>
+
+<!-- ══ PRISM LOGOUT SCREEN ══ -->
+<div id="prism-logout" class="prism-screen" style="display:none;position:fixed;inset:0;z-index:10001;">
+    <div class="prism-bg" style="background:linear-gradient(160deg,#0a0f1e 0%,#1a1040 50%,#0a0f1e 100%);"></div>
+    <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:32px;padding:40px;">
+        <!-- Crystal logo -->
+        <div style="position:relative;width:80px;height:80px;">
+            <div style="position:absolute;inset:0;border-radius:50%;border:2px solid rgba(99,102,241,0.3);animation:prism-ring1 1.8s linear infinite;"></div>
+            <div style="position:absolute;inset:8px;border-radius:50%;border:2px solid rgba(139,92,246,0.4);animation:prism-ring2 1.4s linear infinite reverse;"></div>
+            <div style="position:absolute;inset:16px;border-radius:50%;border:2px solid rgba(167,139,250,0.6);animation:prism-ring3 1s linear infinite;"></div>
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.8rem;">◈</div>
+        </div>
+        <!-- Title -->
+        <div style="text-align:center;">
+            <div style="font-size:1.4rem;font-weight:700;color:#f1f5f9;letter-spacing:0.15em;margin-bottom:8px;">SIGNING OUT</div>
+            <div id="prism-logout-status" style="font-size:0.85rem;color:#94a3b8;letter-spacing:0.08em;min-height:20px;">Saving your work...</div>
+        </div>
+        <!-- Progress bar -->
+        <div style="width:220px;height:3px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;">
+            <div id="prism-logout-fill" style="height:100%;width:0%;background:linear-gradient(90deg,#6366f1,#8b5cf6,#a78bfa);border-radius:2px;transition:width 0.4s ease;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ PRISM DEMO MODAL ══ -->
+<div id="prism-demo-overlay" style="display:none;position:fixed;inset:0;z-index:10002;background:rgba(4,8,20,0.95);overflow-y:auto;">
+    <div style="max-width:900px;margin:0 auto;padding:40px 20px 80px;">
+        <!-- Header -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:40px;">
+            <div>
+                <div style="font-size:0.75rem;font-weight:700;color:#6366f1;letter-spacing:0.2em;margin-bottom:6px;">PROPERTY MANAGEMENT SYSTEM</div>
+                <div style="font-size:2rem;font-weight:800;color:#f1f5f9;letter-spacing:0.08em;">PRISM</div>
+                <div style="font-size:0.9rem;color:#64748b;margin-top:4px;">Everything your business needs — in one app.</div>
+            </div>
+            <button onclick="prismCloseDemo()" style="width:40px;height:40px;background:rgba(255,255,255,0.06);border:1px solid #334155;border-radius:50%;color:#94a3b8;font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>
+        </div>
+
+        <!-- Feature slideshow -->
+        <div style="position:relative;border-radius:20px;overflow:hidden;margin-bottom:40px;background:#0f172a;border:1px solid #1e293b;">
+            <div id="prism-demo-slides" style="display:flex;transition:transform 0.5s cubic-bezier(0.4,0,0.2,1);">
+                <!-- Slides injected by JS -->
+            </div>
+            <!-- Nav arrows -->
+            <button onclick="prismDemoSlide(-1)" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);width:40px;height:40px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.1);border-radius:50%;color:#fff;font-size:1.1rem;cursor:pointer;">‹</button>
+            <button onclick="prismDemoSlide(1)"  style="position:absolute;right:16px;top:50%;transform:translateY(-50%);width:40px;height:40px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.1);border-radius:50%;color:#fff;font-size:1.1rem;cursor:pointer;">›</button>
+            <!-- Dots -->
+            <div id="prism-demo-dots" style="position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:8px;"></div>
+        </div>
+
+        <!-- Feature grid -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:40px;">
+            <div style="background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:20px;">
+                <div style="font-size:1.5rem;margin-bottom:10px;">🏢</div>
+                <div style="font-weight:700;color:#f1f5f9;margin-bottom:6px;">Property Management</div>
+                <div style="font-size:0.82rem;color:#64748b;line-height:1.6;">Track units, tenants, leases and rental payments all in one place.</div>
+            </div>
+            <div style="background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:20px;">
+                <div style="font-size:1.5rem;margin-bottom:10px;">💧</div>
+                <div style="font-weight:700;color:#f1f5f9;margin-bottom:6px;">Water Billing</div>
+                <div style="font-size:0.82rem;color:#64748b;line-height:1.6;">Automated water usage tracking and billing for your customers.</div>
+            </div>
+            <div style="background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:20px;">
+                <div style="font-size:1.5rem;margin-bottom:10px;">👥</div>
+                <div style="font-weight:700;color:#f1f5f9;margin-bottom:6px;">HR & Payroll</div>
+                <div style="font-size:0.82rem;color:#64748b;line-height:1.6;">Employee records, time tracking, salary computation and cash advances.</div>
+            </div>
+            <div style="background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:20px;">
+                <div style="font-size:1.5rem;margin-bottom:10px;">💳</div>
+                <div style="font-weight:700;color:#f1f5f9;margin-bottom:6px;">Credit & Collections</div>
+                <div style="font-size:0.82rem;color:#64748b;line-height:1.6;">Track debtors, credit accounts and collection schedules effortlessly.</div>
+            </div>
+            <div style="background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:20px;">
+                <div style="font-size:1.5rem;margin-bottom:10px;">📊</div>
+                <div style="font-weight:700;color:#f1f5f9;margin-bottom:6px;">Reports & Analytics</div>
+                <div style="font-size:0.82rem;color:#64748b;line-height:1.6;">Visual dashboards and trend charts to keep you in control of your business.</div>
+            </div>
+            <div style="background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:20px;">
+                <div style="font-size:1.5rem;margin-bottom:10px;">🔒</div>
+                <div style="font-weight:700;color:#f1f5f9;margin-bottom:6px;">Multi-tenant Security</div>
+                <div style="font-size:0.82rem;color:#64748b;line-height:1.6;">Role-based access, org isolation and Firebase-backed security rules.</div>
+            </div>
+        </div>
+
+        <!-- CTA -->
+        <div style="text-align:center;padding:32px;background:linear-gradient(135deg,rgba(99,102,241,0.1),rgba(139,92,246,0.1));border:1px solid rgba(99,102,241,0.2);border-radius:16px;">
+            <div style="font-size:1.1rem;font-weight:700;color:#f1f5f9;margin-bottom:8px;">Ready to get started?</div>
+            <div style="font-size:0.85rem;color:#64748b;margin-bottom:20px;">Contact the administrator for access or sign in if you already have an account.</div>
+            <button onclick="prismCloseDemo();prismGoToLogin();" style="padding:12px 36px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;border-radius:10px;color:#fff;font-size:0.95rem;font-weight:700;cursor:pointer;letter-spacing:0.05em;">Sign In →</button>
+        </div>
+    </div>
 </div>
 
 <div id="mt-auth">
@@ -22695,9 +22789,18 @@ function _mtShowAppActual() {
 }
 
 function mtShowSuperAdmin() {
-    mtShowScreen('mt-superadmin');
-    document.getElementById('mt-sa-user-email').textContent = MT.currentUser?.email || '';
-    mtLoadSAData();
+    // Show cinematic connecting screen first, then SA panel
+    if (typeof prismShowConnecting === 'function') {
+        prismShowConnecting(() => {
+            mtShowScreen('mt-superadmin');
+            document.getElementById('mt-sa-user-email').textContent = MT.currentUser?.email || '';
+            mtLoadSAData();
+        });
+    } else {
+        mtShowScreen('mt-superadmin');
+        document.getElementById('mt-sa-user-email').textContent = MT.currentUser?.email || '';
+        mtLoadSAData();
+    }
 }
 
 // ---- Loading screen ----
@@ -24138,12 +24241,15 @@ function mtShowRoleDashboard() {
 // App-level logout — works for both Google and local users
 async function mtAppLogout() {
     let confirmed = false;
-    try { confirmed = await showConfirm('Are you sure you want to logout?', 'warning', '👋 Logout', 'Yes, Logout'); } 
+    try { confirmed = await showConfirm('Are you sure you want to logout?', 'warning', '👋 Logout', 'Yes, Logout'); }
     catch(e) { confirmed = window.confirm('Are you sure you want to logout?'); }
     if (!confirmed) return;
+
+    // Stop sync immediately
     try { mtStopRealtimeSync(); } catch(e) {}
-    try { showToast('👋 Logged out successfully', 'success'); } catch(e) {}
-    setTimeout(() => mtLogout(), 800);
+
+    // Show cinematic logout/saving screen
+    prismShowLogout(() => mtLogout());
 }
 
 // ---- Main Init ----
@@ -25011,6 +25117,164 @@ window.mtSAToggleOrgStatus=mtSAToggleOrgStatus;
             }
             return _origSuspend(docId);
         };
+
+
+        
+        // ══ PRISM LOGOUT SPINNER ══
+        function prismShowLogout(onComplete) {
+            const screen = document.getElementById('prism-logout');
+            if (!screen) { onComplete && onComplete(); return; }
+            screen.style.display = 'block';
+
+            const statusEl = document.getElementById('prism-logout-status');
+            const fillEl   = document.getElementById('prism-logout-fill');
+
+            const steps = [
+                [0,    'Saving your work...', 20],
+                [600,  'Syncing to cloud...', 55],
+                [1400, 'Closing connections...', 80],
+                [2000, 'Signing you out safely...', 95],
+                [2600, 'See you soon! 👋', 100],
+            ];
+
+            steps.forEach(([delay, msg, pct]) => {
+                setTimeout(() => {
+                    if (statusEl) statusEl.textContent = msg;
+                    if (fillEl)   fillEl.style.width = pct + '%';
+                }, delay);
+            });
+
+            setTimeout(() => {
+                screen.style.display = 'none';
+                onComplete && onComplete();
+            }, 3000);
+        }
+        window.prismShowLogout = prismShowLogout;
+
+        // ══ PRISM DEMO SLIDESHOW ══
+        const _demoSlides = [
+            {
+                icon: '🏢',
+                color: 'linear-gradient(135deg,#1e1b4b,#312e81)',
+                accent: '#6366f1',
+                title: 'Property Management',
+                desc: 'Manage all your properties, units and tenants from a single dashboard. Track vacancies, lease expiry and rental history at a glance.',
+                tags: ['Properties', 'Tenants', 'Leases', 'Vacancies'],
+            },
+            {
+                icon: '💰',
+                color: 'linear-gradient(135deg,#064e3b,#065f46)',
+                accent: '#10b981',
+                title: 'Rental & Payments',
+                desc: 'Record and monitor rental payments, generate receipts and track outstanding balances. Never miss a payment again.',
+                tags: ['Payments', 'Receipts', 'Balances', 'History'],
+            },
+            {
+                icon: '💧',
+                color: 'linear-gradient(135deg,#0c4a6e,#075985)',
+                accent: '#0ea5e9',
+                title: 'Water Billing',
+                desc: 'Track water meter readings, compute consumption and generate billing statements for individual customers automatically.',
+                tags: ['Meter Readings', 'Billing', 'Consumption', 'Customers'],
+            },
+            {
+                icon: '👥',
+                color: 'linear-gradient(135deg,#4a1942,#6b21a8)',
+                accent: '#a855f7',
+                title: 'HR & Payroll',
+                desc: 'Complete employee management — attendance, time records, overtime, salary computation and cash advance tracking.',
+                tags: ['Employees', 'Payroll', 'Attendance', 'Cash Advance'],
+            },
+            {
+                icon: '💳',
+                color: 'linear-gradient(135deg,#7c2d12,#9a3412)',
+                accent: '#f97316',
+                title: 'Credit & Collections',
+                desc: 'Monitor credit accounts and debtors. Track outstanding balances, payment schedules and collection status in real time.',
+                tags: ['Credits', 'Debtors', 'Collections', 'Balances'],
+            },
+            {
+                icon: '📊',
+                color: 'linear-gradient(135deg,#1e293b,#0f172a)',
+                accent: '#38bdf8',
+                title: 'Analytics & Reports',
+                desc: 'Beautiful charts and trend reports across all your business data. Income, expenses, collections — all visualized clearly.',
+                tags: ['Dashboard', 'Charts', 'Trends', 'Export'],
+            },
+        ];
+
+        let _demoCurrentSlide = 0;
+        let _demoAutoTimer = null;
+
+        function prismOpenDemo() {
+            const overlay = document.getElementById('prism-demo-overlay');
+            if (!overlay) return;
+            _demoCurrentSlide = 0;
+            _prismRenderDemoSlides();
+            overlay.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+            _demoAutoTimer = setInterval(() => prismDemoSlide(1), 4000);
+        }
+
+        function prismCloseDemo() {
+            const overlay = document.getElementById('prism-demo-overlay');
+            if (overlay) overlay.style.display = 'none';
+            document.body.style.overflow = '';
+            if (_demoAutoTimer) { clearInterval(_demoAutoTimer); _demoAutoTimer = null; }
+        }
+
+        function _prismRenderDemoSlides() {
+            const container = document.getElementById('prism-demo-slides');
+            const dots      = document.getElementById('prism-demo-dots');
+            if (!container) return;
+
+            container.innerHTML = _demoSlides.map((s, i) => `
+                <div style="min-width:100%;padding:48px 40px;background:${s.color};box-sizing:border-box;">
+                    <div style="max-width:600px;margin:0 auto;text-align:center;">
+                        <div style="font-size:3.5rem;margin-bottom:20px;filter:drop-shadow(0 0 20px ${s.accent});">${s.icon}</div>
+                        <div style="font-size:1.6rem;font-weight:800;color:#f1f5f9;margin-bottom:14px;letter-spacing:0.05em;">${s.title}</div>
+                        <div style="font-size:0.92rem;color:rgba(255,255,255,0.7);line-height:1.8;margin-bottom:24px;max-width:440px;margin-left:auto;margin-right:auto;">${s.desc}</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;">
+                            ${s.tags.map(t => `<span style="padding:4px 14px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:50px;font-size:0.75rem;color:rgba(255,255,255,0.8);font-weight:600;">${t}</span>`).join('')}
+                        </div>
+                    </div>
+                </div>`).join('');
+
+            if (dots) {
+                dots.innerHTML = _demoSlides.map((_, i) =>
+                    `<div onclick="prismDemoGoTo(${i})" style="width:${i===0?'20px':'8px'};height:8px;border-radius:4px;background:${i===0?'#fff':'rgba(255,255,255,0.3)'};cursor:pointer;transition:all 0.3s;" id="prism-dot-${i}"></div>`
+                ).join('');
+            }
+        }
+
+        function prismDemoSlide(dir) {
+            _demoCurrentSlide = (_demoCurrentSlide + dir + _demoSlides.length) % _demoSlides.length;
+            _prismUpdateDemoPosition();
+        }
+
+        function prismDemoGoTo(idx) {
+            _demoCurrentSlide = idx;
+            _prismUpdateDemoPosition();
+            if (_demoAutoTimer) { clearInterval(_demoAutoTimer); _demoAutoTimer = setInterval(()=>prismDemoSlide(1),4000); }
+        }
+
+        function _prismUpdateDemoPosition() {
+            const container = document.getElementById('prism-demo-slides');
+            if (container) container.style.transform = `translateX(-${_demoCurrentSlide * 100}%)`;
+            _demoSlides.forEach((_,i) => {
+                const dot = document.getElementById('prism-dot-'+i);
+                if (dot) {
+                    dot.style.width  = i === _demoCurrentSlide ? '20px' : '8px';
+                    dot.style.background = i === _demoCurrentSlide ? '#fff' : 'rgba(255,255,255,0.3)';
+                }
+            });
+        }
+
+        window.prismOpenDemo    = prismOpenDemo;
+        window.prismCloseDemo   = prismCloseDemo;
+        window.prismDemoSlide   = prismDemoSlide;
+        window.prismDemoGoTo    = prismDemoGoTo;
+        window.prismShowLogout  = prismShowLogout;
 
 
         // ---- Intercept existing appLogout to use MT logout ----
