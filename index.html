@@ -4686,8 +4686,9 @@
                 </div>
                 <p style="color: var(--text-secondary); margin-bottom: 15px;">Load sample data to see how the app works with real examples.</p>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button class="btn btn-primary" onclick="console.log('Load Sample Data button clicked!'); loadSampleData();">📦 Load Sample Data</button>
-                    <button class="btn btn-danger" onclick="console.log('Clear All Data button clicked!'); clearAllData();">🗑️ Clear All Data</button>
+                    <button class="btn btn-primary" onclick="loadSampleData();">📦 Load Sample Data</button>
+                    <button class="btn btn-warning" onclick="deleteSampleData();" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;">🧹 Delete Sample Data Only</button>
+                    <button class="btn btn-danger" onclick="clearAllData();">🗑️ Clear All Data</button>
                 </div>
                 <p style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 10px;">
                     Sample data includes: Properties, Tenants, Employees, Credits, Water Customers, and Transactions
@@ -16169,8 +16170,13 @@ async function showPayrollSummary() {
             safeSetText('exp-savings', '₱' + expenseByCategory.savings.toLocaleString());
 
             // Render calendar with error handling
+            // Load tasks and notes for calendar
+            let calendarTasks = [], calendarNotes = [];
+            try { calendarTasks = await dbGetAll('tasks') || []; } catch(e) {}
+            try { calendarNotes = await dbGetAll('customNotes') || []; } catch(e) {}
+
             try {
-                await renderCalendar(tenants, credits, payments, creditPayments);
+                await renderCalendar(tenants, credits, payments, creditPayments, calendarTasks, calendarNotes);
             } catch (error) {
                 console.error('Error rendering calendar:', error);
             }
@@ -16435,121 +16441,171 @@ async function showPayrollSummary() {
             loadDashboard();
         }
 
-        async function renderCalendar(tenants, credits, payments, creditPayments) {
+        async function renderCalendar(tenants, credits, payments, creditPayments, tasks, notes) {
+            tasks = tasks || []; notes = notes || [];
             const calendar = document.getElementById('collection-calendar');
             const monthLabel = document.getElementById('calendar-month-label');
-            
-            // Exit early if calendar elements don't exist
-            if (!calendar || !monthLabel) {
-                console.log('Calendar elements not found, skipping calendar render');
-                return;
-            }
-            
-            const year = calendarDate.getFullYear();
+            if (!calendar || !monthLabel) return;
+
+            const year  = calendarDate.getFullYear();
             const month = calendarDate.getMonth();
-            
             monthLabel.textContent = calendarDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-            
-            const firstDay = new Date(year, month, 1);
-            const lastDay = new Date(year, month + 1, 0);
+
+            const firstDay    = new Date(year, month, 1);
+            const lastDay     = new Date(year, month + 1, 0);
             const startingDay = firstDay.getDay();
-            const totalDays = lastDay.getDate();
-            
-            const today = new Date();
-            const currentMonthStr = `${year}-${String(month + 1).padStart(2, '0')}`;
-            
-            // Get payment data for this month
-            const monthPayments = payments.filter(p => p.date.startsWith(currentMonthStr));
-            const monthCreditPayments = creditPayments.filter(p => p.date.startsWith(currentMonthStr));
-            
-            // Build schedule data
+            const totalDays   = lastDay.getDate();
+            const today       = new Date();
+            const currentMonthStr = `${year}-${String(month+1).padStart(2,'0')}`;
+
+            const monthPayments       = payments.filter(p => p.date && p.date.startsWith(currentMonthStr));
+            const monthCreditPayments = creditPayments.filter(p => p.date && p.date.startsWith(currentMonthStr));
+
+            // Build per-day schedule
             const scheduleData = {};
-            
-            // Tenants are due on the 5th of each month
+            function getDay(d) {
+                if (!scheduleData[d]) scheduleData[d] = { tenants:[], debtors:[], overdue:[], tasks:[], notes:[] };
+                return scheduleData[d];
+            }
+
+            // ── TENANTS due on 5th ──
             tenants.forEach(tenant => {
                 const dueDay = 5;
-                if (!scheduleData[dueDay]) scheduleData[dueDay] = { tenants: [], debtors: [], overdue: [] };
-                
                 const paidThisMonth = monthPayments.some(p => p.tenantId === tenant.id && p.monthCovered === currentMonthStr);
-                
-                if (paidThisMonth) {
-                    // Already paid, no need to show
-                } else if (today.getMonth() === month && today.getFullYear() === year && today.getDate() > dueDay) {
-                    scheduleData[dueDay].overdue.push({ type: 'tenant', ...tenant });
-                } else {
-                    scheduleData[dueDay].tenants.push(tenant);
+                if (!paidThisMonth) {
+                    const sd = getDay(dueDay);
+                    if (today.getMonth()===month && today.getFullYear()===year && today.getDate()>dueDay) {
+                        sd.overdue.push({ type:'tenant', label:`🏠 ${tenant.name}`, sub:`Rent due`, amount: tenant.monthlyRent });
+                    } else {
+                        sd.tenants.push({ type:'tenant', label:`🏠 ${tenant.name}`, sub:`Rent due`, amount: tenant.monthlyRent });
+                    }
                 }
             });
-            
-            // Credits - due based on date lent (same day of month)
+
+            // ── CREDITS due on day of month lent ──
             credits.forEach(credit => {
+                if (!credit.dateLent) return;
                 const lentDate = new Date(credit.dateLent);
-                const dueDay = lentDate.getDate();
-                if (!scheduleData[dueDay]) scheduleData[dueDay] = { tenants: [], debtors: [], overdue: [] };
-                
-                // Check if fully paid
-                const creditPmts = creditPayments.filter(p => p.creditId === credit.id);
-                const totalPaid = creditPmts.reduce((sum, p) => sum + p.amount, 0);
-                let totalDue = credit.principal;
+                const dueDay   = lentDate.getDate();
+                const creditPmts  = creditPayments.filter(p => p.creditId === credit.id);
+                const totalPaid   = creditPmts.reduce((s,p) => s+(p.amount||0), 0);
+                let   totalDue    = credit.principal || 0;
                 if (credit.interestType === 'simple') {
-                    const months = Math.ceil((today - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
-                    totalDue = credit.principal + (credit.principal * (credit.interestRate / 100) * months);
+                    const months = Math.ceil((today - lentDate) / (1000*60*60*24*30));
+                    totalDue = (credit.principal||0) + (credit.principal||0) * ((credit.interestRate||0)/100) * months;
                 } else if (credit.interestType === 'flat') {
-                    totalDue = credit.principal + credit.interestRate;
+                    totalDue = (credit.principal||0) + (credit.interestRate||0);
                 }
-                
-                if (totalPaid >= totalDue) {
-                    // Fully paid
-                } else if (today.getMonth() === month && today.getFullYear() === year && today.getDate() > dueDay) {
-                    scheduleData[dueDay].overdue.push({ type: 'debtor', ...credit });
+                if (totalPaid >= totalDue) return;
+                const sd = getDay(dueDay);
+                const balance = (totalDue - totalPaid).toLocaleString('en-PH',{style:'currency',currency:'PHP'});
+                if (today.getMonth()===month && today.getFullYear()===year && today.getDate()>dueDay) {
+                    sd.overdue.push({ type:'debtor', label:`💳 ${credit.debtor||credit.name||'Debtor'}`, sub:`Balance: ${balance}` });
                 } else {
-                    scheduleData[dueDay].debtors.push(credit);
+                    sd.debtors.push({ type:'debtor', label:`💳 ${credit.debtor||credit.name||'Debtor'}`, sub:`Balance: ${balance}` });
                 }
             });
-            
-            // Render calendar HTML
-            let html = '';
-            
-            // Headers
-            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-            days.forEach(day => {
-                html += `<div class="calendar-header">${day}</div>`;
+
+            // ── TASKS with dueDate ──
+            tasks.forEach(task => {
+                if (!task.dueDate || task.status === 'completed' || task.status === 'done') return;
+                const d = new Date(task.dueDate);
+                if (d.getFullYear()!==year || d.getMonth()!==month) return;
+                const dueDay = d.getDate();
+                const sd = getDay(dueDay);
+                const isOverdue = today > d && task.status !== 'completed';
+                const icon = task.priority==='high' ? '🔴' : task.priority==='medium' ? '🟡' : '🟢';
+                const entry = { type:'task', label:`${icon} ${task.title}`, sub: task.category||'Task', priority: task.priority };
+                if (isOverdue) sd.overdue.push(entry);
+                else sd.tasks.push(entry);
             });
-            
-            // Empty cells before first day
-            for (let i = 0; i < startingDay; i++) {
-                html += '<div class="calendar-day empty"></div>';
-            }
-            
-            // Days
-            for (let day = 1; day <= totalDays; day++) {
-                const isToday = today.getDate() === day && today.getMonth() === month && today.getFullYear() === year;
-                const schedule = scheduleData[day] || { tenants: [], debtors: [], overdue: [] };
-                
+
+            // ── NOTES with date ──
+            notes.forEach(note => {
+                if (!note.date) return;
+                const d = new Date(note.date);
+                if (d.getFullYear()!==year || d.getMonth()!==month) return;
+                const dueDay = d.getDate();
+                const sd = getDay(dueDay);
+                sd.notes.push({ type:'note', label:`📝 ${note.title||'Note'}`, sub: note.category||'Note' });
+            });
+
+            // ── RENDER ──
+            let calHtml = '';
+            const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+            dayNames.forEach(d => { calHtml += `<div class="calendar-header">${d}</div>`; });
+            for (let i=0; i<startingDay; i++) calHtml += '<div class="calendar-day empty"></div>';
+
+            for (let day=1; day<=totalDays; day++) {
+                const isToday  = today.getDate()===day && today.getMonth()===month && today.getFullYear()===year;
+                const sd       = scheduleData[day] || { tenants:[], debtors:[], overdue:[], tasks:[], notes:[] };
+                const hasTask  = sd.tasks.length > 0;
+                const hasNote  = sd.notes.length > 0;
+                const allItems = [...(sd.overdue||[]), ...(sd.tenants||[]), ...(sd.debtors||[]), ...(sd.tasks||[]), ...(sd.notes||[])];
+
                 let dayClass = 'calendar-day';
                 if (isToday) dayClass += ' today';
-                if (schedule.overdue.length > 0) dayClass += ' has-overdue';
-                else if (schedule.tenants.length > 0 && schedule.debtors.length > 0) dayClass += ' has-both';
-                else if (schedule.tenants.length > 0) dayClass += ' has-tenant';
-                else if (schedule.debtors.length > 0) dayClass += ' has-debtor';
-                
+                if (sd.overdue.length > 0) dayClass += ' has-overdue';
+                else if (sd.tenants.length>0 && sd.debtors.length>0) dayClass += ' has-both';
+                else if (sd.tenants.length>0) dayClass += ' has-tenant';
+                else if (sd.debtors.length>0) dayClass += ' has-debtor';
+                else if (hasTask) dayClass += ' has-task';
+                else if (hasNote) dayClass += ' has-note';
+
+                // Dot indicators
                 let dots = '';
-                if (schedule.tenants.length > 0) dots += '<span class="dot tenant"></span>';
-                if (schedule.debtors.length > 0) dots += '<span class="dot debtor"></span>';
-                if (schedule.overdue.length > 0) dots += '<span class="dot overdue"></span>';
-                
-                const hasSchedule = schedule.tenants.length > 0 || schedule.debtors.length > 0 || schedule.overdue.length > 0;
-                const onclick = hasSchedule ? `onclick="showDaySchedule(${day}, ${month}, ${year})"` : '';
-                
-                html += `
-                    <div class="${dayClass}" ${onclick}>
-                        <span class="day-number">${day}</span>
-                        ${dots ? `<div class="day-dots">${dots}</div>` : ''}
-                    </div>
-                `;
+                if (sd.tenants.length>0 || sd.overdue.some(x=>x.type==='tenant'))  dots += '<span class="cal-dot dot-rent"></span>';
+                if (sd.debtors.length>0 || sd.overdue.some(x=>x.type==='debtor'))   dots += '<span class="cal-dot dot-credit"></span>';
+                if (hasTask || sd.overdue.some(x=>x.type==='task'))                 dots += '<span class="cal-dot dot-task"></span>';
+                if (hasNote)                                                          dots += '<span class="cal-dot dot-note"></span>';
+
+                // Tooltip items
+                let tooltip = '';
+                if (allItems.length > 0) {
+                    tooltip = `<div class="cal-tooltip"><div class="cal-tooltip-date">${day} ${calendarDate.toLocaleString('default',{month:'short'})}</div>`;
+                    allItems.slice(0,6).forEach(item => {
+                        const cls = item.type==='task'?'cal-tt-task':item.type==='note'?'cal-tt-note':item.type==='debtor'?'cal-tt-debtor':'cal-tt-tenant';
+                        tooltip += `<div class="cal-tt-item ${cls}"><div class="cal-tt-label">${item.label}</div><div class="cal-tt-sub">${item.sub||''}</div></div>`;
+                    });
+                    if (allItems.length > 6) tooltip += `<div class="cal-tt-more">+${allItems.length-6} more</div>`;
+                    tooltip += '</div>';
+                }
+
+                const badge = allItems.length > 0 ? `<span class="cal-badge">${allItems.length}</span>` : '';
+                calHtml += `<div class="${dayClass}" data-day="${day}">${day}${badge}<div class="cal-dots">${dots}</div>${tooltip}</div>`;
             }
-            
-            calendar.innerHTML = html;
+
+            calendar.innerHTML = calHtml;
+
+            // Inject calendar styles if not present
+            if (!document.getElementById('cal-enhanced-styles')) {
+                const style = document.createElement('style');
+                style.id = 'cal-enhanced-styles';
+                style.textContent = `
+                    .cal-dots { display:flex; gap:2px; justify-content:center; margin-top:2px; flex-wrap:wrap; }
+                    .cal-dot  { width:5px; height:5px; border-radius:50%; display:inline-block; }
+                    .dot-rent   { background:#38bdf8; }
+                    .dot-credit { background:#f97316; }
+                    .dot-task   { background:#a78bfa; }
+                    .dot-note   { background:#4ade80; }
+                    .cal-badge  { position:absolute; top:2px; right:3px; font-size:0.55rem; background:rgba(255,255,255,0.15); border-radius:6px; padding:0 3px; color:#94a3b8; }
+                    .calendar-day { position:relative; }
+                    .has-task   { border-color: rgba(167,139,250,0.4) !important; background: rgba(167,139,250,0.05) !important; }
+                    .has-note   { border-color: rgba(74,222,128,0.4) !important; background: rgba(74,222,128,0.05) !important; }
+                    .cal-tooltip { display:none; position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%); background:#0f172a; border:1px solid #1e293b; border-radius:10px; padding:10px; min-width:180px; max-width:220px; z-index:999; box-shadow:0 8px 24px rgba(0,0,0,0.5); }
+                    .calendar-day:hover .cal-tooltip { display:block; }
+                    .cal-tooltip-date { font-size:0.7rem; font-weight:700; color:#64748b; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:8px; }
+                    .cal-tt-item  { padding:5px 8px; border-radius:6px; margin-bottom:4px; }
+                    .cal-tt-label { font-size:0.78rem; font-weight:600; color:#f1f5f9; }
+                    .cal-tt-sub   { font-size:0.7rem; color:#64748b; margin-top:1px; }
+                    .cal-tt-tenant { background:rgba(56,189,248,0.08); border-left:2px solid #38bdf8; }
+                    .cal-tt-debtor { background:rgba(249,115,22,0.08); border-left:2px solid #f97316; }
+                    .cal-tt-task   { background:rgba(167,139,250,0.08); border-left:2px solid #a78bfa; }
+                    .cal-tt-note   { background:rgba(74,222,128,0.08); border-left:2px solid #4ade80; }
+                    .cal-tt-more   { font-size:0.7rem; color:#64748b; text-align:center; margin-top:4px; }
+                `;
+                document.head.appendChild(style);
+            }
         }
 
         async function showDaySchedule(day, month, year) {
@@ -16796,8 +16852,68 @@ async function showPayrollSummary() {
             event.target.value = '';
         }
 
+        
+        // ══ DELETE SAMPLE DATA ONLY ══
+        async function deleteSampleData() {
+            // Step 1 — Initial confirm
+            const step1 = await showConfirm(
+                'This will permanently delete all sample/demo data across every module — properties, tenants, payments, credits, employees, water, tasks, notes and more.\n\nYour REAL recorded data will NOT be affected.',
+                'warning', '🧹 Delete Sample Data', 'Yes, continue'
+            );
+            if (!step1) return;
+
+            // Step 2 — Second confirm
+            const step2 = await showConfirm(
+                'Are you absolutely sure? This action cannot be undone.\n\nOnly records tagged as sample data will be removed.',
+                'danger', '⚠️ Final Warning', 'Yes, delete sample data'
+            );
+            if (!step2) return;
+
+            // Step 3 — Type confirmation
+            const typed = window.prompt('Type  DELETE SAMPLE  to confirm (case sensitive):');
+            if (typed !== 'DELETE SAMPLE') {
+                showToast('❌ Cancelled — text did not match.', 'error');
+                return;
+            }
+
+            showToast('🧹 Deleting sample data...', 'info');
+            let totalDeleted = 0;
+
+            try {
+                const tables = ['properties', 'tenants', 'payments', 'credits', 'creditPayments', 'employees', 'timeRecords', 'cashAdvances', 'waterCustomers', 'waterSales', 'expenses', 'tasks', 'customNotes', 'clientCharges', 'additionalIncome'];
+                for (const table of tables) {
+                    try {
+                        const allRecords = await dbGetAll(table);
+                        const sampleRecords = allRecords.filter(r => r.isSample === true);
+                        for (const record of sampleRecords) {
+                            await dbDelete(table, record.id);
+                            totalDeleted++;
+                        }
+                    } catch(e) { console.warn('[DeleteSample] Skipping table:', table, e); }
+                }
+
+                // Sync to Firebase after deletion
+                try { await syncToFirebase(); } catch(e) {}
+
+                showToast(`✅ Done! ${totalDeleted} sample records deleted. Your real data is safe.`, 'success');
+                setTimeout(() => loadDashboard(), 1000);
+
+            } catch(e) {
+                showToast('❌ Error deleting sample data: ' + e.message, 'error');
+            }
+        }
+        window.deleteSampleData = deleteSampleData;
+
         async function clearAllData() {
-            if (!await showConfirm('ALL data will be permanently deleted from this device and the cloud — properties, tenants, payments, credits, expenses, notes, water records, and employees. This CANNOT be undone.', 'danger', '☢️ Delete ALL Data', 'Yes, Delete Everything')) return;
+            // Step 1
+            const _ca1 = await showConfirm('ALL data will be permanently deleted — properties, tenants, payments, credits, expenses, notes, water records, and employees.\n\nThis CANNOT be undone.', 'danger', '☢️ Delete ALL Data', 'Yes, continue');
+            if (!_ca1) return;
+            // Step 2
+            const _ca2 = await showConfirm('This is your FINAL warning.\n\nEvery single record — real and sample — will be gone forever. Are you absolutely sure?', 'danger', '☢️ Point of No Return', 'I understand, proceed');
+            if (!_ca2) return;
+            // Step 3 — type confirm
+            const _ca3 = window.prompt('Type  DELETE ALL  to confirm (case sensitive):');
+            if (_ca3 !== 'DELETE ALL') { showToast('❌ Cancelled — text did not match.', 'error'); return; }
 
             try {
                 // Clear local IndexedDB
@@ -21860,13 +21976,13 @@ async function editTask(id) {
                 console.log('Starting to add properties...');
                 // ===== PROPERTIES =====
                 const properties = [
-                    { name: 'Lot 1 - Poblacion', type: 'lot', address: 'Purok 1, Poblacion', rent: 3000, status: 'occupied', createdAt: new Date().toISOString() },
-                    { name: 'Lot 2 - Riverside', type: 'lot', address: 'Riverside Subd', rent: 3500, status: 'vacant', createdAt: new Date().toISOString() },
-                    { name: 'Apartment Unit A', type: 'apartment', address: 'Main Street', rent: 5000, status: 'occupied', createdAt: new Date().toISOString() },
-                    { name: 'Apartment Unit B', type: 'apartment', address: 'Main Street', rent: 5000, status: 'vacant', createdAt: new Date().toISOString() },
-                    { name: 'Room 1 - Boarding', type: 'room', address: 'Near Market', rent: 2000, status: 'occupied', createdAt: new Date().toISOString() },
-                    { name: 'Room 2 - Boarding', type: 'room', address: 'Near Market', rent: 2000, status: 'vacant', createdAt: new Date().toISOString() },
-                    { name: 'Commercial Space', type: 'commercial', address: 'Highway', rent: 8000, status: 'vacant', createdAt: new Date().toISOString() },
+                    { name: 'Lot 1 - Poblacion', type: 'lot', address: 'Purok 1, Poblacion', rent: 3000, status: 'occupied', createdAt: new Date().toISOString(), isSample: true },
+                    { name: 'Lot 2 - Riverside', type: 'lot', address: 'Riverside Subd', rent: 3500, status: 'vacant', createdAt: new Date().toISOString(), isSample: true },
+                    { name: 'Apartment Unit A', type: 'apartment', address: 'Main Street', rent: 5000, status: 'occupied', createdAt: new Date().toISOString(), isSample: true },
+                    { name: 'Apartment Unit B', type: 'apartment', address: 'Main Street', rent: 5000, status: 'vacant', createdAt: new Date().toISOString(), isSample: true },
+                    { name: 'Room 1 - Boarding', type: 'room', address: 'Near Market', rent: 2000, status: 'occupied', createdAt: new Date().toISOString(), isSample: true },
+                    { name: 'Room 2 - Boarding', type: 'room', address: 'Near Market', rent: 2000, status: 'vacant', createdAt: new Date().toISOString(), isSample: true },
+                    { name: 'Commercial Space', type: 'commercial', address: 'Highway', rent: 8000, status: 'vacant', createdAt: new Date().toISOString(), isSample: true },
                 ];
                 
                 for (const p of properties) {
@@ -21881,10 +21997,10 @@ async function editTask(id) {
                 
                 // ===== TENANTS =====
                 const tenants = [
-                    { name: 'Juan Dela Cruz', phone: '09171234567', propertyId: prop1 ? prop1.id : null, rent: 3000, dueDay: 5, status: 'active', moveIn: '2024-06-01', createdAt: new Date().toISOString() },
-                    { name: 'Maria Santos', phone: '09189876543', propertyId: prop3 ? prop3.id : null, rent: 5000, dueDay: 10, status: 'active', moveIn: '2024-08-15', createdAt: new Date().toISOString() },
-                    { name: 'Pedro Reyes', phone: '09201112233', propertyId: prop5 ? prop5.id : null, rent: 2000, dueDay: 1, status: 'active', moveIn: '2024-09-01', createdAt: new Date().toISOString() },
-                    { name: 'Ana Garcia', phone: '09223334455', propertyId: null, rent: 0, dueDay: 0, status: 'inactive', moveIn: '2024-01-01', createdAt: new Date().toISOString() },
+                    { name: 'Juan Dela Cruz', phone: '09171234567', propertyId: prop1 ? prop1.id : null, rent: 3000, dueDay: 5, status: 'active', moveIn: '2024-06-01', createdAt: new Date().toISOString(), isSample: true },
+                    { name: 'Maria Santos', phone: '09189876543', propertyId: prop3 ? prop3.id : null, rent: 5000, dueDay: 10, status: 'active', moveIn: '2024-08-15', createdAt: new Date().toISOString(), isSample: true },
+                    { name: 'Pedro Reyes', phone: '09201112233', propertyId: prop5 ? prop5.id : null, rent: 2000, dueDay: 1, status: 'active', moveIn: '2024-09-01', createdAt: new Date().toISOString(), isSample: true },
+                    { name: 'Ana Garcia', phone: '09223334455', propertyId: null, rent: 0, dueDay: 0, status: 'inactive', moveIn: '2024-01-01', createdAt: new Date().toISOString(), isSample: true },
                 ];
                 
                 for (const t of tenants) {
@@ -21898,17 +22014,17 @@ async function editTask(id) {
                 
                 // ===== PAYMENTS =====
                 if (tenant1) {
-                    await dbAdd('payments', { tenantId: tenant1.id, amount: 3000, method: 'cash', date: dateStr(5), forMonth: dateStr(1).substring(0, 7), createdAt: new Date().toISOString() });
+                    await dbAdd('payments', { tenantId: tenant1.id, amount: 3000, method: 'cash', date: dateStr(5), forMonth: dateStr(1).substring(0, 7), createdAt: new Date().toISOString(), isSample: true });
                 }
                 if (tenant2) {
-                    await dbAdd('payments', { tenantId: tenant2.id, amount: 5000, method: 'gcash', date: dateStr(10), forMonth: dateStr(1).substring(0, 7), createdAt: new Date().toISOString() });
+                    await dbAdd('payments', { tenantId: tenant2.id, amount: 5000, method: 'gcash', date: dateStr(10), forMonth: dateStr(1).substring(0, 7), createdAt: new Date().toISOString(), isSample: true });
                 }
                 
                 // ===== CREDITS/LOANS =====
                 const credits = [
-                    { borrowerName: 'Roberto Fernandez', borrowerPhone: '09151234567', principal: 10000, interest: 1000, interestRate: 10, date: '2024-10-01', dueDate: '2025-01-01', notes: 'Personal loan', createdAt: new Date().toISOString() },
-                    { borrowerName: 'Liza Mendoza', borrowerPhone: '09162345678', principal: 5000, interest: 500, interestRate: 10, date: '2024-11-15', dueDate: '2025-02-15', notes: 'Emergency loan', createdAt: new Date().toISOString() },
-                    { borrowerName: 'Carlos Rivera', borrowerPhone: '09173456789', principal: 15000, interest: 2250, interestRate: 15, date: '2024-09-01', dueDate: '2024-12-01', notes: 'Business loan', createdAt: new Date().toISOString() },
+                    { borrowerName: 'Roberto Fernandez', borrowerPhone: '09151234567', principal: 10000, interest: 1000, interestRate: 10, date: '2024-10-01', dueDate: '2025-01-01', notes: 'Personal loan', createdAt: new Date().toISOString(), isSample: true },
+                    { borrowerName: 'Liza Mendoza', borrowerPhone: '09162345678', principal: 5000, interest: 500, interestRate: 10, date: '2024-11-15', dueDate: '2025-02-15', notes: 'Emergency loan', createdAt: new Date().toISOString(), isSample: true },
+                    { borrowerName: 'Carlos Rivera', borrowerPhone: '09173456789', principal: 15000, interest: 2250, interestRate: 15, date: '2024-09-01', dueDate: '2024-12-01', notes: 'Business loan', createdAt: new Date().toISOString(), isSample: true },
                 ];
                 
                 for (const c of credits) {
@@ -21922,17 +22038,17 @@ async function editTask(id) {
                 
                 // ===== CREDIT PAYMENTS =====
                 if (credit1) {
-                    await dbAdd('creditPayments', { creditId: credit1.id, amount: 3000, date: dateStr(1), notes: 'Partial payment', createdAt: new Date().toISOString() });
+                    await dbAdd('creditPayments', { creditId: credit1.id, amount: 3000, date: dateStr(1), notes: 'Partial payment', createdAt: new Date().toISOString(), isSample: true });
                 }
                 if (credit3) {
-                    await dbAdd('creditPayments', { creditId: credit3.id, amount: 5000, date: dateStr(5), notes: 'Partial payment', createdAt: new Date().toISOString() });
+                    await dbAdd('creditPayments', { creditId: credit3.id, amount: 5000, date: dateStr(5), notes: 'Partial payment', createdAt: new Date().toISOString(), isSample: true });
                 }
                 
                 // ===== EMPLOYEES =====
                 const employees = [
-                    { name: 'Roger Ellioso', position: 'Staff', dailyRate: 300, payFrequency: 'weekly', phone: '09181234567', otRate: 47, workDays: { mon: true, tue: true, wed: true, thu: true, fri: true, sat: true, sun: false }, createdAt: new Date().toISOString() },
-                    { name: 'Cenia Ellioso', position: 'Cashier', dailyRate: 280, payFrequency: 'weekly', phone: '09182345678', otRate: 44, workDays: { mon: true, tue: true, wed: true, thu: true, fri: true, sat: true, sun: false }, createdAt: new Date().toISOString() },
-                    { name: 'Mario Delos Santos', position: 'Helper', dailyRate: 250, payFrequency: 'daily', phone: '09183456789', otRate: 39, workDays: { mon: true, tue: true, wed: true, thu: true, fri: true, sat: true, sun: false }, createdAt: new Date().toISOString() },
+                    { name: 'Roger Ellioso', position: 'Staff', dailyRate: 300, payFrequency: 'weekly', phone: '09181234567', otRate: 47, workDays: { mon: true, tue: true, wed: true, thu: true, fri: true, sat: true, sun: false }, createdAt: new Date().toISOString(), isSample: true },
+                    { name: 'Cenia Ellioso', position: 'Cashier', dailyRate: 280, payFrequency: 'weekly', phone: '09182345678', otRate: 44, workDays: { mon: true, tue: true, wed: true, thu: true, fri: true, sat: true, sun: false }, createdAt: new Date().toISOString(), isSample: true },
+                    { name: 'Mario Delos Santos', position: 'Helper', dailyRate: 250, payFrequency: 'daily', phone: '09183456789', otRate: 39, workDays: { mon: true, tue: true, wed: true, thu: true, fri: true, sat: true, sun: false }, createdAt: new Date().toISOString(), isSample: true },
                 ];
                 
                 for (const e of employees) {
@@ -21969,16 +22085,16 @@ async function editTask(id) {
                 // ===== CASH ADVANCES =====
                 const roger = allEmployees.find(e => e.name === 'Roger Ellioso');
                 if (roger) {
-                    await dbAdd('cashAdvances', { employeeId: roger.id, amount: 200, date: today.toISOString().split('T')[0], reason: 'Emergency', deducted: false, createdAt: new Date().toISOString() });
+                    await dbAdd('cashAdvances', { employeeId: roger.id, amount: 200, date: today.toISOString().split('T')[0], reason: 'Emergency', deducted: false, createdAt: new Date().toISOString(), isSample: true });
                 }
                 
                 // ===== WATER CUSTOMERS =====
                 const waterCustomers = [
-                    { name: 'Aling Nena Store', phone: '09191234567', address: 'Purok 2', balance: 0, totalPurchases: 500, createdAt: new Date().toISOString() },
-                    { name: 'Mang Tony', phone: '09192345678', address: 'Riverside', balance: 75, totalPurchases: 300, createdAt: new Date().toISOString() },
-                    { name: 'Ate Luz Carinderia', phone: '09193456789', address: 'Market', balance: 150, totalPurchases: 800, createdAt: new Date().toISOString() },
-                    { name: 'Barangay Hall', phone: '09194567890', address: 'Poblacion', balance: 0, totalPurchases: 1200, createdAt: new Date().toISOString() },
-                    { name: 'Kuya Ben', phone: '09195678901', address: 'Highway', balance: 50, totalPurchases: 250, createdAt: new Date().toISOString() },
+                    { name: 'Aling Nena Store', phone: '09191234567', address: 'Purok 2', balance: 0, totalPurchases: 500, createdAt: new Date().toISOString(), isSample: true },
+                    { name: 'Mang Tony', phone: '09192345678', address: 'Riverside', balance: 75, totalPurchases: 300, createdAt: new Date().toISOString(), isSample: true },
+                    { name: 'Ate Luz Carinderia', phone: '09193456789', address: 'Market', balance: 150, totalPurchases: 800, createdAt: new Date().toISOString(), isSample: true },
+                    { name: 'Barangay Hall', phone: '09194567890', address: 'Poblacion', balance: 0, totalPurchases: 1200, createdAt: new Date().toISOString(), isSample: true },
+                    { name: 'Kuya Ben', phone: '09195678901', address: 'Highway', balance: 50, totalPurchases: 250, createdAt: new Date().toISOString(), isSample: true },
                 ];
                 
                 for (const wc of waterCustomers) {
@@ -22000,6 +22116,7 @@ async function editTask(id) {
                     await dbAdd('waterSales', {
                         customerId: cust.id,
                         customerName: cust.name,
+                        isSample: true,
                         gallons: gallons,
                         pricePerGallon: 25,
                         total: total,
@@ -22013,10 +22130,10 @@ async function editTask(id) {
                 
                 // ===== EXPENSES =====
                 const expenses = [
-                    { description: 'Electricity Bill', category: 'utilities', amount: 2500, date: dateStr(1), createdAt: new Date().toISOString() },
-                    { description: 'Water Bill', category: 'utilities', amount: 800, date: dateStr(1), createdAt: new Date().toISOString() },
-                    { description: 'Property Repair - Lot 1', category: 'maintenance', amount: 1500, date: dateStr(3), createdAt: new Date().toISOString() },
-                    { description: 'Office Supplies', category: 'supplies', amount: 350, date: dateStr(5), createdAt: new Date().toISOString() },
+                    { description: 'Electricity Bill', category: 'utilities', amount: 2500, date: dateStr(1), createdAt: new Date().toISOString(), isSample: true },
+                    { description: 'Water Bill', category: 'utilities', amount: 800, date: dateStr(1), createdAt: new Date().toISOString(), isSample: true },
+                    { description: 'Property Repair - Lot 1', category: 'maintenance', amount: 1500, date: dateStr(3), createdAt: new Date().toISOString(), isSample: true },
+                    { description: 'Office Supplies', category: 'supplies', amount: 350, date: dateStr(5), createdAt: new Date().toISOString(), isSample: true },
                 ];
                 
                 for (const exp of expenses) {
@@ -22035,7 +22152,7 @@ async function editTask(id) {
                         dueDate: dateStr(5), 
                         status: 'pending', 
                         assignedTo: 'Admin',
-                        createdAt: new Date().toISOString(),
+                        createdAt: new Date().toISOString(), isSample: true,
                         updatedAt: new Date().toISOString()
                     },
                     { 
@@ -22046,7 +22163,7 @@ async function editTask(id) {
                         dueDate: dateStr(2), 
                         status: 'in-progress', 
                         assignedTo: 'Maintenance Staff',
-                        createdAt: new Date().toISOString(),
+                        createdAt: new Date().toISOString(), isSample: true,
                         updatedAt: new Date().toISOString()
                     },
                     { 
@@ -22057,7 +22174,7 @@ async function editTask(id) {
                         dueDate: dateStr(3), 
                         status: 'pending', 
                         assignedTo: 'Collections Team',
-                        createdAt: new Date().toISOString(),
+                        createdAt: new Date().toISOString(), isSample: true,
                         updatedAt: new Date().toISOString()
                     },
                     { 
@@ -22068,7 +22185,7 @@ async function editTask(id) {
                         dueDate: dateStr(15), 
                         status: 'pending', 
                         assignedTo: 'HR Department',
-                        createdAt: new Date().toISOString(),
+                        createdAt: new Date().toISOString(), isSample: true,
                         updatedAt: new Date().toISOString()
                     },
                     { 
@@ -22079,7 +22196,7 @@ async function editTask(id) {
                         dueDate: dateStr(10), 
                         status: 'pending', 
                         assignedTo: 'Property Manager',
-                        createdAt: new Date().toISOString(),
+                        createdAt: new Date().toISOString(), isSample: true,
                         updatedAt: new Date().toISOString()
                     },
                     { 
@@ -22101,7 +22218,7 @@ async function editTask(id) {
                         dueDate: dateStr(8), 
                         status: 'in-progress', 
                         assignedTo: 'Water Station Manager',
-                        createdAt: new Date().toISOString(),
+                        createdAt: new Date().toISOString(), isSample: true,
                         updatedAt: new Date().toISOString()
                     },
                     { 
@@ -22129,35 +22246,35 @@ async function editTask(id) {
                         title: 'Tenant Complaint - Unit A',
                         content: 'Noise complaint from neighbor. Need to send warning letter to tenant.',
                         category: 'client',
-                        createdAt: new Date().toISOString(),
+                        createdAt: new Date().toISOString(), isSample: true,
                         updatedAt: new Date().toISOString()
                     },
                     {
                         title: 'Property Maintenance Schedule',
                         content: 'Q1 2026:\n- Paint exterior walls (Lot 1)\n- Clean drainage system (All properties)\n- Replace old light fixtures (Commercial Space)',
                         category: 'general',
-                        createdAt: new Date().toISOString(),
+                        createdAt: new Date().toISOString(), isSample: true,
                         updatedAt: new Date().toISOString()
                     },
                     {
                         title: 'Water Station - Peak Hours',
                         content: 'Busiest times: 7-9 AM and 5-7 PM. Consider adding extra staff during these hours.',
                         category: 'area',
-                        createdAt: new Date().toISOString(),
+                        createdAt: new Date().toISOString(), isSample: true,
                         updatedAt: new Date().toISOString()
                     },
                     {
                         title: 'REMINDER: Annual Property Inspection',
                         content: 'Schedule inspection with Building Official by March 31st. Required documents ready.',
                         category: 'reminder',
-                        createdAt: new Date().toISOString(),
+                        createdAt: new Date().toISOString(), isSample: true,
                         updatedAt: new Date().toISOString()
                     },
                     {
                         title: 'New Tenant Application - Maria Cruz',
                         content: 'Interested in Room 2. Good references from previous landlord. Income: ₱15,000/month. Schedule interview.',
                         category: 'client',
-                        createdAt: new Date().toISOString(),
+                        createdAt: new Date().toISOString(), isSample: true,
                         updatedAt: new Date().toISOString()
                     }
                 ];
@@ -22237,10 +22354,10 @@ async function editTask(id) {
                 const existingUsers = JSON.parse(localStorage.getItem('prism_app_users') || '[]');
                 if (existingUsers.length === 0) {
                     const sampleUsers = [
-                        { id: 1, username: 'admin', fullname: 'Administrator', role: 'admin', password: 'admin123', email: 'admin@rlm.com', phone: '09171234567', createdAt: new Date().toISOString() },
-                        { id: 2, username: 'cashier1', fullname: 'Cenia Ellioso', role: 'cashier', password: 'cashier123', email: 'cenia@rlm.com', phone: '09182345678', createdAt: new Date().toISOString() },
-                        { id: 3, username: 'cashier2', fullname: 'Roger Ellioso', role: 'cashier', password: 'cashier123', email: 'roger@rlm.com', phone: '09181234567', createdAt: new Date().toISOString() },
-                        { id: 4, username: 'manager1', fullname: 'Maria Santos', role: 'manager', password: 'manager123', email: 'maria@rlm.com', phone: '09189876543', createdAt: new Date().toISOString() },
+                        { id: 1, username: 'admin', fullname: 'Administrator', role: 'admin', password: 'admin123', email: 'admin@rlm.com', phone: '09171234567', createdAt: new Date().toISOString(), isSample: true },
+                        { id: 2, username: 'cashier1', fullname: 'Cenia Ellioso', role: 'cashier', password: 'cashier123', email: 'cenia@rlm.com', phone: '09182345678', createdAt: new Date().toISOString(), isSample: true },
+                        { id: 3, username: 'cashier2', fullname: 'Roger Ellioso', role: 'cashier', password: 'cashier123', email: 'roger@rlm.com', phone: '09181234567', createdAt: new Date().toISOString(), isSample: true },
+                        { id: 4, username: 'manager1', fullname: 'Maria Santos', role: 'manager', password: 'manager123', email: 'maria@rlm.com', phone: '09189876543', createdAt: new Date().toISOString(), isSample: true },
                     ];
                     localStorage.setItem('prism_app_users', JSON.stringify(sampleUsers));
                 }
@@ -22263,11 +22380,11 @@ async function editTask(id) {
                 const existingIncome = await dbGetAll('additionalIncome');
                 if (existingIncome.length < 5) {
                     const moreIncome = [
-                        { description: 'Hardware Store Sales - Week 1', category: 'store', amount: 12500, date: dateStr(3), notes: 'Cement, nails, paints', createdAt: new Date().toISOString() },
-                        { description: 'Hardware Store Sales - Week 2', category: 'store', amount: 9800, date: dateStr(10), notes: 'Tools and electrical', createdAt: new Date().toISOString() },
-                        { description: 'Interest Income - Loans', category: 'interest', amount: 3750, date: dateStr(1), notes: 'Monthly interest collection', createdAt: new Date().toISOString() },
-                        { description: 'Water Station Sales - Week 1', category: 'water', amount: 4200, date: dateStr(5), notes: '168 gallons @ ₱25', createdAt: new Date().toISOString() },
-                        { description: 'Parking Fee - Monthly', category: 'parking', amount: 1500, date: dateStr(1), notes: '3 vehicles @ ₱500', createdAt: new Date().toISOString() },
+                        { description: 'Hardware Store Sales - Week 1', category: 'store', amount: 12500, date: dateStr(3), notes: 'Cement, nails, paints', createdAt: new Date().toISOString(), isSample: true },
+                        { description: 'Hardware Store Sales - Week 2', category: 'store', amount: 9800, date: dateStr(10), notes: 'Tools and electrical', createdAt: new Date().toISOString(), isSample: true },
+                        { description: 'Interest Income - Loans', category: 'interest', amount: 3750, date: dateStr(1), notes: 'Monthly interest collection', createdAt: new Date().toISOString(), isSample: true },
+                        { description: 'Water Station Sales - Week 1', category: 'water', amount: 4200, date: dateStr(5), notes: '168 gallons @ ₱25', createdAt: new Date().toISOString(), isSample: true },
+                        { description: 'Parking Fee - Monthly', category: 'parking', amount: 1500, date: dateStr(1), notes: '3 vehicles @ ₱500', createdAt: new Date().toISOString(), isSample: true },
                     ];
                     for (const inc of moreIncome) {
                         await dbAdd('additionalIncome', inc);
@@ -22278,10 +22395,10 @@ async function editTask(id) {
                 const existingExp = await dbGetAll('expenses');
                 if (existingExp.length < 6) {
                     const moreExp = [
-                        { description: 'Hardware Store Restocking', category: 'inventory', amount: 15000, date: dateStr(2), notes: 'Cement bags, GI sheets', createdAt: new Date().toISOString() },
-                        { description: 'Employee Salaries', category: 'payroll', amount: 8400, date: dateStr(7), notes: 'Weekly payroll 3 staff', createdAt: new Date().toISOString() },
-                        { description: 'Vehicle Fuel', category: 'transport', amount: 1200, date: dateStr(4), notes: 'Delivery truck', createdAt: new Date().toISOString() },
-                        { description: 'Water Station Filter Replacement', category: 'maintenance', amount: 2800, date: dateStr(6), notes: 'UV filter + carbon filter', createdAt: new Date().toISOString() },
+                        { description: 'Hardware Store Restocking', category: 'inventory', amount: 15000, date: dateStr(2), notes: 'Cement bags, GI sheets', createdAt: new Date().toISOString(), isSample: true },
+                        { description: 'Employee Salaries', category: 'payroll', amount: 8400, date: dateStr(7), notes: 'Weekly payroll 3 staff', createdAt: new Date().toISOString(), isSample: true },
+                        { description: 'Vehicle Fuel', category: 'transport', amount: 1200, date: dateStr(4), notes: 'Delivery truck', createdAt: new Date().toISOString(), isSample: true },
+                        { description: 'Water Station Filter Replacement', category: 'maintenance', amount: 2800, date: dateStr(6), notes: 'UV filter + carbon filter', createdAt: new Date().toISOString(), isSample: true },
                     ];
                     for (const exp of moreExp) {
                         await dbAdd('expenses', exp);
