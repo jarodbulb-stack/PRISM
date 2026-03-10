@@ -6619,7 +6619,7 @@
                     </div>
 
                     <!-- REMINDER ONLY: Time + Repeat fields (shown only for ⏰ Reminder category) -->
-                    <div id="reminder-extra-fields" style="display:none;">
+                    <div id="reminder-extra-fields" class="reminder-hidden">
                         <div class="form-group">
                             <label>⏰ Reminder Time <span style="font-size:0.78rem;color:#64748b;">(shown on dashboard when you open the app)</span></label>
                             <input type="time" id="note-reminder-time" value="08:00" style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:8px;padding:10px 12px;color:var(--text-primary);width:100%;font-size:0.95rem;">
@@ -6995,6 +6995,22 @@
                     <div class="form-group">
                         <label>Due Date</label>
                         <input type="date" id="task-due-date">
+                    </div>
+
+                    <div class="form-group">
+                        <label>🔁 Repeat</label>
+                        <select id="task-repeat">
+                            <option value="none">No repeat — one time only</option>
+                            <option value="daily">Every day</option>
+                            <option value="weekly">Every week (same day)</option>
+                            <option value="monthly">Every month (same date)</option>
+                            <option value="yearly">Every year (same date)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>⏰ Reminder Time <span style="font-size:0.78rem;color:#64748b;">(optional — shown on dashboard)</span></label>
+                        <input type="time" id="task-reminder-time" value="08:00" style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:8px;padding:10px 12px;color:var(--text-primary);width:100%;font-size:0.95rem;">
                     </div>
                     
                     <div class="form-group">
@@ -11984,6 +12000,7 @@ async function recordTenantPayment(tenantId) {
 
     
         /* ========== CUSTOM CONFIRM MODAL ========== */
+        .reminder-hidden { display: none !important; }
         #prism-confirm-overlay {
             display: none;
             position: fixed;
@@ -14895,7 +14912,12 @@ async function showPayrollSummary() {
 
         function prismToggleReminderFields(category) {
             const el = document.getElementById('reminder-extra-fields');
-            if (el) el.style.display = (category === 'reminder') ? 'block' : 'none';
+            if (!el) return;
+            if (category === 'reminder') {
+                el.classList.remove('reminder-hidden');
+            } else {
+                el.classList.add('reminder-hidden');
+            }
         }
         window.prismToggleReminderFields = prismToggleReminderFields;
 
@@ -14937,23 +14959,51 @@ async function showPayrollSummary() {
                     n.category === 'reminder' && prismIsReminderDueToday(n)
                 );
 
+                // Also include recurring tasks due today (not completed)
+                let recurringTasksDue = [];
+                try {
+                    const tasks = await dbGetAll('tasks');
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    const todayDate = new Date(todayStr + 'T00:00:00');
+                    recurringTasksDue = (tasks||[]).filter(t => {
+                        if (t.status === 'completed' || !t.dueDate || !t.repeat || t.repeat === 'none') return false;
+                        // Use same repeat logic as calendar
+                        const origin = new Date(t.dueDate + 'T00:00:00');
+                        if (isNaN(origin) || origin > todayDate) return false;
+                        if (t.repeat === 'daily') return true;
+                        if (t.repeat === 'weekly') return origin.getDay() === todayDate.getDay();
+                        if (t.repeat === 'monthly') return origin.getDate() === todayDate.getDate();
+                        if (t.repeat === 'yearly') return origin.getDate()===todayDate.getDate() && origin.getMonth()===todayDate.getMonth();
+                        return false;
+                    }).map(t => ({
+                        title: t.title,
+                        description: t.description || '',
+                        reminderTime: t.reminderTime || '',
+                        repeat: t.repeat,
+                        _isTask: true,
+                    }));
+                } catch(e) {}
+
+                const allAlerts = [...reminders, ...recurringTasksDue];
+
                 const banner = document.getElementById('notifications-banner');
                 if (!banner) return;
 
-                if (reminders.length === 0) {
+                if (allAlerts.length === 0) {
                     banner.classList.add('hidden');
                     banner.innerHTML = '';
                     return;
                 }
 
                 // Build banner HTML
-                const itemsHtml = reminders.map(r => {
+                const itemsHtml = allAlerts.map(r => {
+                    const icon = r._isTask ? '✅' : '🔔';
                     const repeatLabel = r.repeat && r.repeat !== 'none'
                         ? `<span style="color:#10b981;font-size:0.72rem;margin-left:6px;">🔁 ${r.repeat}</span>` : '';
                     const timeLabel = r.reminderTime
                         ? `<span style="color:#818cf8;font-size:0.72rem;margin-left:6px;">⏰ ${r.reminderTime}</span>` : '';
                     return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);">
-                        <span style="font-size:1.1rem;">🔔</span>
+                        <span style="font-size:1.1rem;">${icon}</span>
                         <div style="flex:1;">
                             <span style="font-weight:600;color:#f1f5f9;">${r.title}</span>
                             ${timeLabel}${repeatLabel}
@@ -14982,7 +15032,7 @@ async function showPayrollSummary() {
                 banner.classList.remove('hidden');
 
                 // Also update bell badge on Notes nav button if it exists
-                prismUpdateReminderBadge(reminders.length);
+                prismUpdateReminderBadge(allAlerts.length);
 
             } catch(e) {
                 console.warn('[Reminders] Check failed:', e);
@@ -15093,18 +15143,32 @@ async function showPayrollSummary() {
                 general: '📋 General'
             };
 
-            container.innerHTML = notes.sort((a, b) => new Date(b.date) - new Date(a.date)).map(note => {
+            // Sort: active reminders first, then by date desc
+            const sorted = [...notes].sort((a,b) => {
+                const aRec = a.category==='reminder' && a.repeat && a.repeat!=='none';
+                const bRec = b.category==='reminder' && b.repeat && b.repeat!=='none';
+                if (aRec && !bRec) return -1;
+                if (!aRec && bRec) return 1;
+                return new Date(b.date) - new Date(a.date);
+            });
+
+            container.innerHTML = sorted.map(note => {
+                const isRecurring = note.category==='reminder' && note.repeat && note.repeat!=='none';
+                const borderStyle = isRecurring ? 'border-left:3px solid #f59e0b;' : '';
+                const repeatBadge = isRecurring
+                    ? `<span style="display:inline-block;background:rgba(245,158,11,0.15);color:#f59e0b;font-size:0.68rem;padding:1px 8px;border-radius:10px;font-weight:600;margin-left:5px;">🔁 ${note.repeat}</span>`
+                    : '';
                 return `
-                    <div class="note-card" onclick="viewNoteDetails(${note.id})">
+                    <div class="note-card" onclick="viewNoteDetails(${note.id})" style="${borderStyle}">
                         <div class="note-header">
-                            <h4 class="note-title">${note.title}</h4>
+                            <h4 class="note-title">${note.title}${repeatBadge}</h4>
                             <span class="note-category ${note.category}">${categoryLabels[note.category] || note.category}</span>
                         </div>
                         <p class="note-preview">${note.description}</p>
                         <div class="note-meta">
                             <span>${note.date}</span>
                             ${note.reminderTime && note.category==='reminder' ? `<span style="color:#6366f1;font-size:0.75rem;">⏰ ${note.reminderTime}</span>` : ''}
-                            ${note.repeat && note.repeat !== 'none' && note.category==='reminder' ? `<span style="color:#10b981;font-size:0.75rem;">🔁 ${note.repeat}</span>` : ''}
+                            ${isRecurring ? `<span style="color:#f59e0b;font-size:0.75rem;">🔔 Always active</span>` : ''}
                             ${note.photo ? '<span class="has-photo">📷 Has photo</span>' : ''}
                         </div>
                     </div>
@@ -17023,33 +17087,113 @@ async function showPayrollSummary() {
                 }
             });
 
-            // ── TASKS with dueDate ──
+            // ── TASKS with dueDate (+ repeat projection) ──
             tasks.forEach(task => {
-                if (!task.dueDate || task.status === 'completed' || task.status === 'done') return;
-                const d = new Date(task.dueDate);
-                if (d.getFullYear()!==year || d.getMonth()!==month) return;
-                const dueDay = d.getDate();
-                const sd = getDay(dueDay);
-                const isOverdue = today > d && task.status !== 'completed';
+                if (task.status === 'completed' || task.status === 'done') return;
+                if (!task.dueDate) return;
+                const origin = new Date(task.dueDate + 'T00:00:00');
+                if (isNaN(origin)) return;
+                const repeat = task.repeat || 'none';
                 const icon = task.priority==='high' ? '🔴' : task.priority==='medium' ? '🟡' : '🟢';
-                const entry = { type:'task', label:`${icon} ${task.title}`, sub: task.category||'Task', priority: task.priority };
-                if (isOverdue) sd.overdue.push(entry);
-                else sd.tasks.push(entry);
+                const repeatSub = repeat !== 'none' ? `🔁 ${repeat}` : (task.category||'Task');
+
+                const hitDays = new Set();
+                const viewEnd = new Date(year, month + 1, 0);
+                if (origin > viewEnd) return;
+
+                if (repeat === 'none') {
+                    if (origin.getFullYear()===year && origin.getMonth()===month) hitDays.add(origin.getDate());
+                } else if (repeat === 'daily') {
+                    for (let d=1; d<=viewEnd.getDate(); d++) {
+                        if (new Date(year,month,d) >= origin) hitDays.add(d);
+                    }
+                } else if (repeat === 'weekly') {
+                    const dow = origin.getDay();
+                    for (let d=1; d<=viewEnd.getDate(); d++) {
+                        const dt = new Date(year,month,d);
+                        if (dt >= origin && dt.getDay()===dow) hitDays.add(d);
+                    }
+                } else if (repeat === 'monthly') {
+                    const dom = Math.min(origin.getDate(), viewEnd.getDate());
+                    const dt = new Date(year,month,dom);
+                    if (dt >= origin) hitDays.add(dom);
+                } else if (repeat === 'yearly') {
+                    if (origin.getMonth()===month) {
+                        const dom = origin.getDate();
+                        if (new Date(year,month,dom) >= origin) hitDays.add(dom);
+                    }
+                }
+
+                hitDays.forEach(dueDay => {
+                    const sd = getDay(dueDay);
+                    const dt = new Date(year, month, dueDay);
+                    const isOverdue = today > dt;
+                    const entry = { type:'task', label:`${icon} ${task.title}`, sub: repeatSub, priority: task.priority };
+                    if (isOverdue) sd.overdue.push(entry);
+                    else sd.tasks.push(entry);
+                });
             });
 
-            // ── NOTES with date ──
+            // ── NOTES with date (+ repeat projection for reminders) ──
             notes.forEach(note => {
                 if (!note.date) return;
-                const d = new Date(note.date);
-                if (d.getFullYear()!==year || d.getMonth()!==month) return;
-                const dueDay = d.getDate();
-                const sd = getDay(dueDay);
+                const origin = new Date(note.date + 'T00:00:00');
+                if (isNaN(origin)) return;
                 const isReminder = note.category === 'reminder';
-                sd.notes.push({
-                    type: isReminder ? 'reminder' : 'note',
-                    label: `${isReminder ? '🔔' : '📝'} ${note.title||'Note'}`,
-                    sub: isReminder && note.repeat && note.repeat!=='none' ? `🔁 ${note.repeat}` : (note.category||'Note'),
-                    reminderTime: note.reminderTime || null,
+                const repeat = (note.repeat || 'none');
+
+                // Determine which days in the viewed month this note falls on
+                const hitDays = new Set();
+
+                if (!isReminder || repeat === 'none') {
+                    // Plain note or one-time reminder — only show on its own date
+                    if (origin.getFullYear()===year && origin.getMonth()===month) {
+                        hitDays.add(origin.getDate());
+                    }
+                } else {
+                    // Repeat reminder — project forward from origin into viewed month
+                    // Only show from origin date onward (don't backfill past)
+                    const viewStart = new Date(year, month, 1);
+                    const viewEnd   = new Date(year, month + 1, 0);
+                    if (origin > viewEnd) return; // reminder hasn't started yet
+
+                    if (repeat === 'daily') {
+                        for (let d = 1; d <= viewEnd.getDate(); d++) {
+                            const dt = new Date(year, month, d);
+                            if (dt >= origin) hitDays.add(d);
+                        }
+                    } else if (repeat === 'weekly') {
+                        const dow = origin.getDay(); // day of week (0=Sun)
+                        for (let d = 1; d <= viewEnd.getDate(); d++) {
+                            const dt = new Date(year, month, d);
+                            if (dt >= origin && dt.getDay() === dow) hitDays.add(d);
+                        }
+                    } else if (repeat === 'monthly') {
+                        const dom = origin.getDate(); // day of month
+                        const maxDay = viewEnd.getDate();
+                        const actualDay = Math.min(dom, maxDay); // handle Feb 30 etc
+                        const dt = new Date(year, month, actualDay);
+                        if (dt >= origin) hitDays.add(actualDay);
+                    } else if (repeat === 'yearly') {
+                        if (origin.getMonth() === month) {
+                            const dom = origin.getDate();
+                            const dt = new Date(year, month, dom);
+                            if (dt >= origin) hitDays.add(dom);
+                        }
+                    }
+                }
+
+                hitDays.forEach(dueDay => {
+                    const sd = getDay(dueDay);
+                    const repeatLabel = (isReminder && repeat && repeat !== 'none')
+                        ? `🔁 ${repeat}${note.reminderTime ? ' · ⏰ ' + note.reminderTime : ''}`
+                        : (note.category || 'Note');
+                    sd.notes.push({
+                        type: isReminder ? 'reminder' : 'note',
+                        label: `${isReminder ? '🔔' : '📝'} ${note.title||'Note'}`,
+                        sub: repeatLabel,
+                        reminderTime: note.reminderTime || null,
+                    });
                 });
             });
 
@@ -17090,7 +17234,7 @@ async function showPayrollSummary() {
                 if (allItems.length > 0) {
                     tooltip = `<div class="cal-tooltip"><div class="cal-tooltip-date">${day} ${calendarDate.toLocaleString('default',{month:'short'})}</div>`;
                     allItems.slice(0,6).forEach(item => {
-                        const cls = item.type==='task'?'cal-tt-task':item.type==='note'?'cal-tt-note':item.type==='debtor'?'cal-tt-debtor':'cal-tt-tenant';
+                        const cls = item.type==='task'?'cal-tt-task':item.type==='reminder'?'cal-tt-reminder':item.type==='note'?'cal-tt-note':item.type==='debtor'?'cal-tt-debtor':'cal-tt-tenant';
                         tooltip += `<div class="cal-tt-item ${cls}"><div class="cal-tt-label">${item.label}</div><div class="cal-tt-sub">${item.sub||''}</div></div>`;
                     });
                     if (allItems.length > 6) tooltip += `<div class="cal-tt-more">+${allItems.length-6} more</div>`;
@@ -17128,7 +17272,8 @@ async function showPayrollSummary() {
                     .cal-tt-tenant { background:rgba(56,189,248,0.08); border-left:2px solid #38bdf8; }
                     .cal-tt-debtor { background:rgba(249,115,22,0.08); border-left:2px solid #f97316; }
                     .cal-tt-task   { background:rgba(167,139,250,0.08); border-left:2px solid #a78bfa; }
-                    .cal-tt-note   { background:rgba(74,222,128,0.08); border-left:2px solid #4ade80; }
+                    .cal-tt-note     { background:rgba(74,222,128,0.08); border-left:2px solid #4ade80; }
+                    .cal-tt-reminder { background:rgba(245,158,11,0.08); border-left:2px solid #f59e0b; }
                     .cal-tt-more   { font-size:0.7rem; color:#64748b; text-align:center; margin-top:4px; }
                 `;
                 document.head.appendChild(style);
@@ -22975,22 +23120,40 @@ function initReportsPage() {
             const today = new Date().toISOString().split('T')[0];
             
             let html = '';
+            // Sort: recurring first, then by due date, completed last
+            tasks.sort((a,b) => {
+                if (a.status==='completed' && b.status!=='completed') return 1;
+                if (b.status==='completed' && a.status!=='completed') return -1;
+                const aRecur = a.repeat && a.repeat !== 'none';
+                const bRecur = b.repeat && b.repeat !== 'none';
+                if (aRecur && !bRecur) return -1;
+                if (!aRecur && bRecur) return 1;
+                if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+                return 0;
+            });
+
             tasks.forEach(task => {
                 const isOverdue = task.dueDate && task.dueDate < today && task.status !== 'completed';
+                const isRecurring = task.repeat && task.repeat !== 'none';
                 const categoryEmoji = task.category === 'property' ? '🏠' : task.category === 'maintenance' ? '🔧' : task.category === 'collection' ? '💰' : task.category === 'admin' ? '📋' : task.category === 'follow-up' ? '📞' : '📝';
                 const priorityColor = task.priority === 'high' ? '#ef4444' : task.priority === 'medium' ? '#f59e0b' : '#10b981';
                 const statusIcon = task.status === 'completed' ? '✅' : task.status === 'in-progress' ? '🔄' : '⏳';
-                
+                const repeatLabel = isRecurring ? `<span style="display:inline-block;background:rgba(16,185,129,0.15);color:#10b981;font-size:0.68rem;padding:1px 7px;border-radius:10px;margin-left:5px;font-weight:600;">🔁 ${task.repeat}</span>` : '';
+                const timeLabel = task.reminderTime ? `<span style="color:#6366f1;font-size:0.75rem;margin-left:6px;">⏰ ${task.reminderTime}</span>` : '';
+                const borderColor = isOverdue ? '#ef4444' : isRecurring ? '#10b981' : 'transparent';
+
                 html += `
-                    <div class="list-item" style="${isOverdue ? 'border-left: 4px solid #ef4444;' : ''}">
+                    <div class="list-item" style="border-left: 4px solid ${borderColor};">
                         <div class="list-item-content" onclick="editTask(${task.id})" style="cursor: pointer; flex: 1;">
                             <div class="list-item-title">
                                 ${statusIcon} ${task.title}
+                                ${repeatLabel}
                                 ${isOverdue ? '<span class="badge badge-danger" style="font-size: 0.7rem; margin-left: 5px;">OVERDUE</span>' : ''}
                             </div>
                             <div class="list-item-subtitle">
                                 ${categoryEmoji} ${task.category.charAt(0).toUpperCase() + task.category.slice(1)}
                                 ${task.dueDate ? ` • 📅 Due: ${task.dueDate}` : ''}
+                                ${timeLabel}
                                 ${task.assignedTo ? ` • 👤 ${task.assignedTo}` : ''}
                             </div>
                             ${task.description ? `<p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 5px;">${task.description}</p>` : ''}
@@ -23046,6 +23209,8 @@ async function editTask(id) {
             document.getElementById('task-category').value = task.category;
             document.getElementById('task-priority').value = task.priority;
             document.getElementById('task-due-date').value = task.dueDate || '';
+            document.getElementById('task-repeat').value = task.repeat || 'none';
+            document.getElementById('task-reminder-time').value = task.reminderTime || '08:00';
             document.getElementById('task-status').value = task.status;
             document.getElementById('task-assigned-to').value = task.assignedTo || '';
             
@@ -23063,6 +23228,8 @@ async function editTask(id) {
                 category: document.getElementById('task-category').value,
                 priority: document.getElementById('task-priority').value,
                 dueDate: document.getElementById('task-due-date').value,
+                repeat: document.getElementById('task-repeat').value || 'none',
+                reminderTime: document.getElementById('task-reminder-time').value || '',
                 status: document.getElementById('task-status').value,
                 assignedTo: document.getElementById('task-assigned-to').value.trim(),
                 createdAt: editId ? (await dbGet('tasks', parseInt(editId))).createdAt : new Date().toISOString(),
