@@ -3105,6 +3105,10 @@
 
                 <button class="prism-signin-btn" id="mt-login-btn" onclick="prismLoginSubmit()">Sign In</button>
 
+                <p style="text-align:center;margin:8px 0 4px;">
+                    <span onclick="prismForgotPassword()" style="color:#818cf8;font-size:0.8rem;cursor:pointer;text-decoration:underline;text-underline-offset:3px;">Forgot password?</span>
+                </p>
+
                 <p class="prism-back-link" onclick="prismGoToSplash()">← Back to home</p>
             </div>
         </div>
@@ -3242,8 +3246,8 @@
 
         <!-- REGISTER FORM (hidden by default) -->
         <div id="mt-register-form" style="display:none;margin-bottom:12px;">
-            <div style="font-size:0.8rem;color:#94a3b8;text-align:center;margin-bottom:10px;font-weight:600;">📝 CREATE ACCOUNT</div>
-            <input type="text" id="mt-reg-name" class="mt-form-input" placeholder="Full Name / Business Name" style="margin-bottom:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);color:#f8fafc;">
+            <div style="font-size:0.8rem;color:#94a3b8;text-align:center;margin-bottom:10px;font-weight:600;">📝 CREATE YOUR ACCOUNT</div><div style="font-size:0.75rem;color:#64748b;text-align:center;margin-bottom:12px;padding:8px;background:rgba(99,102,241,0.08);border-radius:8px;border:1px solid rgba(99,102,241,0.2);">👋 Staff & cashiers — register with the email your admin approved. You'll get instant access if pre-approved.</div>
+            <input type="text" id="mt-reg-name" class="mt-form-input" placeholder="Your Full Name" style="margin-bottom:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);color:#f8fafc;">
             <input type="email" id="mt-reg-email" class="mt-form-input" placeholder="Email address" style="margin-bottom:8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);color:#f8fafc;">
             <div style="position:relative;margin-bottom:8px;">
                 <input type="password" id="mt-reg-password" class="mt-form-input" placeholder="Password (min 6 chars)" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);color:#f8fafc;padding-right:44px;">
@@ -8568,6 +8572,13 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                         tasksStore.createIndex('priority', 'priority', { unique: false });
                         tasksStore.createIndex('dueDate', 'dueDate', { unique: false });
                     }
+                    // Audit log store
+                    if (!database.objectStoreNames.contains('auditLog')) {
+                        const auditStore = database.createObjectStore('auditLog', { keyPath: 'id', autoIncrement: true });
+                        auditStore.createIndex('action', 'action', { unique: false });
+                        auditStore.createIndex('date', 'date', { unique: false });
+                        auditStore.createIndex('user', 'user', { unique: false });
+                    }
                 };
 
                 request.onblocked = () => {
@@ -8697,6 +8708,22 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
         }
 
         function showSection(sectionId) {
+            // ── Role gate: block forbidden sections for cashier/viewer ──
+            const _role = currentAppUser && currentAppUser.role;
+            const _perms = currentAppUser && currentAppUser.permissions;
+            const _blockedSections = {
+                'properties': _perms && !_perms['access-properties'],
+                'expenses':   _perms && !_perms['view-expenses'],
+                'income':     _perms && !_perms['view-income'],
+                'employees':  _perms && !_perms['access-hr'],
+                'reports':    _perms && !_perms['view-reports'],
+                'settings':   _perms && !_perms['access-settings'],
+            };
+            if (_blockedSections[sectionId]) {
+                showToast('⛔ Access restricted. Contact your admin.', 'warning');
+                return;
+            }
+
             // Scroll to top
             window.scrollTo({ top: 0, behavior: 'smooth' });
             // Update nav buttons
@@ -10419,7 +10446,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                                         <td class="text-success">₱${p.amount.toLocaleString()}</td>
                                         <td>
                                             <button class="btn btn-sm btn-secondary" onclick="showReceipt(${p.id}, 'rent')" title="View Receipt">📄</button>
-                                            ${currentAppUser && currentAppUser.role !== 'cashier' ? `<button class="btn btn-sm btn-danger" onclick="deletePayment(${p.id}, 'rent', ${id})" title="Delete">🗑</button>` : ''}
+                                            ${currentAppUser && currentAppUser.role === 'cashier' ? `<button class="btn btn-sm btn-warning" onclick="prismRequestVoid('rent-payment',${p.id},'Rent ₱${p.amount||0} ${p.date||''}')" title="Request void">🚫 Void</button>` : currentAppUser ? `<button class="btn btn-sm btn-danger" onclick="deletePayment(${p.id}, 'rent', ${id})" title="Delete">🗑</button>` : ''}
                                         </td>
                                     </tr>
                                 `}).join('')}
@@ -10722,6 +10749,7 @@ async function recordTenantPayment(tenantId) {
 
             payment.recordedBy = currentAppUser?.username || 'unknown';
             payment.recordedByRole = currentAppUser?.role || 'unknown';
+            payment.recordedByEmail = currentAppUser?.email || 'unknown';
             await dbAdd('payments', payment);
             await viewTenantDetails(tenantId);
             loadTenants();
@@ -14038,7 +14066,7 @@ async function showPayrollSummary() {
                                         <td class="text-success">₱${p.amount.toLocaleString()}</td>
                                         <td>
                                             <button class="btn btn-sm btn-secondary" onclick="showReceipt(${p.id}, 'credit')" title="View Receipt">📄</button>
-                                            ${currentAppUser && currentAppUser.role !== 'cashier' ? `<button class="btn btn-sm btn-danger" onclick="deletePayment(${p.id}, 'credit', ${id})" title="Delete">🗑</button>` : ''}
+                                            ${currentAppUser && currentAppUser.role === 'cashier' ? `<button class="btn btn-sm btn-warning" onclick="prismRequestVoid('credit-payment',${p.id},'Credit ₱${p.amount||0} ${p.date||''}')" title="Request void">🚫 Void</button>` : currentAppUser ? `<button class="btn btn-sm btn-danger" onclick="deletePayment(${p.id}, 'credit', ${id})" title="Delete">🗑</button>` : ''}
                                         </td>
                                     </tr>
                                 `}).join('')}
@@ -16853,6 +16881,297 @@ async function showPayrollSummary() {
         }
 
         
+        
+        // ═══════════════════════════════════════════════════════
+        // CASHIER SYSTEM: Auto time-in, early-out, void requests, audit log
+        // ═══════════════════════════════════════════════════════
+
+        // ── AUTO TIME-IN ON LOGIN ──
+        async function prismCashierAutoTimeIn() {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const email = currentAppUser && currentAppUser.email;
+                if (!email) return;
+
+                // Find employee record linked to this email
+                const employees = await dbGetAll('employees');
+                const emp = employees.find(e => (e.email||'').toLowerCase() === email.toLowerCase()
+                            || (e.name||'').toLowerCase().includes(email.split('@')[0].toLowerCase()));
+                if (!emp) {
+                    console.log('[TimeIn] No employee record found for', email);
+                    return;
+                }
+
+                // Check if already timed in today
+                const records = await dbGetAll('timeRecords');
+                const todayRecord = records.find(r => r.employeeId === emp.id && r.date === today);
+                if (todayRecord) {
+                    console.log('[TimeIn] Already timed in today');
+                    return;
+                }
+
+                // Auto time-in — create present record
+                const timeInRecord = {
+                    employeeId: emp.id,
+                    employeeName: emp.name,
+                    date: today,
+                    status: 'present',
+                    timeIn: new Date().toLocaleTimeString('en-PH', {hour:'2-digit',minute:'2-digit'}),
+                    timeOut: null,
+                    lateDeduction: 0,
+                    otHours: 0,
+                    bonus: 0,
+                    notes: 'Auto time-in via login',
+                    autoTimeIn: true,
+                    createdAt: new Date().toISOString()
+                };
+                await dbAdd('timeRecords', timeInRecord);
+                try { await syncToFirebase(); } catch(e) {}
+
+                // Log to audit
+                await prismAuditLog('time-in', `Auto time-in at ${timeInRecord.timeIn}`, { employeeId: emp.id, date: today });
+                showToast(`✅ Time-in recorded: ${timeInRecord.timeIn}`, 'success');
+            } catch(e) {
+                console.warn('[AutoTimeIn] Error:', e);
+            }
+        }
+        window.prismCashierAutoTimeIn = prismCashierAutoTimeIn;
+
+        // ── EARLY-OUT REQUEST ──
+        async function prismRequestEarlyOut() {
+            const reason = window.prompt('Enter reason for early out (e.g. medical, family emergency, etc.):');
+            if (!reason || !reason.trim()) return;
+
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const now = new Date().toLocaleTimeString('en-PH', {hour:'2-digit',minute:'2-digit'});
+                const email = currentAppUser && currentAppUser.email;
+
+                const earlyOut = {
+                    type: 'early-out-request',
+                    requestedBy: email,
+                    requestedByName: currentAppUser.fullname || email,
+                    date: today,
+                    time: now,
+                    reason: reason.trim(),
+                    status: 'pending',
+                    createdAt: new Date().toISOString(),
+                    isSample: false
+                };
+                await dbAdd('customNotes', {
+                    ...earlyOut,
+                    title: `⏰ Early-Out Request — ${now}`,
+                    category: 'endorsement',
+                    date: today,
+                    description: `Early out at ${now}. Reason: ${reason.trim()}`,
+                    isEarlyOutRequest: true
+                });
+
+                // Notify admin via Firestore
+                if (window.db && currentAppUser.orgId) {
+                    try {
+                        await window.db.collection('prism_data').doc(currentAppUser.orgId)
+                            .collection('notifications').add({
+                                type: 'early-out-request',
+                                from: email,
+                                fromName: currentAppUser.fullname || email,
+                                message: `🔔 Early-out request from ${currentAppUser.fullname||email} at ${now}. Reason: ${reason.trim()}`,
+                                date: today, time: now,
+                                read: false,
+                                createdAt: new Date().toISOString()
+                            });
+                    } catch(e) { console.warn('[EarlyOut] Notification failed:', e); }
+                }
+
+                try { await syncToFirebase(); } catch(e) {}
+                await prismAuditLog('early-out-request', `Early out request at ${now}: ${reason.trim()}`);
+                showToast('📤 Early-out request sent to admin.', 'success');
+            } catch(e) {
+                showToast('❌ Error submitting request: ' + e.message, 'error');
+            }
+        }
+        window.prismRequestEarlyOut = prismRequestEarlyOut;
+
+        // ── VOID REQUEST ──
+        async function prismRequestVoid(type, recordId, details) {
+            const reason = window.prompt('Reason for void request:');
+            if (!reason || !reason.trim()) return;
+
+            try {
+                const now = new Date();
+                const voidReq = {
+                    type: 'void-request',
+                    recordType: type,
+                    recordId: recordId,
+                    details: details || '',
+                    reason: reason.trim(),
+                    requestedBy: currentAppUser && currentAppUser.email,
+                    requestedByName: currentAppUser && (currentAppUser.fullname || currentAppUser.email),
+                    status: 'pending',
+                    createdAt: now.toISOString(),
+                    date: now.toISOString().split('T')[0]
+                };
+                await dbAdd('customNotes', {
+                    ...voidReq,
+                    title: `🚫 Void Request — ${type} #${recordId}`,
+                    category: 'endorsement',
+                    date: voidReq.date,
+                    description: `Void request for ${type} #${recordId}. Reason: ${reason.trim()}`,
+                    isVoidRequest: true
+                });
+
+                // Notify admin
+                if (window.db && currentAppUser && currentAppUser.orgId) {
+                    try {
+                        await window.db.collection('prism_data').doc(currentAppUser.orgId)
+                            .collection('notifications').add({
+                                type: 'void-request',
+                                from: currentAppUser.email,
+                                message: `🔔 Void request from ${currentAppUser.fullname||currentAppUser.email} for ${type} #${recordId}. Reason: ${reason.trim()}`,
+                                recordType: type, recordId,
+                                read: false,
+                                createdAt: now.toISOString()
+                            });
+                    } catch(e) {}
+                }
+
+                try { await syncToFirebase(); } catch(e) {}
+                await prismAuditLog('void-request', `Void request for ${type} #${recordId}: ${reason.trim()}`);
+                showToast('📤 Void request sent to admin for approval.', 'success');
+            } catch(e) {
+                showToast('❌ Error sending void request: ' + e.message, 'error');
+            }
+        }
+        window.prismRequestVoid = prismRequestVoid;
+
+        // ── AUDIT LOG ──
+        async function prismAuditLog(action, details, extra) {
+            try {
+                const log = {
+                    action,
+                    details,
+                    user: currentAppUser && currentAppUser.email,
+                    userName: currentAppUser && (currentAppUser.fullname || currentAppUser.email),
+                    role: currentAppUser && currentAppUser.role,
+                    timestamp: new Date().toISOString(),
+                    date: new Date().toISOString().split('T')[0],
+                    ...(extra || {})
+                };
+                await dbAdd('auditLog', log);
+                // Also push to Firestore for admin visibility
+                if (window.db && currentAppUser && currentAppUser.orgId) {
+                    try {
+                        await window.db.collection('prism_data').doc(currentAppUser.orgId)
+                            .collection('auditLog').add(log);
+                    } catch(e) {}
+                }
+            } catch(e) { console.warn('[AuditLog]', e); }
+        }
+        window.prismAuditLog = prismAuditLog;
+
+        // ── SESSION TIMEOUT (15 min for cashier, 60 min for others) ──
+        let _sessionTimer = null;
+        let _lastActivity = Date.now();
+        function prismResetSessionTimer() {
+            _lastActivity = Date.now();
+        }
+        function prismStartSessionTimeout() {
+            const role = currentAppUser && currentAppUser.role;
+            const timeoutMs = role === 'cashier' ? 15 * 60 * 1000 : 60 * 60 * 1000;
+            clearInterval(_sessionTimer);
+            _sessionTimer = setInterval(async () => {
+                if (Date.now() - _lastActivity > timeoutMs) {
+                    clearInterval(_sessionTimer);
+                    showToast('⏰ Session expired. Logging out for security.', 'warning');
+                    await prismAuditLog('session-timeout', 'Auto logout due to inactivity');
+                    setTimeout(() => { if (typeof mtAppLogout === 'function') mtAppLogout(); }, 2000);
+                }
+            }, 30000);
+        }
+        // Track activity
+        ['click','keydown','touchstart','scroll'].forEach(ev => {
+            document.addEventListener(ev, prismResetSessionTimer, { passive: true });
+        });
+        window.prismStartSessionTimeout = prismStartSessionTimeout;
+
+        
+        // ── ADD EARLY-OUT BUTTON TO CASHIER DASHBOARD ──
+        function prismAddCashierButtons() {
+            if (!currentAppUser || currentAppUser.role !== 'cashier') return;
+            const dash = document.getElementById('cashier-dashboard');
+            if (!dash || document.getElementById('cashier-action-bar')) return;
+            const bar = document.createElement('div');
+            bar.id = 'cashier-action-bar';
+            bar.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;padding:12px 16px;background:rgba(99,102,241,0.05);border-bottom:1px solid rgba(99,102,241,0.1);';
+            bar.innerHTML = `
+                <button onclick="prismRequestEarlyOut()" style="padding:8px 16px;background:rgba(251,191,36,0.1);border:1px solid #f59e0b;color:#fbbf24;border-radius:8px;cursor:pointer;font-size:0.82rem;font-weight:600;">⏰ Request Early Out</button>
+                <button onclick="prismViewMyLogs()" style="padding:8px 16px;background:rgba(99,102,241,0.1);border:1px solid #6366f1;color:#818cf8;border-radius:8px;cursor:pointer;font-size:0.82rem;font-weight:600;">📋 My Activity Log</button>
+            `;
+            dash.insertBefore(bar, dash.firstChild);
+        }
+        window.prismAddCashierButtons = prismAddCashierButtons;
+
+        // ── VIEW MY LOGS ──
+        async function prismViewMyLogs() {
+            const email = currentAppUser && currentAppUser.email;
+            if (!email) return;
+            const logs = await dbGetAll('auditLog');
+            const myLogs = logs.filter(l => l.user === email).slice(-30).reverse();
+            if (myLogs.length === 0) { showToast('No activity logged yet.', 'info'); return; }
+            const rows = myLogs.map(l => {
+                const t = new Date(l.timestamp).toLocaleString('en-PH');
+                return `<tr style="border-bottom:1px solid #1e293b;">
+                    <td style="padding:6px 10px;color:#94a3b8;font-size:0.78rem;">${t}</td>
+                    <td style="padding:6px 10px;color:#e2e8f0;font-size:0.8rem;">${l.action||''}</td>
+                    <td style="padding:6px 10px;color:#64748b;font-size:0.78rem;">${l.details||''}</td>
+                </tr>`;
+            }).join('');
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+            modal.innerHTML = `<div style="background:#0f172a;border:1px solid #1e293b;border-radius:14px;max-width:600px;width:100%;max-height:80vh;overflow:auto;padding:20px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <h3 style="color:#f1f5f9;margin:0;">📋 My Activity Log</h3>
+                    <button onclick="this.closest('div[style]').remove()" style="background:none;border:none;color:#64748b;font-size:1.4rem;cursor:pointer;">×</button>
+                </div>
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead><tr style="color:#64748b;font-size:0.75rem;text-align:left;">
+                        <th style="padding:6px 10px;">Time</th><th style="padding:6px 10px;">Action</th><th style="padding:6px 10px;">Details</th>
+                    </tr></thead><tbody>${rows}</tbody>
+                </table>
+            </div>`;
+            document.body.appendChild(modal);
+        }
+        window.prismViewMyLogs = prismViewMyLogs;
+
+        
+        // ── ADMIN: LOAD PENDING VOID REQUESTS + EARLY OUT NOTIFICATIONS ──
+        async function prismLoadAdminNotifications() {
+            const role = currentAppUser && currentAppUser.role;
+            if (!['owner','admin','manager'].includes(role)) return;
+            try {
+                const notes = await dbGetAll('customNotes');
+                const voidReqs = notes.filter(n => n.isVoidRequest && n.status === 'pending');
+                const earlyOuts = notes.filter(n => n.isEarlyOutRequest && n.status === 'pending');
+                const total = voidReqs.length + earlyOuts.length;
+                if (total > 0) {
+                    // Show badge on notes/endorsements section
+                    const badge = document.getElementById('admin-notif-badge');
+                    if (!badge) {
+                        const b = document.createElement('span');
+                        b.id = 'admin-notif-badge';
+                        b.style.cssText = 'position:fixed;top:12px;right:12px;background:#ef4444;color:white;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;z-index:9999;cursor:pointer;';
+                        b.textContent = total;
+                        b.title = `${voidReqs.length} void request(s), ${earlyOuts.length} early-out request(s)`;
+                        b.onclick = () => showSection('notes');
+                        document.body.appendChild(b);
+                    } else {
+                        badge.textContent = total;
+                    }
+                }
+            } catch(e) {}
+        }
+        window.prismLoadAdminNotifications = prismLoadAdminNotifications;
+
         // ══ DELETE SAMPLE DATA ONLY ══
         async function deleteSampleData() {
             // Step 1 — Initial confirm
@@ -19222,6 +19541,46 @@ Lender/Manager
         }
 
         // Update user display in header
+        
+        // ── APPLY ROLE-BASED NAV VISIBILITY ──
+        function applyRoleNav() {
+            const role = currentAppUser && currentAppUser.role;
+            const perms = currentAppUser && currentAppUser.permissions;
+            if (!role || !perms) return;
+
+            const restrictedSections = {
+                'properties': !perms['access-properties'],
+                'expenses':   !perms['view-expenses'],
+                'income':     !perms['view-income'],
+                'employees':  !perms['access-hr'],
+                'reports':    !perms['view-reports'],
+                'settings':   !perms['access-settings'],
+            };
+
+            // Hide nav buttons for restricted sections
+            document.querySelectorAll('.nav-btn[data-section], .bottom-nav-item[data-section]').forEach(btn => {
+                const sec = btn.dataset.section;
+                if (restrictedSections[sec]) {
+                    btn.style.display = 'none';
+                } else {
+                    btn.style.display = '';
+                }
+            });
+
+            // For cashier — add role badge to header
+            if (role === 'cashier') {
+                const header = document.querySelector('.app-header, .header, #app-header');
+                if (header && !document.getElementById('role-badge')) {
+                    const badge = document.createElement('span');
+                    badge.id = 'role-badge';
+                    badge.style.cssText = 'background:rgba(251,191,36,0.15);border:1px solid #f59e0b;color:#fbbf24;font-size:0.7rem;padding:2px 8px;border-radius:10px;margin-left:8px;font-weight:600;';
+                    badge.textContent = '💼 CASHIER';
+                    header.appendChild(badge);
+                }
+            }
+        }
+        window.applyRoleNav = applyRoleNav;
+
         function updateUserDisplay() {
             const userDisplay = document.getElementById('current-user-display');
             // Refresh endorsement FAB + role dashboard whenever user display updates
@@ -22986,7 +23345,30 @@ async function _mtWaitForAuth(maxMs = 20000) {
     });
 }
 
-async function mtLogin() {
+
+        // ── FORGOT PASSWORD ──
+        async function prismForgotPassword() {
+            const emailEl = document.getElementById('mt-login-email');
+            const email = emailEl ? emailEl.value.trim() : '';
+            const useEmail = email || window.prompt('Enter your email address to receive a password reset link:');
+            if (!useEmail) return;
+            try {
+                const authInst = window.auth || (firebase && firebase.auth && firebase.auth());
+                if (!authInst) { showToast('❌ Cannot connect. Please refresh.', 'error'); return; }
+                await authInst.sendPasswordResetEmail(useEmail.trim());
+                showToast('📧 Password reset link sent to ' + useEmail.trim() + ' — check your inbox!', 'success');
+            } catch(e) {
+                const codes = {
+                    'auth/user-not-found':   '❌ No account found with that email.',
+                    'auth/invalid-email':    '❌ Invalid email address.',
+                    'auth/too-many-requests':'⏳ Too many attempts. Please wait a moment.'
+                };
+                showToast(codes[e.code] || '❌ Error: ' + e.message, 'error');
+            }
+        }
+        window.prismForgotPassword = prismForgotPassword;
+
+        async function mtLogin() {
     const email = (document.getElementById('mt-login-email')?.value || '').trim();
     const password = document.getElementById('mt-login-password')?.value || '';
     if (!email || !password) { mtShowAuthError('Please enter your email and password.'); return; }
@@ -23083,16 +23465,40 @@ async function mtRegister() {
             const el = document.getElementById(id);
             if (el) el.value = '';
         });
-        // ── SECURITY: Self-register in allowlist as pending ──
+        // ── SECURITY: Check if pre-approved before self-registering ──
         const _isSAEmail = MT.SUPER_ADMINS.map(e=>e.toLowerCase()).includes(email.toLowerCase());
         if (!_isSAEmail) {
-            // Create pending entry keyed by Firebase UID — required for Firestore RLS rules
-            await PRISM_SECURITY.selfRegister(email, null, userCred.user.uid);
-            // Sign them out immediately — they need approval first
-            try { await firebase.auth().signOut(); } catch(e) {}
-            mtShowAuthSuccess('✅ Registration received! Your account is pending administrator approval. You will be notified once approved.');
-            setBusy(false);
-            return; // Don't proceed to setup
+            // Check if admin pre-approved this email
+            let preApproved = false;
+            try {
+                if (window.db) {
+                    const snap = await window.db.collection('prism_allowed_users')
+                        .where('email','==', email.toLowerCase()).limit(1).get();
+                    if (!snap.empty) {
+                        const entry = snap.docs[0].data();
+                        if (entry.status === 'approved') {
+                            preApproved = true;
+                            // Stamp UID on the existing entry
+                            await snap.docs[0].ref.update({ uid: userCred.user.uid, updatedAt: new Date().toISOString() });
+                        }
+                    }
+                }
+            } catch(e) { console.warn('[Register] Allowlist check failed:', e); }
+
+            if (preApproved) {
+                // Pre-approved — let them through directly
+                mtShowAuthSuccess('✅ Welcome! Your account is approved. Loading your workspace...');
+                setBusy(false);
+                // onAuthStateChanged will fire and handle navigation
+                return;
+            } else {
+                // Not pre-approved — register as pending
+                await PRISM_SECURITY.selfRegister(email, null, userCred.user.uid);
+                try { await firebase.auth().signOut(); } catch(e) {}
+                mtShowAuthSuccess('✅ Registration received! Your account is pending administrator approval.');
+                setBusy(false);
+                return;
+            }
         }
         // For super admin emails — navigate directly, don't wait for onAuthStateChanged
         const isSA = _isSAEmail;
@@ -24376,9 +24782,18 @@ async function mtInit() {
                     mtUpdateOrgBadge();
                     setTimeout(async () => {
                         if (typeof updateUserDisplay === 'function') updateUserDisplay();
+                        if (typeof applyRoleNav === 'function') applyRoleNav();
+                        // Auto time-in for cashier on login
+                        if (currentAppUser && currentAppUser.role === 'cashier') {
+                            await prismCashierAutoTimeIn();
+                        }
                         // Wait for DB ready before loading dashboard
                         if (window._dbReadyPromise) await window._dbReadyPromise;
                         if (typeof loadDashboard === 'function') loadDashboard();
+                        setTimeout(() => {
+                            if (typeof prismAddCashierButtons === 'function') prismAddCashierButtons();
+                            if (typeof prismLoadAdminNotifications === 'function') prismLoadAdminNotifications();
+                        }, 800);
                     }, 300);
                 }
             }
@@ -24496,18 +24911,40 @@ async function mtInit() {
                     }
                     if (!currentAppUser) {
                         // Build owner user from Firebase profile
+                        // ── Read role from allowlist entry ──
+                        const _secRole = (MT._securityData && MT._securityData.role) ? MT._securityData.role : 'admin';
+                        const _isCashier = _secRole === 'cashier';
+                        const _isViewer  = _secRole === 'viewer';
+                        const _canAdmin  = ['owner','admin','manager'].includes(_secRole);
+
                         currentAppUser = {
                             id: 1,
                             username: user.email.split('@')[0],
                             fullname: user.displayName || user.email,
-                            role: 'admin',
+                            role: _secRole,
                             email: user.email,
                             orgId: org.id,
                             permissions: {
-                                'add-property':true,'edit-property':true,'delete-property':true,
-                                'add-tenant':true,'edit-tenant':true,'delete-tenant':true,
-                                'record-payment':true,'water-sales':true,'void-sale':true,
-                                'manage-staff':true,'manage-users':true,'view-reports':true,'backup-restore':true
+                                'add-property':     _canAdmin,
+                                'edit-property':    _canAdmin,
+                                'delete-property':  _canAdmin,
+                                'add-tenant':       _canAdmin,
+                                'edit-tenant':      _canAdmin,
+                                'delete-tenant':    _canAdmin,
+                                'record-payment':   true,
+                                'water-sales':      true,
+                                'void-sale':        _canAdmin,
+                                'manage-staff':     _canAdmin,
+                                'manage-users':     _canAdmin,
+                                'view-reports':     _canAdmin,
+                                'backup-restore':   _canAdmin,
+                                'view-expenses':    _canAdmin,
+                                'view-income':      _canAdmin,
+                                'view-profiles':    _canAdmin,
+                                'delete-records':   _canAdmin,
+                                'access-settings':  _canAdmin,
+                                'access-hr':        _canAdmin,
+                                'access-properties':_canAdmin
                             }
                         };
                         localStorage.setItem('carent_current_user', JSON.stringify(currentAppUser));
@@ -24938,6 +25375,50 @@ window.mtSAToggleOrgStatus=mtSAToggleOrgStatus;
         
         // ══ PRISM ALLOWLIST ADMIN FUNCTIONS ══
 
+        
+        // ── SA: SEND PASSWORD RESET EMAIL ──
+        async function mtSASendPasswordReset(email) {
+            if (!email) return;
+            const ok = await showConfirm(
+                `Send a password reset email to ${email}?\n\nThey will receive a link to set a new password.`,
+                'info', '🔑 Send Password Reset', 'Yes, Send Email'
+            );
+            if (!ok) return;
+            try {
+                const authInst = window.auth || (firebase && firebase.auth && firebase.auth());
+                await authInst.sendPasswordResetEmail(email);
+                showToast('📧 Password reset email sent to ' + email, 'success');
+            } catch(e) {
+                showToast('❌ Failed: ' + (e.message || e), 'error');
+            }
+        }
+        window.mtSASendPasswordReset = mtSASendPasswordReset;
+
+        // ── SA: DELETE USER ACCOUNT (allowlist entry only) ──
+        async function mtSADeleteUserAccount(docId, email) {
+            if (!docId) return;
+            const step1 = await showConfirm(
+                `Delete the account entry for ${email}?\n\nThis removes them from the allowed users list. They will no longer be able to log in.\n\nYou can re-add them anytime.`,
+                'danger', '🗑 Delete User Account', 'Yes, Delete'
+            );
+            if (!step1) return;
+            const step2 = await showConfirm(
+                `Are you sure? ${email} will be locked out immediately.`,
+                'danger', '⚠️ Confirm Delete', 'Yes, Remove User'
+            );
+            if (!step2) return;
+            try {
+                if (window.db) {
+                    await window.db.collection('prism_allowed_users').doc(docId).delete();
+                }
+                showToast('✅ User account entry deleted. Re-add them anytime via Add User.', 'success');
+                setTimeout(() => mtSALoadAllowlist(), 800);
+            } catch(e) {
+                showToast('❌ Failed: ' + (e.message || e), 'error');
+            }
+        }
+        window.mtSADeleteUserAccount = mtSADeleteUserAccount;
+
         async function mtSALoadAllowlist() {
             const pendingEl = document.getElementById('sa-pending-list');
             const tableEl   = document.getElementById('sa-allowlist-table');
@@ -24977,6 +25458,8 @@ window.mtSAToggleOrgStatus=mtSAToggleOrgStatus;
                                 <td style="padding:9px 10px;display:flex;gap:6px;flex-wrap:wrap;">
                                     ${u.status!=='approved'?`<button onclick="mtSAApproveUserDirect('${u.id}')" style="padding:4px 10px;background:rgba(16,185,129,0.1);border:1px solid #10b981;color:#34d399;border-radius:5px;cursor:pointer;font-size:0.75rem;">Approve</button>`:''}
                                     ${u.status!=='suspended'?`<button onclick="mtSASuspendUser('${u.id}')" style="padding:4px 10px;background:rgba(239,68,68,0.08);border:1px solid #ef4444;color:#f87171;border-radius:5px;cursor:pointer;font-size:0.75rem;">Suspend</button>`:`<button onclick="mtSAUnsuspendUser('${u.id}')" style="padding:4px 10px;background:rgba(99,102,241,0.1);border:1px solid #6366f1;color:#818cf8;border-radius:5px;cursor:pointer;font-size:0.75rem;">Unsuspend</button>`}
+                                    <button onclick="mtSASendPasswordReset('${u.email}')" style="padding:4px 10px;background:rgba(251,191,36,0.08);border:1px solid #f59e0b;color:#fbbf24;border-radius:5px;cursor:pointer;font-size:0.75rem;" title="Send password reset email">🔑 Reset PW</button>
+                                    <button onclick="mtSADeleteUserAccount('${u.id}','${u.email}')" style="padding:4px 10px;background:rgba(239,68,68,0.06);border:1px solid #7f1d1d;color:#f87171;border-radius:5px;cursor:pointer;font-size:0.75rem;" title="Delete this user account completely">🗑 Delete</button>
                                 </td></tr>`).join('')}
                             </tbody></table>`;
                 }
