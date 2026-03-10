@@ -7674,6 +7674,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 };
 
                 _lastSyncTimestamp = data.lastSync;
+                window._lastSyncTimestamp = data.lastSync; // shared with MT onSnapshot scope
                 await dataRef.set(data);
                 console.log('[Sync] Data synced to Firestore — org:', orgId);
                 updateSyncStatus('synced');
@@ -18124,10 +18125,7 @@ async function showPayrollSummary() {
 
         // ══ DELETE SAMPLE DATA ONLY ══
         async function deleteSampleData() {
-            // Pause realtime sync during deletion
-            window._prismWipeInProgress = true;
-            try { if (typeof mtStopRealtimeSync === 'function') mtStopRealtimeSync(); } catch(e) {}
-            // Step 1 — Initial confirm
+            // Step 1 — Initial confirm (BEFORE setting wipe flag)
             const step1 = await showConfirm(
                 'This will permanently delete all sample/demo data across every module — properties, tenants, payments, credits, employees, water, tasks, notes and more.\n\nYour REAL recorded data will NOT be affected.',
                 'warning', '🧹 Delete Sample Data', 'Yes, continue'
@@ -18145,10 +18143,12 @@ async function showPayrollSummary() {
             const typed = await prismShowTypeConfirm('DELETE SAMPLE');
             if (typed !== 'DELETE SAMPLE') {
                 showToast('❌ Cancelled — text did not match.', 'error');
-                window._prismWipeInProgress = false;
-                try { if (typeof mtStartRealtimeSync === 'function') mtStartRealtimeSync(); } catch(e) {}
                 return;
             }
+
+            // ── All confirms passed — NOW lock out Firebase sync ──
+            window._prismWipeInProgress = true;
+            try { if (typeof mtStopRealtimeSync === 'function') mtStopRealtimeSync(); } catch(e) {}
 
             showToast('🧹 Deleting sample data...', 'info');
             let totalDeleted = 0;
@@ -18259,11 +18259,7 @@ async function showPayrollSummary() {
         window.prismFullRefresh = prismFullRefresh;
 
 async function clearAllData() {
-            // ── Pause realtime sync so it doesn't race against the wipe ──
-            window._prismWipeInProgress = true;
-            try { if (typeof mtStopRealtimeSync === 'function') mtStopRealtimeSync(); } catch(e) {}
-
-            // ── Step 0: Snapshot notes + tasks before asking ──
+            // ── Step 0: Snapshot notes + tasks before asking (BEFORE wipe flag) ──
             let _snapNotes = [], _snapTasks = [];
             try { _snapNotes = await dbGetAll('customNotes') || []; } catch(e) {}
             try { _snapTasks = await dbGetAll('tasks') || [];        } catch(e) {}
@@ -18293,6 +18289,10 @@ async function clearAllData() {
             // ── Step 5: Type confirm ──
             const _ca5 = await prismShowTypeConfirm();
             if (_ca5 !== 'DELETE ALL') { showToast('\u274c Cancelled \u2014 text did not match.', 'error'); return; }
+
+            // ── All confirms passed — NOW lock out Firebase sync ──
+            window._prismWipeInProgress = true;
+            try { if (typeof mtStopRealtimeSync === 'function') mtStopRealtimeSync(); } catch(e) {}
 
             showToast('\u23f3 Deleting all data...', 'info');
 
@@ -27477,6 +27477,8 @@ window.addEventListener('DOMContentLoaded', () => {
         
 
         // ========== REAL-TIME CROSS-DEVICE SYNC ==========
+        // Safety: always reset wipe flag on page load — prevents stuck state from cancelled operations
+        window._prismWipeInProgress = false;
         let _realtimeSyncUnsubscribe = null;
         let _lastSyncTimestamp = null;
 
@@ -27498,8 +27500,13 @@ window.addEventListener('DOMContentLoaded', () => {
                     if (!doc.exists) return;
                     const data = doc.data();
                     if (!data || !data.lastSync) return;
-                    if (_lastSyncTimestamp && data.lastSync === _lastSyncTimestamp) return;
+                    // Use window._lastSyncTimestamp — wipe functions write here across scope boundaries
+                    const _tsToCheck = window._lastSyncTimestamp || _lastSyncTimestamp;
+                    if (_tsToCheck && data.lastSync === _tsToCheck) return;
                     if (window._prismWipeInProgress) { console.log('[RealtimeSync] Wipe in progress — skipping snapshot'); return; }
+                    // Update both so future checks work
+                    _lastSyncTimestamp = data.lastSync;
+                    window._lastSyncTimestamp = data.lastSync;
 
                     console.log('[RealtimeSync] Remote change detected — updating local data...');
 
