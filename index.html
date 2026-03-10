@@ -4987,6 +4987,9 @@
                         <p>Export all data to JSON file</p>
                     </div>
                     <button class="btn btn-sm btn-secondary" onclick="backupData()">Backup</button>
+                    <button class="btn btn-secondary" onclick="prismViewErrorLog()" style="margin-top:8px;width:100%;background:rgba(239,68,68,0.08);border-color:rgba(239,68,68,0.3);color:#f87171;" title="View system error log (admin only)">
+                        🩺 View System Error Log
+                    </button>
                 </div>
                 <div class="settings-item">
                     <div class="settings-info">
@@ -8642,6 +8645,13 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                         auditStore.createIndex('date', 'date', { unique: false });
                         auditStore.createIndex('user', 'user', { unique: false });
                     }
+                    // Error log store
+                    if (!database.objectStoreNames.contains('errorLog')) {
+                        const errStore = database.createObjectStore('errorLog', { keyPath: 'id', autoIncrement: true });
+                        errStore.createIndex('source', 'source', { unique: false });
+                        errStore.createIndex('date', 'date', { unique: false });
+                        errStore.createIndex('isCritical', 'isCritical', { unique: false });
+                    }
                 };
 
                 request.onblocked = () => {
@@ -8803,25 +8813,29 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             });
 
             // Refresh data
+            // ── Auto-recovery wrapped section loaders ──
+            const _safeLoad = async (name, fn) => {
+                try { await fn(); }
+                catch(e) { prismAutoRecover(name, fn); prismRecordError('Section:'+name, e.message, e.stack||'', false); }
+            };
             if (sectionId === 'dashboard') {
                 if (currentAppUser && currentAppUser.role === 'cashier') {
-                    mtShowRoleDashboard();
+                    _safeLoad('dashboard', () => mtShowRoleDashboard());
                 } else {
-                    loadDashboard();
+                    _safeLoad('dashboard', () => loadDashboard());
                 }
             }
-            if (sectionId === 'properties') loadProperties();
-            if (sectionId === 'tenants') loadTenants();
-            if (sectionId === 'credits') loadCredits();
-            if (sectionId === 'water') loadWaterCustomers();
-            if (sectionId === 'income') loadIncome();
-            if (sectionId === 'employees') loadEmployees();
-            if (sectionId === 'expenses') loadExpenses();
-            if (sectionId === 'tasks') loadTasks();
-            if (sectionId === 'notes') loadNotes();
+            if (sectionId === 'properties') _safeLoad('properties', loadProperties);
+            if (sectionId === 'tenants')    _safeLoad('tenants',    loadTenants);
+            if (sectionId === 'credits')    _safeLoad('credits',    loadCredits);
+            if (sectionId === 'water')      _safeLoad('water',      loadWaterCustomers);
+            if (sectionId === 'income')     _safeLoad('income',     loadIncome);
+            if (sectionId === 'employees')  _safeLoad('employees',  loadEmployees);
+            if (sectionId === 'expenses')   _safeLoad('expenses',   loadExpenses);
+            if (sectionId === 'tasks')      _safeLoad('tasks',      loadTasks);
+            if (sectionId === 'notes')      _safeLoad('notes',      loadNotes);
             if (sectionId === 'reports') {
-                initReportsPage();
-                generateReports();
+                _safeLoad('reports', async () => { initReportsPage(); generateReports(); });
             }
             if (sectionId === 'settings') {
                 refreshStats();
@@ -17246,6 +17260,265 @@ async function showPayrollSummary() {
             } catch(e) {}
         }
         window.prismLoadAdminNotifications = prismLoadAdminNotifications;
+
+        
+        // ════════════════════════════════════════════════════════════════
+        // PRISM SELF-HEALING HEALTH SYSTEM
+        // Layer 1: Global error boundary (catches all JS crashes)
+        // Layer 2: Error recorder (logs to IndexedDB + Firestore)
+        // Layer 3: Auto-recovery (retries failed modules)
+        // Layer 4: Health ping (Firebase connection watchdog every 30s)
+        // ════════════════════════════════════════════════════════════════
+
+        // ── LAYER 2: ERROR RECORDER ──
+        // Must be defined first so layers 1, 3, 4 can use it
+        async function prismRecordError(source, message, detail, isCritical) {
+            try {
+                const ts  = new Date().toISOString();
+                const day = ts.split('T')[0];
+                const entry = {
+                    source:    source    || 'unknown',
+                    message:   message   || 'Unknown error',
+                    detail:    detail    || '',
+                    isCritical: !!isCritical,
+                    user:      currentAppUser?.email    || 'unauthenticated',
+                    role:      currentAppUser?.role     || 'unknown',
+                    orgId:     currentAppUser?.orgId    || 'none',
+                    timestamp: ts,
+                    date:      day,
+                    userAgent: navigator.userAgent.slice(0, 120),
+                    url:       location.href.slice(0, 100),
+                };
+
+                // Save locally
+                try { await dbAdd('errorLog', entry); } catch(e) {}
+
+                // Push to Firestore for remote visibility
+                if (window.db && currentAppUser?.orgId) {
+                    try {
+                        await window.db
+                            .collection('prism_data')
+                            .doc(currentAppUser.orgId)
+                            .collection('errorLog')
+                            .add(entry);
+                    } catch(e) {}
+                }
+
+                // Notify admin via endorsement inbox (critical errors only)
+                if (isCritical) {
+                    try {
+                        const list = getEndorsements ? getEndorsements() : [];
+                        list.push({
+                            id:          'err_' + Date.now(),
+                            type:        'urgent',
+                            message:     '🚨 SYSTEM ERROR — ' + source + ': ' + message,
+                            detail:      detail || '',
+                            sentBy:      'PRISM Health Monitor',
+                            sentByRole:  'system',
+                            orgId:       currentAppUser?.orgId || 'local',
+                            read:        false,
+                            timestamp:   ts,
+                            isSystemError: true,
+                        });
+                        if (typeof saveEndorsements === 'function') saveEndorsements(list);
+                        // Flash the inbox badge
+                        const badge = document.getElementById('inbox-badge');
+                        if (badge) { badge.style.display = 'inline'; badge.textContent = '!'; }
+                    } catch(e) {}
+                }
+            } catch(e) {
+                console.warn('[HealthSystem] recorder failed:', e);
+            }
+        }
+        window.prismRecordError = prismRecordError;
+
+        // ── LAYER 1: GLOBAL ERROR BOUNDARY ──
+        // Catches unhandled JS errors and promise rejections
+        (function installErrorBoundary() {
+            // Synchronous JS errors
+            window.onerror = function(msg, src, line, col, err) {
+                const source  = src ? src.split('/').pop() + ':' + line : 'unknown';
+                const message = msg || 'Script error';
+                const detail  = err?.stack ? err.stack.slice(0, 400) : '';
+                const isCrit  = !message.includes('Script error') &&
+                                 !message.includes('ResizeObserver') &&
+                                 !message.includes('Non-Error');
+                console.error('[PRISM Error]', source, message);
+                prismRecordError(source, message, detail, isCrit);
+                // Show friendly recovery UI for critical crashes
+                if (isCrit) {
+                    const existing = document.getElementById('prism-error-banner');
+                    if (!existing) {
+                        const banner = document.createElement('div');
+                        banner.id = 'prism-error-banner';
+                        banner.style.cssText = [
+                            'position:fixed','top:60px','left:50%','transform:translateX(-50%)',
+                            'background:#7f1d1d','color:#fecaca','border:1px solid #ef4444',
+                            'border-radius:10px','padding:10px 18px','z-index:99999',
+                            'font-size:0.82rem','max-width:360px','text-align:center',
+                            'box-shadow:0 4px 20px rgba(0,0,0,0.4)','cursor:pointer',
+                        ].join(';');
+                        banner.innerHTML = '⚠️ Something went wrong. <u>Tap to reload</u>';
+                        banner.onclick = () => location.reload();
+                        document.body.appendChild(banner);
+                        setTimeout(() => { if (banner.parentNode) banner.remove(); }, 8000);
+                    }
+                }
+                return false; // don't suppress default console error
+            };
+
+            // Unhandled promise rejections
+            window.addEventListener('unhandledrejection', function(e) {
+                const reason  = e.reason;
+                const message = reason?.message || String(reason).slice(0, 200) || 'Unhandled promise rejection';
+                const detail  = reason?.stack   ? reason.stack.slice(0, 400) : '';
+                // Filter noise
+                const isNoise = ['Firebase','network','fetch','Failed to fetch',
+                                  'Load failed','cancelled','abort']
+                                 .some(w => message.toLowerCase().includes(w.toLowerCase()));
+                if (!isNoise) {
+                    prismRecordError('Promise', message, detail, false);
+                }
+            });
+        })();
+
+        // ── LAYER 3: AUTO-RECOVERY (retry failed section loads) ──
+        const _prismRetryMap = {};
+        async function prismAutoRecover(sectionId, loaderFn) {
+            const key     = sectionId;
+            const attempt = (_prismRetryMap[key] || 0) + 1;
+            _prismRetryMap[key] = attempt;
+            if (attempt > 3) {
+                showToast('⚠️ ' + sectionId + ' could not load after 3 attempts. Try refreshing.', 'error');
+                await prismRecordError('AutoRecover', sectionId + ' failed after 3 retries', '', true);
+                return;
+            }
+            const delay = attempt * 1200;
+            showToast('🔄 Retrying ' + sectionId + ' (attempt ' + attempt + ')...', 'info');
+            setTimeout(async () => {
+                try {
+                    await loaderFn();
+                    _prismRetryMap[key] = 0;
+                    showToast('✅ ' + sectionId + ' recovered successfully.', 'success');
+                } catch(e) {
+                    prismAutoRecover(sectionId, loaderFn);
+                }
+            }, delay);
+        }
+        window.prismAutoRecover = prismAutoRecover;
+
+        // ── LAYER 4: HEALTH PING — Firebase watchdog ──
+        let _healthPingTimer  = null;
+        let _fbWasOnline      = true;
+        let _consecutiveFails = 0;
+
+        async function prismHealthPing() {
+            const dot = document.getElementById('firebase-header-dot');
+            try {
+                if (!window.db || !window.firebaseReady) throw new Error('Firebase not ready');
+                if (!window.auth || !window.auth.currentUser) {
+                    // Not logged in — skip ping but keep dot amber
+                    if (dot) { dot.style.background = '#f59e0b'; dot.title = 'Firebase: Standby'; }
+                    return;
+                }
+                // Lightweight read to confirm Firestore is alive
+                await window.db.collection('prism_allowed_users').limit(1).get();
+
+                // ✅ Online
+                _consecutiveFails = 0;
+                if (!_fbWasOnline) {
+                    _fbWasOnline = true;
+                    showToast('✅ Connection restored — syncing...', 'success');
+                    await prismRecordError('HealthPing', 'Connection restored after outage', '', false);
+                    try { await syncFromFirebase(); } catch(e) {}
+                }
+                if (dot) { dot.style.background = '#22c55e'; dot.title = 'Firebase: Connected ✅'; }
+
+            } catch(e) {
+                _consecutiveFails++;
+                _fbWasOnline = false;
+                if (dot) { dot.style.background = '#ef4444'; dot.title = 'Firebase: Offline ⚠️'; }
+
+                if (_consecutiveFails === 2) {
+                    showToast('⚠️ Connection lost — working offline. Will retry...', 'warning');
+                }
+                if (_consecutiveFails === 5) {
+                    // Escalate — notify admin and log
+                    await prismRecordError('HealthPing',
+                        'Firebase offline for 5 consecutive pings (~2.5 min)',
+                        e.message || '', true);
+                    showToast('🔴 Extended outage detected — admin notified.', 'error');
+                }
+            }
+        }
+
+        function prismStartHealthPing() {
+            clearInterval(_healthPingTimer);
+            prismHealthPing(); // immediate first check
+            _healthPingTimer = setInterval(prismHealthPing, 30000); // every 30s
+        }
+        window.prismStartHealthPing = prismStartHealthPing;
+
+        // ── ERROR LOG VIEWER (admin only) ──
+        async function prismViewErrorLog() {
+            const role = currentAppUser?.role;
+            if (!['owner','admin'].includes(role)) {
+                showToast('⛔ Admin access required.', 'warning'); return;
+            }
+            let logs = [];
+            try { logs = await dbGetAll('errorLog'); } catch(e) {}
+            logs = logs.slice(-50).reverse();
+            if (logs.length === 0) {
+                showToast('✅ No errors recorded — system is clean!', 'success'); return;
+            }
+            const rows = logs.map(l => {
+                const t    = new Date(l.timestamp).toLocaleString('en-PH');
+                const crit = l.isCritical ? '🔴' : '🟡';
+                return '<tr style="border-bottom:1px solid #1e293b;">' +
+                    '<td style="padding:5px 8px;color:#94a3b8;font-size:0.72rem;white-space:nowrap;">' + t + '</td>' +
+                    '<td style="padding:5px 8px;font-size:0.75rem;">' + crit + '</td>' +
+                    '<td style="padding:5px 8px;color:#e2e8f0;font-size:0.75rem;">' + (l.source||'') + '</td>' +
+                    '<td style="padding:5px 8px;color:#94a3b8;font-size:0.72rem;">' + (l.message||'').slice(0,80) + '</td>' +
+                    '<td style="padding:5px 8px;color:#64748b;font-size:0.7rem;">' + (l.user||'') + '</td>' +
+                '</tr>';
+            }).join('');
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
+            modal.innerHTML =
+                '<div style="background:#0f172a;border:1px solid #1e293b;border-radius:14px;max-width:700px;width:100%;max-height:85vh;overflow:auto;padding:20px;">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
+                        '<h3 style="color:#f1f5f9;margin:0;">🩺 System Error Log <span style=\"font-size:0.75rem;color:#64748b;font-weight:400;\">(last 50)</span></h3>' +
+                        '<div style="display:flex;gap:8px;">' +
+                            '<button onclick=\"prismClearErrorLog()\" style=\"padding:5px 12px;background:rgba(239,68,68,0.1);border:1px solid #ef4444;color:#f87171;border-radius:6px;font-size:0.75rem;cursor:pointer;\">🗑 Clear Log</button>' +
+                            '<button onclick=\"this.closest(\\\'div[style*=inset]\\\').remove()\" style=\"background:none;border:none;color:#64748b;font-size:1.4rem;cursor:pointer;line-height:1;">×</button>' +
+                        '</div>' +
+                    '</div>' +
+                    '<table style="width:100%;border-collapse:collapse;">' +
+                        '<thead><tr style="color:#475569;font-size:0.7rem;text-align:left;border-bottom:1px solid #1e293b;">' +
+                            '<th style="padding:5px 8px;">Time</th>' +
+                            '<th style="padding:5px 8px;">Sev</th>' +
+                            '<th style="padding:5px 8px;">Source</th>' +
+                            '<th style="padding:5px 8px;">Message</th>' +
+                            '<th style="padding:5px 8px;">User</th>' +
+                        '</tr></thead>' +
+                        '<tbody>' + rows + '</tbody>' +
+                    '</table>' +
+                '</div>';
+            document.body.appendChild(modal);
+        }
+        window.prismViewErrorLog = prismViewErrorLog;
+
+        async function prismClearErrorLog() {
+            const ok = await showConfirm('Clear all recorded errors?', 'danger', '🗑 Clear Error Log', 'Yes, Clear');
+            if (!ok) return;
+            try {
+                const all = await dbGetAll('errorLog');
+                for (const e of all) { try { await dbDelete('errorLog', e.id); } catch(ex) {} }
+                showToast('✅ Error log cleared.', 'success');
+                document.querySelector('div[style*="inset:0"]')?.remove();
+            } catch(e) { showToast('Error clearing log: ' + e.message, 'error'); }
+        }
+        window.prismClearErrorLog = prismClearErrorLog;
 
         // ══ DELETE SAMPLE DATA ONLY ══
         async function deleteSampleData() {
@@ -25821,7 +26094,7 @@ window.mtSAToggleOrgStatus=mtSAToggleOrgStatus;
             return out;
         }
         var _demoIMGS = _getDemoIMGS();
-        const _demoSlides = [{"img": 0, "eyebrow": "Property Management", "svg": "<svg width=\"72\" height=\"72\" viewBox=\"0 0 72 72\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"14\" y=\"20\" width=\"44\" height=\"46\" rx=\"2\" fill=\"#1e293b\" stroke=\"#475569\" stroke-width=\"1.2\"/><rect x=\"14\" y=\"12\" width=\"44\" height=\"12\" rx=\"2\" fill=\"#0f172a\" stroke=\"#475569\" stroke-width=\"1.2\"/><rect x=\"20\" y=\"28\" width=\"8\" height=\"8\" rx=\"1\" fill=\"#38bdf8\" opacity=\"0.7\"/><rect x=\"32\" y=\"28\" width=\"8\" height=\"8\" rx=\"1\" fill=\"#38bdf8\" opacity=\"0.7\"/><rect x=\"44\" y=\"28\" width=\"8\" height=\"8\" rx=\"1\" fill=\"#38bdf8\" opacity=\"0.5\"/><rect x=\"20\" y=\"40\" width=\"8\" height=\"8\" rx=\"1\" fill=\"#7dd3fc\" opacity=\"0.6\"/><rect x=\"32\" y=\"40\" width=\"8\" height=\"8\" rx=\"1\" fill=\"#38bdf8\" opacity=\"0.8\"/><rect x=\"44\" y=\"40\" width=\"8\" height=\"8\" rx=\"1\" fill=\"#38bdf8\" opacity=\"0.4\"/><rect x=\"20\" y=\"52\" width=\"8\" height=\"8\" rx=\"1\" fill=\"#38bdf8\" opacity=\"0.5\"/><rect x=\"32\" y=\"52\" width=\"8\" height=\"8\" rx=\"1\" fill=\"#7dd3fc\" opacity=\"0.7\"/><rect x=\"44\" y=\"52\" width=\"8\" height=\"8\" rx=\"1\" fill=\"#38bdf8\" opacity=\"0.6\"/><rect x=\"29\" y=\"56\" width=\"14\" height=\"10\" rx=\"1\" fill=\"#334155\"/><rect x=\"34\" y=\"14\" width=\"4\" height=\"6\" rx=\"0.5\" fill=\"#7dd3fc\" opacity=\"0.5\"/><line x1=\"14\" y1=\"66\" x2=\"58\" y2=\"66\" stroke=\"#475569\" stroke-width=\"1.5\"/></svg>", "title": "Every unit.\\nEvery tenant.\\nOne place.", "caption": "Track vacancies, leases and rental history at a glance. Nothing slips through the cracks.", "tags": ["Properties", "Tenants", "Leases", "Vacancies"]}, {"img": 1, "eyebrow": "Rental & Payments", "svg": "<svg width=\"72\" height=\"72\" viewBox=\"0 0 72 72\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"8\" y=\"30\" width=\"56\" height=\"28\" rx=\"4\" fill=\"#14532d\" stroke=\"#166534\" stroke-width=\"1.2\"/><rect x=\"11\" y=\"33\" width=\"50\" height=\"22\" rx=\"3\" fill=\"#15803d\" stroke=\"#16a34a\" stroke-width=\"0.8\"/><circle cx=\"36\" cy=\"44\" r=\"8\" fill=\"#14532d\" stroke=\"#4ade80\" stroke-width=\"1\"/><text x=\"36\" y=\"48\" text-anchor=\"middle\" font-size=\"9\" font-weight=\"700\" fill=\"#4ade80\" font-family=\"serif\">&#8369;</text><rect x=\"11\" y=\"33\" width=\"10\" height=\"22\" rx=\"2\" fill=\"#166534\" opacity=\"0.5\"/><rect x=\"51\" y=\"33\" width=\"10\" height=\"22\" rx=\"2\" fill=\"#166534\" opacity=\"0.5\"/><ellipse cx=\"52\" cy=\"26\" rx=\"10\" ry=\"5\" fill=\"#854d0e\" stroke=\"#92400e\" stroke-width=\"1\"/><rect x=\"42\" y=\"18\" width=\"20\" height=\"8\" fill=\"#92400e\"/><ellipse cx=\"52\" cy=\"18\" rx=\"10\" ry=\"5\" fill=\"#ca8a04\" stroke=\"#a16207\" stroke-width=\"1\"/><ellipse cx=\"52\" cy=\"18\" rx=\"6\" ry=\"2.5\" fill=\"#fbbf24\" opacity=\"0.6\"/></svg>", "title": "Know who paid.\\nKnow who owes.", "caption": "Record payments, generate receipts and track outstanding balances — instantly.", "tags": ["Payments", "Receipts", "Balances", "History"]}, {"img": 2, "eyebrow": "Water Billing", "svg": "<svg width=\"72\" height=\"72\" viewBox=\"0 0 72 72\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"28\" y=\"10\" width=\"16\" height=\"8\" rx=\"3\" fill=\"#94a3b8\" stroke=\"#64748b\" stroke-width=\"1\"/><rect x=\"32\" y=\"18\" width=\"8\" height=\"20\" rx=\"2\" fill=\"#cbd5e1\" stroke=\"#94a3b8\" stroke-width=\"1\"/><path d=\"M32 34 Q20 34 18 42 Q16 50 24 50 L32 50\" fill=\"#7dd3fc\" stroke=\"#38bdf8\" stroke-width=\"1\"/><rect x=\"30\" y=\"50\" width=\"12\" height=\"4\" rx=\"1\" fill=\"#94a3b8\"/><path d=\"M36 56 Q34 62 36 65 Q38 62 36 56Z\" fill=\"#38bdf8\" opacity=\"0.9\"/><path d=\"M30 60 Q28.5 64 30 66 Q31.5 64 30 60Z\" fill=\"#7dd3fc\" opacity=\"0.7\"/><path d=\"M42 58 Q40.5 62 42 64 Q43.5 62 42 58Z\" fill=\"#7dd3fc\" opacity=\"0.6\"/><circle cx=\"44\" cy=\"18\" r=\"5\" fill=\"#475569\" stroke=\"#64748b\" stroke-width=\"1\"/><circle cx=\"44\" cy=\"18\" r=\"2\" fill=\"#94a3b8\"/></svg>", "title": "Meter to billing\\nin seconds.", "caption": "Track consumption, compute billing and notify customers — fully automated.", "tags": ["Meter Readings", "Billing", "Customers"]}, {"img": 0, "eyebrow": "HR & Payroll", "svg": "<svg width=\"72\" height=\"72\" viewBox=\"0 0 72 72\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"24\" cy=\"20\" r=\"8\" fill=\"#475569\" stroke=\"#64748b\" stroke-width=\"1\"/><path d=\"M10 44 Q10 34 24 34 Q38 34 38 44 L38 48 L10 48Z\" fill=\"#334155\" stroke=\"#475569\" stroke-width=\"1\"/><circle cx=\"48\" cy=\"22\" r=\"7\" fill=\"#6366f1\" stroke=\"#818cf8\" stroke-width=\"1\"/><path d=\"M34 46 Q34 37 48 37 Q62 37 62 46 L62 50 L34 50Z\" fill=\"#4338ca\" stroke=\"#6366f1\" stroke-width=\"1\"/><rect x=\"26\" y=\"54\" width=\"20\" height=\"12\" rx=\"2\" fill=\"#1e293b\" stroke=\"#334155\" stroke-width=\"1\"/><line x1=\"29\" y1=\"58\" x2=\"43\" y2=\"58\" stroke=\"#6366f1\" stroke-width=\"1.2\"/><line x1=\"29\" y1=\"61\" x2=\"39\" y2=\"61\" stroke=\"#475569\" stroke-width=\"1\"/></svg>", "title": "Your team.\\nPaid right.\\nEvery time.", "caption": "Attendance, overtime, salary computation and cash advance — all in one module.", "tags": ["Employees", "Payroll", "Attendance", "Cash Advance"]}, {"img": 1, "eyebrow": "Credit & Collections", "svg": "<svg width=\"72\" height=\"72\" viewBox=\"0 0 72 72\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"14\" y=\"8\" width=\"44\" height=\"56\" rx=\"3\" fill=\"#1e293b\" stroke=\"#334155\" stroke-width=\"1.2\"/><rect x=\"14\" y=\"8\" width=\"10\" height=\"56\" rx=\"3\" fill=\"#0f172a\" stroke=\"#334155\" stroke-width=\"1\"/><line x1=\"24\" y1=\"20\" x2=\"52\" y2=\"20\" stroke=\"#334155\" stroke-width=\"1\"/><line x1=\"24\" y1=\"28\" x2=\"52\" y2=\"28\" stroke=\"#334155\" stroke-width=\"1\"/><line x1=\"24\" y1=\"36\" x2=\"52\" y2=\"36\" stroke=\"#334155\" stroke-width=\"1\"/><line x1=\"24\" y1=\"44\" x2=\"52\" y2=\"44\" stroke=\"#334155\" stroke-width=\"1\"/><text x=\"27\" y=\"24\" font-size=\"7\" fill=\"#94a3b8\" font-family=\"monospace\">Dela Cruz</text><text x=\"27\" y=\"32\" font-size=\"7\" fill=\"#94a3b8\" font-family=\"monospace\">Reyes</text><text x=\"27\" y=\"40\" font-size=\"7\" fill=\"#94a3b8\" font-family=\"monospace\">Santos</text><text x=\"44\" y=\"24\" font-size=\"8\" fill=\"#4ade80\" font-family=\"monospace\">&#10003;</text><text x=\"44\" y=\"32\" font-size=\"8\" fill=\"#f87171\" font-family=\"monospace\">&#10007;</text><text x=\"44\" y=\"40\" font-size=\"8\" fill=\"#4ade80\" font-family=\"monospace\">&#10003;</text></svg>", "title": "Never lose track\\nof what's yours.", "caption": "Monitor debtors, credit accounts and collection schedules in real time.", "tags": ["Credits", "Debtors", "Collections"]}, {"img": 2, "eyebrow": "Analytics", "svg": "<svg width=\"72\" height=\"72\" viewBox=\"0 0 72 72\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"8\" y=\"8\" width=\"56\" height=\"44\" rx=\"4\" fill=\"#0f172a\" stroke=\"#1e293b\" stroke-width=\"1.2\"/><rect x=\"14\" y=\"28\" width=\"8\" height=\"20\" rx=\"1.5\" fill=\"#6366f1\" opacity=\"0.9\"/><rect x=\"26\" y=\"20\" width=\"8\" height=\"28\" rx=\"1.5\" fill=\"#8b5cf6\" opacity=\"0.9\"/><rect x=\"38\" y=\"24\" width=\"8\" height=\"24\" rx=\"1.5\" fill=\"#6366f1\" opacity=\"0.7\"/><rect x=\"50\" y=\"16\" width=\"8\" height=\"32\" rx=\"1.5\" fill=\"#a78bfa\" opacity=\"0.9\"/><polyline points=\"18,28 30,20 42,22 54,14\" stroke=\"#38bdf8\" stroke-width=\"1.8\" fill=\"none\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><circle cx=\"18\" cy=\"28\" r=\"2.5\" fill=\"#38bdf8\"/><circle cx=\"30\" cy=\"20\" r=\"2.5\" fill=\"#38bdf8\"/><circle cx=\"42\" cy=\"22\" r=\"2.5\" fill=\"#38bdf8\"/><circle cx=\"54\" cy=\"14\" r=\"2.5\" fill=\"#38bdf8\"/><line x1=\"8\" y1=\"52\" x2=\"64\" y2=\"52\" stroke=\"#1e293b\" stroke-width=\"1\"/><text x=\"12\" y=\"62\" font-size=\"6\" fill=\"#475569\" font-family=\"monospace\">Q1</text><text x=\"24\" y=\"62\" font-size=\"6\" fill=\"#475569\" font-family=\"monospace\">Q2</text><text x=\"36\" y=\"62\" font-size=\"6\" fill=\"#475569\" font-family=\"monospace\">Q3</text><text x=\"48\" y=\"62\" font-size=\"6\" fill=\"#475569\" font-family=\"monospace\">Q4</text></svg>", "title": "Your whole business.\\nOne glance.", "caption": "Beautiful charts and trend reports across income, expenses and collections.", "tags": ["Dashboard", "Charts", "Trends", "Reports"]}];
+        const _demoSlides = [{"img": 0, "eyebrow": "Property Management", "svg": "<svg width=\"72\" height=\"72\" viewBox=\"0 0 72 72\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"14\" y=\"20\" width=\"44\" height=\"46\" rx=\"2\" fill=\"#1e293b\" stroke=\"#475569\" stroke-width=\"1.2\"/><rect x=\"14\" y=\"12\" width=\"44\" height=\"12\" rx=\"2\" fill=\"#0f172a\" stroke=\"#475569\" stroke-width=\"1.2\"/><rect x=\"20\" y=\"28\" width=\"8\" height=\"8\" rx=\"1\" fill=\"#38bdf8\" opacity=\"0.7\"/><rect x=\"32\" y=\"28\" width=\"8\" height=\"8\" rx=\"1\" fill=\"#38bdf8\" opacity=\"0.7\"/><rect x=\"44\" y=\"28\" width=\"8\" height=\"8\" rx=\"1\" fill=\"#38bdf8\" opacity=\"0.5\"/><rect x=\"20\" y=\"40\" width=\"8\" height=\"8\" rx=\"1\" fill=\"#7dd3fc\" opacity=\"0.6\"/><rect x=\"32\" y=\"40\" width=\"8\" height=\"8\" rx=\"1\" fill=\"#38bdf8\" opacity=\"0.8\"/><rect x=\"44\" y=\"40\" width=\"8\" height=\"8\" rx=\"1\" fill=\"#38bdf8\" opacity=\"0.4\"/><rect x=\"20\" y=\"52\" width=\"8\" height=\"8\" rx=\"1\" fill=\"#38bdf8\" opacity=\"0.5\"/><rect x=\"32\" y=\"52\" width=\"8\" height=\"8\" rx=\"1\" fill=\"#7dd3fc\" opacity=\"0.7\"/><rect x=\"44\" y=\"52\" width=\"8\" height=\"8\" rx=\"1\" fill=\"#38bdf8\" opacity=\"0.6\"/><rect x=\"29\" y=\"56\" width=\"14\" height=\"10\" rx=\"1\" fill=\"#334155\"/><rect x=\"34\" y=\"14\" width=\"4\" height=\"6\" rx=\"0.5\" fill=\"#7dd3fc\" opacity=\"0.5\"/><line x1=\"14\" y1=\"66\" x2=\"58\" y2=\"66\" stroke=\"#475569\" stroke-width=\"1.5\"/></svg>", "title": "Every unit. Every tenant. One place.", "caption": "Track vacancies, leases and rental history at a glance. Nothing slips through the cracks.", "tags": ["Properties", "Tenants", "Leases", "Vacancies"]}, {"img": 1, "eyebrow": "Rental & Payments", "svg": "<svg width=\"72\" height=\"72\" viewBox=\"0 0 72 72\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"8\" y=\"30\" width=\"56\" height=\"28\" rx=\"4\" fill=\"#14532d\" stroke=\"#166534\" stroke-width=\"1.2\"/><rect x=\"11\" y=\"33\" width=\"50\" height=\"22\" rx=\"3\" fill=\"#15803d\" stroke=\"#16a34a\" stroke-width=\"0.8\"/><circle cx=\"36\" cy=\"44\" r=\"8\" fill=\"#14532d\" stroke=\"#4ade80\" stroke-width=\"1\"/><text x=\"36\" y=\"48\" text-anchor=\"middle\" font-size=\"9\" font-weight=\"700\" fill=\"#4ade80\" font-family=\"serif\">&#8369;</text><rect x=\"11\" y=\"33\" width=\"10\" height=\"22\" rx=\"2\" fill=\"#166534\" opacity=\"0.5\"/><rect x=\"51\" y=\"33\" width=\"10\" height=\"22\" rx=\"2\" fill=\"#166534\" opacity=\"0.5\"/><ellipse cx=\"52\" cy=\"26\" rx=\"10\" ry=\"5\" fill=\"#854d0e\" stroke=\"#92400e\" stroke-width=\"1\"/><rect x=\"42\" y=\"18\" width=\"20\" height=\"8\" fill=\"#92400e\"/><ellipse cx=\"52\" cy=\"18\" rx=\"10\" ry=\"5\" fill=\"#ca8a04\" stroke=\"#a16207\" stroke-width=\"1\"/><ellipse cx=\"52\" cy=\"18\" rx=\"6\" ry=\"2.5\" fill=\"#fbbf24\" opacity=\"0.6\"/></svg>", "title": "Know who paid. Know who owes.", "caption": "Record payments, generate receipts and track outstanding balances — instantly.", "tags": ["Payments", "Receipts", "Balances", "History"]}, {"img": 2, "eyebrow": "Water Billing", "svg": "<svg width=\"72\" height=\"72\" viewBox=\"0 0 72 72\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"28\" y=\"10\" width=\"16\" height=\"8\" rx=\"3\" fill=\"#94a3b8\" stroke=\"#64748b\" stroke-width=\"1\"/><rect x=\"32\" y=\"18\" width=\"8\" height=\"20\" rx=\"2\" fill=\"#cbd5e1\" stroke=\"#94a3b8\" stroke-width=\"1\"/><path d=\"M32 34 Q20 34 18 42 Q16 50 24 50 L32 50\" fill=\"#7dd3fc\" stroke=\"#38bdf8\" stroke-width=\"1\"/><rect x=\"30\" y=\"50\" width=\"12\" height=\"4\" rx=\"1\" fill=\"#94a3b8\"/><path d=\"M36 56 Q34 62 36 65 Q38 62 36 56Z\" fill=\"#38bdf8\" opacity=\"0.9\"/><path d=\"M30 60 Q28.5 64 30 66 Q31.5 64 30 60Z\" fill=\"#7dd3fc\" opacity=\"0.7\"/><path d=\"M42 58 Q40.5 62 42 64 Q43.5 62 42 58Z\" fill=\"#7dd3fc\" opacity=\"0.6\"/><circle cx=\"44\" cy=\"18\" r=\"5\" fill=\"#475569\" stroke=\"#64748b\" stroke-width=\"1\"/><circle cx=\"44\" cy=\"18\" r=\"2\" fill=\"#94a3b8\"/></svg>", "title": "Meter to billing in seconds.", "caption": "Track consumption, compute billing and notify customers — fully automated.", "tags": ["Meter Readings", "Billing", "Customers"]}, {"img": 0, "eyebrow": "HR & Payroll", "svg": "<svg width=\"72\" height=\"72\" viewBox=\"0 0 72 72\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"24\" cy=\"20\" r=\"8\" fill=\"#475569\" stroke=\"#64748b\" stroke-width=\"1\"/><path d=\"M10 44 Q10 34 24 34 Q38 34 38 44 L38 48 L10 48Z\" fill=\"#334155\" stroke=\"#475569\" stroke-width=\"1\"/><circle cx=\"48\" cy=\"22\" r=\"7\" fill=\"#6366f1\" stroke=\"#818cf8\" stroke-width=\"1\"/><path d=\"M34 46 Q34 37 48 37 Q62 37 62 46 L62 50 L34 50Z\" fill=\"#4338ca\" stroke=\"#6366f1\" stroke-width=\"1\"/><rect x=\"26\" y=\"54\" width=\"20\" height=\"12\" rx=\"2\" fill=\"#1e293b\" stroke=\"#334155\" stroke-width=\"1\"/><line x1=\"29\" y1=\"58\" x2=\"43\" y2=\"58\" stroke=\"#6366f1\" stroke-width=\"1.2\"/><line x1=\"29\" y1=\"61\" x2=\"39\" y2=\"61\" stroke=\"#475569\" stroke-width=\"1\"/></svg>", "title": "Your team. Paid right. Every time.", "caption": "Attendance, overtime, salary computation and cash advance — all in one module.", "tags": ["Employees", "Payroll", "Attendance", "Cash Advance"]}, {"img": 1, "eyebrow": "Credit & Collections", "svg": "<svg width=\"72\" height=\"72\" viewBox=\"0 0 72 72\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"14\" y=\"8\" width=\"44\" height=\"56\" rx=\"3\" fill=\"#1e293b\" stroke=\"#334155\" stroke-width=\"1.2\"/><rect x=\"14\" y=\"8\" width=\"10\" height=\"56\" rx=\"3\" fill=\"#0f172a\" stroke=\"#334155\" stroke-width=\"1\"/><line x1=\"24\" y1=\"20\" x2=\"52\" y2=\"20\" stroke=\"#334155\" stroke-width=\"1\"/><line x1=\"24\" y1=\"28\" x2=\"52\" y2=\"28\" stroke=\"#334155\" stroke-width=\"1\"/><line x1=\"24\" y1=\"36\" x2=\"52\" y2=\"36\" stroke=\"#334155\" stroke-width=\"1\"/><line x1=\"24\" y1=\"44\" x2=\"52\" y2=\"44\" stroke=\"#334155\" stroke-width=\"1\"/><text x=\"27\" y=\"24\" font-size=\"7\" fill=\"#94a3b8\" font-family=\"monospace\">Dela Cruz</text><text x=\"27\" y=\"32\" font-size=\"7\" fill=\"#94a3b8\" font-family=\"monospace\">Reyes</text><text x=\"27\" y=\"40\" font-size=\"7\" fill=\"#94a3b8\" font-family=\"monospace\">Santos</text><text x=\"44\" y=\"24\" font-size=\"8\" fill=\"#4ade80\" font-family=\"monospace\">&#10003;</text><text x=\"44\" y=\"32\" font-size=\"8\" fill=\"#f87171\" font-family=\"monospace\">&#10007;</text><text x=\"44\" y=\"40\" font-size=\"8\" fill=\"#4ade80\" font-family=\"monospace\">&#10003;</text></svg>", "title": "Never lose track of what's yours.", "caption": "Monitor debtors, credit accounts and collection schedules in real time.", "tags": ["Credits", "Debtors", "Collections"]}, {"img": 2, "eyebrow": "Analytics", "svg": "<svg width=\"72\" height=\"72\" viewBox=\"0 0 72 72\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"8\" y=\"8\" width=\"56\" height=\"44\" rx=\"4\" fill=\"#0f172a\" stroke=\"#1e293b\" stroke-width=\"1.2\"/><rect x=\"14\" y=\"28\" width=\"8\" height=\"20\" rx=\"1.5\" fill=\"#6366f1\" opacity=\"0.9\"/><rect x=\"26\" y=\"20\" width=\"8\" height=\"28\" rx=\"1.5\" fill=\"#8b5cf6\" opacity=\"0.9\"/><rect x=\"38\" y=\"24\" width=\"8\" height=\"24\" rx=\"1.5\" fill=\"#6366f1\" opacity=\"0.7\"/><rect x=\"50\" y=\"16\" width=\"8\" height=\"32\" rx=\"1.5\" fill=\"#a78bfa\" opacity=\"0.9\"/><polyline points=\"18,28 30,20 42,22 54,14\" stroke=\"#38bdf8\" stroke-width=\"1.8\" fill=\"none\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><circle cx=\"18\" cy=\"28\" r=\"2.5\" fill=\"#38bdf8\"/><circle cx=\"30\" cy=\"20\" r=\"2.5\" fill=\"#38bdf8\"/><circle cx=\"42\" cy=\"22\" r=\"2.5\" fill=\"#38bdf8\"/><circle cx=\"54\" cy=\"14\" r=\"2.5\" fill=\"#38bdf8\"/><line x1=\"8\" y1=\"52\" x2=\"64\" y2=\"52\" stroke=\"#1e293b\" stroke-width=\"1\"/><text x=\"12\" y=\"62\" font-size=\"6\" fill=\"#475569\" font-family=\"monospace\">Q1</text><text x=\"24\" y=\"62\" font-size=\"6\" fill=\"#475569\" font-family=\"monospace\">Q2</text><text x=\"36\" y=\"62\" font-size=\"6\" fill=\"#475569\" font-family=\"monospace\">Q3</text><text x=\"48\" y=\"62\" font-size=\"6\" fill=\"#475569\" font-family=\"monospace\">Q4</text></svg>", "title": "Your whole business. One glance.", "caption": "Beautiful charts and trend reports across income, expenses and collections.", "tags": ["Dashboard", "Charts", "Trends", "Reports"]}];
 
         let _demoCur = 0, _demoTimer = null, _DEMO_INTERVAL = 10000;
 
@@ -25861,7 +26134,7 @@ window.mtSAToggleOrgStatus=mtSAToggleOrgStatus;
                 bg.style.backgroundImage = 'url(' + _demoIMGS[s.img] + ')';
                 document.getElementById('sd-eyebrow').textContent = s.eyebrow;
                 document.getElementById('sd-icon').innerHTML = s.svg;
-                document.getElementById('sd-title').innerHTML = s.title.replace(/\n/g,'<br>');
+                document.getElementById('sd-title').innerHTML = s.title.replace(/\\n/g,'<br>').replace(/\n/g,'<br>');
                 document.getElementById('sd-caption').textContent = s.caption;
                 document.getElementById('sd-counter').textContent = (idx+1) + ' / ' + _demoSlides.length;
                 document.getElementById('sd-tags').innerHTML = s.tags.map(function(t){
