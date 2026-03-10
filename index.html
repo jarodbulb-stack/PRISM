@@ -7755,15 +7755,14 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     const data = doc.data();
                     console.log('[Sync] Data found in Firebase, syncing to local...');
 
-                    // authoritative=true when clearedAt is present — wipe local before putting
-                    const isWipe = !!data.clearedAt;
+                    // Always authoritative on load — Firebase is the truth source.
+                    // This ensures deleted records never linger in IndexedDB.
                     const stores = ['properties','tenants','payments','credits','creditPayments',
                         'expenses','customNotes','additionalIncome','clientCharges',
                         'waterCustomers','waterSales','employees','cashAdvances',
                         'salaryPayments','timeRecords','tasks'];
                     for (const s of stores) {
-                        // Always sync — even empty arrays must clear local when authoritative
-                        await syncCollectionToLocal(s, Array.isArray(data[s]) ? data[s] : [], isWipe);
+                        await syncCollectionToLocal(s, Array.isArray(data[s]) ? data[s] : [], true);
                     }
 
                     // Restore app users (admin/cashier accounts) to localStorage
@@ -18202,6 +18201,13 @@ async function showPayrollSummary() {
             window.allEmployeesData      = [];
             window.allWaterCustomersData = [];
 
+            // 1b. Immediately zero the Notes badge and clear reminder banner
+            try { prismUpdateReminderBadge(0); } catch(e) {}
+            try {
+                const banner = document.getElementById('notifications-banner');
+                if (banner) { banner.classList.add('hidden'); banner.innerHTML = ''; }
+            } catch(e) {}
+
             // 2. Reload every data page sequentially
             const loaders = [
                 loadDashboard, loadProperties, loadTenants, loadCredits,
@@ -18221,6 +18227,9 @@ async function showPayrollSummary() {
                     if (tab) showSection(tab);
                 }
             } catch(e) {}
+
+            // 4. Re-run reminder check so badge reflects fresh (empty) data
+            try { await prismCheckReminders(); } catch(e) {}
         }
         window.prismFullRefresh = prismFullRefresh;
 
@@ -27437,12 +27446,9 @@ window.addEventListener('DOMContentLoaded', () => {
                         'waterCustomers','waterSales','employees','cashAdvances',
                         'salaryPayments','timeRecords','tasks'];
 
-                    // Use authoritative (clear-then-put) only after a bulk wipe (clearedAt present)
-                    const isWipe = !!data.clearedAt;
+                    // Always authoritative — realtime cloud changes always win
                     for (const t of tables) {
-                        if (data[t] && Array.isArray(data[t])) {
-                            try { await syncCollectionToLocal(t, data[t], isWipe); } catch(e) {}
-                        }
+                        try { await syncCollectionToLocal(t, Array.isArray(data[t]) ? data[t] : [], true); } catch(e) {}
                     }
 
                     // Sync app users from real-time update
