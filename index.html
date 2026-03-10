@@ -18163,7 +18163,7 @@ async function showPayrollSummary() {
                 try { await syncToFirebase(); } catch(e) {}
 
                 showToast(`✅ Done! ${totalDeleted} sample records deleted. Your real data is safe.`, 'success');
-                setTimeout(() => loadDashboard(), 1000);
+                await prismFullRefresh();
 
             } catch(e) {
                 showToast('❌ Error deleting sample data: ' + e.message, 'error');
@@ -18171,7 +18171,41 @@ async function showPayrollSummary() {
         }
         window.deleteSampleData = deleteSampleData;
 
-        async function clearAllData() {
+        
+        // ── Full UI refresh — called after any bulk data operation ──
+        async function prismFullRefresh() {
+            // 1. Reset all in-memory caches
+            window.allTenantsData        = [];
+            window.allCreditsData        = [];
+            window.allExpensesData       = [];
+            window.allNotesData          = [];
+            window.allTasksData          = [];
+            window.allEmployeesData      = [];
+            window.allWaterCustomersData = [];
+
+            // 2. Reload every data page sequentially
+            const loaders = [
+                loadDashboard, loadProperties, loadTenants, loadCredits,
+                loadWaterCustomers, loadEmployees, loadExpenses, loadIncome,
+                loadNotes, loadTasks, loadReports, loadPayrollSummary,
+                refreshStats, refreshFinancialOverview, updateDeleteStats
+            ];
+            for (const fn of loaders) {
+                try { await fn(); } catch(e) { console.warn('[prismFullRefresh] skipped:', fn.name, e.message); }
+            }
+
+            // 3. Force re-render the currently visible tab
+            try {
+                const activeTab = document.querySelector('.nav-tab.active, .tab-btn.active, [data-tab].active');
+                if (activeTab) {
+                    const tab = activeTab.dataset.tab || activeTab.getAttribute('data-section');
+                    if (tab) showSection(tab);
+                }
+            } catch(e) {}
+        }
+        window.prismFullRefresh = prismFullRefresh;
+
+async function clearAllData() {
             // ── Step 0: Snapshot notes + tasks before asking ──
             let _snapNotes = [], _snapTasks = [];
             try { _snapNotes = await dbGetAll('customNotes') || []; } catch(e) {}
@@ -18258,32 +18292,7 @@ async function showPayrollSummary() {
                 }
 
                 showToast('\u2705 All done.', 'success');
-
-                // ── Reset all in-memory cache vars so stale data never shows ──
-                window.allTenantsData      = [];
-                window.allCreditsData      = [];
-                window.allExpensesData     = [];
-                window.allNotesData        = [];
-                window.allTasksData        = [];
-                window.allEmployeesData    = [];
-                window.allWaterCustomersData = [];
-
-                // ── Reload every page that holds data ──
-                try { await loadDashboard(); }           catch(e) {}
-                try { await loadProperties(); }          catch(e) {}
-                try { await loadTenants(); }             catch(e) {}
-                try { await loadCredits(); }             catch(e) {}
-                try { await loadWaterCustomers(); }      catch(e) {}
-                try { await loadEmployees(); }           catch(e) {}
-                try { await loadExpenses(); }            catch(e) {}
-                try { await loadIncome(); }              catch(e) {}
-                try { await loadNotes(); }               catch(e) {}
-                try { await loadTasks(); }               catch(e) {}
-                try { await loadReports(); }             catch(e) {}
-                try { await loadPayrollSummary(); }      catch(e) {}
-                try { await refreshStats(); }            catch(e) {}
-                try { await refreshFinancialOverview(); } catch(e) {}
-                try { updateDeleteStats(); }             catch(e) {}
+                await prismFullRefresh();
 
             } catch (error) {
                 console.error('[Clear] Error:', error);
