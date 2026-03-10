@@ -3451,10 +3451,22 @@
         <!-- Overview Tab -->
         <div id="mt-sa-overview">
             <div class="mt-sa-stats" id="mt-sa-stats-grid">
-                <div class="mt-sa-stat"><div class="mt-sa-stat-val" id="sa-total-orgs">0</div><div class="mt-sa-stat-label">Total Organizations</div></div>
-                <div class="mt-sa-stat"><div class="mt-sa-stat-val" id="sa-active-orgs">0</div><div class="mt-sa-stat-label">Active Orgs</div></div>
-                <div class="mt-sa-stat"><div class="mt-sa-stat-val" id="sa-total-users">0</div><div class="mt-sa-stat-label">Total Users</div></div>
-                <div class="mt-sa-stat"><div class="mt-sa-stat-val" id="sa-total-revenue">₱0</div><div class="mt-sa-stat-label">Monthly Revenue</div></div>
+                <div class="mt-sa-stat" onclick="mtSATab('orgs', document.querySelector('.mt-sa-nav-btn:nth-child(3)'))" style="cursor:pointer;" title="Click to view all organizations">
+                    <div class="mt-sa-stat-val" id="sa-total-orgs">0</div>
+                    <div class="mt-sa-stat-label">Total Organizations <span style="font-size:0.65rem;color:#6366f1;">↗ view</span></div>
+                </div>
+                <div class="mt-sa-stat" onclick="mtSATab('orgs', document.querySelector('.mt-sa-nav-btn:nth-child(3)'))" style="cursor:pointer;" title="Click to view active organizations">
+                    <div class="mt-sa-stat-val" id="sa-active-orgs">0</div>
+                    <div class="mt-sa-stat-label">Active Orgs <span style="font-size:0.65rem;color:#6366f1;">↗ view</span></div>
+                </div>
+                <div class="mt-sa-stat" onclick="mtSATab('allowlist', document.querySelector('.mt-sa-nav-btn:nth-child(2)'))" style="cursor:pointer;" title="Click to view all users">
+                    <div class="mt-sa-stat-val" id="sa-total-users">0</div>
+                    <div class="mt-sa-stat-label">Total Users <span style="font-size:0.65rem;color:#6366f1;">↗ view</span></div>
+                </div>
+                <div class="mt-sa-stat">
+                    <div class="mt-sa-stat-val" id="sa-total-revenue">₱0</div>
+                    <div class="mt-sa-stat-label">Monthly Revenue</div>
+                </div>
             </div>
         </div>
         <!-- Orgs Tab -->
@@ -3465,8 +3477,8 @@
                         <tr>
                             <th>Organization</th>
                             <th>Plan</th>
-                            <th>Owner</th>
-                            <th>Users</th>
+                            <th>Owner / Contact</th>
+                            <th style="text-align:center;">Users</th>
                             <th>Status</th>
                             <th>Created</th>
                             <th>Actions</th>
@@ -24480,24 +24492,57 @@ async function mtLoadSAData() {
 function mtRenderSAOrgs(orgs) {
     const tbody = document.getElementById('mt-sa-orgs-tbody');
     if (!tbody) return;
-    tbody.innerHTML = orgs.map(org => `
-        <tr>
-            <td><b>${org.name}</b><br><span style="font-size:0.78rem;color:#64748b;">${org.bizType || '-'}</span></td>
-            <td><span class="mt-badge-plan ${org.plan || 'basic'}">${(org.plan||'basic').toUpperCase()}</span></td>
-            <td style="font-size:0.85rem;">${org.ownerEmail || org.ownerName || '-'}</td>
-            <td>${org.memberCount || 1}</td>
-            <td><span class="mt-badge-status ${org.status || 'active'}">${(org.status||'active').toUpperCase()}</span></td>
-            <td style="font-size:0.82rem;color:#64748b;">${org.createdAt ? new Date(org.createdAt).toLocaleDateString() : '-'}</td>
-            <td style="display:flex;gap:6px;flex-wrap:wrap;">
-                <button onclick="mtSAToggleOrgStatus('${org.id}','${org.status}')" style="background:none;border:1px solid rgba(255,255,255,0.1);color:#94a3b8;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:0.78rem;">
-                    ${org.status === 'active' ? 'Suspend' : 'Activate'}
-                </button>
-                <button onclick="mtSADeleteOrg('${org.id}','${org.name}')" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:0.78rem;">
-                    Delete
-                </button>
+    if (!orgs || orgs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="padding:30px;text-align:center;color:#64748b;">No organizations yet.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = orgs.map(org => {
+        const ownerDisplay = org.ownerName
+            ? `<div style="color:#e2e8f0;font-weight:600;font-size:0.83rem;">${org.ownerName}</div>`
+            : '';
+        const ownerEmail = org.ownerEmail
+            ? `<div style="color:#818cf8;font-size:0.78rem;">${org.ownerEmail}</div>`
+            : '<div style="color:#475569;font-size:0.78rem;">—</div>';
+        const ownerPhone = org.phone
+            ? `<div style="color:#94a3b8;font-size:0.75rem;">📞 ${org.phone}</div>`
+            : '';
+        const ownerAddress = org.address
+            ? `<div style="color:#64748b;font-size:0.72rem;">📍 ${org.address}</div>`
+            : '';
+
+        return `<tr style="border-bottom:1px solid #0f172a;">
+            <td style="padding:10px 12px;">
+                <div style="font-weight:700;color:#f1f5f9;font-size:0.88rem;">${org.name || '—'}</div>
+                <div style="color:#64748b;font-size:0.75rem;">${org.bizType || '-'}</div>
+                ${ownerAddress}
             </td>
-        </tr>
-    `).join('') || '<tr><td colspan="7" style="text-align:center;color:#64748b;padding:30px;">No organizations yet</td></tr>';
+            <td style="padding:10px 12px;">
+                <span class="mt-badge-plan ${org.plan || 'basic'}">${(org.plan||'basic').toUpperCase()}</span>
+            </td>
+            <td style="padding:10px 12px;">
+                ${ownerDisplay}
+                ${ownerEmail}
+                ${ownerPhone}
+            </td>
+            <td style="padding:10px 12px;color:#94a3b8;text-align:center;">${org.memberCount || 1}</td>
+            <td style="padding:10px 12px;">
+                <span class="mt-badge-status ${org.status || 'active'}">${(org.status||'active').toUpperCase()}</span>
+            </td>
+            <td style="padding:10px 12px;color:#64748b;font-size:0.8rem;white-space:nowrap;">
+                ${org.createdAt ? new Date(org.createdAt).toLocaleDateString('en-PH') : '-'}
+            </td>
+            <td style="padding:10px 12px;">
+                <div style="display:flex;gap:5px;flex-wrap:wrap;">
+                    <button onclick="mtSAToggleOrgStatus('${org.id}','${org.status}')" style="background:none;border:1px solid rgba(255,255,255,0.1);color:#94a3b8;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:0.75rem;">
+                        ${org.status === 'active' ? '🚫 Suspend' : '✅ Activate'}
+                    </button>
+                    <button onclick="mtSADeleteOrg('${org.id}','${org.name}')" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:0.75rem;">
+                        🗑 Delete
+                    </button>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
 }
 
 async function mtSADeleteOrg(orgId, orgName) {
