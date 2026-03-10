@@ -7674,6 +7674,10 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 };
 
                 _lastSyncTimestamp = data.lastSync;
+                // Also update MT-scope timestamp so onSnapshot doesn't echo our own write back
+                if (typeof window._mtLastSyncTimestamp !== 'undefined' || true) {
+                    window._mtLastSyncTimestamp = data.lastSync;
+                }
                 await dataRef.set(data);
                 console.log('[Sync] Data synced to Firestore — org:', orgId);
                 updateSyncStatus('synced');
@@ -18123,6 +18127,7 @@ async function showPayrollSummary() {
         // ══ DELETE SAMPLE DATA ONLY ══
         async function deleteSampleData() {
             // Pause realtime sync during deletion
+            window._prismWipeInProgress = true;
             try { if (typeof mtStopRealtimeSync === 'function') mtStopRealtimeSync(); } catch(e) {}
             // Step 1 — Initial confirm
             const step1 = await showConfirm(
@@ -18143,6 +18148,7 @@ async function showPayrollSummary() {
             if (typed !== 'DELETE SAMPLE') {
                 showToast('❌ Cancelled — text did not match.', 'error');
                 // Resume sync if cancelled
+                window._prismWipeInProgress = false;
                 try { if (typeof mtStartRealtimeSync === 'function') mtStartRealtimeSync(); } catch(e) {}
                 return;
             }
@@ -18180,10 +18186,13 @@ async function showPayrollSummary() {
 
                 showToast(`✅ Done! ${totalDeleted} sample records deleted. Your real data is safe.`, 'success');
                 await new Promise(r => setTimeout(r, 1500));
+                window._prismJustWiped = true;
                 await prismFullRefresh();
+                window._prismWipeInProgress = false;
                 try { if (typeof mtStartRealtimeSync === 'function') mtStartRealtimeSync(); } catch(e) {}
 
             } catch(e) {
+                window._prismWipeInProgress = false;
                 showToast('❌ Error deleting sample data: ' + e.message, 'error');
             }
         }
@@ -18230,11 +18239,22 @@ async function showPayrollSummary() {
 
             // 4. Re-run reminder check so badge reflects fresh (empty) data
             try { await prismCheckReminders(); } catch(e) {}
+
+            // 5. If a wipe just completed, force badge to zero regardless
+            if (window._prismJustWiped) {
+                window._prismJustWiped = false;
+                try { prismUpdateReminderBadge(0); } catch(e) {}
+                try {
+                    const banner = document.getElementById('notifications-banner');
+                    if (banner) { banner.classList.add('hidden'); banner.innerHTML = ''; }
+                } catch(e) {}
+            }
         }
         window.prismFullRefresh = prismFullRefresh;
 
 async function clearAllData() {
             // ── Pause realtime sync so it doesn't race against the wipe ──
+            window._prismWipeInProgress = true;
             try { if (typeof mtStopRealtimeSync === 'function') mtStopRealtimeSync(); } catch(e) {}
 
             // ── Step 0: Snapshot notes + tasks before asking ──
@@ -18319,17 +18339,22 @@ async function clearAllData() {
                         lastSync: new Date().toISOString(),
                         clearedAt: new Date().toISOString()
                     });
+                    // Update shared timestamp so onSnapshot skips this write's echo
+                    window._mtLastSyncTimestamp = new Date().toISOString();
                     try { showToast('\u2601\ufe0f Cloud data cleared', 'success'); } catch(e) {}
                 }
 
                 showToast('\u2705 All done.', 'success');
                 // Wait briefly so Firestore write propagates before resuming listener
                 await new Promise(r => setTimeout(r, 1500));
+                window._prismJustWiped = true;
                 await prismFullRefresh();
                 // ── Resume realtime sync after everything is refreshed ──
+                window._prismWipeInProgress = false;
                 try { if (typeof mtStartRealtimeSync === 'function') mtStartRealtimeSync(); } catch(e) {}
 
             } catch (error) {
+                window._prismWipeInProgress = false;
                 console.error('[Clear] Error:', error);
                 showToast('\u274c Error clearing data: ' + error.message, 'error');
             }
@@ -27418,6 +27443,8 @@ window.addEventListener('DOMContentLoaded', () => {
         // ========== REAL-TIME CROSS-DEVICE SYNC ==========
         let _realtimeSyncUnsubscribe = null;
         let _lastSyncTimestamp = null;
+        // Shared timestamp — syncToFirebase writes here so onSnapshot skips echo
+        if (typeof window._mtLastSyncTimestamp === 'undefined') window._mtLastSyncTimestamp = null;
 
         function mtStartRealtimeSync() {
             const dbRef = window.db || (typeof firestore !== 'undefined' ? firestore : null);
@@ -27437,7 +27464,16 @@ window.addEventListener('DOMContentLoaded', () => {
                     if (!doc.exists) return;
                     const data = doc.data();
                     if (!data || !data.lastSync) return;
-                    if (_lastSyncTimestamp && data.lastSync === _lastSyncTimestamp) return;
+
+                    // Use shared timestamp — syncToFirebase sets window._mtLastSyncTimestamp
+                    const _effectiveLastSync = window._mtLastSyncTimestamp || _lastSyncTimestamp;
+                    if (_effectiveLastSync && data.lastSync === _effectiveLastSync) return;
+
+                    // Skip if a wipe is in progress
+                    if (window._prismWipeInProgress) return;
+
+                    _lastSyncTimestamp = data.lastSync;
+                    window._mtLastSyncTimestamp = data.lastSync;
 
                     console.log('[RealtimeSync] Remote change detected — updating local data...');
 
