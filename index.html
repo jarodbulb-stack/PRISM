@@ -7674,7 +7674,6 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 };
 
                 _lastSyncTimestamp = data.lastSync;
-                window._lastSyncTimestamp = data.lastSync; // share with MT scope
                 await dataRef.set(data);
                 console.log('[Sync] Data synced to Firestore — org:', orgId);
                 updateSyncStatus('synced');
@@ -7688,6 +7687,8 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
         }
 
         async function syncFromFirebase() {
+            // Block all pulls while a wipe/delete is in progress
+            if (window._prismWipeInProgress) { console.log('[Sync] Wipe in progress — skipping pull'); return; }
             // STARTUP FIX: Wait for IndexedDB to be ready before syncing
             if (window._dbReadyPromise) await window._dbReadyPromise;
             const cu = currentUser || (typeof MT !== 'undefined' && MT.currentUser);
@@ -18144,7 +18145,6 @@ async function showPayrollSummary() {
             const typed = await prismShowTypeConfirm('DELETE SAMPLE');
             if (typed !== 'DELETE SAMPLE') {
                 showToast('❌ Cancelled — text did not match.', 'error');
-                // Resume sync if cancelled
                 window._prismWipeInProgress = false;
                 try { if (typeof mtStartRealtimeSync === 'function') mtStartRealtimeSync(); } catch(e) {}
                 return;
@@ -18178,8 +18178,28 @@ async function showPayrollSummary() {
 
                 console.log('[DeleteSample] Protected real records:', realDataCount, '| Deleted sample:', totalDeleted);
 
-                // Sync to Firebase — push the cleaned state (real data only)
-                try { await syncToFirebase(); } catch(e) {}
+                // Direct Firebase write — bypass syncToFirebase to avoid REQ7/race issues
+                // This ensures Firebase gets the cleaned state with clearedAt so restores never bring sample data back
+                try {
+                    const _fdb = window.db || (typeof firestore !== 'undefined' ? firestore : null);
+                    const _cu = currentUser || (MT && MT.currentUser);
+                    const _orgId = (MT && MT.currentOrg && MT.currentOrg.id) || localStorage.getItem('mt_current_org_id') || (_cu && _cu.uid);
+                    if (_fdb && _orgId && _orgId !== 'local_org') {
+                        const _cleanData = {};
+                        for (const t of tables) {
+                            try { _cleanData[t] = (await dbGetAll(t) || []).map(r => { const x = Object.assign({}, r); delete x.id; return x; }); } catch(e2) { _cleanData[t] = []; }
+                        }
+                        const _ts = new Date().toISOString();
+                        _cleanData.lastSync = _ts;
+                        _cleanData.clearedAt = _ts;
+                        _cleanData.appUsers = JSON.parse(localStorage.getItem('prism_app_users') || '[]');
+                        _cleanData.orgId = _orgId;
+                        await _fdb.collection('prism_data').doc(_orgId).set(_cleanData);
+                        window._lastSyncTimestamp = _ts;
+                        _lastSyncTimestamp = _ts;
+                        console.log('[DeleteSample] Pushed cleaned state to Firebase');
+                    }
+                } catch(eFb) { console.warn('[DeleteSample] Firebase push failed:', eFb); }
 
                 showToast(`✅ Done! ${totalDeleted} sample records deleted. Your real data is safe.`, 'success');
                 await new Promise(r => setTimeout(r, 1500));
@@ -18326,7 +18346,6 @@ async function clearAllData() {
                         lastSync: _clearTs,
                         clearedAt: _clearTs
                     });
-                    // Update shared timestamp so onSnapshot skips this write's echo
                     window._lastSyncTimestamp = _clearTs;
                     _lastSyncTimestamp = _clearTs;
                     try { showToast('\u2601\ufe0f Cloud data cleared', 'success'); } catch(e) {}
@@ -27449,13 +27468,8 @@ window.addEventListener('DOMContentLoaded', () => {
                     if (!doc.exists) return;
                     const data = doc.data();
                     if (!data || !data.lastSync) return;
-                    // Use shared window timestamp so syncToFirebase writes are not echoed back
-                    const _tsCheck = window._lastSyncTimestamp || _lastSyncTimestamp;
-                    if (_tsCheck && data.lastSync === _tsCheck) return;
-                    // Skip entirely if a wipe/delete operation is in progress
-                    if (window._prismWipeInProgress) return;
-                    _lastSyncTimestamp = data.lastSync;
-                    window._lastSyncTimestamp = data.lastSync;
+                    if (_lastSyncTimestamp && data.lastSync === _lastSyncTimestamp) return;
+                    if (window._prismWipeInProgress) { console.log('[RealtimeSync] Wipe in progress — skipping snapshot'); return; }
 
                     console.log('[RealtimeSync] Remote change detected — updating local data...');
 
