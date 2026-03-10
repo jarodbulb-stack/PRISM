@@ -7815,7 +7815,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
         }
 
         async function syncCollectionToLocal(storeName, data) {
-            // Wait for DB to be ready instead of bailing — fixes startup race condition
+            // Wait for DB to be ready
             if (!db || !dbReady) {
                 console.log('[Sync] DB not ready for', storeName, '— waiting...');
                 await ensureDB();
@@ -7825,16 +7825,18 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 const transaction = db.transaction([storeName], 'readwrite');
                 const store = transaction.objectStore(storeName);
 
-                // Use put() instead of clear+add to merge by key (avoids data loss)
-                // Cloud record wins for existing IDs; local-only records are preserved
-                let pending = data.length;
-                if (pending === 0) { resolve(); return; }
-
-                data.forEach(item => {
-                    const req = store.put(item);
-                    req.onsuccess = () => { pending--; if (pending === 0) resolve(); };
-                    req.onerror = () => { pending--; if (pending === 0) resolve(); };
-                });
+                // Clear first — cloud is authoritative. Deleted records must not linger locally.
+                const clearReq = store.clear();
+                clearReq.onerror = () => reject(clearReq.error);
+                clearReq.onsuccess = () => {
+                    if (data.length === 0) { resolve(); return; }
+                    let pending = data.length;
+                    data.forEach(item => {
+                        const req = store.put(item);
+                        req.onsuccess = () => { pending--; if (pending === 0) resolve(); };
+                        req.onerror   = () => { pending--; if (pending === 0) resolve(); };
+                    });
+                };
 
                 transaction.onerror = () => reject(transaction.error);
             });
@@ -18120,6 +18122,8 @@ async function showPayrollSummary() {
 
         // ══ DELETE SAMPLE DATA ONLY ══
         async function deleteSampleData() {
+            // Pause realtime sync during deletion
+            try { if (typeof mtStopRealtimeSync === 'function') mtStopRealtimeSync(); } catch(e) {}
             // Step 1 — Initial confirm
             const step1 = await showConfirm(
                 'This will permanently delete all sample/demo data across every module — properties, tenants, payments, credits, employees, water, tasks, notes and more.\n\nYour REAL recorded data will NOT be affected.',
@@ -18164,6 +18168,7 @@ async function showPayrollSummary() {
 
                 showToast(`✅ Done! ${totalDeleted} sample records deleted. Your real data is safe.`, 'success');
                 await prismFullRefresh();
+                try { if (typeof mtStartRealtimeSync === 'function') mtStartRealtimeSync(); } catch(e) {}
 
             } catch(e) {
                 showToast('❌ Error deleting sample data: ' + e.message, 'error');
@@ -18206,6 +18211,9 @@ async function showPayrollSummary() {
         window.prismFullRefresh = prismFullRefresh;
 
 async function clearAllData() {
+            // ── Pause realtime sync so it doesn't race against the wipe ──
+            try { if (typeof mtStopRealtimeSync === 'function') mtStopRealtimeSync(); } catch(e) {}
+
             // ── Step 0: Snapshot notes + tasks before asking ──
             let _snapNotes = [], _snapTasks = [];
             try { _snapNotes = await dbGetAll('customNotes') || []; } catch(e) {}
@@ -18293,6 +18301,8 @@ async function clearAllData() {
 
                 showToast('\u2705 All done.', 'success');
                 await prismFullRefresh();
+                // ── Resume realtime sync after everything is refreshed ──
+                try { if (typeof mtStartRealtimeSync === 'function') mtStartRealtimeSync(); } catch(e) {}
 
             } catch (error) {
                 console.error('[Clear] Error:', error);
