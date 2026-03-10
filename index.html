@@ -18258,9 +18258,32 @@ async function showPayrollSummary() {
                 }
 
                 showToast('\u2705 All done.', 'success');
-                loadDashboard(); loadProperties(); loadTenants(); loadCredits();
-                loadWaterCustomers(); loadEmployees(); loadExpenses();
-                loadNotes(); refreshStats(); updateDeleteStats();
+
+                // ── Reset all in-memory cache vars so stale data never shows ──
+                window.allTenantsData      = [];
+                window.allCreditsData      = [];
+                window.allExpensesData     = [];
+                window.allNotesData        = [];
+                window.allTasksData        = [];
+                window.allEmployeesData    = [];
+                window.allWaterCustomersData = [];
+
+                // ── Reload every page that holds data ──
+                try { await loadDashboard(); }           catch(e) {}
+                try { await loadProperties(); }          catch(e) {}
+                try { await loadTenants(); }             catch(e) {}
+                try { await loadCredits(); }             catch(e) {}
+                try { await loadWaterCustomers(); }      catch(e) {}
+                try { await loadEmployees(); }           catch(e) {}
+                try { await loadExpenses(); }            catch(e) {}
+                try { await loadIncome(); }              catch(e) {}
+                try { await loadNotes(); }               catch(e) {}
+                try { await loadTasks(); }               catch(e) {}
+                try { await loadReports(); }             catch(e) {}
+                try { await loadPayrollSummary(); }      catch(e) {}
+                try { await refreshStats(); }            catch(e) {}
+                try { await refreshFinancialOverview(); } catch(e) {}
+                try { updateDeleteStats(); }             catch(e) {}
 
             } catch (error) {
                 console.error('[Clear] Error:', error);
