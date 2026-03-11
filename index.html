@@ -13371,10 +13371,10 @@ Enter reason:`);
         window.switchVoidTab = switchVoidTab;
 
         async function adminDirectVoid(store, id, label) {
-            if (!await showConfirm(\`Void this record?\n\n"\${label}"\n\nThis cannot be undone.\`, 'danger', '🗑️ Confirm Void', 'Yes, Void It')) return;
+            if (!await showConfirm(`Void this record?\n\n"${label}"\n\nThis cannot be undone.`, 'danger', '🗑️ Confirm Void', 'Yes, Void It')) return;
             try {
                 await dbDelete(store, id);
-                showToast(\`✅ Voided: \${label}\`, 'success');
+                showToast(`✅ Voided: ${label}`, 'success');
                 // Refresh the modal
                 document.querySelector('.void-modal-wrap')?.remove();
                 loadDashboard();
