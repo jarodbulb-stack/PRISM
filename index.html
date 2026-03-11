@@ -7198,6 +7198,28 @@
             }
         }
 
+
+        // ── Universal input modal (replaces prompt() blocked on GitHub Pages) ──
+        function showInputModal(title, message, placeholder, defaultVal) {
+            return new Promise(resolve => {
+                const existing = document.getElementById('prism-input-modal');
+                if (existing) existing.remove();
+                const modal = document.createElement('div');
+                modal.id = 'prism-input-modal';
+                modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+                modal.innerHTML = `<div style="background:var(--bg-card,#1e293b);border:1px solid var(--border-color,#334155);border-radius:14px;padding:24px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.5);"><div style="font-weight:700;font-size:1rem;color:var(--text-primary,#f1f5f9);margin-bottom:8px;">${title}</div>${message ? '<div style=\"font-size:0.85rem;color:var(--text-secondary,#94a3b8);margin-bottom:14px;white-space:pre-line;\">' + message + '</div>' : ''}<input id="prism-input-modal-field" type="text" value="${defaultVal||''}" placeholder="${placeholder||''}" style="width:100%;padding:10px 12px;background:var(--bg-primary,#0f172a);border:1px solid var(--border-color,#334155);border-radius:8px;color:var(--text-primary,#f1f5f9);font-size:0.9rem;box-sizing:border-box;margin-bottom:14px;" autocomplete="off" /><div style="display:flex;gap:10px;justify-content:flex-end;"><button id="prism-input-cancel" style="padding:8px 18px;background:transparent;border:1px solid var(--border-color,#334155);border-radius:8px;color:var(--text-secondary,#94a3b8);cursor:pointer;font-size:0.85rem;">Cancel</button><button id="prism-input-ok" style="padding:8px 18px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;border-radius:8px;color:white;cursor:pointer;font-size:0.85rem;font-weight:600;">OK</button></div></div>`;
+                document.body.appendChild(modal);
+                const field = document.getElementById('prism-input-modal-field');
+                const ok = () => { const val = (field?.value||'').trim(); modal.remove(); resolve(val||null); };
+                const cancel = () => { modal.remove(); resolve(null); };
+                if (field) { field.focus(); field.select(); field.addEventListener('keydown', e => { if(e.key==='Enter') ok(); if(e.key==='Escape') cancel(); }); }
+                document.getElementById('prism-input-ok').addEventListener('click', ok);
+                document.getElementById('prism-input-cancel').addEventListener('click', cancel);
+                modal.addEventListener('click', e => { if(e.target===modal) cancel(); });
+            });
+        }
+        window.showInputModal = showInputModal;
+
         // =====================
         // THEME TOGGLE
         // =====================
@@ -10227,6 +10249,11 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
         }
 
         async function deleteProperty(id) {
+        const _dp_user = window.currentAppUser || null;
+        if (_dp_user && !['owner','admin'].includes(_dp_user.role)) {
+            showToast('❌ Only Owner or Admin can delete properties.', 'error'); return;
+        }
+
             // Check for tenants
             const tenants = await dbGetAll('tenants');
             const propTenants = tenants.filter(t => t.propertyId === id);
@@ -12689,8 +12716,9 @@ async function loadWaterCustomers() {
         }
 
         // Show water payment modal
-        function showWaterPaymentModal(customerId, customerName, balance) {
-            const amount = prompt(`💵 Record Payment for ${customerName}\n\nOutstanding Balance: ₱${balance.toLocaleString()}\n\nEnter payment amount:`);
+        async function showWaterPaymentModal(customerId, customerName, balance) {
+            const amount = await showInputModal('💵 Record Payment', `Customer: ${customerName}
+Outstanding Balance: ₱${balance.toLocaleString()}`, 'Enter payment amount', '');
             if (!amount) return;
             
             const paymentAmount = parseFloat(amount.replace(/,/g, '')) || 0;
@@ -13401,9 +13429,10 @@ async function showQuickAttendance() {
 
         // Void request system - cashier submits, admin approves
         async function requestVoidAttendance(recordId, employeeName, date) {
-            const reason = prompt(`Request to void attendance for ${employeeName} on ${date}.
+            const reason = await showInputModal('🗑️ Void Attendance Request', `Employee: ${employeeName}
+Date: ${date}
 
-Enter reason for void request:`);
+Enter reason for void request:`, 'Reason...');
             if (!reason) return;
 
             const voidRequests = JSON.parse(localStorage.getItem('prism_void_requests') || '[]');
@@ -13423,9 +13452,10 @@ Enter reason for void request:`);
         }
 
         async function requestVoidAdvance(advanceId, employeeName, amount) {
-            const reason = prompt(`Request to void cash advance of ₱${amount.toLocaleString()} for ${employeeName}.
+            const reason = await showInputModal('🗑️ Void Advance Request', `Employee: ${employeeName}
+Amount: ₱${amount.toLocaleString()}
 
-Enter reason:`);
+Enter reason:`, 'Reason...');
             if (!reason) return;
 
             const voidRequests = JSON.parse(localStorage.getItem('prism_void_requests') || '[]');
@@ -14235,6 +14265,25 @@ async function showPayrollSummary() {
             debouncedSync();
             showToast('Employee deleted successfully!', 'success');
         }
+
+        async function deleteAdvance(advanceId) {
+            const advance = await dbGet('cashAdvances', advanceId);
+            if (!advance) return showToast('❌ Advance not found.', 'error');
+            if (!confirm(`Delete cash advance of ₱${(advance.amount||0).toLocaleString()}?\n\nThis cannot be undone.`)) return;
+            try {
+                await dbDelete('cashAdvances', advanceId);
+                await syncToFirebase('cashAdvances');
+                showToast('🗑️ Cash advance deleted.', 'success');
+                // Refresh employee detail if open
+                if (typeof showEmployeeDetail === 'function' && advance.employeeId) {
+                    showEmployeeDetail(advance.employeeId);
+                }
+            } catch(e) {
+                showToast('❌ Delete failed: ' + e.message, 'error');
+            }
+        }
+        window.deleteAdvance = deleteAdvance;
+
 
         // =====================
         // CREDIT FUNCTIONS
@@ -15244,6 +15293,7 @@ async function showPayrollSummary() {
                     showToast('⏳ Saving note...', 'info');
                     await dbUpdate('customNotes', note);
                 } else {
+                    note.isSample = true;
                     await dbAdd('customNotes', note);
                 }
 
@@ -15954,6 +16004,7 @@ async function showPayrollSummary() {
                 createdAt: new Date().toISOString()
             };
 
+            charge.isSample = true;
             await dbAdd('clientCharges', charge);
             hideModal('charge-modal');
 
@@ -16003,6 +16054,7 @@ async function showPayrollSummary() {
                 fromChargeId: chargeId,
                 createdAt: new Date().toISOString()
             };
+            income.isSample = true;
             await dbAdd('additionalIncome', income);
 
             // Refresh view
@@ -16030,7 +16082,7 @@ async function showPayrollSummary() {
 
         // Add notes to client
         async function addClientNote(type, id) {
-            const note = prompt('Enter note for this client:');
+            const note = await showInputModal('📝 Add Note', null, 'Enter note for this client...');
             if (!note || !note.trim()) return;
 
             const client = type === 'tenant' ? await dbGet('tenants', id) : await dbGet('credits', id);
@@ -18294,7 +18346,7 @@ async function showPayrollSummary() {
 
         // ── EARLY-OUT REQUEST ──
         async function prismRequestEarlyOut() {
-            const reason = window.prompt('Enter reason for early out (e.g. medical, family emergency, etc.):');
+            const reason = await showInputModal('🕐 Early Out Request', null, 'e.g. medical, family emergency, etc.');
             if (!reason || !reason.trim()) return;
 
             try {
@@ -18350,7 +18402,7 @@ async function showPayrollSummary() {
 
         // ── VOID REQUEST ──
         async function prismRequestVoid(type, recordId, details) {
-            const reason = window.prompt('Reason for void request:');
+            const reason = await showInputModal('🗑️ Void Request', null, 'Enter reason for void...');
             if (!reason || !reason.trim()) return;
 
             try {
@@ -18790,6 +18842,11 @@ async function showPayrollSummary() {
 
         // ══ DELETE SAMPLE DATA ONLY ══
         async function deleteSampleData() {
+        const _dsd_user = window.currentAppUser || null;
+        if (_dsd_user && !['owner','admin'].includes(_dsd_user.role)) {
+            showToast('❌ Only Owner or Admin can delete sample data.', 'error'); return;
+        }
+
             // Single native confirm — avoids custom dialog race conditions
             if (!confirm('Delete all sample/demo data?\n\nThis will remove all records tagged as sample data. Your real data will NOT be affected.')) return;
 
@@ -18957,6 +19014,12 @@ async function showPayrollSummary() {
         window.prismFullRefresh = prismFullRefresh;
 
 async function clearAllData() {
+        // Role check — only Owner/Admin can clear all data
+        const _cad_user = window.currentAppUser || null;
+        if (_cad_user && !['owner','admin'].includes(_cad_user.role)) {
+            showToast('❌ Only Owner or Admin can delete all data.', 'error'); return;
+        }
+
             // ── Step 0: Snapshot notes + tasks before asking (BEFORE wipe flag) ──
             let _snapNotes = [], _snapTasks = [];
             try { _snapNotes = await dbGetAll('customNotes') || []; } catch(e) {}
@@ -24168,6 +24231,7 @@ async function editTask(id) {
                 ];
                 
                 for (const p of properties) {
+                    p.isSample = true;
                     await dbAdd('properties', p);
                 }
                 
@@ -24186,6 +24250,7 @@ async function editTask(id) {
                 ];
                 
                 for (const t of tenants) {
+                    t.isSample = true;
                     await dbAdd('tenants', t);
                 }
                 
@@ -24196,10 +24261,10 @@ async function editTask(id) {
                 
                 // ===== PAYMENTS =====
                 if (tenant1) {
-                    await dbAdd('payments', { tenantId: tenant1.id, amount: 3000, method: 'cash', date: dateStr(5), forMonth: dateStr(1).substring(0, 7), createdAt: new Date().toISOString(), isSample: true });
+                    await dbAdd('payments', { tenantId: tenant1.id, amount: 3000, method: 'cash', date: dateStr(5), forMonth: dateStr(1).substring(0, 7), createdAt: new Date().toISOString(), isSample: true , isSample: true });
                 }
                 if (tenant2) {
-                    await dbAdd('payments', { tenantId: tenant2.id, amount: 5000, method: 'gcash', date: dateStr(10), forMonth: dateStr(1).substring(0, 7), createdAt: new Date().toISOString(), isSample: true });
+                    await dbAdd('payments', { tenantId: tenant2.id, amount: 5000, method: 'gcash', date: dateStr(10), forMonth: dateStr(1).substring(0, 7), createdAt: new Date().toISOString(), isSample: true , isSample: true });
                 }
                 
                 // ===== CREDITS/LOANS =====
@@ -24210,6 +24275,7 @@ async function editTask(id) {
                 ];
                 
                 for (const c of credits) {
+                    c.isSample = true;
                     await dbAdd('credits', c);
                 }
                 
@@ -24220,10 +24286,10 @@ async function editTask(id) {
                 
                 // ===== CREDIT PAYMENTS =====
                 if (credit1) {
-                    await dbAdd('creditPayments', { creditId: credit1.id, amount: 3000, date: dateStr(1), notes: 'Partial payment', createdAt: new Date().toISOString(), isSample: true });
+                    await dbAdd('creditPayments', { creditId: credit1.id, amount: 3000, date: dateStr(1), notes: 'Partial payment', createdAt: new Date().toISOString(), isSample: true , isSample: true });
                 }
                 if (credit3) {
-                    await dbAdd('creditPayments', { creditId: credit3.id, amount: 5000, date: dateStr(5), notes: 'Partial payment', createdAt: new Date().toISOString(), isSample: true });
+                    await dbAdd('creditPayments', { creditId: credit3.id, amount: 5000, date: dateStr(5), notes: 'Partial payment', createdAt: new Date().toISOString(), isSample: true , isSample: true });
                 }
                 
                 // ===== EMPLOYEES =====
@@ -24234,6 +24300,7 @@ async function editTask(id) {
                 ];
                 
                 for (const e of employees) {
+                    e.isSample = true;
                     await dbAdd('employees', e);
                 }
                 
@@ -24261,6 +24328,7 @@ async function editTask(id) {
                             createdAt: new Date().toISOString(),
                             isSample: true
                         };
+                        record.isSample = true;
                         await dbAdd('timeRecords', record);
                     }
                 }
@@ -24268,7 +24336,7 @@ async function editTask(id) {
                 // ===== CASH ADVANCES =====
                 const roger = allEmployees.find(e => e.name === 'Roger Ellioso');
                 if (roger) {
-                    await dbAdd('cashAdvances', { employeeId: roger.id, amount: 200, date: today.toISOString().split('T')[0], reason: 'Emergency', deducted: false, createdAt: new Date().toISOString(), isSample: true });
+                    await dbAdd('cashAdvances', { employeeId: roger.id, amount: 200, date: today.toISOString().split('T')[0], reason: 'Emergency', deducted: false, createdAt: new Date().toISOString(), isSample: true , isSample: true });
                 }
                 
                 // ===== WATER CUSTOMERS =====
@@ -24281,6 +24349,7 @@ async function editTask(id) {
                 ];
                 
                 for (const wc of waterCustomers) {
+                    wc.isSample = true;
                     await dbAdd('waterCustomers', wc);
                 }
                 
@@ -24307,7 +24376,7 @@ async function editTask(id) {
                         balance: total - (amountsPaid[i] || total),
                         paymentType: paymentTypes[i] || 'cash',
                         date: todayStr,
-                        createdAt: new Date().toISOString()
+                        createdAt: new Date().toISOString(),
                     });
                 }
                 
@@ -24320,6 +24389,7 @@ async function editTask(id) {
                 ];
                 
                 for (const exp of expenses) {
+                    exp.isSample = true;
                     await dbAdd('expenses', exp);
                 }
                 
@@ -24420,6 +24490,7 @@ async function editTask(id) {
                 ];
                 
                 for (const task of tasks) {
+                    task.isSample = true;
                     await dbAdd('tasks', task);
                 }
                 
@@ -24465,6 +24536,7 @@ async function editTask(id) {
                 ];
                 
                 for (const note of notes) {
+                    note.isSample = true;
                     await dbAdd('customNotes', note);
                 }
                 
@@ -24501,6 +24573,7 @@ async function editTask(id) {
                 ];
                 
                 for (const charge of clientCharges) {
+                    charge.isSample = true;
                     await dbAdd('clientCharges', charge);
                 }
                 
@@ -24535,6 +24608,7 @@ async function editTask(id) {
                 ];
                 
                 for (const income of additionalIncomes) {
+                    income.isSample = true;
                     await dbAdd('additionalIncome', income);
                 }
                 
@@ -24577,6 +24651,7 @@ async function editTask(id) {
                         { description: 'Parking Fee - Monthly', category: 'parking', amount: 1500, date: dateStr(1), notes: '3 vehicles @ ₱500', createdAt: new Date().toISOString(), isSample: true },
                     ];
                     for (const inc of moreIncome) {
+                        inc.isSample = true;
                         await dbAdd('additionalIncome', inc);
                     }
                 }
@@ -24591,6 +24666,7 @@ async function editTask(id) {
                         { description: 'Water Station Filter Replacement', category: 'maintenance', amount: 2800, date: dateStr(6), notes: 'UV filter + carbon filter', createdAt: new Date().toISOString(), isSample: true },
                     ];
                     for (const exp of moreExp) {
+                        exp.isSample = true;
                         await dbAdd('expenses', exp);
                     }
                 }
@@ -25236,7 +25312,7 @@ async function _mtWaitForAuth(maxMs = 20000) {
         async function prismForgotPassword() {
             const emailEl = document.getElementById('mt-login-email');
             const email = emailEl ? emailEl.value.trim() : '';
-            const useEmail = email || window.prompt('Enter your email address to receive a password reset link:');
+            const useEmail = email || await showInputModal('🔑 Password Reset', null, 'Enter your email address', '');
             if (!useEmail) return;
             try {
                 const authInst = window.auth || (firebase && firebase.auth && firebase.auth());
