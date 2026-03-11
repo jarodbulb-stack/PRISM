@@ -18146,7 +18146,8 @@ async function showPayrollSummary() {
                 return;
             }
 
-            // ── All confirms passed — NOW lock out Firebase sync ──
+            // ── All confirms passed ──
+            // Step 1: Kill the listener permanently — do NOT restart until reload
             window._prismWipeInProgress = true;
             try { if (typeof mtStopRealtimeSync === 'function') mtStopRealtimeSync(); } catch(e) {}
 
@@ -18155,61 +18156,75 @@ async function showPayrollSummary() {
 
             try {
                 const tables = ['properties', 'tenants', 'payments', 'credits', 'creditPayments', 'employees', 'timeRecords', 'cashAdvances', 'waterCustomers', 'waterSales', 'expenses', 'tasks', 'customNotes', 'clientCharges', 'additionalIncome'];
+
+                // Step 2: Delete sample records from IndexedDB
                 let realDataCount = 0;
                 for (const table of tables) {
                     try {
                         const allRecords = await dbGetAll(table);
                         realDataCount += allRecords.filter(r => r.isSample !== true).length;
-
-                        // TRIPLE SAFETY: only touch records where isSample is STRICTLY true
                         const sampleRecords = allRecords.filter(r => r.isSample === true);
-
                         for (const record of sampleRecords) {
-                            // Final guard — never delete a record without the exact flag
-                            if (record.isSample !== true) {
-                                console.warn('[DeleteSample] BLOCKED non-sample delete:', table, record.id);
-                                continue;
-                            }
                             await dbDelete(table, record.id);
                             totalDeleted++;
                         }
                     } catch(e) { console.warn('[DeleteSample] Skipping table:', table, e); }
                 }
+                console.log('[DeleteSample] Deleted sample:', totalDeleted, '| Real records kept:', realDataCount);
 
-                console.log('[DeleteSample] Protected real records:', realDataCount, '| Deleted sample:', totalDeleted);
+                // Step 3: Build clean data from IndexedDB (real data only, no sample)
+                const _fdb = window.db || (typeof firestore !== 'undefined' ? firestore : null);
+                const _cu = currentUser || (MT && MT.currentUser);
+                const _orgId = (MT && MT.currentOrg && MT.currentOrg.id) || localStorage.getItem('mt_current_org_id') || (_cu && _cu.uid);
 
-                // Direct Firebase write — bypass syncToFirebase to avoid REQ7/race issues
-                // This ensures Firebase gets the cleaned state with clearedAt so restores never bring sample data back
-                try {
-                    const _fdb = window.db || (typeof firestore !== 'undefined' ? firestore : null);
-                    const _cu = currentUser || (MT && MT.currentUser);
-                    const _orgId = (MT && MT.currentOrg && MT.currentOrg.id) || localStorage.getItem('mt_current_org_id') || (_cu && _cu.uid);
-                    if (_fdb && _orgId && _orgId !== 'local_org') {
-                        const _cleanData = {};
-                        for (const t of tables) {
-                            try { _cleanData[t] = (await dbGetAll(t) || []).map(r => { const x = Object.assign({}, r); delete x.id; return x; }); } catch(e2) { _cleanData[t] = []; }
-                        }
-                        const _ts = new Date().toISOString();
-                        _cleanData.lastSync = _ts;
-                        _cleanData.clearedAt = _ts;
-                        _cleanData.appUsers = JSON.parse(localStorage.getItem('prism_app_users') || '[]');
-                        _cleanData.orgId = _orgId;
-                        await _fdb.collection('prism_data').doc(_orgId).set(_cleanData);
-                        window._lastSyncTimestamp = _ts;
-                        _lastSyncTimestamp = _ts;
-                        console.log('[DeleteSample] Pushed cleaned state to Firebase');
+                if (_fdb && _orgId && _orgId !== 'local_org') {
+                    const _cleanData = {};
+                    for (const t of tables) {
+                        try {
+                            _cleanData[t] = (await dbGetAll(t) || []).map(r => { const x = Object.assign({}, r); delete x.id; return x; });
+                        } catch(e2) { _cleanData[t] = []; }
                     }
-                } catch(eFb) { console.warn('[DeleteSample] Firebase push failed:', eFb); }
+                    const _ts = new Date().toISOString();
+                    _cleanData.lastSync = _ts;
+                    _cleanData.clearedAt = _ts;
+                    _cleanData.appUsers = JSON.parse(localStorage.getItem('prism_app_users') || '[]');
+                    _cleanData.orgId = _orgId;
 
-                showToast(`✅ Done! ${totalDeleted} sample records deleted. Your real data is safe.`, 'success');
-                await new Promise(r => setTimeout(r, 1500));
+                    // Step 4: Write to Firebase and WAIT for confirmation
+                    await _fdb.collection('prism_data').doc(_orgId).set(_cleanData);
+                    window._lastSyncTimestamp = _ts;
+                    _lastSyncTimestamp = _ts;
+                    console.log('[DeleteSample] ✅ Firebase confirmed write. lastSync:', _ts);
+
+                    // Step 5: Wait 3 seconds for Firebase to fully propagate
+                    await new Promise(r => setTimeout(r, 3000));
+
+                    // Step 6: Verify Firebase has the clean data
+                    const _verify = await _fdb.collection('prism_data').doc(_orgId).get();
+                    if (_verify.exists) {
+                        const _vdata = _verify.data();
+                        const _vProps = (_vdata.properties || []).length;
+                        const _vTenants = (_vdata.tenants || []).length;
+                        console.log('[DeleteSample] ✅ Firebase verified — properties:', _vProps, 'tenants:', _vTenants);
+                    }
+                } else {
+                    console.warn('[DeleteSample] No Firebase — local delete only');
+                }
+
+                showToast('✅ Done! ' + totalDeleted + ' sample records deleted. Reloading...', 'success');
+
+                // Step 7: Refresh UI from clean IndexedDB
                 await prismFullRefresh();
-                window._prismWipeInProgress = false;
-                try { if (typeof mtStartRealtimeSync === 'function') mtStartRealtimeSync(); } catch(e) {}
+
+                // Step 8: Keep wipe flag TRUE — do NOT restart listener
+                // The listener will restart naturally on next page load with fresh timestamp
+                // This prevents any race condition from onSnapshot restoring old data
+                console.log('[DeleteSample] Complete. Listener stays off until reload.');
 
             } catch(e) {
                 window._prismWipeInProgress = false;
-                showToast('❌ Error deleting sample data: ' + e.message, 'error');
+                console.error('[DeleteSample] Error:', e);
+                showToast('❌ Error: ' + e.message, 'error');
             }
         }
         window.deleteSampleData = deleteSampleData;
@@ -18352,12 +18367,12 @@ async function clearAllData() {
                 }
 
                 showToast('\u2705 All done.', 'success');
-                // Wait briefly so Firestore write propagates before resuming listener
-                await new Promise(r => setTimeout(r, 1500));
+                // Wait 3s for Firebase to fully propagate before refreshing UI
+                await new Promise(r => setTimeout(r, 3000));
                 await prismFullRefresh();
-                // ── Resume realtime sync after everything is refreshed ──
-                window._prismWipeInProgress = false;
-                try { if (typeof mtStartRealtimeSync === 'function') mtStartRealtimeSync(); } catch(e) {}
+                // ── Do NOT restart listener — keep wipe flag TRUE until next page load ──
+                // This prevents onSnapshot from restoring old data in the propagation window
+                console.log('[ClearAll] Complete. Listener stays off until reload.');
 
             } catch (error) {
                 window._prismWipeInProgress = false;
