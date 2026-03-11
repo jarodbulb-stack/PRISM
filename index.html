@@ -8660,7 +8660,12 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 }
             }
         };
-        window.PrismGuardian = PrismGuardian; // expose globally for onclick handlers
+        window.PrismGuardian = PrismGuardian;
+        window.requestVoidAttendance = requestVoidAttendance;
+        window.mtDemoLogin = mtDemoLogin;
+        window.requestVoidAdvance = requestVoidAdvance;
+        window.getNextDueDate = getNextDueDate;
+         // expose globally for onclick handlers
 
         // =====================
         // SAFE WRAPPER FUNCTIONS
@@ -9905,7 +9910,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 
                 let totalDue = credit.principal;
                 if (credit.interestType === 'simple') {
-                    const months = Math.ceil((now - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
+                    const months = prismCreditMonths(credit.dateLent, now);
                     totalDue = credit.principal + (credit.principal * (credit.interestRate / 100) * months);
                 } else if (credit.interestType === 'flat') {
                     totalDue = credit.principal + credit.interestRate;
@@ -10180,10 +10185,10 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
         async function updateProperty(event, id) {
             event.preventDefault();
 
-            const name = document.getElementById('edit-property-name').value.trim();
-            const type = document.getElementById('edit-property-type').value;
-            const address = document.getElementById('edit-property-address').value.trim();
-            const rentStr = document.getElementById('edit-property-rent').value.trim();
+            const name = document.getElementById('property-name').value.trim();
+            const type = document.getElementById('property-type').value;
+            const address = document.getElementById('property-address').value.trim();
+            const rentStr = document.getElementById('property-rent').value.trim();
             const rent = parseFloat(rentStr.replace(/,/g, '')) || 0;
 
             if (!name || !type || rent <= 0) {
@@ -11267,7 +11272,7 @@ async function recordTenantPayment(tenantId) {
                     const totalPaid = tenantPayments.reduce((sum, p) => sum + p.amount, 0);
                     const moveInDate = new Date(tenant.moveIn);
                     const today = new Date();
-                    const monthsOccupied = Math.max(1, Math.ceil((today - moveInDate) / (30 * 24 * 60 * 60 * 1000)));
+                    const monthsOccupied = prismMonthsDiff(moveInDate, today);
                     const totalExpected = monthlyRent * monthsOccupied;
                     const totalBalance = Math.max(0, totalExpected - totalPaid);
 
@@ -11324,9 +11329,9 @@ async function recordTenantPayment(tenantId) {
                     
                     // Calculate with interest
                     let totalDue = credit.principal;
-                    if (credit.interestType === 'percentage') {
+                    if (credit.interestType === 'simple') {
                         totalDue = credit.principal * (1 + (credit.interestRate / 100));
-                    } else if (credit.interestType === 'fixed') {
+                    } else if (credit.interestType === 'flat') {
                         totalDue = credit.principal + credit.interestRate;
                     }
                     
@@ -11342,7 +11347,7 @@ async function recordTenantPayment(tenantId) {
                         ${credit.interestType !== 'none' ? `
                         <div class="receipt-row">
                             <span>Interest:</span>
-                            <span>${credit.interestType === 'percentage' ? credit.interestRate + '%' : '₱' + credit.interestRate.toLocaleString()}</span>
+                            <span>${credit.interestType === 'simple' ? credit.interestRate + '%' : '₱' + credit.interestRate.toLocaleString()}</span>
                         </div>
                         <div class="receipt-row">
                             <span>Total Loan:</span>
@@ -11471,7 +11476,7 @@ async function recordTenantPayment(tenantId) {
                 const todayDate = new Date();
                 
                 // Calculate months occupied
-                const monthsOccupied = Math.max(1, Math.ceil((todayDate - moveInDate) / (30 * 24 * 60 * 60 * 1000)));
+                const monthsOccupied = prismMonthsDiff(moveInDate, todayDate);
                 const totalExpected = monthlyRent * monthsOccupied;
                 const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
                 const totalBalance = Math.max(0, totalExpected - totalPaid);
@@ -11572,10 +11577,10 @@ async function recordTenantPayment(tenantId) {
                 // Calculate total with interest
                 let totalDue = credit.principal;
                 let interestAmount = 0;
-                if (credit.interestType === 'percentage' || credit.interestType === 'simple') {
+                if (credit.interestType === 'simple' || credit.interestType === 'simple') {
                     interestAmount = credit.principal * (credit.interestRate / 100);
                     totalDue = credit.principal + interestAmount;
-                } else if (credit.interestType === 'fixed' || credit.interestType === 'flat') {
+                } else if (credit.interestType === 'flat' || credit.interestType === 'flat') {
                     interestAmount = credit.interestRate;
                     totalDue = credit.principal + interestAmount;
                 }
@@ -11625,7 +11630,7 @@ async function recordTenantPayment(tenantId) {
                         </div>
                         ${credit.interestType !== 'none' ? `
                         <div class="receipt-row">
-                            <span>Interest (${credit.interestType === 'percentage' || credit.interestType === 'simple' ? credit.interestRate + '%' : 'Flat'}):</span>
+                            <span>Interest (${credit.interestType === 'simple' || credit.interestType === 'simple' ? credit.interestRate + '%' : 'Flat'}):</span>
                             <span>₱${interestAmount.toLocaleString()}</span>
                         </div>
                         ` : ''}
@@ -11846,7 +11851,7 @@ async function recordTenantPayment(tenantId) {
             let totalDue = credit.principal;
             let interestAmount = 0;
             if (credit.interestType === 'simple') {
-                const months = Math.ceil((new Date() - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
+                const months = prismCreditMonths(credit.dateLent);
                 interestAmount = credit.principal * (credit.interestRate / 100) * months;
                 totalDue = credit.principal + interestAmount;
             } else if (credit.interestType === 'flat') {
@@ -12663,9 +12668,10 @@ async function loadWaterCustomers() {
                             <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); cashierQuickRecord(${e.id}, '${e.name.replace(/'/g,"\\'")}', 'absent')" title="Absent">❌</button>
                             <button class="btn btn-sm btn-warning" onclick="event.stopPropagation(); cashierQuickRecord(${e.id}, '${e.name.replace(/'/g,"\\'")}', 'halfday')" title="Half Day">🕐</button>
                             <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); cashierShowAdvance(${e.id}, '${e.name.replace(/'/g,"\\'")}');" title="Cash Advance">💵</button>
+                            <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); requestVoidAttendance(${e.id}, '${e.name.replace(/'/g,"\\'")}', new Date().toISOString().split('T')[0])" title="Request to void today's attendance">🗑️</button>
                         </div>
                     </div>
-                `).join('');
+                \`).join('');
                 return;
             }
 
@@ -12891,7 +12897,22 @@ async function loadWaterCustomers() {
             // Role-based action buttons
             const _isAdmin = currentAppUser && (currentAppUser.role === 'admin' || currentAppUser.role === 'owner');
             if (_isAdmin) {
-                content += `
+                // Add recent advances section with void option
+            content += `</div><h4 style="margin-bottom:10px;margin-top:15px;">💵 Cash Advance History</h4><div style="max-height:120px;overflow-y:auto;margin-bottom:15px;">`;
+            if (empAdvances.length === 0) {
+                content += '<p style="color:var(--text-secondary);font-size:0.9rem;">No cash advances.</p>';
+            } else {
+                empAdvances.slice(0, 6).forEach(a => {
+                    const voidBtn = (!a.deducted && currentAppUser?.role === 'cashier')
+                        ? `<button class="btn btn-sm btn-danger" onclick="requestVoidAdvance(${a.id},'${employee.name.replace(/'/g,"\'")}',${a.amount})" style="font-size:0.7rem;padding:2px 8px;">🗑️ Void</button>`
+                        : (!a.deducted && (currentAppUser?.role === 'admin' || currentAppUser?.role === 'owner'))
+                        ? `<button class="btn btn-sm btn-danger" onclick="deleteAdvance(${a.id})" style="font-size:0.7rem;padding:2px 8px;">🗑️</button>`
+                        : '';
+                    content += `<div class="list-item" style="padding:8px;"><div class="list-item-content"><div class="list-item-title" style="font-size:0.9rem;">💵 ₱${(a.amount||0).toLocaleString()}</div><div class="list-item-subtitle" style="font-size:0.8rem;">${a.date||''} • ${a.deducted?'✅ Deducted':'⏳ Pending'}${a.notes?' • '+a.notes:''}</div></div>${voidBtn}</div>`;
+                });
+            }
+
+            content += `
                 </div>
                 <!-- Quick Actions -->
                 <div style="background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;padding:12px;margin-bottom:10px;">
@@ -14006,7 +14027,7 @@ async function showPayrollSummary() {
                 // Calculate total with interest
                 let totalDue = credit.principal;
                 if (credit.interestType === 'simple') {
-                    const months = Math.ceil((now - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
+                    const months = prismCreditMonths(credit.dateLent, now);
                     totalDue = credit.principal + (credit.principal * (credit.interestRate / 100) * months);
                 } else if (credit.interestType === 'flat') {
                     totalDue = credit.principal + credit.interestRate;
@@ -14318,7 +14339,7 @@ async function showPayrollSummary() {
             let totalDue = credit.principal;
             let interestAmount = 0;
             if (credit.interestType === 'simple') {
-                const months = Math.ceil((new Date() - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
+                const months = prismCreditMonths(credit.dateLent);
                 interestAmount = credit.principal * (credit.interestRate / 100) * months;
                 totalDue = credit.principal + interestAmount;
             } else if (credit.interestType === 'flat') {
@@ -14915,17 +14936,14 @@ async function showPayrollSummary() {
         // ══════════════════════════════════════════════════════
 
         function prismToggleReminderFields(category) {
-            const el = document.getElementById('reminder-extra-fields');
-            if (!el) return;
-            if (category === 'reminder') {
-                el.classList.remove('reminder-hidden');
-            } else {
-                el.classList.add('reminder-hidden');
-            }
+            // Time field only shows for reminder category
+            // Repeat field always visible for all categories
+            const timeField = document.getElementById('reminder-extra-fields');
+            if (timeField) timeField.style.display = category === 'reminder' ? '' : 'none';
         }
         window.prismToggleReminderFields = prismToggleReminderFields;
 
-        // Check if a reminder note is due TODAY based on its date + repeat setting
+        // Check if a note/reminder is due TODAY based on its date + repeat setting
         function prismIsReminderDueToday(note) {
             if (!note.date) return false;
             const today  = new Date();
@@ -14958,9 +14976,12 @@ async function showPayrollSummary() {
         async function prismCheckReminders() {
             try {
                 if (!db || !db.objectStoreNames.contains('customNotes')) return;
+                // Respect daily dismiss — skip if user already dismissed today
+                const dismissed = localStorage.getItem('prism_reminders_dismissed');
+                if (dismissed && dismissed === new Date().toDateString()) return;
                 const notes = await dbGetAll('customNotes');
                 const reminders = (notes || []).filter(n =>
-                    n.category === 'reminder' && prismIsReminderDueToday(n)
+                    prismIsReminderDueToday(n) && (n.category === 'reminder' || (n.repeat && n.repeat !== 'none'))
                 );
 
                 // Also include recurring tasks due today (not completed)
@@ -14970,8 +14991,9 @@ async function showPayrollSummary() {
                     const todayStr = new Date().toISOString().split('T')[0];
                     const todayDate = new Date(todayStr + 'T00:00:00');
                     recurringTasksDue = (tasks||[]).filter(t => {
-                        if (t.status === 'completed' || !t.dueDate || !t.repeat || t.repeat === 'none') return false;
-                        // Use same repeat logic as calendar
+                        if (t.status === 'completed' || !t.repeat || t.repeat === 'none') return false;
+                        // Tasks with no dueDate but daily repeat — always notify
+                        if (!t.dueDate) return t.repeat === 'daily';
                         const origin = new Date(t.dueDate + 'T00:00:00');
                         if (isNaN(origin) || origin > todayDate) return false;
                         if (t.repeat === 'daily') return true;
@@ -15022,7 +15044,7 @@ async function showPayrollSummary() {
                                 padding:14px 16px;margin-bottom:16px;position:relative;">
                         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
                             <div style="font-weight:700;color:#fbbf24;font-size:0.95rem;">
-                                🔔 ${reminders.length} Reminder${reminders.length>1?'s':''} Today
+                                🔔 ${allAlerts.length} Alert${allAlerts.length>1?'s':''} Today${recurringTasksDue.length>0?' ('+recurringTasksDue.length+' task'+(recurringTasksDue.length>1?'s':'')+')':''}
                             </div>
                             <div style="display:flex;gap:8px;">
                                 <button onclick="showSection('notes')" style="font-size:0.75rem;padding:4px 10px;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);color:#818cf8;border-radius:6px;cursor:pointer;">View All</button>
@@ -15149,15 +15171,15 @@ async function showPayrollSummary() {
 
             // Sort: active reminders first, then by date desc
             const sorted = [...notes].sort((a,b) => {
-                const aRec = a.category==='reminder' && a.repeat && a.repeat!=='none';
-                const bRec = b.category==='reminder' && b.repeat && b.repeat!=='none';
+                const aRec = a.repeat && a.repeat!=='none';
+                const bRec = b.repeat && b.repeat!=='none';
                 if (aRec && !bRec) return -1;
                 if (!aRec && bRec) return 1;
                 return new Date(b.date) - new Date(a.date);
             });
 
             container.innerHTML = sorted.map(note => {
-                const isRecurring = note.category==='reminder' && note.repeat && note.repeat!=='none';
+                const isRecurring = note.repeat && note.repeat!=='none';
                 const borderStyle = isRecurring ? 'border-left:3px solid #f59e0b;' : '';
                 const repeatBadge = isRecurring
                     ? `<span style="display:inline-block;background:rgba(245,158,11,0.15);color:#f59e0b;font-size:0.68rem;padding:1px 8px;border-radius:10px;font-weight:600;margin-left:5px;">🔁 ${note.repeat}</span>`
@@ -15171,8 +15193,8 @@ async function showPayrollSummary() {
                         <p class="note-preview">${note.description}</p>
                         <div class="note-meta">
                             <span>${note.date}</span>
-                            ${note.reminderTime && note.category==='reminder' ? `<span style="color:#6366f1;font-size:0.75rem;">⏰ ${note.reminderTime}</span>` : ''}
-                            ${isRecurring ? `<span style="color:#f59e0b;font-size:0.75rem;">🔔 Always active</span>` : ''}
+                            ${note.reminderTime ? `<span style="color:#6366f1;font-size:0.75rem;">⏰ ${note.reminderTime}</span>` : ''}
+                            ${isRecurring ? `<span style="color:#f59e0b;font-size:0.75rem;">🔔 Repeating</span>` : ''}
                             ${note.photo ? '<span class="has-photo">📷 Has photo</span>' : ''}
                         </div>
                     </div>
@@ -15487,17 +15509,20 @@ async function showPayrollSummary() {
                 options += '</optgroup>';
             }
             
-            document.getElementById('income-linked-to').innerHTML = options;
+            const incomeLinkedTo = document.getElementById('income-linked-to');
+            if (incomeLinkedTo) incomeLinkedTo.innerHTML = options;
             document.getElementById('income-date').value = new Date().toISOString().split('T')[0];
             document.getElementById('income-form').reset();
             document.getElementById('income-date').value = new Date().toISOString().split('T')[0];
-            document.getElementById('custom-source-group').style.display = 'none';
+            const csg = document.getElementById('custom-source-group');
+            if (csg) csg.style.display = 'none';
             showModal('income-modal');
         }
 
         function toggleCustomSource() {
-            const source = document.getElementById('income-source').value;
-            document.getElementById('custom-source-group').style.display = source === 'custom' ? 'block' : 'none';
+            const incSrc = document.getElementById('income-source');
+            const csgEl = document.getElementById('custom-source-group');
+            if (incSrc && csgEl) csgEl.style.display = incSrc.value === 'custom' ? 'block' : 'none';
         }
 
         // [REMOVED: duplicate saveIncome - used wrong form field IDs]
@@ -16447,6 +16472,24 @@ async function showPayrollSummary() {
         // =====================================================
         // DASHBOARD
         // =====================================================
+
+        // Shared helper: calendar-accurate month difference (inclusive)
+        function prismMonthsDiff(fromDate, toDate) {
+            const f = new Date(fromDate);
+            const t = new Date(toDate || new Date());
+            if (isNaN(f)) return 1;
+            const diff = (t.getFullYear() - f.getFullYear()) * 12 + (t.getMonth() - f.getMonth()) + 1;
+            return Math.max(1, diff);
+        }
+        // Calendar-accurate month diff for credit (no +1 since it's elapsed time)
+        function prismCreditMonths(fromDate, toDate) {
+            const f = new Date(fromDate);
+            const t = new Date(toDate || new Date());
+            if (isNaN(f)) return 1;
+            const diff = (t.getFullYear() - f.getFullYear()) * 12 + (t.getMonth() - f.getMonth());
+            return Math.max(1, diff);
+        }
+
         async function loadDashboard() {
             const properties = await dbGetAll('properties');
             const tenants = await dbGetAll('tenants');
@@ -16477,7 +16520,20 @@ async function showPayrollSummary() {
             
             if (statProperties) statProperties.textContent = properties.length;
             if (statTenants) statTenants.textContent = tenants.length;
-            if (statDebtors) statDebtors.textContent = credits.length;
+            // Only count credits with remaining balance (active debtors)
+            const activeDebtors = credits.filter(credit => {
+                const pmts = creditPayments.filter(p => p.creditId === credit.id);
+                const paid = pmts.reduce((s, p) => s + p.amount, 0);
+                let due = credit.principal;
+                if (credit.interestType === 'simple') {
+                    const months = prismCreditMonths(credit.dateLent, now);
+                    due = credit.principal + (credit.principal * (credit.interestRate / 100) * months);
+                } else if (credit.interestType === 'flat') {
+                    due = credit.principal + credit.interestRate;
+                }
+                return paid < due;
+            });
+            if (statDebtors) statDebtors.textContent = activeDebtors.length;
 
             // Calculate vacant properties - only count properties with NO active tenant
             const occupiedPropertyIds = new Set(tenants.filter(t => t.status === 'active' || !t.status).map(t => t.propertyId));
@@ -16533,7 +16589,7 @@ async function showPayrollSummary() {
                 const totalPaid = creditPmts.reduce((sum, p) => sum + p.amount, 0);
                 let totalDue = credit.principal;
                 if (credit.interestType === 'simple') {
-                    const months = Math.ceil((now - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
+                    const months = prismCreditMonths(credit.dateLent, now);
                     totalDue = credit.principal + (credit.principal * (credit.interestRate / 100) * months);
                 } else if (credit.interestType === 'flat') {
                     totalDue = credit.principal + credit.interestRate;
@@ -16604,7 +16660,7 @@ async function showPayrollSummary() {
             
             tenants.forEach(tenant => {
                 const moveInDate = new Date(tenant.moveIn);
-                const monthsSince = Math.max(1, Math.ceil((now - moveInDate) / (1000 * 60 * 60 * 24 * 30)));
+                const monthsSince = prismMonthsDiff(moveInDate, now);
                 overallRentExpected += tenant.rent * monthsSince;
             });
 
@@ -16625,7 +16681,7 @@ async function showPayrollSummary() {
             credits.forEach(credit => {
                 let totalDue = credit.principal;
                 if (credit.interestType === 'simple') {
-                    const months = Math.ceil((now - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
+                    const months = prismCreditMonths(credit.dateLent, now);
                     totalDue = credit.principal + (credit.principal * (credit.interestRate / 100) * months);
                 } else if (credit.interestType === 'flat') {
                     totalDue = credit.principal + credit.interestRate;
@@ -17149,8 +17205,8 @@ async function showPayrollSummary() {
                 // Determine which days in the viewed month this note falls on
                 const hitDays = new Set();
 
-                if (!isReminder || repeat === 'none') {
-                    // Plain note or one-time reminder — only show on its own date
+                if (repeat === 'none') {
+                    // One-time note — only show on its own date
                     if (origin.getFullYear()===year && origin.getMonth()===month) {
                         hitDays.add(origin.getDate());
                     }
@@ -18865,7 +18921,7 @@ async function clearAllData() {
 
                 let totalDue = credit.principal;
                 if (credit.interestType === 'simple') {
-                    const months = Math.ceil((new Date() - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
+                    const months = prismCreditMonths(credit.dateLent);
                     totalDue = credit.principal + (credit.principal * (credit.interestRate / 100) * months);
                 } else if (credit.interestType === 'flat') {
                     totalDue = credit.principal + credit.interestRate;
@@ -19625,7 +19681,7 @@ Lender/Manager
                         const totalPaid = creditPmts.reduce((sum, p) => sum + p.amount, 0);
                         let totalDue = credit.principal;
                         if (credit.interestType === 'simple') {
-                            const months = Math.ceil((now - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
+                            const months = prismCreditMonths(credit.dateLent, now);
                             totalDue = credit.principal + (credit.principal * (credit.interestRate / 100) * months);
                         } else if (credit.interestType === 'flat') {
                             totalDue = credit.principal + (credit.interestRate || 0);
@@ -19691,7 +19747,7 @@ Lender/Manager
                         const totalPaid = creditPmts.reduce((sum, p) => sum + p.amount, 0);
                         let totalDue = credit.principal;
                         if (credit.interestType === 'simple') {
-                            const months = Math.ceil((now - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
+                            const months = prismCreditMonths(credit.dateLent, now);
                             totalDue = credit.principal + (credit.principal * (credit.interestRate / 100) * months);
                         } else if (credit.interestType === 'flat') {
                             totalDue = credit.principal + (credit.interestRate || 0);
@@ -19993,7 +20049,7 @@ Lender/Manager
                     const trOverallRentCollected = payments.filter(p => p.type === 'rent').reduce((sum, p) => sum + (p.amount||0), 0);
                     tenants.forEach(tenant => {
                         const moveInDate = new Date(tenant.moveIn);
-                        const monthsSince = Math.max(1, Math.ceil((now - moveInDate) / (1000 * 60 * 60 * 24 * 30)));
+                        const monthsSince = prismMonthsDiff(moveInDate, now);
                         trOverallRentExpected += (tenant.rent||0) * monthsSince;
                     });
                     const trOutstandingRent = Math.max(0, trOverallRentExpected - trOverallRentCollected);
@@ -23239,6 +23295,20 @@ function initReportsPage() {
     const cycle = { 'pending': 'in-progress', 'in-progress': 'completed', 'completed': 'pending' };
     task.status = cycle[task.status] || 'pending';
     task.updatedAt = new Date().toISOString();
+    // Recurring tasks: when manually reset from completed → pending, advance to next due date
+    if (task.status === 'pending' && task.repeat && task.repeat !== 'none' && task.dueDate) {
+        const today = new Date().toISOString().split('T')[0];
+        if (task.dueDate <= today) {
+            const origin = new Date(task.dueDate + 'T00:00:00');
+            let next = new Date(origin);
+            if (task.repeat === 'daily')   next.setDate(next.getDate() + 1);
+            if (task.repeat === 'weekly')  next.setDate(next.getDate() + 7);
+            if (task.repeat === 'monthly') next.setMonth(next.getMonth() + 1);
+            if (task.repeat === 'yearly')  next.setFullYear(next.getFullYear() + 1);
+            task.dueDate = next.toISOString().split('T')[0];
+            showToast(`🔁 Next occurrence set to: ${task.dueDate}`, 'info');
+        }
+    }
     await dbUpdate('tasks', task);
     loadTasks();
     showToast(`Task marked as ${task.status}`, 'success');
