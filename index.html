@@ -1,38 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
-<!-- ===== PRISM STABILITY PATCH (Jarod rebuild) ===== -->
-<script>
-window.currentAppUser = window.currentAppUser || null;
-window.currentFlashcardType = window.currentFlashcardType || null;
-
-if (typeof window.mtDemoLogin !== "function") {
-    window.mtDemoLogin = function(){
-        console.warn("[PRISM] Demo login placeholder executed.");
-    };
-}
-
-window.addEventListener("error", function(e){
-    console.warn("[PRISM runtime warning]", e.message);
-});
-
-window.waitForFirebase = function(callback){
-    const check = () => {
-        if (window.firebase && firebase.apps && firebase.apps.length){
-            try{
-                window.db = firebase.firestore();
-            }catch(e){}
-            callback && callback();
-        } else {
-            setTimeout(check,50);
-        }
-    };
-    check();
-};
-</script>
-<!-- ===== END STABILITY PATCH ===== -->
-
     <meta charset="UTF-8">
     <!-- CSP handled at server level via Firebase/GitHub Pages headers -->
     <!-- Firebase Performance: DNS prefetch + preconnect -->
@@ -4724,8 +4692,8 @@ window.waitForFirebase = function(callback){
             <div class="card">
                 <div class="card-header">
                     <div class="card-title">👷 Employee Management</div>
-                    <button id="void-requests-btn" onclick="showVoidRequests()" style="display:none;background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-secondary);padding:6px 14px;border-radius:8px;cursor:pointer;font-size:0.8rem;font-weight:700;">
-                        🗑️ Void Center <span id="void-req-count" style="background:#ef4444;color:white;border-radius:10px;padding:1px 7px;margin-left:4px;font-size:0.75rem;display:none;">0</span>
+                    <button id="void-requests-btn" onclick="showVoidRequests()" style="display:none;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#ef4444;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:0.8rem;font-weight:700;">
+                        ⚠️ Void Requests <span id="void-req-count" style="background:#ef4444;color:white;border-radius:10px;padding:1px 7px;margin-left:4px;font-size:0.75rem;">0</span>
                     </button>
                     <button class="btn btn-sm btn-primary" onclick="showModal('employee-modal')">+ Add Employee</button>
                 </div>
@@ -4734,7 +4702,6 @@ window.waitForFirebase = function(callback){
                 <div style="display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap;">
                     <button class="btn btn-sm btn-success" onclick="showQuickAttendance()" title="Mark employee attendance for today">📋 Quick Attendance</button>
                     <button class="btn btn-sm btn-warning" onclick="showPayrollSummary()" title="View and process employee payroll">💰 Payroll Summary</button>
-                    <button class="btn btn-sm btn-danger" id="void-center-btn" onclick="showVoidRequests()" title="Admin: void/delete any attendance, advance, or payment record">🗑️ Void Center</button>
                 </div>
 
                 <input type="text" id="employee-search" placeholder="🔍 Search employee..." style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 15px; background: var(--card-bg); color: var(--text-primary);" oninput="filterEmployees()">
@@ -6637,16 +6604,6 @@ window.waitForFirebase = function(callback){
                             <option value="reminder">⏰ Personal Reminder</option>
                             <option value="general">📋 General Note</option>
                         </select>
-                        <div class="form-group" id="general-repeat-group" style="display:none;">
-    <label>Repeat</label>
-    <select id="general-note-repeat">
-        <option value="none">None</option>
-        <option value="daily">Daily</option>
-        <option value="weekly">Weekly</option>
-        <option value="monthly">Monthly</option>
-        <option value="yearly">Yearly</option>
-    </select>
-</div>
                     </div>
                     <div class="form-group">
                         <label>Title</label>
@@ -7115,7 +7072,32 @@ window.waitForFirebase = function(callback){
         let toastContainer = null;
         let toastCounter = 0;
 
-        function showToast(message, type = 'info', duration = 3000) {
+        fu
+
+        function showInputModal(title, message, placeholder, defaultVal) {
+            return new Promise(resolve => {
+                const ex = document.getElementById('prism-input-modal'); if(ex) ex.remove();
+                const modal = document.createElement('div');
+                modal.id = 'prism-input-modal';
+                modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+                modal.innerHTML = '<div style="background:var(--bg-card,#1e293b);border:1px solid var(--border-color,#334155);border-radius:14px;padding:24px;width:100%;max-width:420px;">'
+                    + '<div style="font-weight:700;font-size:1rem;color:var(--text-primary,#f1f5f9);margin-bottom:8px;">' + title + '</div>'
+                    + (message ? '<div style="font-size:0.85rem;color:var(--text-secondary,#94a3b8);margin-bottom:14px;white-space:pre-line;">' + message + '</div>' : '')
+                    + '<input id="prism-input-modal-field" type="text" value="' + (defaultVal||'') + '" placeholder="' + (placeholder||'') + '" style="width:100%;padding:10px 12px;background:var(--bg-primary,#0f172a);border:1px solid var(--border-color,#334155);border-radius:8px;color:var(--text-primary,#f1f5f9);font-size:0.9rem;box-sizing:border-box;margin-bottom:14px;" autocomplete="off" />'
+                    + '<div style="display:flex;gap:10px;justify-content:flex-end;"><button id="prism-input-cancel" style="padding:8px 18px;background:transparent;border:1px solid var(--border-color,#334155);border-radius:8px;color:var(--text-secondary,#94a3b8);cursor:pointer;">Cancel</button>'
+                    + '<button id="prism-input-ok" style="padding:8px 18px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;border-radius:8px;color:white;cursor:pointer;font-weight:600;">OK</button></div></div>';
+                document.body.appendChild(modal);
+                const field = document.getElementById('prism-input-modal-field');
+                const ok = () => { const v=(field?.value||'').trim(); modal.remove(); resolve(v||null); };
+                const cancel = () => { modal.remove(); resolve(null); };
+                if(field){field.focus();field.select();field.addEventListener('keydown',e=>{if(e.key==='Enter')ok();if(e.key==='Escape')cancel();});}
+                document.getElementById('prism-input-ok').addEventListener('click', ok);
+                document.getElementById('prism-input-cancel').addEventListener('click', cancel);
+                modal.addEventListener('click', e => { if(e.target===modal) cancel(); });
+            });
+        }
+        window.showInputModal = showInputModal;
+nction showToast(message, type = 'info', duration = 3000) {
             // Create container if doesn't exist
             if (!toastContainer) {
                 toastContainer = document.createElement('div');
@@ -7794,6 +7776,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
 
                 const dataRef = dbRef.collection('prism_data').doc(orgId);
                 const doc = await dataRef.get();
+                // DEBUG: show what was found
                 console.log('[Sync] Doc exists:', doc.exists, doc.exists ? 'appUsers:' + (doc.data().appUsers||[]).length : '');
 
                 if (doc.exists) {
@@ -8703,12 +8686,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 }
             }
         };
-        window.PrismGuardian = PrismGuardian;
-        window.requestVoidAttendance = requestVoidAttendance;
-        window.mtDemoLogin = mtDemoLogin;
-        window.requestVoidAdvance = requestVoidAdvance;
-        window.getNextDueDate = getNextDueDate;
-         // expose globally for onclick handlers
+        window.PrismGuardian = PrismGuardian; // expose globally for onclick handlers
 
         // =====================
         // SAFE WRAPPER FUNCTIONS
@@ -9953,7 +9931,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 
                 let totalDue = credit.principal;
                 if (credit.interestType === 'simple') {
-                    const months = prismCreditMonths(credit.dateLent, now);
+                    const months = Math.ceil((now - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
                     totalDue = credit.principal + (credit.principal * (credit.interestRate / 100) * months);
                 } else if (credit.interestType === 'flat') {
                     totalDue = credit.principal + credit.interestRate;
@@ -10228,10 +10206,10 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
         async function updateProperty(event, id) {
             event.preventDefault();
 
-            const name = document.getElementById('property-name').value.trim();
-            const type = document.getElementById('property-type').value;
-            const address = document.getElementById('property-address').value.trim();
-            const rentStr = document.getElementById('property-rent').value.trim();
+            const name = document.getElementById('edit-property-name').value.trim();
+            const type = document.getElementById('edit-property-type').value;
+            const address = document.getElementById('edit-property-address').value.trim();
+            const rentStr = document.getElementById('edit-property-rent').value.trim();
             const rent = parseFloat(rentStr.replace(/,/g, '')) || 0;
 
             if (!name || !type || rent <= 0) {
@@ -10253,6 +10231,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
         }
 
         async function deleteProperty(id) {
+        const _dp=window.currentAppUser||null;if(_dp&&!['owner','admin'].includes(_dp.role)){showToast('Only Owner or Admin can delete properties.','error');return;}
             // Check for tenants
             const tenants = await dbGetAll('tenants');
             const propTenants = tenants.filter(t => t.propertyId === id);
@@ -10821,7 +10800,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     <button class="btn btn-info" onclick="printTenantReport(${id})">🖨️ Print</button>
                     ${currentAppUser && currentAppUser.role !== 'cashier' ? `
                         <button class="btn btn-warning" onclick="addChargeToClient('tenant', ${id})">💵 Add Charge</button>
-                        <button class="btn btn-danger" onclick="deleteTenant(${id})">Delete</button>
+                        ${tenant.status==='inactive' ? '<button class="btn" onclick="terminateTenant(${id})" style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);color:#34d399;">Reactivate</button>' : '<button class="btn" onclick="terminateTenant(${id})" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;">Terminate</button>'}<button class="btn btn-danger" onclick="deleteTenant(${id})">Delete</button>
                     ` : `
                         <button class="btn btn-primary" onclick="quickEndorse('sales', '🏠 Rent payment recorded for tenant. Admin please review.')">📋 Endorse to Admin</button>
                     `}
@@ -11147,7 +11126,60 @@ async function recordTenantPayment(tenantId) {
             debouncedSync();
         }
 
-        async function deleteTenant(id) {
+        
+        async function terminateTenant(id) {
+            const tenant = await dbGet('tenants', id);
+            if (!tenant) return showToast('Tenant not found.', 'error');
+            if (tenant.status === 'inactive') {
+                if (!confirm('Reactivate this tenant?')) return;
+                tenant.status = 'active';
+                delete tenant.terminatedAt; delete tenant.terminationReason; delete tenant.terminationNotes;
+                if (tenant.propertyId) { const p = await dbGet('properties', tenant.propertyId); if(p){p.status='occupied';await dbUpdate('properties',p);} }
+                await dbUpdate('tenants', tenant); await syncToFirebase('tenants'); await syncToFirebase('properties');
+                showToast('Tenant reactivated.', 'success'); showTenantDetail(id); return;
+            }
+            const reasons = ['Contract Expired','Eviction - Non-payment','Eviction - Violation','Tenant Move-out','Property Sold','Renovation','Other'];
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+            modal.innerHTML = `<div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:14px;padding:24px;width:100%;max-width:400px;"><div style="font-weight:700;font-size:1rem;color:#f87171;margin-bottom:14px;">Terminate Tenant</div><div style="font-size:0.85rem;color:#cbd5e1;margin-bottom:14px;">Tenant: <b>${tenant.name}</b></div><select id="term-reason" style="width:100%;padding:9px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);margin-bottom:10px;">${reasons.map(r=>'<option>'+r+'</option>').join('')}</select><textarea id="term-notes" placeholder="Additional notes (optional)" rows="3" style="width:100%;padding:9px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);resize:none;box-sizing:border-box;margin-bottom:14px;"></textarea><div style="display:flex;gap:10px;justify-content:flex-end;"><button onclick="this.closest('[style*=fixed]').remove()" style="padding:8px 18px;background:transparent;border:1px solid var(--border-color);border-radius:8px;color:var(--text-secondary);cursor:pointer;">Cancel</button><button id="term-confirm-btn" style="padding:8px 18px;background:#ef4444;border:none;border-radius:8px;color:white;cursor:pointer;font-weight:600;">Terminate</button></div></div>`;
+            document.body.appendChild(modal);
+            document.getElementById('term-confirm-btn').onclick = async () => {
+                const reason = document.getElementById('term-reason').value;
+                const notes = document.getElementById('term-notes').value.trim();
+                modal.remove();
+                tenant.status='inactive'; tenant.terminatedAt=new Date().toISOString(); tenant.terminationReason=reason; tenant.terminationNotes=notes;
+                if(tenant.propertyId){const p=await dbGet('properties',tenant.propertyId);if(p){p.status='vacant';await dbUpdate('properties',p);await syncToFirebase('properties');}}
+                await dbUpdate('tenants',tenant); await syncToFirebase('tenants');
+                showToast('Tenant terminated.', 'success'); showTenantDetail(id);
+            };
+        }
+        window.terminateTenant = terminateTenant;
+
+        async function freezeCredit(id) {
+            const credit = await dbGet('credits', id);
+            if (!credit) return showToast('Credit not found.', 'error');
+            if (credit.status === 'closed') {
+                if (!confirm('Reopen this debt record?')) return;
+                credit.status='active'; delete credit.closedAt; delete credit.closureReason; delete credit.closureNotes;
+                await dbUpdate('credits',credit); await syncToFirebase('credits');
+                showToast('Debt reopened.', 'success'); showCreditDetail(id); return;
+            }
+            const remaining = (credit.principal||0)+(credit.totalInterest||0)-(credit.totalPaid||0);
+            const reasons = ['Fully Paid','Written Off','Partial Settlement','Deceased','Legal Action','Stop Interest Only','Other'];
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+            modal.innerHTML = `<div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:14px;padding:24px;width:100%;max-width:400px;"><div style="font-weight:700;font-size:1rem;color:#fbbf24;margin-bottom:14px;">Close / Freeze Debt</div><div style="font-size:0.85rem;color:#cbd5e1;margin-bottom:4px;">Borrower: <b>${credit.borrowerName}</b></div><div style="font-size:0.85rem;color:#f87171;margin-bottom:14px;">Balance: ${remaining.toLocaleString('en-PH',{minimumFractionDigits:2})}</div><select id="close-reason" style="width:100%;padding:9px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);margin-bottom:10px;">${reasons.map(r=>'<option>'+r+'</option>').join('')}</select><textarea id="close-notes" placeholder="Notes (optional)" rows="3" style="width:100%;padding:9px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);resize:none;box-sizing:border-box;margin-bottom:14px;"></textarea><div style="display:flex;gap:10px;justify-content:flex-end;"><button onclick="this.closest('[style*=fixed]').remove()" style="padding:8px 18px;background:transparent;border:1px solid var(--border-color);border-radius:8px;color:var(--text-secondary);cursor:pointer;">Cancel</button><button id="close-confirm-btn" style="padding:8px 18px;background:#f59e0b;border:none;border-radius:8px;color:white;cursor:pointer;font-weight:600;">Close Debt</button></div></div>`;
+            document.body.appendChild(modal);
+            document.getElementById('close-confirm-btn').onclick = async () => {
+                const reason=document.getElementById('close-reason').value; const notes=document.getElementById('close-notes').value.trim(); modal.remove();
+                credit.status='closed'; credit.closedAt=new Date().toISOString(); credit.closureReason=reason; credit.closureNotes=notes;
+                await dbUpdate('credits',credit); await syncToFirebase('credits');
+                showToast('Debt closed.', 'success'); showCreditDetail(id);
+            };
+        }
+        window.freezeCredit = freezeCredit;
+
+async function deleteTenant(id) {
             if (currentAppUser && currentAppUser.role === 'cashier') {
                 showToast('⛔ Cashiers cannot delete tenant records. Contact admin.', 'error');
                 return;
@@ -11315,7 +11347,7 @@ async function recordTenantPayment(tenantId) {
                     const totalPaid = tenantPayments.reduce((sum, p) => sum + p.amount, 0);
                     const moveInDate = new Date(tenant.moveIn);
                     const today = new Date();
-                    const monthsOccupied = prismMonthsDiff(moveInDate, today);
+                    const monthsOccupied = Math.max(1, Math.ceil((today - moveInDate) / (30 * 24 * 60 * 60 * 1000)));
                     const totalExpected = monthlyRent * monthsOccupied;
                     const totalBalance = Math.max(0, totalExpected - totalPaid);
 
@@ -11372,9 +11404,9 @@ async function recordTenantPayment(tenantId) {
                     
                     // Calculate with interest
                     let totalDue = credit.principal;
-                    if (credit.interestType === 'simple') {
+                    if (credit.interestType === 'percentage') {
                         totalDue = credit.principal * (1 + (credit.interestRate / 100));
-                    } else if (credit.interestType === 'flat') {
+                    } else if (credit.interestType === 'fixed') {
                         totalDue = credit.principal + credit.interestRate;
                     }
                     
@@ -11390,7 +11422,7 @@ async function recordTenantPayment(tenantId) {
                         ${credit.interestType !== 'none' ? `
                         <div class="receipt-row">
                             <span>Interest:</span>
-                            <span>${credit.interestType === 'simple' ? credit.interestRate + '%' : '₱' + credit.interestRate.toLocaleString()}</span>
+                            <span>${credit.interestType === 'percentage' ? credit.interestRate + '%' : '₱' + credit.interestRate.toLocaleString()}</span>
                         </div>
                         <div class="receipt-row">
                             <span>Total Loan:</span>
@@ -11519,7 +11551,7 @@ async function recordTenantPayment(tenantId) {
                 const todayDate = new Date();
                 
                 // Calculate months occupied
-                const monthsOccupied = prismMonthsDiff(moveInDate, todayDate);
+                const monthsOccupied = Math.max(1, Math.ceil((todayDate - moveInDate) / (30 * 24 * 60 * 60 * 1000)));
                 const totalExpected = monthlyRent * monthsOccupied;
                 const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
                 const totalBalance = Math.max(0, totalExpected - totalPaid);
@@ -11620,10 +11652,10 @@ async function recordTenantPayment(tenantId) {
                 // Calculate total with interest
                 let totalDue = credit.principal;
                 let interestAmount = 0;
-                if (credit.interestType === 'simple' || credit.interestType === 'simple') {
+                if (credit.interestType === 'percentage' || credit.interestType === 'simple') {
                     interestAmount = credit.principal * (credit.interestRate / 100);
                     totalDue = credit.principal + interestAmount;
-                } else if (credit.interestType === 'flat' || credit.interestType === 'flat') {
+                } else if (credit.interestType === 'fixed' || credit.interestType === 'flat') {
                     interestAmount = credit.interestRate;
                     totalDue = credit.principal + interestAmount;
                 }
@@ -11673,7 +11705,7 @@ async function recordTenantPayment(tenantId) {
                         </div>
                         ${credit.interestType !== 'none' ? `
                         <div class="receipt-row">
-                            <span>Interest (${credit.interestType === 'simple' || credit.interestType === 'simple' ? credit.interestRate + '%' : 'Flat'}):</span>
+                            <span>Interest (${credit.interestType === 'percentage' || credit.interestType === 'simple' ? credit.interestRate + '%' : 'Flat'}):</span>
                             <span>₱${interestAmount.toLocaleString()}</span>
                         </div>
                         ` : ''}
@@ -11894,7 +11926,7 @@ async function recordTenantPayment(tenantId) {
             let totalDue = credit.principal;
             let interestAmount = 0;
             if (credit.interestType === 'simple') {
-                const months = prismCreditMonths(credit.dateLent);
+                const months = Math.ceil((new Date() - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
                 interestAmount = credit.principal * (credit.interestRate / 100) * months;
                 totalDue = credit.principal + interestAmount;
             } else if (credit.interestType === 'flat') {
@@ -12529,8 +12561,9 @@ async function loadWaterCustomers() {
         }
 
         // Show water payment modal
-        function showWaterPaymentModal(customerId, customerName, balance) {
-            const amount = prompt(`💵 Record Payment for ${customerName}\n\nOutstanding Balance: ₱${balance.toLocaleString()}\n\nEnter payment amount:`);
+        async function showWaterPaymentModal(customerId, customerName, balance) {
+            const amount = await showInputModal('Record Payment', 'Customer: ' + customerName + '
+Balance: ' + balance.toLocaleString(), 'Enter payment amount', '');
             if (!amount) return;
             
             const paymentAmount = parseFloat(amount.replace(/,/g, '')) || 0;
@@ -12630,27 +12663,14 @@ async function loadWaterCustomers() {
         let allEmployeesData = [];
 
         async function loadEmployees() {
-            // Show/hide Void Center button based on role
-            const voidCenterBtn = document.getElementById('void-center-btn');
-            if (voidCenterBtn) {
-                voidCenterBtn.style.display = (currentAppUser && (currentAppUser.role === 'admin' || currentAppUser.role === 'owner')) ? 'inline-flex' : 'none';
-            }
             // Update void request badge for admin
             if (currentAppUser && (currentAppUser.role === 'admin' || currentAppUser.role === 'owner')) {
                 const voidRequests = JSON.parse(localStorage.getItem('prism_void_requests') || '[]');
                 const pendingCount = voidRequests.filter(r => r.status === 'pending').length;
                 const btn = document.getElementById('void-requests-btn');
                 const countEl = document.getElementById('void-req-count');
-                if (btn) {
-                    btn.style.display = 'inline-flex';
-                    btn.style.background = pendingCount > 0 ? 'rgba(239,68,68,0.15)' : 'var(--bg-secondary)';
-                    btn.style.borderColor = pendingCount > 0 ? 'rgba(239,68,68,0.5)' : 'var(--border-color)';
-                    btn.style.color = pendingCount > 0 ? '#ef4444' : 'var(--text-secondary)';
-                }
-                if (countEl) {
-                    countEl.textContent = pendingCount;
-                    countEl.style.display = pendingCount > 0 ? 'inline' : 'none';
-                }
+                if (btn) btn.style.display = pendingCount > 0 ? 'inline-flex' : 'none';
+                if (countEl) countEl.textContent = pendingCount;
             }
             const employees = await dbGetAll('employees');
             const advances = await dbGetAll('cashAdvances');
@@ -12724,7 +12744,6 @@ async function loadWaterCustomers() {
                             <button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); cashierQuickRecord(${e.id}, '${e.name.replace(/'/g,"\\'")}', 'absent')" title="Absent">❌</button>
                             <button class="btn btn-sm btn-warning" onclick="event.stopPropagation(); cashierQuickRecord(${e.id}, '${e.name.replace(/'/g,"\\'")}', 'halfday')" title="Half Day">🕐</button>
                             <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); cashierShowAdvance(${e.id}, '${e.name.replace(/'/g,"\\'")}');" title="Cash Advance">💵</button>
-                            <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); requestVoidAttendance(${e.id}, '${e.name.replace(/'/g,"\\'")}', new Date().toISOString().split('T')[0])" title="Request to void today's attendance">🗑️</button>
                         </div>
                     </div>
                 `).join('');
@@ -12754,7 +12773,20 @@ async function loadWaterCustomers() {
             }
         }
 
-        async function saveEmployee(event) {
+        async async function deleteAdvance(advanceId) {
+            const advance = await dbGet('cashAdvances', advanceId);
+            if (!advance) return showToast('Advance not found.','error');
+            if (!confirm('Delete cash advance? This cannot be undone.')) return;
+            try {
+                await dbDelete('cashAdvances', advanceId);
+                await syncToFirebase('cashAdvances');
+                showToast('Cash advance deleted.','success');
+                if (typeof showEmployeeDetail==='function' && advance.employeeId) showEmployeeDetail(advance.employeeId);
+            } catch(e) { showToast('Delete failed: '+e.message,'error'); }
+        }
+        window.deleteAdvance = deleteAdvance;
+
+        function saveEmployee(event) {
             event.preventDefault();
             
             const editId = document.getElementById('employee-edit-id').value;
@@ -12953,22 +12985,7 @@ async function loadWaterCustomers() {
             // Role-based action buttons
             const _isAdmin = currentAppUser && (currentAppUser.role === 'admin' || currentAppUser.role === 'owner');
             if (_isAdmin) {
-                // Add recent advances section with void option
-            content += `</div><h4 style="margin-bottom:10px;margin-top:15px;">💵 Cash Advance History</h4><div style="max-height:120px;overflow-y:auto;margin-bottom:15px;">`;
-            if (empAdvances.length === 0) {
-                content += '<p style="color:var(--text-secondary);font-size:0.9rem;">No cash advances.</p>';
-            } else {
-                empAdvances.slice(0, 6).forEach(a => {
-                    const voidBtn = (!a.deducted && currentAppUser?.role === 'cashier')
-                        ? `<button class="btn btn-sm btn-danger" onclick="requestVoidAdvance(${a.id},'${employee.name}',${a.amount})" style="font-size:0.7rem;padding:2px 8px;">🗑️ Void</button>`
-                        : (!a.deducted && (currentAppUser?.role === 'admin' || currentAppUser?.role === 'owner'))
-                        ? `<button class="btn btn-sm btn-danger" onclick="deleteAdvance(${a.id})" style="font-size:0.7rem;padding:2px 8px;">🗑️</button>`
-                        : '';
-                    content += `<div class="list-item" style="padding:8px;"><div class="list-item-content"><div class="list-item-title" style="font-size:0.9rem;">💵 ₱${(a.amount||0).toLocaleString()}</div><div class="list-item-subtitle" style="font-size:0.8rem;">${a.date||''} • ${a.deducted?'✅ Deducted':'⏳ Pending'}${a.notes?' • '+a.notes:''}</div></div>${voidBtn}</div>`;
-                });
-            }
-
-            content += `
+                content += `
                 </div>
                 <!-- Quick Actions -->
                 <div style="background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;padding:12px;margin-bottom:10px;">
@@ -13235,9 +13252,8 @@ async function showQuickAttendance() {
 
         // Void request system - cashier submits, admin approves
         async function requestVoidAttendance(recordId, employeeName, date) {
-            const reason = prompt(`Request to void attendance for ${employeeName} on ${date}.
-
-Enter reason for void request:`);
+            const reason = await showInputModal('Void Attendance', 'Employee: ' + employeeName + '
+Date: ' + date, 'Enter reason...');
             if (!reason) return;
 
             const voidRequests = JSON.parse(localStorage.getItem('prism_void_requests') || '[]');
@@ -13257,9 +13273,7 @@ Enter reason for void request:`);
         }
 
         async function requestVoidAdvance(advanceId, employeeName, amount) {
-            const reason = prompt(`Request to void cash advance of ₱${amount.toLocaleString()} for ${employeeName}.
-
-Enter reason:`);
+            const reason = await showInputModal('Void Cash Advance', 'Employee: ' + employeeName, 'Enter reason...');
             if (!reason) return;
 
             const voidRequests = JSON.parse(localStorage.getItem('prism_void_requests') || '[]');
@@ -13284,149 +13298,44 @@ Enter reason:`);
                 showToast('⛔ Admin access only.', 'error');
                 return;
             }
-
-            // Load data for direct void panel
-            const [timeRecords, employees, cashAdvances, payments, credits] = await Promise.all([
-                dbGetAll('timeRecords'),
-                dbGetAll('employees'),
-                dbGetAll('cashAdvances'),
-                dbGetAll('payments'),
-                dbGetAll('credits')
-            ]);
-
-            const empMap = {};
-            employees.forEach(e => empMap[e.id] = e.name);
-
             const voidRequests = JSON.parse(localStorage.getItem('prism_void_requests') || '[]');
             const pending = voidRequests.filter(r => r.status === 'pending');
 
-            // Tab 1: Cashier void requests
-            let requestsHtml = pending.length === 0
-                ? '<div style="text-align:center;padding:30px;color:var(--text-secondary);">✅ No pending void requests from staff.</div>'
-                : pending.map(req => `
+            if (pending.length === 0) {
+                showToast('✅ No pending void requests.', 'info');
+                return;
+            }
+
+            let html = `<div style="max-height:70vh;overflow-y:auto;">
+                <h3 style="margin-bottom:16px;">⚠️ Pending Void Requests (${pending.length})</h3>`;
+            pending.forEach(req => {
+                html += `
                 <div style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;padding:14px;margin-bottom:12px;">
-                    <div style="margin-bottom:8px;">
-                        <b>${req.type === 'attendance' ? '📅 Attendance' : '💵 Cash Advance'}</b> — ${req.employeeName}
-                        <div style="font-size:0.85rem;color:var(--text-secondary);">${req.date || '₱'+(req.amount||0).toLocaleString()} • By: ${req.requestedBy}</div>
-                        <div style="font-size:0.85rem;color:#f59e0b;">Reason: ${req.reason}</div>
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+                        <div>
+                            <b>${req.type === 'attendance' ? '📅 Attendance' : '💵 Cash Advance'}</b> — ${req.employeeName}
+                            <div style="font-size:0.85rem;color:var(--text-secondary);">${req.date || '₱'+(req.amount||0).toLocaleString()} • Requested by: ${req.requestedBy}</div>
+                            <div style="font-size:0.85rem;color:var(--text-secondary);">Reason: ${req.reason}</div>
+                        </div>
                     </div>
                     <div style="display:flex;gap:8px;">
-                        <button class="btn btn-danger btn-sm" onclick="adminApproveVoid('${req.id}', true)" style="flex:1;">✅ Approve & Void</button>
+                        <button class="btn btn-danger btn-sm" onclick="adminApproveVoid('${req.id}', true)" style="flex:1;">✅ Approve Void</button>
                         <button class="btn btn-secondary btn-sm" onclick="adminApproveVoid('${req.id}', false)" style="flex:1;">❌ Reject</button>
                     </div>
-                </div>`).join('');
+                </div>`;
+            });
+            html += '</div>';
 
-            // Tab 2: Direct admin void — recent attendance (last 30 records)
-            const recentAtt = timeRecords
-                .filter(r => !r.paid)
-                .sort((a,b) => (b.date||'').localeCompare(a.date||''))
-                .slice(0, 20);
-
-            let attHtml = recentAtt.length === 0
-                ? '<div style="text-align:center;padding:20px;color:var(--text-secondary);">No unpaid attendance records.</div>'
-                : recentAtt.map(r => {
-                    const emp = empMap[r.employeeId] || 'Unknown';
-                    const icon = r.status === 'present' ? '✅' : r.status === 'absent' ? '❌' : r.status === 'halfday' ? '🕐' : '🔘';
-                    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px;border-bottom:1px solid var(--border-color);gap:8px;">
-                        <div style="flex:1;min-width:0;">
-                            <div style="font-weight:600;font-size:0.9rem;">${icon} ${emp}</div>
-                            <div style="font-size:0.78rem;color:var(--text-secondary);">${r.date} • ${r.status}${r.otHours>0?' • OT:'+r.otHours+'h':''}</div>
-                        </div>
-                        <button class="btn btn-sm btn-danger" onclick="adminDirectVoid('timeRecords',${r.id},'Attendance record')" style="white-space:nowrap;padding:4px 10px;font-size:0.78rem;">🗑️ Void</button>
-                    </div>`;
-                }).join('');
-
-            // Tab 3: Direct admin void — cash advances
-            const recentAdv = cashAdvances
-                .filter(a => !a.deducted)
-                .sort((a,b) => (b.date||'').localeCompare(a.date||''))
-                .slice(0, 20);
-
-            let advHtml = recentAdv.length === 0
-                ? '<div style="text-align:center;padding:20px;color:var(--text-secondary);">No pending cash advances.</div>'
-                : recentAdv.map(a => {
-                    const emp = empMap[a.employeeId] || 'Unknown';
-                    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px;border-bottom:1px solid var(--border-color);gap:8px;">
-                        <div style="flex:1;min-width:0;">
-                            <div style="font-weight:600;font-size:0.9rem;">💵 ${emp}</div>
-                            <div style="font-size:0.78rem;color:var(--text-secondary);">${a.date} • ₱${(a.amount||0).toLocaleString()}${a.notes?' • '+a.notes:''}</div>
-                        </div>
-                        <button class="btn btn-sm btn-danger" onclick="adminDirectVoid('cashAdvances',${a.id},'Cash advance')" style="white-space:nowrap;padding:4px 10px;font-size:0.78rem;">🗑️ Void</button>
-                    </div>`;
-                }).join('');
-
-            // Tab 4: Direct admin void — rent/payments
-            const recentPmts = payments
-                .sort((a,b) => (b.date||'').localeCompare(a.date||''))
-                .slice(0, 20);
-            let pmtHtml = recentPmts.length === 0
-                ? '<div style="text-align:center;padding:20px;color:var(--text-secondary);">No recent payments.</div>'
-                : recentPmts.map(p => {
-                    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px;border-bottom:1px solid var(--border-color);gap:8px;">
-                        <div style="flex:1;min-width:0;">
-                            <div style="font-weight:600;font-size:0.9rem;">🏠 ${p.tenantName||'Tenant'}</div>
-                            <div style="font-size:0.78rem;color:var(--text-secondary);">${p.date} • ₱${(p.amount||0).toLocaleString()} • ${p.type||'rent'}</div>
-                        </div>
-                        <button class="btn btn-sm btn-danger" onclick="adminDirectVoid('payments',${p.id},'Rent payment')" style="white-space:nowrap;padding:4px 10px;font-size:0.78rem;">🗑️ Void</button>
-                    </div>`;
-                }).join('');
-
-            const tabStyle = 'padding:8px 14px;border:none;background:transparent;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text-secondary);border-bottom:2px solid transparent;';
-            const activeTabStyle = tabStyle + 'color:var(--primary);border-bottom-color:var(--primary);';
-
-            const html = `
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                <h3 style="margin:0;">🗑️ Void Center</h3>
-                <span style="font-size:0.8rem;color:var(--text-secondary);">${pending.length} pending request${pending.length!==1?'s':''}</span>
-            </div>
-            <div style="display:flex;border-bottom:1px solid var(--border-color);margin-bottom:16px;overflow-x:auto;">
-                <button id="vt-0" style="${activeTabStyle}" onclick="switchVoidTab(0)">📩 Staff Requests</button>
-                <button id="vt-1" style="${tabStyle}" onclick="switchVoidTab(1)">📅 Attendance</button>
-                <button id="vt-2" style="${tabStyle}" onclick="switchVoidTab(2)">💵 Advances</button>
-                <button id="vt-3" style="${tabStyle}" onclick="switchVoidTab(3)">🏠 Payments</button>
-            </div>
-            <div id="void-tab-0" style="max-height:55vh;overflow-y:auto;">${requestsHtml}</div>
-            <div id="void-tab-1" style="max-height:55vh;overflow-y:auto;display:none;">${attHtml}</div>
-            <div id="void-tab-2" style="max-height:55vh;overflow-y:auto;display:none;">${advHtml}</div>
-            <div id="void-tab-3" style="max-height:55vh;overflow-y:auto;display:none;">${pmtHtml}</div>`;
-
+            // Show in a modal
             const modal = document.createElement('div');
-            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
-            modal.innerHTML = `<div style="background:var(--bg-card);border-radius:16px;padding:24px;width:100%;max-width:520px;color:var(--text-primary);">${html}
-                <button class="btn btn-secondary btn-block" onclick="this.closest('.void-modal-wrap').remove();" style="margin-top:16px;">Close</button>
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+            modal.innerHTML = `<div style="background:var(--bg-card);border-radius:16px;padding:24px;width:100%;max-width:500px;color:var(--text-primary);">${html}
+                <button class="btn btn-secondary btn-block" onclick="this.closest('.void-modal-wrap').remove();" style="margin-top:12px;">Close</button>
             </div>`;
             modal.className = 'void-modal-wrap';
             modal.onclick = e => { if(e.target === modal) modal.remove(); };
             document.body.appendChild(modal);
         }
-
-        function switchVoidTab(index) {
-            [0,1,2,3].forEach(i => {
-                const tab = document.getElementById('void-tab-' + i);
-                const btn = document.getElementById('vt-' + i);
-                if (tab) tab.style.display = i === index ? 'block' : 'none';
-                if (btn) btn.style.cssText = i === index
-                    ? 'padding:8px 14px;border:none;background:transparent;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--primary);border-bottom:2px solid var(--primary);'
-                    : 'padding:8px 14px;border:none;background:transparent;cursor:pointer;font-size:0.85rem;font-weight:600;color:var(--text-secondary);border-bottom:2px solid transparent;';
-            });
-        }
-        window.switchVoidTab = switchVoidTab;
-
-        async function adminDirectVoid(store, id, label) {
-            if (!await showConfirm(`Void this record?\n\n"${label}"\n\nThis cannot be undone.`, 'danger', 'Confirm Void')) return;
-            try {
-                await dbDelete(store, id);
-                showToast(`Voided: ${label}`, 'success');
-                // Refresh the modal
-                document.querySelector('.void-modal-wrap')?.remove();
-                loadDashboard();
-                loadEmployees();
-                setTimeout(() => showVoidRequests(), 300);
-            } catch(e) {
-                showToast('❌ Error: ' + e.message, 'error');
-            }
-        }
-        window.adminDirectVoid = adminDirectVoid;
 
         async function adminApproveVoid(requestId, approve) {
             const voidRequests = JSON.parse(localStorage.getItem('prism_void_requests') || '[]');
@@ -14188,7 +14097,7 @@ async function showPayrollSummary() {
                 // Calculate total with interest
                 let totalDue = credit.principal;
                 if (credit.interestType === 'simple') {
-                    const months = prismCreditMonths(credit.dateLent, now);
+                    const months = Math.ceil((now - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
                     totalDue = credit.principal + (credit.principal * (credit.interestRate / 100) * months);
                 } else if (credit.interestType === 'flat') {
                     totalDue = credit.principal + credit.interestRate;
@@ -14500,7 +14409,7 @@ async function showPayrollSummary() {
             let totalDue = credit.principal;
             let interestAmount = 0;
             if (credit.interestType === 'simple') {
-                const months = prismCreditMonths(credit.dateLent);
+                const months = Math.ceil((new Date() - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
                 interestAmount = credit.principal * (credit.interestRate / 100) * months;
                 totalDue = credit.principal + interestAmount;
             } else if (credit.interestType === 'flat') {
@@ -14601,7 +14510,7 @@ async function showPayrollSummary() {
                     <button class="btn btn-secondary" onclick="showStatementOfAccount(${id}, 'credit')">📊 Statement</button>
                     <button class="btn btn-info" onclick="printCreditReport(${id})">🖨️ Print</button>
                     ${currentAppUser && currentAppUser.role !== 'cashier' ? `
-                        <button class="btn btn-danger" onclick="deleteCredit(${id})">Delete Credit</button>
+                        ${credit.status==='closed' ? '<button class="btn" onclick="freezeCredit(${id})" style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);color:#34d399;">Reopen Debt</button>' : '<button class="btn" onclick="freezeCredit(${id})" style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);color:#fbbf24;">Freeze Debt</button>'}<button class="btn btn-danger" onclick="deleteCredit(${id})">Delete Credit</button>
                     ` : `
                         <button class="btn btn-primary" onclick="quickEndorse('credit', '💳 Credit account needs admin attention: ' + '${credit.debtor}' + ' — Balance: ₱' + balance.toLocaleString())">📋 Endorse to Admin</button>
                     `}
@@ -15066,8 +14975,8 @@ async function showPayrollSummary() {
                     photo: notePhotoData || null,
                     createdAt: new Date().toISOString(),
                     // Reminder fields (only meaningful for category='reminder')
-                    reminderTime: category === 'reminder' ? reminderTime : null,
-                    repeat: (category === 'reminder' || category === 'general') ? repeat : 'none',
+                    reminderTime: (category === 'reminder' || category === 'general') ? reminderTime : null,
+                    repeat:       (category === 'reminder' || category === 'general') ? repeat : 'none',
                     dismissed:    false,  // reset dismissed on save/edit
                 };
 
@@ -15097,16 +15006,17 @@ async function showPayrollSummary() {
         // ══════════════════════════════════════════════════════
 
         function prismToggleReminderFields(category) {
-            // Time field only shows for reminder category
-            // Repeat field always visible for all categories
-            const timeField = document.getElementById('reminder-extra-fields');
-            if (timeField) timeField.style.display = category === 'reminder' ? '' : 'none';
-            const generalRepeat = document.getElementById('general-repeat-group');
-if (generalRepeat) generalRepeat.style.display = category === 'general' ? '' : 'none';
+            const el = document.getElementById('reminder-extra-fields');
+            if (!el) return;
+            if ((category === 'reminder' || category === 'general')) {
+                el.classList.remove('reminder-hidden');
+            } else {
+                el.classList.add('reminder-hidden');
+            }
         }
         window.prismToggleReminderFields = prismToggleReminderFields;
 
-        // Check if a note/reminder is due TODAY based on its date + repeat setting
+        // Check if a reminder note is due TODAY based on its date + repeat setting
         function prismIsReminderDueToday(note) {
             if (!note.date) return false;
             const today  = new Date();
@@ -15139,12 +15049,9 @@ if (generalRepeat) generalRepeat.style.display = category === 'general' ? '' : '
         async function prismCheckReminders() {
             try {
                 if (!db || !db.objectStoreNames.contains('customNotes')) return;
-                // Respect daily dismiss — skip if user already dismissed today
-                const dismissed = localStorage.getItem('prism_reminders_dismissed');
-                if (dismissed && dismissed === new Date().toDateString()) return;
                 const notes = await dbGetAll('customNotes');
                 const reminders = (notes || []).filter(n =>
-                    prismIsReminderDueToday(n) && (n.category === 'reminder' || (n.repeat && n.repeat !== 'none'))
+                    n.(category === 'reminder' || category === 'general') && prismIsReminderDueToday(n)
                 );
 
                 // Also include recurring tasks due today (not completed)
@@ -15154,9 +15061,8 @@ if (generalRepeat) generalRepeat.style.display = category === 'general' ? '' : '
                     const todayStr = new Date().toISOString().split('T')[0];
                     const todayDate = new Date(todayStr + 'T00:00:00');
                     recurringTasksDue = (tasks||[]).filter(t => {
-                        if (t.status === 'completed' || !t.repeat || t.repeat === 'none') return false;
-                        // Tasks with no dueDate but daily repeat — always notify
-                        if (!t.dueDate) return t.repeat === 'daily';
+                        if (t.status === 'completed' || !t.dueDate || !t.repeat || t.repeat === 'none') return false;
+                        // Use same repeat logic as calendar
                         const origin = new Date(t.dueDate + 'T00:00:00');
                         if (isNaN(origin) || origin > todayDate) return false;
                         if (t.repeat === 'daily') return true;
@@ -15207,7 +15113,7 @@ if (generalRepeat) generalRepeat.style.display = category === 'general' ? '' : '
                                 padding:14px 16px;margin-bottom:16px;position:relative;">
                         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
                             <div style="font-weight:700;color:#fbbf24;font-size:0.95rem;">
-                                🔔 ${allAlerts.length} Alert${allAlerts.length>1?'s':''} Today${recurringTasksDue.length>0?' ('+recurringTasksDue.length+' task'+(recurringTasksDue.length>1?'s':'')+')':''}
+                                🔔 ${reminders.length} Reminder${reminders.length>1?'s':''} Today
                             </div>
                             <div style="display:flex;gap:8px;">
                                 <button onclick="showSection('notes')" style="font-size:0.75rem;padding:4px 10px;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);color:#818cf8;border-radius:6px;cursor:pointer;">View All</button>
@@ -15281,12 +15187,12 @@ if (generalRepeat) generalRepeat.style.display = category === 'general' ? '' : '
 
                 // Update stats
                 document.getElementById('stat-notes-total').textContent = allNotesData.length;
-                document.getElementById('stat-notes-reminders').textContent = allNotesData.filter(n => n.category === 'reminder').length;
+                document.getElementById('stat-notes-reminders').textContent = allNotesData.filter(n => n.(category === 'reminder' || category === 'general')).length;
                 
                 // Update category counts in Quick Add section
                 const clientCount = allNotesData.filter(n => n.category === 'client').length;
                 const areaCount = allNotesData.filter(n => n.category === 'area').length;
-                const reminderCount = allNotesData.filter(n => n.category === 'reminder').length;
+                const reminderCount = allNotesData.filter(n => n.(category === 'reminder' || category === 'general')).length;
                 const generalCount = allNotesData.filter(n => n.category === 'general').length;
                 
                 if (document.getElementById('stat-notes-client')) {
@@ -15334,15 +15240,15 @@ if (generalRepeat) generalRepeat.style.display = category === 'general' ? '' : '
 
             // Sort: active reminders first, then by date desc
             const sorted = [...notes].sort((a,b) => {
-                const aRec = a.repeat && a.repeat!=='none';
-                const bRec = b.repeat && b.repeat!=='none';
+                const aRec = a.category==='reminder' && a.repeat && a.repeat!=='none';
+                const bRec = b.category==='reminder' && b.repeat && b.repeat!=='none';
                 if (aRec && !bRec) return -1;
                 if (!aRec && bRec) return 1;
                 return new Date(b.date) - new Date(a.date);
             });
 
             container.innerHTML = sorted.map(note => {
-                const isRecurring = note.repeat && note.repeat!=='none';
+                const isRecurring = note.category==='reminder' && note.repeat && note.repeat!=='none';
                 const borderStyle = isRecurring ? 'border-left:3px solid #f59e0b;' : '';
                 const repeatBadge = isRecurring
                     ? `<span style="display:inline-block;background:rgba(245,158,11,0.15);color:#f59e0b;font-size:0.68rem;padding:1px 8px;border-radius:10px;font-weight:600;margin-left:5px;">🔁 ${note.repeat}</span>`
@@ -15356,8 +15262,8 @@ if (generalRepeat) generalRepeat.style.display = category === 'general' ? '' : '
                         <p class="note-preview">${note.description}</p>
                         <div class="note-meta">
                             <span>${note.date}</span>
-                            ${note.reminderTime ? `<span style="color:#6366f1;font-size:0.75rem;">⏰ ${note.reminderTime}</span>` : ''}
-                            ${isRecurring ? `<span style="color:#f59e0b;font-size:0.75rem;">🔔 Repeating</span>` : ''}
+                            ${note.reminderTime && note.category==='reminder' ? `<span style="color:#6366f1;font-size:0.75rem;">⏰ ${note.reminderTime}</span>` : ''}
+                            ${isRecurring ? `<span style="color:#f59e0b;font-size:0.75rem;">🔔 Always active</span>` : ''}
                             ${note.photo ? '<span class="has-photo">📷 Has photo</span>' : ''}
                         </div>
                     </div>
@@ -15421,7 +15327,7 @@ if (generalRepeat) generalRepeat.style.display = category === 'general' ? '' : '
                      <div>No ${info.label.toLowerCase()} yet.</div>
                    </div>`
                 : filtered.map(n => {
-                    const isOverdue = n.category === 'reminder' && n.reminderDate && n.reminderDate < today;
+                    const isOverdue = n.(category === 'reminder' || category === 'general') && n.reminderDate && n.reminderDate < today;
                     const catColor = categoryBadgeColors[n.category] || '#6366f1';
                     return `
                     <div style="background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;padding:14px;margin-bottom:10px;cursor:pointer;${isOverdue ? 'border-left:4px solid #ef4444;' : ''}"
@@ -15592,7 +15498,7 @@ if (generalRepeat) generalRepeat.style.display = category === 'general' ? '' : '
             document.getElementById('note-date').value = note.date;
             // Restore reminder fields
             prismToggleReminderFields(note.category);
-            if (note.category === 'reminder') {
+            if (note.(category === 'reminder' || category === 'general')) {
                 const rtEl = document.getElementById('note-reminder-time');
                 const rpEl = document.getElementById('note-repeat');
                 if (rtEl) rtEl.value = note.reminderTime || '08:00';
@@ -15672,20 +15578,17 @@ if (generalRepeat) generalRepeat.style.display = category === 'general' ? '' : '
                 options += '</optgroup>';
             }
             
-            const incomeLinkedTo = document.getElementById('income-linked-to');
-            if (incomeLinkedTo) incomeLinkedTo.innerHTML = options;
+            document.getElementById('income-linked-to').innerHTML = options;
             document.getElementById('income-date').value = new Date().toISOString().split('T')[0];
             document.getElementById('income-form').reset();
             document.getElementById('income-date').value = new Date().toISOString().split('T')[0];
-            const csg = document.getElementById('custom-source-group');
-            if (csg) csg.style.display = 'none';
+            document.getElementById('custom-source-group').style.display = 'none';
             showModal('income-modal');
         }
 
         function toggleCustomSource() {
-            const incSrc = document.getElementById('income-source');
-            const csgEl = document.getElementById('custom-source-group');
-            if (incSrc && csgEl) csgEl.style.display = incSrc.value === 'custom' ? 'block' : 'none';
+            const source = document.getElementById('income-source').value;
+            document.getElementById('custom-source-group').style.display = source === 'custom' ? 'block' : 'none';
         }
 
         // [REMOVED: duplicate saveIncome - used wrong form field IDs]
@@ -15865,7 +15768,7 @@ if (generalRepeat) generalRepeat.style.display = category === 'general' ? '' : '
 
         // Add notes to client
         async function addClientNote(type, id) {
-            const note = prompt('Enter note for this client:');
+            const note = await showInputModal('Add Note', null, 'Enter note for this client...');
             if (!note || !note.trim()) return;
 
             const client = type === 'tenant' ? await dbGet('tenants', id) : await dbGet('credits', id);
@@ -16635,24 +16538,6 @@ if (generalRepeat) generalRepeat.style.display = category === 'general' ? '' : '
         // =====================================================
         // DASHBOARD
         // =====================================================
-
-        // Shared helper: calendar-accurate month difference (inclusive)
-        function prismMonthsDiff(fromDate, toDate) {
-            const f = new Date(fromDate);
-            const t = new Date(toDate || new Date());
-            if (isNaN(f)) return 1;
-            const diff = (t.getFullYear() - f.getFullYear()) * 12 + (t.getMonth() - f.getMonth()) + 1;
-            return Math.max(1, diff);
-        }
-        // Calendar-accurate month diff for credit (no +1 since it's elapsed time)
-        function prismCreditMonths(fromDate, toDate) {
-            const f = new Date(fromDate);
-            const t = new Date(toDate || new Date());
-            if (isNaN(f)) return 1;
-            const diff = (t.getFullYear() - f.getFullYear()) * 12 + (t.getMonth() - f.getMonth());
-            return Math.max(1, diff);
-        }
-
         async function loadDashboard() {
             const properties = await dbGetAll('properties');
             const tenants = await dbGetAll('tenants');
@@ -16683,20 +16568,7 @@ if (generalRepeat) generalRepeat.style.display = category === 'general' ? '' : '
             
             if (statProperties) statProperties.textContent = properties.length;
             if (statTenants) statTenants.textContent = tenants.length;
-            // Only count credits with remaining balance (active debtors)
-            const activeDebtors = credits.filter(credit => {
-                const pmts = creditPayments.filter(p => p.creditId === credit.id);
-                const paid = pmts.reduce((s, p) => s + p.amount, 0);
-                let due = credit.principal;
-                if (credit.interestType === 'simple') {
-                    const months = prismCreditMonths(credit.dateLent, now);
-                    due = credit.principal + (credit.principal * (credit.interestRate / 100) * months);
-                } else if (credit.interestType === 'flat') {
-                    due = credit.principal + credit.interestRate;
-                }
-                return paid < due;
-            });
-            if (statDebtors) statDebtors.textContent = activeDebtors.length;
+            if (statDebtors) statDebtors.textContent = credits.length;
 
             // Calculate vacant properties - only count properties with NO active tenant
             const occupiedPropertyIds = new Set(tenants.filter(t => t.status === 'active' || !t.status).map(t => t.propertyId));
@@ -16752,7 +16624,7 @@ if (generalRepeat) generalRepeat.style.display = category === 'general' ? '' : '
                 const totalPaid = creditPmts.reduce((sum, p) => sum + p.amount, 0);
                 let totalDue = credit.principal;
                 if (credit.interestType === 'simple') {
-                    const months = prismCreditMonths(credit.dateLent, now);
+                    const months = Math.ceil((now - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
                     totalDue = credit.principal + (credit.principal * (credit.interestRate / 100) * months);
                 } else if (credit.interestType === 'flat') {
                     totalDue = credit.principal + credit.interestRate;
@@ -16823,7 +16695,7 @@ if (generalRepeat) generalRepeat.style.display = category === 'general' ? '' : '
             
             tenants.forEach(tenant => {
                 const moveInDate = new Date(tenant.moveIn);
-                const monthsSince = prismMonthsDiff(moveInDate, now);
+                const monthsSince = Math.max(1, Math.ceil((now - moveInDate) / (1000 * 60 * 60 * 24 * 30)));
                 overallRentExpected += tenant.rent * monthsSince;
             });
 
@@ -16844,7 +16716,7 @@ if (generalRepeat) generalRepeat.style.display = category === 'general' ? '' : '
             credits.forEach(credit => {
                 let totalDue = credit.principal;
                 if (credit.interestType === 'simple') {
-                    const months = prismCreditMonths(credit.dateLent, now);
+                    const months = Math.ceil((now - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
                     totalDue = credit.principal + (credit.principal * (credit.interestRate / 100) * months);
                 } else if (credit.interestType === 'flat') {
                     totalDue = credit.principal + credit.interestRate;
@@ -17362,14 +17234,14 @@ if (generalRepeat) generalRepeat.style.display = category === 'general' ? '' : '
                 if (!note.date) return;
                 const origin = new Date(note.date + 'T00:00:00');
                 if (isNaN(origin)) return;
-                const isReminder = note.category === 'reminder';
+                const isReminder = note.(category === 'reminder' || category === 'general');
                 const repeat = (note.repeat || 'none');
 
                 // Determine which days in the viewed month this note falls on
                 const hitDays = new Set();
 
-                if (repeat === 'none') {
-                    // One-time note — only show on its own date
+                if (!isReminder || repeat === 'none') {
+                    // Plain note or one-time reminder — only show on its own date
                     if (origin.getFullYear()===year && origin.getMonth()===month) {
                         hitDays.add(origin.getDate());
                     }
@@ -17688,7 +17560,7 @@ if (generalRepeat) generalRepeat.style.display = category === 'general' ? '' : '
                 try { await dbClear('clientCharges'); } catch (e) {}
                 // Ask about personal reminders before deleting
                 const notes = await dbGetAll('customNotes').catch(()=>[]);
-                const reminders = (notes||[]).filter(n => n.category === 'reminder');
+                const reminders = (notes||[]).filter(n => n.(category === 'reminder' || category === 'general'));
                 if (reminders.length > 0) {
                     const keepReminders = await showConfirm(
                         `You have ${reminders.length} personal reminder${reminders.length>1?'s':''} (SSS, bills, etc.)\n\nDo you want to KEEP your reminders?`,
@@ -17847,7 +17719,7 @@ if (generalRepeat) generalRepeat.style.display = category === 'general' ? '' : '
 
         // ── EARLY-OUT REQUEST ──
         async function prismRequestEarlyOut() {
-            const reason = window.prompt('Enter reason for early out (e.g. medical, family emergency, etc.):');
+            const reason = await showInputModal('Early Out Request', null, 'e.g. medical, family emergency...');
             if (!reason || !reason.trim()) return;
 
             try {
@@ -17903,7 +17775,7 @@ if (generalRepeat) generalRepeat.style.display = category === 'general' ? '' : '
 
         // ── VOID REQUEST ──
         async function prismRequestVoid(type, recordId, details) {
-            const reason = window.prompt('Reason for void request:');
+            const reason = await showInputModal('Void Request', null, 'Enter reason...');
             if (!reason || !reason.trim()) return;
 
             try {
@@ -18343,8 +18215,27 @@ if (generalRepeat) generalRepeat.style.display = category === 'general' ? '' : '
 
         // ══ DELETE SAMPLE DATA ONLY ══
         async function deleteSampleData() {
-            // Single native confirm — avoids custom dialog race conditions
-            if (!confirm('Delete all sample/demo data?\n\nThis will remove all records tagged as sample data. Your real data will NOT be affected.')) return;
+        const _dsd=window.currentAppUser||null;if(_dsd&&!['owner','admin'].includes(_dsd.role)){showToast('Only Owner or Admin can delete sample data.','error');return;}
+            // Step 1 — Initial confirm (BEFORE setting wipe flag)
+            const step1 = await showConfirm(
+                'This will permanently delete all sample/demo data across every module — properties, tenants, payments, credits, employees, water, tasks, notes and more.\n\nYour REAL recorded data will NOT be affected.',
+                'warning', '🧹 Delete Sample Data', 'Yes, continue'
+            );
+            if (!step1) return;
+
+            // Step 2 — Second confirm
+            const step2 = await showConfirm(
+                'Are you absolutely sure? This action cannot be undone.\n\nOnly records tagged as sample data will be removed.',
+                'danger', '⚠️ Final Warning', 'Yes, delete sample data'
+            );
+            if (!step2) return;
+
+            // Step 3 — Inline type confirmation
+            const typed = await prismShowTypeConfirm('DELETE SAMPLE');
+            if (typed !== 'DELETE SAMPLE') {
+                showToast('❌ Cancelled — text did not match.', 'error');
+                return;
+            }
 
             // ── All confirms passed ──
             // Step 1: Kill the listener permanently — do NOT restart until reload
@@ -18411,6 +18302,7 @@ if (generalRepeat) generalRepeat.style.display = category === 'general' ? '' : '
                     console.warn('[DeleteSample] No Firebase — local delete only');
                 }
 
+        try { const _ae=JSON.parse(localStorage.getItem('prism_endorsements')||'[]'); localStorage.setItem('prism_endorsements',JSON.stringify(_ae.filter(e=>e.isSample!==true))); const _b=document.getElementById('admin-inbox-count'); const _un=JSON.parse(localStorage.getItem('prism_endorsements')||'[]').filter(e=>!e.read).length; if(_b){_b.textContent=_un;_b.style.display=_un>0?'flex':'none';} } catch(e3){}
                 showToast('✅ Done! ' + totalDeleted + ' sample records deleted. Reloading...', 'success');
 
                 // Step 7: Refresh UI from clean IndexedDB
@@ -18419,10 +18311,7 @@ if (generalRepeat) generalRepeat.style.display = category === 'general' ? '' : '
                 // Step 8: Keep wipe flag TRUE — do NOT restart listener
                 // The listener will restart naturally on next page load with fresh timestamp
                 // This prevents any race condition from onSnapshot restoring old data
-                // Reset wipe flag after UI is refreshed — safe now since Firebase is already updated
-                window._prismWipeInProgress = false;
-                try { if (typeof mtStartRealtimeSync === 'function') mtStartRealtimeSync(); } catch(e) {}
-                console.log('[DeleteSample] Complete. Sync resumed.');
+                console.log('[DeleteSample] Complete. Listener stays off until reload.');
 
             } catch(e) {
                 window._prismWipeInProgress = false;
@@ -18477,17 +18366,39 @@ if (generalRepeat) generalRepeat.style.display = category === 'general' ? '' : '
         window.prismFullRefresh = prismFullRefresh;
 
 async function clearAllData() {
+        const _cad_user = window.currentAppUser||null; if(_cad_user && !['owner','admin'].includes(_cad_user.role)){showToast('Only Owner or Admin can delete all data.','error');return;}
             // ── Step 0: Snapshot notes + tasks before asking (BEFORE wipe flag) ──
             let _snapNotes = [], _snapTasks = [];
             try { _snapNotes = await dbGetAll('customNotes') || []; } catch(e) {}
             try { _snapTasks = await dbGetAll('tasks') || [];        } catch(e) {}
 
-            // ── Single native confirm ──
-            if (!confirm('DELETE ALL DATA?\n\nThis will permanently delete ALL records. This cannot be undone.')) return;
-            const _keepNotes = [];
-            const _keepTasks = [];
+            // ── Step 1 ──
+            const _ca1 = await showConfirm('ALL data will be permanently deleted — properties, tenants, payments, credits, expenses, water records, employees, notes and tasks.\n\nThis CANNOT be undone.', 'danger', '\u2622\ufe0f Delete ALL Data', 'Yes, continue');
+            if (!_ca1) return;
 
-            // ── Lock out Firebase sync ──
+            // ── Step 2 ──
+            const _ca2 = await showConfirm('This is your FINAL warning.\n\nEvery single record will be gone forever. Are you absolutely sure?', 'danger', '\u2622\ufe0f Point of No Return', 'I understand, proceed');
+            if (!_ca2) return;
+
+            // ── Step 3: Ask about notes (all categories — reminders, client, area, general) ──
+            let _keepNotes = [];
+            if (_snapNotes.length > 0) {
+                const keepN = await showConfirm('You have ' + _snapNotes.length + ' note(s) and reminder(s).\n\nDelete them all too, or keep them all?\n\n(To delete specific notes manually, cancel here.)', 'warning', '\ud83d\udcdd Notes & Reminders', 'Delete them all', 'Keep them all');
+                _keepNotes = keepN ? [] : _snapNotes;
+            }
+
+            // ── Step 4: Ask about tasks ──
+            let _keepTasks = [];
+            if (_snapTasks.length > 0) {
+                const keepT = await showConfirm('You have ' + _snapTasks.length + ' task(s).\n\nDelete them all too, or keep them all?\n\n(To delete specific tasks manually, cancel here.)', 'warning', '\u2705 Tasks', 'Delete them all', 'Keep them all');
+                _keepTasks = keepT ? [] : _snapTasks;
+            }
+
+            // ── Step 5: Type confirm ──
+            const _ca5 = await prismShowTypeConfirm();
+            if (_ca5 !== 'DELETE ALL') { showToast('\u274c Cancelled \u2014 text did not match.', 'error'); return; }
+
+            // ── All confirms passed — NOW lock out Firebase sync ──
             window._prismWipeInProgress = true;
             try { if (typeof mtStopRealtimeSync === 'function') mtStopRealtimeSync(); } catch(e) {}
 
@@ -18552,10 +18463,9 @@ async function clearAllData() {
                 // Wait 3s for Firebase to fully propagate before refreshing UI
                 await new Promise(r => setTimeout(r, 3000));
                 await prismFullRefresh();
-                // Reset wipe flag and resume sync — Firebase is already updated with clean data
-                window._prismWipeInProgress = false;
-                try { if (typeof mtStartRealtimeSync === 'function') mtStartRealtimeSync(); } catch(e) {}
-                console.log('[ClearAll] Complete. Sync resumed.');
+                // ── Do NOT restart listener — keep wipe flag TRUE until next page load ──
+                // This prevents onSnapshot from restoring old data in the propagation window
+                console.log('[ClearAll] Complete. Listener stays off until reload.');
 
             } catch (error) {
                 window._prismWipeInProgress = false;
@@ -19084,7 +18994,7 @@ async function clearAllData() {
 
                 let totalDue = credit.principal;
                 if (credit.interestType === 'simple') {
-                    const months = prismCreditMonths(credit.dateLent);
+                    const months = Math.ceil((new Date() - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
                     totalDue = credit.principal + (credit.principal * (credit.interestRate / 100) * months);
                 } else if (credit.interestType === 'flat') {
                     totalDue = credit.principal + credit.interestRate;
@@ -19844,7 +19754,7 @@ Lender/Manager
                         const totalPaid = creditPmts.reduce((sum, p) => sum + p.amount, 0);
                         let totalDue = credit.principal;
                         if (credit.interestType === 'simple') {
-                            const months = prismCreditMonths(credit.dateLent, now);
+                            const months = Math.ceil((now - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
                             totalDue = credit.principal + (credit.principal * (credit.interestRate / 100) * months);
                         } else if (credit.interestType === 'flat') {
                             totalDue = credit.principal + (credit.interestRate || 0);
@@ -19910,7 +19820,7 @@ Lender/Manager
                         const totalPaid = creditPmts.reduce((sum, p) => sum + p.amount, 0);
                         let totalDue = credit.principal;
                         if (credit.interestType === 'simple') {
-                            const months = prismCreditMonths(credit.dateLent, now);
+                            const months = Math.ceil((now - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
                             totalDue = credit.principal + (credit.principal * (credit.interestRate / 100) * months);
                         } else if (credit.interestType === 'flat') {
                             totalDue = credit.principal + (credit.interestRate || 0);
@@ -20212,7 +20122,7 @@ Lender/Manager
                     const trOverallRentCollected = payments.filter(p => p.type === 'rent').reduce((sum, p) => sum + (p.amount||0), 0);
                     tenants.forEach(tenant => {
                         const moveInDate = new Date(tenant.moveIn);
-                        const monthsSince = prismMonthsDiff(moveInDate, now);
+                        const monthsSince = Math.max(1, Math.ceil((now - moveInDate) / (1000 * 60 * 60 * 24 * 30)));
                         trOverallRentExpected += (tenant.rent||0) * monthsSince;
                     });
                     const trOutstandingRent = Math.max(0, trOverallRentExpected - trOverallRentCollected);
@@ -20296,7 +20206,7 @@ Lender/Manager
                     titleText = '📝 Notes & Reminders';
                     sectionName = 'notes';
                     const allNotes = await dbGetAll('customNotes');
-                    const remNotes = allNotes.filter(n => n.category === 'reminder');
+                    const remNotes = allNotes.filter(n => n.(category === 'reminder' || category === 'general'));
                     html = `
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
                             <div style="background:rgba(99,102,241,0.15);border-radius:8px;padding:10px;text-align:center;">
@@ -23458,20 +23368,6 @@ function initReportsPage() {
     const cycle = { 'pending': 'in-progress', 'in-progress': 'completed', 'completed': 'pending' };
     task.status = cycle[task.status] || 'pending';
     task.updatedAt = new Date().toISOString();
-    // Recurring tasks: when manually reset from completed → pending, advance to next due date
-    if (task.status === 'pending' && task.repeat && task.repeat !== 'none' && task.dueDate) {
-        const today = new Date().toISOString().split('T')[0];
-        if (task.dueDate <= today) {
-            const origin = new Date(task.dueDate + 'T00:00:00');
-            let next = new Date(origin);
-            if (task.repeat === 'daily')   next.setDate(next.getDate() + 1);
-            if (task.repeat === 'weekly')  next.setDate(next.getDate() + 7);
-            if (task.repeat === 'monthly') next.setMonth(next.getMonth() + 1);
-            if (task.repeat === 'yearly')  next.setFullYear(next.getFullYear() + 1);
-            task.dueDate = next.toISOString().split('T')[0];
-            showToast(`🔁 Next occurrence set to: ${task.dueDate}`, 'info');
-        }
-    }
     await dbUpdate('tasks', task);
     loadTasks();
     showToast(`Task marked as ${task.status}`, 'success');
@@ -23672,10 +23568,10 @@ async function editTask(id) {
                 
                 // ===== PAYMENTS =====
                 if (tenant1) {
-                    await dbAdd('payments', { tenantId: tenant1.id, amount: 3000, method: 'cash', date: dateStr(5), forMonth: dateStr(1).substring(0, 7), createdAt: new Date().toISOString(), isSample: true });
+                    await dbAdd('payments', { isSample:true, tenantId: tenant1.id, amount: 3000, method: 'cash', date: dateStr(5), forMonth: dateStr(1).substring(0, 7), createdAt: new Date().toISOString(), isSample: true });
                 }
                 if (tenant2) {
-                    await dbAdd('payments', { tenantId: tenant2.id, amount: 5000, method: 'gcash', date: dateStr(10), forMonth: dateStr(1).substring(0, 7), createdAt: new Date().toISOString(), isSample: true });
+                    await dbAdd('payments', { isSample:true, tenantId: tenant2.id, amount: 5000, method: 'gcash', date: dateStr(10), forMonth: dateStr(1).substring(0, 7), createdAt: new Date().toISOString(), isSample: true });
                 }
                 
                 // ===== CREDITS/LOANS =====
@@ -23696,10 +23592,10 @@ async function editTask(id) {
                 
                 // ===== CREDIT PAYMENTS =====
                 if (credit1) {
-                    await dbAdd('creditPayments', { creditId: credit1.id, amount: 3000, date: dateStr(1), notes: 'Partial payment', createdAt: new Date().toISOString(), isSample: true });
+                    await dbAdd('creditPayments', { isSample:true, creditId: credit1.id, amount: 3000, date: dateStr(1), notes: 'Partial payment', createdAt: new Date().toISOString(), isSample: true });
                 }
                 if (credit3) {
-                    await dbAdd('creditPayments', { creditId: credit3.id, amount: 5000, date: dateStr(5), notes: 'Partial payment', createdAt: new Date().toISOString(), isSample: true });
+                    await dbAdd('creditPayments', { isSample:true, creditId: credit3.id, amount: 5000, date: dateStr(5), notes: 'Partial payment', createdAt: new Date().toISOString(), isSample: true });
                 }
                 
                 // ===== EMPLOYEES =====
@@ -23744,7 +23640,7 @@ async function editTask(id) {
                 // ===== CASH ADVANCES =====
                 const roger = allEmployees.find(e => e.name === 'Roger Ellioso');
                 if (roger) {
-                    await dbAdd('cashAdvances', { employeeId: roger.id, amount: 200, date: today.toISOString().split('T')[0], reason: 'Emergency', deducted: false, createdAt: new Date().toISOString(), isSample: true });
+                    await dbAdd('cashAdvances', { isSample:true, employeeId: roger.id, amount: 200, date: today.toISOString().split('T')[0], reason: 'Emergency', deducted: false, createdAt: new Date().toISOString(), isSample: true });
                 }
                 
                 // ===== WATER CUSTOMERS =====
@@ -23772,7 +23668,7 @@ async function editTask(id) {
                     const paymentTypes = ['cash', 'credit', 'partial', 'cash'];
                     const amountsPaid = [125, 0, 100, 500];
                     
-                    await dbAdd('waterSales', {
+                    await dbAdd('waterSales', { isSample:true,
                         customerId: cust.id,
                         customerName: cust.name,
                         isSample: true,
@@ -24039,7 +23935,7 @@ async function editTask(id) {
                         { id: 'end_4', type: 'expense', message: '💸 Expense Recorded:\n• Description: Office Supplies\n• Amount: ₱350\n• Date: ' + todayStr2 + '\nRecorded by: Cenia Ellioso', from: 'cashier1', fromName: 'Cenia Ellioso', timestamp: new Date(today.getTime() - 3*60*60*1000).toISOString(), read: true },
                         { id: 'end_5', type: 'income', message: '💰 Income Recorded:\n• Source: Parking Fee\n• Amount: ₱500\n• Date: ' + todayStr2 + '\nRecorded by: Roger Ellioso', from: 'cashier2', fromName: 'Roger Ellioso', timestamp: new Date(today.getTime() - 4*60*60*1000).toISOString(), read: true },
                     ];
-                    localStorage.setItem('prism_endorsements', JSON.stringify(sampleEndorse));
+                    const taggedE = sampleEndorse.map(e => ({...e, isSample:true, sentBy:'Cashier (Demo)', sentByRole:'cashier', sentAt:new Date().toISOString(), read:false, orgId:(MT?.currentOrg?.id||'local')})); localStorage.setItem('prism_endorsements', JSON.stringify(taggedE));
                 }
 
                 // ===== MORE INCOME for this month (so income section shows data) =====
@@ -24698,7 +24594,7 @@ async function _mtWaitForAuth(maxMs = 20000) {
         async function prismForgotPassword() {
             const emailEl = document.getElementById('mt-login-email');
             const email = emailEl ? emailEl.value.trim() : '';
-            const useEmail = email || window.prompt('Enter your email address to receive a password reset link:');
+            const useEmail = email || await showInputModal('Password Reset', null, 'Enter your email address', '');
             if (!useEmail) return;
             try {
                 const authInst = window.auth || (firebase && firebase.auth && firebase.auth());
@@ -26091,41 +25987,28 @@ function renderSentEndorsements() {
 
 function renderAdminInbox() {
     const list = getEndorsements();
-    let filtered = list.filter(e =>
-        e.orgId === (MT.currentOrg?.id || 'local') || !e.orgId
-    );
-
+    let filtered = list.filter(e => e.orgId === (MT.currentOrg?.id || 'local') || !e.orgId);
     if (inboxFilter === 'unread') filtered = filtered.filter(e => !e.read);
     if (inboxFilter === 'urgent') filtered = filtered.filter(e => e.type === 'urgent');
-
     filtered = [...filtered].reverse();
-
     const container = document.getElementById('admin-inbox-list');
     if (!container) return;
-
-    if (filtered.length === 0) {
-        container.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:0.85rem;padding:20px;">No endorsements found</div>';
-        return;
-    }
-
+    if (filtered.length === 0) { container.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:0.85rem;padding:20px;">No endorsements</div>'; updateEndorseUnreadBadge(); return; }
     const typeIcons = { sales:'💰', credit:'💳', expense:'🧾', water:'💧', attendance:'👷', urgent:'🚨' };
-    container.innerHTML = filtered.map(e => `
-        <div class="endorse-item ${e.type === 'urgent' ? 'urgent' : ''} ${!e.read ? 'endorse-unread' : ''}"
-             onclick="markEndorseRead('${e.id}')"
-             style="${!e.read ? 'border-left-width:4px;' : 'opacity:0.75;'}">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-                <div class="endorse-item-type">${typeIcons[e.type] || '📋'} ${e.type.toUpperCase()}</div>
-                ${!e.read ? '<span style="background:#ef4444;color:white;font-size:0.65rem;padding:2px 7px;border-radius:10px;font-weight:700;">NEW</span>' : ''}
-            </div>
-            <div class="endorse-item-desc" style="font-size:0.83rem;white-space:pre-line;margin:4px 0;">${e.message.substring(0,200)}${e.message.length>200?'...':''}</div>
-            <div class="endorse-item-meta">
-                From: <b>${e.sentBy}</b> · ${new Date(e.sentAt).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}
-            </div>
-        </div>
-    `).join('');
-
+    container.innerHTML = filtered.map(e => `<div class="endorse-item ${e.type==='urgent'?'urgent':''} ${!e.read?'endorse-unread':''}" style="${!e.read?'border-left-width:4px;':'opacity:0.85;'}position:relative;"><div style="display:flex;justify-content:space-between;align-items:flex-start;"><div style="cursor:pointer;flex:1;" onclick="markEndorseRead('${e.id}')"><span class="endorse-item-type">${typeIcons[e.type]||'📋'} ${e.type.toUpperCase()}</span>${e.isSample?'<span style="background:rgba(245,158,11,0.15);color:#fbbf24;font-size:0.6rem;padding:1px 5px;border-radius:6px;margin-left:5px;">SAMPLE</span>':''}${!e.read?'<span style="background:#ef4444;color:white;font-size:0.6rem;padding:1px 6px;border-radius:8px;margin-left:4px;">NEW</span>':''}</div><button onclick="deleteEndorsement('${e.id}')" style="background:transparent;border:none;color:#64748b;cursor:pointer;font-size:0.9rem;padding:2px 5px;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#64748b'">🗑</button></div><div class="endorse-item-desc" onclick="markEndorseRead('${e.id}')" style="font-size:0.83rem;white-space:pre-line;margin:4px 0;cursor:pointer;">${e.message.substring(0,300)}${e.message.length>300?'...':''}</div><div class="endorse-item-meta">From: <b>${e.sentBy||e.fromName||'Cashier'}</b> · ${(e.sentAt||e.timestamp)?new Date(e.sentAt||e.timestamp).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):''}</div></div>`).join('');
     updateEndorseUnreadBadge();
 }
+
+function deleteEndorsement(id) {
+    const list = getEndorsements();
+    const item = list.find(e => e.id === id);
+    if (!item) return;
+    if (!confirm('Delete ' + (item.isSample?'sample':'this') + ' endorsement? Cannot be undone.')) return;
+    saveEndorsements(list.filter(e => e.id !== id));
+    renderAdminInbox(); updateEndorseUnreadBadge();
+    if (typeof showToast==='function') showToast('Endorsement deleted.','success');
+}
+window.deleteEndorsement = deleteEndorsement;
 
 function markEndorseRead(id) {
     const list = getEndorsements();
@@ -27299,14 +27182,14 @@ window.mtSAToggleOrgStatus=mtSAToggleOrgStatus;
             catch(e){ mtToast('Error: '+e.message,'error'); }
         }
         async function mtSAAddUser() {
-            const email  = (document.getElementById('sa-add-email')?.value||'').trim().toLowerCase();
-            const role   = document.getElementById('sa-add-role')?.value||'cashier';
-            const status = document.getElementById('sa-add-status')?.value||'approved';
+            const email = (document.getElementById('sa-add-email')?.value||'').trim().toLowerCase();
+            const role  = document.getElementById('sa-add-role')?.value||'cashier';
+            const status= document.getElementById('sa-add-status')?.value||'approved';
             if(!email||!email.includes('@')){ mtToast('Enter a valid email','error'); return; }
             try {
-                mtToast('⏳ Adding user to allowlist...', 'info');
-            const snap = await window.db.collection(PRISM_SECURITY.COLLECTION).where('email','==',email).get();
-                if(!snap.empty){ mtToast('⚠️ User already exists','warning'); return; }
+                mtToast('Adding user to allowlist...', 'info');
+                const snap = await window.db.collection(PRISM_SECURITY.COLLECTION).where('email','==',email).get();
+                if(!snap.empty){ mtToast('User already exists','warning'); return; }
                 await window.db.collection(PRISM_SECURITY.COLLECTION).add({
                     email, role, status, organization_id: null,
                     created_at: new Date().toISOString(),
@@ -27314,8 +27197,37 @@ window.mtSAToggleOrgStatus=mtSAToggleOrgStatus;
                     pending_uid_migration: true,
                 });
                 document.getElementById('sa-add-email').value='';
-                mtToast('✅ Added: '+email,'success');
                 mtSALoadAllowlist();
+
+                // Try to send invite email (works if Firebase Auth account exists)
+                const appUrl = 'https://jarodbulb-stack.github.io/PRISM/';
+                let emailSent = false;
+                if (window.auth) {
+                    try { await window.auth.sendPasswordResetEmail(email); emailSent = true; }
+                    catch(emailErr) { emailSent = false; }
+                }
+
+                // Show result notice
+                const ex2 = document.getElementById('sa-invite-note'); if(ex2) ex2.remove();
+                const note = document.createElement('div');
+                note.id = 'sa-invite-note';
+                note.style.cssText = 'margin-top:14px;padding:14px 16px;border-radius:10px;font-size:0.83rem;line-height:1.6;'
+                    + (emailSent ? 'background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);' : 'background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);');
+                if (emailSent) {
+                    note.innerHTML = '<div style="font-weight:700;color:#34d399;margin-bottom:4px;">User added and invitation email sent!</div>'
+                        + '<div style="color:#cbd5e1;"><b>' + email + '</b> will receive a link to set their password. They can then log in to PRISM.</div>';
+                    mtToast('Added and email sent to ' + email, 'success');
+                } else {
+                    const msg = 'Hi! You have been invited to PRISM.\n\nApp: ' + appUrl + '\nYour email: ' + email + '\nRole: ' + role
+                        + '\n\nSteps:\n1. Open the app link above\n2. Click "Create Staff Account"\n3. Enter your email (' + email + ') and create a password\n4. You are in!';
+                    note.innerHTML = '<div style="font-weight:700;color:#fbbf24;margin-bottom:4px;">User added - please notify them manually</div>'
+                        + '<div style="color:#cbd5e1;margin-bottom:8px;">No Firebase account found yet. Send them this invitation:</div>'
+                        + '<textarea readonly id="sa-invite-text" style="width:100%;padding:8px;background:#0f172a;border:1px solid #334155;border-radius:6px;color:#94a3b8;font-size:0.75rem;font-family:monospace;resize:vertical;min-height:100px;box-sizing:border-box;">' + msg + '</textarea>'
+                        + '<button onclick="const t=document.getElementById(\'sa-invite-text\');t.select();document.execCommand(\'copy\');mtToast(\'Copied!\',\'success\');" style="margin-top:8px;padding:6px 14px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:6px;color:#818cf8;cursor:pointer;font-size:0.78rem;">Copy Invite Message</button>';
+                    mtToast('Added: ' + email + ' - send them the invite', 'warning');
+                }
+                const addForm = document.getElementById('sa-add-email')?.closest('div');
+                if(addForm && addForm.parentNode) addForm.parentNode.insertBefore(note, addForm.nextSibling);
             } catch(e){ mtToast('Error: '+e.message,'error'); }
         }
         window.mtSALoadAllowlist=mtSALoadAllowlist;
@@ -27449,16 +27361,17 @@ window.mtSAToggleOrgStatus=mtSAToggleOrgStatus;
             if (_origSyncToFirebase && !_origSyncToFirebase._req7guarded) {
                 window.syncToFirebase = async function(...args) {
                     // Always allow sync during wipe/delete operations
+                    // Also allow if MT org role is owner/admin (SA users may have stale currentAppUser)
                     if (window._prismWipeInProgress) return _origSyncToFirebase(...args);
-                    // Check MT role, localStorage role, AND currentAppUser role
                     const _mtRole = (typeof MT !== 'undefined' && MT.currentOrgRole) || null;
-                    const _lsRole = localStorage.getItem('mt_current_org_role') || null;
-                    const _appRole = currentAppUser?.role || null;
-                    const _effectiveRole = _mtRole || _lsRole || _appRole || 'viewer';
-                    // Allow if any source says owner/admin/manager
-                    if (['owner','admin','manager'].includes(_effectiveRole)) return _origSyncToFirebase(...args);
-                    console.info('[Security REQ7] Sync blocked for role:', _effectiveRole);
-                    return;
+                    // SA/Owner via MT always allowed regardless of currentAppUser
+                    if (_mtRole && ['owner','admin'].includes(_mtRole)) return _origSyncToFirebase(...args);
+                    const _role = currentAppUser?.role || _mtRole || 'viewer';
+                    if (['viewer','cashier'].includes(_role)) {
+                        console.info('[Security REQ7] Sync blocked for role:', _role);
+                        return;
+                    }
+                    return _origSyncToFirebase(...args);
                 };
                 window.syncToFirebase._req7guarded = true;
             }
