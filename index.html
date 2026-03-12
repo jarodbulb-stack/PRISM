@@ -4052,34 +4052,18 @@
             </div>
 
             <!-- Monthly Income vs Expenses Chart -->
-<div class="card" style="grid-column: 1 / -1;">
-  <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-    <div>
-      <div class="card-title">📈 Financial Trend — Last 6 Months</div>
-      <div class="card-subtitle" style="font-size:0.75rem;color:var(--text-secondary);margin-top:2px;">Income vs Expenses · Net Cash Flow</div>
-    </div>
-    <button onclick="jarodsAnalysis()" style="padding:6px 14px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;color:#fff;border-radius:8px;cursor:pointer;font-size:0.8rem;font-weight:600;display:flex;align-items:center;gap:6px;">
-      🤖 Jarod's Analysis
-    </button>
-  </div>
-  <div style="position:relative;height:280px;padding:4px 0 8px;">
-    <canvas id="trend-chart"></canvas>
-  </div>
-  <div style="display:flex;justify-content:center;gap:24px;margin-top:4px;font-size:0.78rem;flex-wrap:wrap;">
-    <span style="display:flex;align-items:center;gap:6px;"><span style="width:24px;height:3px;background:#10b981;border-radius:2px;display:inline-block;"></span>Income</span>
-    <span style="display:flex;align-items:center;gap:6px;"><span style="width:24px;height:3px;background:#ef4444;border-radius:2px;display:inline-block;"></span>Expenses</span>
-    <span style="display:flex;align-items:center;gap:6px;"><span style="width:24px;height:3px;background:#3b82f6;border-radius:2px;display:inline-block;border-top:2px dashed #3b82f6;height:0;"></span>Net</span>
-  </div>
-  <!-- Jarod's Analysis Panel -->
-  <div id="jarods-analysis-panel" style="display:none;margin-top:12px;border-top:1px solid var(--border-color);padding-top:10px;">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-      <span style="font-size:1.3rem;">🤖</span>
-      <span style="font-weight:700;font-size:0.9rem;background:linear-gradient(135deg,#6366f1,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Jarod's Financial Analysis</span>
-      <span id="jarods-loading" style="font-size:0.75rem;color:var(--text-secondary);display:none;">analyzing...</span>
-    </div>
-    <div id="jarods-analysis-text" style="font-size:0.84rem;color:var(--text-primary);line-height:1.5;"></div>
-  </div>
-</div>
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">📊 Monthly Trend (Last 6 Months)</div>
+                </div>
+                <div id="monthly-chart" style="height: 200px; position: relative;">
+                    <canvas id="trend-chart"></canvas>
+                </div>
+                <div class="chart-legend" style="display: flex; justify-content: center; gap: 20px; margin-top: 10px; font-size: 0.8rem;">
+                    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 12px; height: 12px; background: #10b981; border-radius: 2px;"></span> Income</span>
+                    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 12px; height: 12px; background: #ef4444; border-radius: 2px;"></span> Expenses</span>
+                </div>
+            </div>
 
             <!-- Overall Rent Collection Progress -->
             <div class="card">
@@ -6621,6 +6605,16 @@
                             <option value="reminder">⏰ Personal Reminder</option>
                             <option value="general">📋 General Note</option>
                         </select>
+                        <div class="form-group" id="general-repeat-group" style="display:none;">
+    <label>Repeat</label>
+    <select id="general-note-repeat">
+        <option value="none">None</option>
+        <option value="daily">Daily</option>
+        <option value="weekly">Weekly</option>
+        <option value="monthly">Monthly</option>
+        <option value="yearly">Yearly</option>
+    </select>
+</div>
                     </div>
                     <div class="form-group">
                         <label>Title</label>
@@ -7197,28 +7191,6 @@
                 buttonElement.innerHTML = originalText || buttonElement.dataset.originalText || buttonElement.innerHTML;
             }
         }
-
-
-        // ── Universal input modal (replaces prompt() blocked on GitHub Pages) ──
-        function showInputModal(title, message, placeholder, defaultVal) {
-            return new Promise(resolve => {
-                const existing = document.getElementById('prism-input-modal');
-                if (existing) existing.remove();
-                const modal = document.createElement('div');
-                modal.id = 'prism-input-modal';
-                modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
-                modal.innerHTML = `<div style="background:var(--bg-card,#1e293b);border:1px solid var(--border-color,#334155);border-radius:14px;padding:24px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.5);"><div style="font-weight:700;font-size:1rem;color:var(--text-primary,#f1f5f9);margin-bottom:8px;">${title}</div>${message ? '<div style=\"font-size:0.85rem;color:var(--text-secondary,#94a3b8);margin-bottom:14px;white-space:pre-line;\">' + message + '</div>' : ''}<input id="prism-input-modal-field" type="text" value="${defaultVal||''}" placeholder="${placeholder||''}" style="width:100%;padding:10px 12px;background:var(--bg-primary,#0f172a);border:1px solid var(--border-color,#334155);border-radius:8px;color:var(--text-primary,#f1f5f9);font-size:0.9rem;box-sizing:border-box;margin-bottom:14px;" autocomplete="off" /><div style="display:flex;gap:10px;justify-content:flex-end;"><button id="prism-input-cancel" style="padding:8px 18px;background:transparent;border:1px solid var(--border-color,#334155);border-radius:8px;color:var(--text-secondary,#94a3b8);cursor:pointer;font-size:0.85rem;">Cancel</button><button id="prism-input-ok" style="padding:8px 18px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;border-radius:8px;color:white;cursor:pointer;font-size:0.85rem;font-weight:600;">OK</button></div></div>`;
-                document.body.appendChild(modal);
-                const field = document.getElementById('prism-input-modal-field');
-                const ok = () => { const val = (field?.value||'').trim(); modal.remove(); resolve(val||null); };
-                const cancel = () => { modal.remove(); resolve(null); };
-                if (field) { field.focus(); field.select(); field.addEventListener('keydown', e => { if(e.key==='Enter') ok(); if(e.key==='Escape') cancel(); }); }
-                document.getElementById('prism-input-ok').addEventListener('click', ok);
-                document.getElementById('prism-input-cancel').addEventListener('click', cancel);
-                modal.addEventListener('click', e => { if(e.target===modal) cancel(); });
-            });
-        }
-        window.showInputModal = showInputModal;
 
         // =====================
         // THEME TOGGLE
@@ -8701,7 +8673,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
         };
         window.PrismGuardian = PrismGuardian;
         window.requestVoidAttendance = requestVoidAttendance;
-        // window.mtDemoLogin exposed below after definition
+        window.mtDemoLogin = mtDemoLogin;
         window.requestVoidAdvance = requestVoidAdvance;
         window.getNextDueDate = getNextDueDate;
          // expose globally for onclick handlers
@@ -10249,11 +10221,6 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
         }
 
         async function deleteProperty(id) {
-        const _dp_user = window.currentAppUser || null;
-        if (_dp_user && !['owner','admin'].includes(_dp_user.role)) {
-            showToast('❌ Only Owner or Admin can delete properties.', 'error'); return;
-        }
-
             // Check for tenants
             const tenants = await dbGetAll('tenants');
             const propTenants = tenants.filter(t => t.propertyId === id);
@@ -10729,15 +10696,6 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             
             document.getElementById('tenant-detail-content').innerHTML = `
                 ${renderClientIdCard('tenant', tenant, { propertyName: property ? property.name : 'Unknown' })}
-${tenant.status === 'inactive' ? `
-<div style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px;">
-    <span style="font-size:1.2rem;">🚫</span>
-    <div>
-        <div style="font-weight:700;color:#f87171;font-size:0.9rem;">TENANT TERMINATED / INACTIVE</div>
-        <div style="font-size:0.78rem;color:#94a3b8;">Reason: ${tenant.terminationReason || 'Not specified'} &middot; Date: ${tenant.terminatedAt ? new Date(tenant.terminatedAt).toLocaleDateString('en-PH') : '-'}</div>
-        ${tenant.terminationNotes ? `<div style="font-size:0.78rem;color:#64748b;margin-top:2px;">${tenant.terminationNotes}</div>` : ''}
-    </div>
-</div>` : ''}
 
                 ${currentAppUser && (currentAppUser.role === 'admin' || currentAppUser.role === 'owner' || currentAppUser.role === 'manager') ? `
                 <button class="admin-edit-profile-btn" onclick="editTenant(${id})">
@@ -10832,7 +10790,6 @@ ${tenant.status === 'inactive' ? `
                     ${currentAppUser && currentAppUser.role !== 'cashier' ? `
                         <button class="btn btn-warning" onclick="addChargeToClient('tenant', ${id})">💵 Add Charge</button>
                         <button class="btn btn-danger" onclick="deleteTenant(${id})">Delete</button>
-                        ${_isAdminRole ? `<button class="btn" style="background:${tenant.status==='inactive'?'rgba(16,185,129,0.12)':'rgba(239,68,68,0.12)'};border:1px solid ${tenant.status==='inactive'?'#10b981':'#ef4444'};color:${tenant.status==='inactive'?'#10b981':'#f87171'};padding:8px 16px;border-radius:8px;font-weight:600;cursor:pointer;" onclick="terminateTenant(${id})">${tenant.status==='inactive'?'✅ Reactivate Tenant':'🚫 Terminate Tenant'}</button>` : ''}
                     ` : `
                         <button class="btn btn-primary" onclick="quickEndorse('sales', '🏠 Rent payment recorded for tenant. Admin please review.')">📋 Endorse to Admin</button>
                     `}
@@ -11157,182 +11114,6 @@ async function recordTenantPayment(tenantId) {
             loadDashboard();
             debouncedSync();
         }
-
-        // ── TERMINATE / REACTIVATE TENANT ──────────────────────────────────
-        async function terminateTenant(id) {
-            const tenant = await dbGet('tenants', id);
-            if (!tenant) return;
-
-            const isInactive = tenant.status === 'inactive';
-
-            if (isInactive) {
-                // Reactivate
-                if (!confirm('Reactivate this tenant?\n\n' + tenant.name + '\n\nThis will mark them as active again.')) return;
-                tenant.status = 'active';
-                tenant.terminatedAt = null;
-                tenant.terminationReason = null;
-                await dbUpdate('tenants', tenant);
-                // Mark property occupied
-                if (tenant.propertyId) {
-                    const prop = await dbGet('properties', tenant.propertyId);
-                    if (prop) { prop.status = 'occupied'; await dbUpdate('properties', prop); }
-                }
-                showToast('✅ Tenant reactivated.', 'success');
-                hideModal('tenant-detail-modal');
-                await loadTenants(); await loadProperties(); await loadDashboard();
-                return;
-            }
-
-            // Terminate — show reason modal
-            const existing = document.getElementById('prism-terminate-modal');
-            if (existing) existing.remove();
-            const modal = document.createElement('div');
-            modal.id = 'prism-terminate-modal';
-            modal.style.cssText = 'position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;';
-            modal.innerHTML = `
-                <div style="background:#1e293b;border:1px solid #ef4444;border-radius:16px;padding:28px;width:100%;max-width:440px;box-shadow:0 25px 50px rgba(0,0,0,0.5);">
-                    <div style="font-size:1.1rem;font-weight:700;color:#f87171;margin-bottom:4px;">🚫 Terminate Tenant</div>
-                    <div style="font-size:0.82rem;color:#94a3b8;margin-bottom:18px;"><b style="color:#f1f5f9;">${tenant.name}</b> — ${tenant.unit || tenant.propertyId || ''}</div>
-                    <div style="margin-bottom:12px;">
-                        <label style="font-size:0.8rem;color:#94a3b8;display:block;margin-bottom:6px;">Termination Reason *</label>
-                        <select id="terminate-reason-select" style="width:100%;padding:10px 12px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:0.88rem;">
-                            <option value="">-- Select reason --</option>
-                            <option value="Contract Expired">📅 Contract Expired</option>
-                            <option value="Eviction - Non-payment">💸 Eviction — Non-payment of Rent</option>
-                            <option value="Eviction - Violation">⚠️ Eviction — Rule Violation</option>
-                            <option value="Tenant Requested Moveout">🚚 Tenant Requested Move-out</option>
-                            <option value="Property Sold">🏠 Property Sold</option>
-                            <option value="Property Renovation">🔨 Property Under Renovation</option>
-                            <option value="Other">📝 Other</option>
-                        </select>
-                    </div>
-                    <div style="margin-bottom:18px;">
-                        <label style="font-size:0.8rem;color:#94a3b8;display:block;margin-bottom:6px;">Additional Notes (optional)</label>
-                        <textarea id="terminate-notes-input" rows="2" style="width:100%;padding:10px 12px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:0.88rem;resize:none;box-sizing:border-box;" placeholder="e.g. 3 months unpaid, moveout date April 1..."></textarea>
-                    </div>
-                    <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px;font-size:0.8rem;color:#fca5a5;margin-bottom:18px;">
-                        ⚠️ This will mark the tenant as <b>Inactive</b> and set the property back to <b>Vacant</b>.
-                    </div>
-                    <div style="display:flex;gap:10px;justify-content:flex-end;">
-                        <button onclick="document.getElementById('prism-terminate-modal').remove()" style="padding:9px 20px;background:transparent;border:1px solid #334155;color:#94a3b8;border-radius:8px;cursor:pointer;font-size:0.85rem;">Cancel</button>
-                        <button id="terminate-confirm-btn" style="padding:9px 20px;background:linear-gradient(135deg,#ef4444,#dc2626);border:none;color:#fff;border-radius:8px;cursor:pointer;font-size:0.85rem;font-weight:600;">🚫 Confirm Terminate</button>
-                    </div>
-                </div>`;
-            document.body.appendChild(modal);
-            modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
-
-            document.getElementById('terminate-confirm-btn').onclick = async () => {
-                const reason = document.getElementById('terminate-reason-select').value;
-                const notes  = document.getElementById('terminate-notes-input').value.trim();
-                if (!reason) {
-                    document.getElementById('terminate-reason-select').style.borderColor = '#ef4444';
-                    return;
-                }
-                const btn = document.getElementById('terminate-confirm-btn');
-                btn.textContent = 'Processing...'; btn.disabled = true;
-                try {
-                    tenant.status = 'inactive';
-                    tenant.terminatedAt = new Date().toISOString();
-                    tenant.terminationReason = reason;
-                    tenant.terminationNotes = notes || '';
-                    await dbUpdate('tenants', tenant);
-                    // Free up the property
-                    if (tenant.propertyId) {
-                        const prop = await dbGet('properties', tenant.propertyId);
-                        if (prop) { prop.status = 'vacant'; await dbUpdate('properties', prop); }
-                    }
-                    modal.remove();
-                    showToast('✅ Tenant terminated. Property is now vacant.', 'success');
-                    hideModal('tenant-detail-modal');
-                    await loadTenants(); await loadProperties(); await loadDashboard();
-                } catch(e) { showToast('❌ Error: ' + e.message, 'error'); btn.textContent = '🚫 Confirm Terminate'; btn.disabled = false; }
-            };
-        }
-
-        // ── FREEZE / REOPEN CREDIT ──────────────────────────────────────────
-        async function freezeCredit(id) {
-            const credit = await dbGet('credits', id);
-            if (!credit) return;
-
-            const isClosed = credit.status === 'closed';
-
-            if (isClosed) {
-                if (!confirm('Reopen this debt account?\n\n' + credit.debtor + '\n\nInterest will resume accruing.')) return;
-                credit.status = 'active';
-                credit.closedAt = null;
-                credit.closureReason = null;
-                await dbUpdate('credits', credit);
-                showToast('🔓 Debt account reopened.', 'success');
-                hideModal('credit-detail-modal');
-                await loadCredits(); await loadDashboard();
-                return;
-            }
-
-            // Freeze — show reason modal
-            const existing = document.getElementById('prism-freeze-modal');
-            if (existing) existing.remove();
-            const modal = document.createElement('div');
-            modal.id = 'prism-freeze-modal';
-            modal.style.cssText = 'position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;';
-
-            // Calculate current balance for display
-            const allCreditPayments = await dbGetAll('creditPayments');
-            const paid = allCreditPayments.filter(p => p.creditId === id).reduce((s,p) => s+(p.amount||0), 0);
-            const balance = Math.max(0, credit.principal - paid);
-
-            modal.innerHTML = `
-                <div style="background:#1e293b;border:1px solid #f59e0b;border-radius:16px;padding:28px;width:100%;max-width:440px;box-shadow:0 25px 50px rgba(0,0,0,0.5);">
-                    <div style="font-size:1.1rem;font-weight:700;color:#fbbf24;margin-bottom:4px;">🔒 Close / Freeze Debt Account</div>
-                    <div style="font-size:0.82rem;color:#94a3b8;margin-bottom:6px;"><b style="color:#f1f5f9;">${credit.debtor}</b></div>
-                    <div style="font-size:0.82rem;color:#94a3b8;margin-bottom:18px;">Remaining Balance: <b style="color:#f87171;">₱${balance.toLocaleString()}</b></div>
-                    <div style="margin-bottom:12px;">
-                        <label style="font-size:0.8rem;color:#94a3b8;display:block;margin-bottom:6px;">Closure Reason *</label>
-                        <select id="freeze-reason-select" style="width:100%;padding:10px 12px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:0.88rem;">
-                            <option value="">-- Select reason --</option>
-                            <option value="Fully Paid">✅ Fully Paid</option>
-                            <option value="Written Off - Bad Debt">❌ Written Off — Bad Debt</option>
-                            <option value="Settled - Partial Agreement">🤝 Settled — Partial Agreement</option>
-                            <option value="Deceased Debtor">🕊️ Deceased Debtor</option>
-                            <option value="Legal Action Filed">⚖️ Legal Action Filed</option>
-                            <option value="Stop Interest Only">⏸️ Stop Interest (keep balance)</option>
-                            <option value="Other">📝 Other</option>
-                        </select>
-                    </div>
-                    <div style="margin-bottom:18px;">
-                        <label style="font-size:0.8rem;color:#94a3b8;display:block;margin-bottom:6px;">Notes (optional)</label>
-                        <textarea id="freeze-notes-input" rows="2" style="width:100%;padding:10px 12px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:0.88rem;resize:none;box-sizing:border-box;" placeholder="e.g. debtor agreed to pay ₱5,000 as final settlement..."></textarea>
-                    </div>
-                    <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:10px;font-size:0.8rem;color:#fcd34d;margin-bottom:18px;">
-                        ⚠️ Interest will <b>stop accruing</b>. The account will be marked <b>Closed</b>. You can reopen it anytime.
-                    </div>
-                    <div style="display:flex;gap:10px;justify-content:flex-end;">
-                        <button onclick="document.getElementById('prism-freeze-modal').remove()" style="padding:9px 20px;background:transparent;border:1px solid #334155;color:#94a3b8;border-radius:8px;cursor:pointer;font-size:0.85rem;">Cancel</button>
-                        <button id="freeze-confirm-btn" style="padding:9px 20px;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;color:#fff;border-radius:8px;cursor:pointer;font-size:0.85rem;font-weight:600;">🔒 Confirm Close</button>
-                    </div>
-                </div>`;
-            document.body.appendChild(modal);
-            modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
-
-            document.getElementById('freeze-confirm-btn').onclick = async () => {
-                const reason = document.getElementById('freeze-reason-select').value;
-                const notes  = document.getElementById('freeze-notes-input').value.trim();
-                if (!reason) { document.getElementById('freeze-reason-select').style.borderColor = '#ef4444'; return; }
-                const btn = document.getElementById('freeze-confirm-btn');
-                btn.textContent = 'Saving...'; btn.disabled = true;
-                try {
-                    credit.status = 'closed';
-                    credit.closedAt = new Date().toISOString();
-                    credit.closureReason = reason;
-                    credit.closureNotes = notes || '';
-                    await dbUpdate('credits', credit);
-                    modal.remove();
-                    showToast('🔒 Debt account closed. Interest stopped.', 'success');
-                    hideModal('credit-detail-modal');
-                    await loadCredits(); await loadDashboard();
-                } catch(e) { showToast('❌ Error: ' + e.message, 'error'); btn.textContent = '🔒 Confirm Close'; btn.disabled = false; }
-            };
-        }
-
 
         async function deleteTenant(id) {
             if (currentAppUser && currentAppUser.role === 'cashier') {
@@ -12716,9 +12497,8 @@ async function loadWaterCustomers() {
         }
 
         // Show water payment modal
-        async function showWaterPaymentModal(customerId, customerName, balance) {
-            const amount = await showInputModal('💵 Record Payment', `Customer: ${customerName}
-Outstanding Balance: ₱${balance.toLocaleString()}`, 'Enter payment amount', '');
+        function showWaterPaymentModal(customerId, customerName, balance) {
+            const amount = prompt(`💵 Record Payment for ${customerName}\n\nOutstanding Balance: ₱${balance.toLocaleString()}\n\nEnter payment amount:`);
             if (!amount) return;
             
             const paymentAmount = parseFloat(amount.replace(/,/g, '')) || 0;
@@ -12922,19 +12702,13 @@ Outstanding Balance: ₱${balance.toLocaleString()}`, 'Enter payment amount', ''
             // Admin/Manager: full list, name + position only (no salary shown)
             container.innerHTML = employees.map(e => `
                 <div class="list-item" onclick="viewEmployeeDetails(${e.id})" style="cursor: pointer;">
-                    <div class="list-item-content" style="flex:1;min-width:0;">
+                    <div class="list-item-content">
                         <div class="list-item-title">👷 ${e.name}</div>
                         <div class="list-item-subtitle">${e.position || 'Staff'}</div>
                     </div>
-                    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
-                        <div style="display:flex;gap:5px;">
-                            ${e.unpaidDays > 0 ? `<div class="badge badge-primary">${e.unpaidDays} unpaid</div>` : ''}
-                            ${e.unpaidAdvances > 0 ? `<div class="badge badge-warning">Advance</div>` : ''}
-                        </div>
-                        <div style="display:flex;gap:5px;" onclick="event.stopPropagation()">
-                            <button class="btn btn-sm" style="background:rgba(99,102,241,0.12);border:1px solid #6366f1;color:#818cf8;padding:3px 10px;font-size:0.75rem;border-radius:6px;" onclick="editEmployee(${e.id})">✏️ Edit</button>
-                            <button class="btn btn-sm" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.4);color:#f87171;padding:3px 10px;font-size:0.75rem;border-radius:6px;" onclick="deleteEmployee(${e.id})">🗑️ Delete</button>
-                        </div>
+                    <div style="text-align: right;">
+                        ${e.unpaidDays > 0 ? `<div class="badge badge-primary" style="margin-bottom: 4px;">${e.unpaidDays} unpaid days</div>` : ''}
+                        ${e.unpaidAdvances > 0 ? `<div class="badge badge-warning">Advance pending</div>` : ''}
                     </div>
                 </div>
             `).join('');
@@ -13429,10 +13203,9 @@ async function showQuickAttendance() {
 
         // Void request system - cashier submits, admin approves
         async function requestVoidAttendance(recordId, employeeName, date) {
-            const reason = await showInputModal('🗑️ Void Attendance Request', `Employee: ${employeeName}
-Date: ${date}
+            const reason = prompt(`Request to void attendance for ${employeeName} on ${date}.
 
-Enter reason for void request:`, 'Reason...');
+Enter reason for void request:`);
             if (!reason) return;
 
             const voidRequests = JSON.parse(localStorage.getItem('prism_void_requests') || '[]');
@@ -13452,10 +13225,9 @@ Enter reason for void request:`, 'Reason...');
         }
 
         async function requestVoidAdvance(advanceId, employeeName, amount) {
-            const reason = await showInputModal('🗑️ Void Advance Request', `Employee: ${employeeName}
-Amount: ₱${amount.toLocaleString()}
+            const reason = prompt(`Request to void cash advance of ₱${amount.toLocaleString()} for ${employeeName}.
 
-Enter reason:`, 'Reason...');
+Enter reason:`);
             if (!reason) return;
 
             const voidRequests = JSON.parse(localStorage.getItem('prism_void_requests') || '[]');
@@ -13609,10 +13381,10 @@ Enter reason:`, 'Reason...');
         window.switchVoidTab = switchVoidTab;
 
         async function adminDirectVoid(store, id, label) {
-            if (!await showConfirm(`Void this record?\n\n"${label}"\n\nThis cannot be undone.`, 'danger', '🗑️ Confirm Void', 'Yes, Void It')) return;
+            if (!await showConfirm(\`Void this record?\n\n"\${label}"\n\nThis cannot be undone.\`, 'danger', '🗑️ Confirm Void', 'Yes, Void It')) return;
             try {
                 await dbDelete(store, id);
-                showToast(`✅ Voided: ${label}`, 'success');
+                showToast(\`✅ Voided: \${label}\`, 'success');
                 // Refresh the modal
                 document.querySelector('.void-modal-wrap')?.remove();
                 loadDashboard();
@@ -14266,25 +14038,6 @@ async function showPayrollSummary() {
             showToast('Employee deleted successfully!', 'success');
         }
 
-        async function deleteAdvance(advanceId) {
-            const advance = await dbGet('cashAdvances', advanceId);
-            if (!advance) return showToast('❌ Advance not found.', 'error');
-            if (!confirm(`Delete cash advance of ₱${(advance.amount||0).toLocaleString()}?\n\nThis cannot be undone.`)) return;
-            try {
-                await dbDelete('cashAdvances', advanceId);
-                await syncToFirebase('cashAdvances');
-                showToast('🗑️ Cash advance deleted.', 'success');
-                // Refresh employee detail if open
-                if (typeof showEmployeeDetail === 'function' && advance.employeeId) {
-                    showEmployeeDetail(advance.employeeId);
-                }
-            } catch(e) {
-                showToast('❌ Delete failed: ' + e.message, 'error');
-            }
-        }
-        window.deleteAdvance = deleteAdvance;
-
-
         // =====================
         // CREDIT FUNCTIONS
         // =====================
@@ -14817,7 +14570,6 @@ async function showPayrollSummary() {
                     <button class="btn btn-info" onclick="printCreditReport(${id})">🖨️ Print</button>
                     ${currentAppUser && currentAppUser.role !== 'cashier' ? `
                         <button class="btn btn-danger" onclick="deleteCredit(${id})">Delete Credit</button>
-                ${currentAppUser && currentAppUser.role !== 'cashier' ? `<button class="btn" style="background:${credit.status==='closed'?'rgba(16,185,129,0.12)':'rgba(239,68,68,0.12)'};border:1px solid ${credit.status==='closed'?'#10b981':'#ef4444'};color:${credit.status==='closed'?'#10b981':'#f87171'};padding:8px 16px;border-radius:8px;font-weight:600;cursor:pointer;" onclick="freezeCredit(${id})">${credit.status==='closed'?'🔓 Reopen Debt':'🔒 Close / Freeze Debt'}</button>` : ''}
                     ` : `
                         <button class="btn btn-primary" onclick="quickEndorse('credit', '💳 Credit account needs admin attention: ' + '${credit.debtor}' + ' — Balance: ₱' + balance.toLocaleString())">📋 Endorse to Admin</button>
                     `}
@@ -15283,7 +15035,7 @@ async function showPayrollSummary() {
                     createdAt: new Date().toISOString(),
                     // Reminder fields (only meaningful for category='reminder')
                     reminderTime: category === 'reminder' ? reminderTime : null,
-                    repeat:       category === 'reminder' ? repeat : 'none',
+                    repeat: (category === 'reminder' || category === 'general') ? repeat : 'none',
                     dismissed:    false,  // reset dismissed on save/edit
                 };
 
@@ -15293,7 +15045,6 @@ async function showPayrollSummary() {
                     showToast('⏳ Saving note...', 'info');
                     await dbUpdate('customNotes', note);
                 } else {
-                    note.isSample = true;
                     await dbAdd('customNotes', note);
                 }
 
@@ -15318,6 +15069,8 @@ async function showPayrollSummary() {
             // Repeat field always visible for all categories
             const timeField = document.getElementById('reminder-extra-fields');
             if (timeField) timeField.style.display = category === 'reminder' ? '' : 'none';
+            const generalRepeat = document.getElementById('general-repeat-group');
+if (generalRepeat) generalRepeat.style.display = category === 'general' ? '' : 'none';
         }
         window.prismToggleReminderFields = prismToggleReminderFields;
 
@@ -16004,7 +15757,6 @@ async function showPayrollSummary() {
                 createdAt: new Date().toISOString()
             };
 
-            charge.isSample = true;
             await dbAdd('clientCharges', charge);
             hideModal('charge-modal');
 
@@ -16054,7 +15806,6 @@ async function showPayrollSummary() {
                 fromChargeId: chargeId,
                 createdAt: new Date().toISOString()
             };
-            income.isSample = true;
             await dbAdd('additionalIncome', income);
 
             // Refresh view
@@ -16082,7 +15833,7 @@ async function showPayrollSummary() {
 
         // Add notes to client
         async function addClientNote(type, id) {
-            const note = await showInputModal('📝 Add Note', null, 'Enter note for this client...');
+            const note = prompt('Enter note for this client:');
             if (!note || !note.trim()) return;
 
             const client = type === 'tenant' ? await dbGet('tenants', id) : await dbGet('credits', id);
@@ -16877,8 +16628,6 @@ async function showPayrollSummary() {
             const credits = await dbGetAll('credits');
             const creditPayments = await dbGetAll('creditPayments');
             const expenses = await dbGetAll('expenses');
-        const additionalIncome = await dbGetAll('additionalIncome');
-        const waterSales = await dbGetAll('waterSales');
 
             const now = new Date();
             const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -16904,7 +16653,6 @@ async function showPayrollSummary() {
             if (statTenants) statTenants.textContent = tenants.length;
             // Only count credits with remaining balance (active debtors)
             const activeDebtors = credits.filter(credit => {
-        if (credit.status === 'closed') return false; // closed/frozen — excluded from active debtors
                 const pmts = creditPayments.filter(p => p.creditId === credit.id);
                 const paid = pmts.reduce((s, p) => s + p.amount, 0);
                 let due = credit.principal;
@@ -17245,366 +16993,87 @@ async function showPayrollSummary() {
 
             // Render monthly trend chart with error handling
             try {
-                renderTrendChart(payments, creditPayments, expenses, credits, additionalIncome, waterSales);
+                renderTrendChart(payments, creditPayments, expenses, credits);
             } catch (error) {
                 console.error('Error rendering trend chart:', error);
             }
         }
 
         // Render Monthly Trend Chart (simple canvas-based)
-        function renderTrendChart(payments, creditPayments, expenses, credits, additionalIncome, waterSales) {
+        function renderTrendChart(payments, creditPayments, expenses, credits) {
             const canvas = document.getElementById('trend-chart');
             if (!canvas) return;
 
-            // Ensure all data arrays exist (empty after clear/delete)
-            payments         = payments         || [];
-            creditPayments   = creditPayments   || [];
-            expenses         = expenses         || [];
-            credits          = credits          || [];
-            additionalIncome = additionalIncome || [];
-            waterSales       = waterSales       || [];
+            const ctx = canvas.getContext('2d');
+            const container = canvas.parentElement;
+            canvas.width = container.offsetWidth;
+            canvas.height = 200;
 
-            // Build last 6 months
+            // Get last 6 months
             const months = [];
             const now = new Date();
             for (let i = 5; i >= 0; i--) {
                 const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
                 months.push({
-                    key: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`,
-                    label: d.toLocaleString('default', { month: 'short', year: '2-digit' })
+                    key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+                    label: d.toLocaleString('default', { month: 'short' })
                 });
             }
 
-            // ── INCOME: rent payments + credit repayments + other income + water sales ──
-            const incomeData = months.map(m => {
-                const rent    = payments.filter(p => p.date && p.date.startsWith(m.key))
-                                        .reduce((s,p) => s + (p.amount||0), 0);
-                const credit  = creditPayments.filter(p => p.date && p.date.startsWith(m.key))
-                                              .reduce((s,p) => s + (p.amount||0), 0);
-                const other   = additionalIncome.filter(i => i.date && i.date.startsWith(m.key))
-                                                .reduce((s,i) => s + (i.amount||0), 0);
-                const water   = waterSales.filter(w => w.date && w.date.startsWith(m.key) && !w.voided)
-                                          .reduce((s,w) => s + (w.amountPaid||0), 0);
-                return rent + credit + other + water;
+            // Calculate income and expenses per month
+            const data = months.map(m => {
+                const rentIncome = payments.filter(p => p.date && p.date.startsWith(m.key)).reduce((sum, p) => sum + (p.amount||0), 0);
+                const creditIncome = creditPayments.filter(p => p.date && p.date.startsWith(m.key)).reduce((sum, p) => sum + (p.amount||0), 0);
+                const totalIncome = rentIncome + creditIncome;
+
+                const monthExpenses = expenses.filter(e => e.date && e.date.startsWith(m.key)).reduce((sum, e) => sum + (e.amount||0), 0);
+                const monthCreditsReleased = credits.filter(c => c.dateLent && c.dateLent.startsWith(m.key)).reduce((sum, c) => sum + (c.principal||0), 0);
+                const totalExpenses = monthExpenses + monthCreditsReleased;
+
+                return { label: m.label, income: totalIncome, expenses: totalExpenses };
             });
 
-            // ── EXPENSES: expense records + credits released (money out) ──
-            const expenseData = months.map(m => {
-                const exp     = expenses.filter(e => e.date && e.date.startsWith(m.key))
-                                        .reduce((s,e) => s + (e.amount||0), 0);
-                const loaned  = credits.filter(c => c.dateLent && c.dateLent.startsWith(m.key))
-                                       .reduce((s,c) => s + (c.principal||0), 0);
-                return exp + loaned;
-            });
+            // Find max value for scaling
+            const maxValue = Math.max(...data.map(d => Math.max(d.income, d.expenses)), 1);
 
-            const netData = incomeData.map((inc, i) => inc - expenseData[i]);
+            // Chart dimensions
+            const padding = { top: 20, right: 20, bottom: 30, left: 50 };
+            const chartWidth = canvas.width - padding.left - padding.right;
+            const chartHeight = canvas.height - padding.top - padding.bottom;
+            const barWidth = (chartWidth / months.length) * 0.35;
+            const groupWidth = chartWidth / months.length;
 
-            // ── Store for Jarod's analysis ──
-            window._trendData = { months: months.map(m=>m.label), incomeData, expenseData, netData };
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // ── All-zero check: show empty state message ──
-            const allZero = [...incomeData, ...expenseData].every(v => v === 0);
+            // Draw bars
+            data.forEach((d, i) => {
+                const x = padding.left + (i * groupWidth) + (groupWidth / 2);
+                
+                // Income bar (green)
+                const incomeHeight = (d.income / maxValue) * chartHeight;
+                ctx.fillStyle = '#10b981';
+                ctx.fillRect(x - barWidth - 2, padding.top + chartHeight - incomeHeight, barWidth, incomeHeight);
 
-            // ── Destroy previous Chart.js instance ──
-            if (window._trendChartInstance) {
-                window._trendChartInstance.destroy();
-                window._trendChartInstance = null;
-            }
+                // Expenses bar (red)
+                const expenseHeight = (d.expenses / maxValue) * chartHeight;
+                ctx.fillStyle = '#ef4444';
+                ctx.fillRect(x + 2, padding.top + chartHeight - expenseHeight, barWidth, expenseHeight);
 
-            if (typeof Chart === 'undefined') {
-                const ctx = canvas.getContext('2d');
-                canvas.height = 280;
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#64748b';
-                ctx.font = '13px Arial';
+                // Month label
+                ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim() || '#6b7280';
+                ctx.font = '11px Arial';
                 ctx.textAlign = 'center';
-                ctx.fillText('Chart.js loading...', canvas.width/2, 140);
-                return;
-            }
-
-            const isDark   = document.documentElement.getAttribute('data-theme') !== 'light';
-            const gridColor = isDark ? 'rgba(148,163,184,0.07)' : 'rgba(0,0,0,0.05)';
-            const tickColor = isDark ? '#64748b' : '#94a3b8';
-            const emptyNote = allZero
-                ? [{ id:'emptyLabel', beforeDraw(chart) {
-                    const { ctx: c, chartArea } = chart;
-                    if (!chartArea) return;
-                    c.save();
-                    c.fillStyle = isDark ? '#475569' : '#94a3b8';
-                    c.font = '13px sans-serif';
-                    c.textAlign = 'center';
-                    c.fillText('No data recorded yet', (chartArea.left+chartArea.right)/2, (chartArea.top+chartArea.bottom)/2);
-                    c.restore();
-                  }}]
-                : [];
-
-            window._trendChartInstance = new Chart(canvas, {
-                type: 'line',
-                plugins: emptyNote,
-                data: {
-                    labels: months.map(m => m.label),
-                    datasets: [
-                        {
-                            label: 'Income',
-                            data: incomeData,
-                            borderColor: '#10b981',
-                            backgroundColor: 'rgba(16,185,129,0.08)',
-                            borderWidth: 2.5,
-                            pointBackgroundColor: '#10b981',
-                            pointBorderColor: '#fff',
-                            pointBorderWidth: 1.5,
-                            pointRadius: allZero ? 0 : 4,
-                            pointHoverRadius: allZero ? 0 : 7,
-                            tension: 0.4,
-                            fill: true,
-                        },
-                        {
-                            label: 'Expenses',
-                            data: expenseData,
-                            borderColor: '#ef4444',
-                            backgroundColor: 'rgba(239,68,68,0.07)',
-                            borderWidth: 2.5,
-                            pointBackgroundColor: '#ef4444',
-                            pointBorderColor: '#fff',
-                            pointBorderWidth: 1.5,
-                            pointRadius: allZero ? 0 : 4,
-                            pointHoverRadius: allZero ? 0 : 7,
-                            tension: 0.4,
-                            fill: true,
-                        },
-                        {
-                            label: 'Net',
-                            data: netData,
-                            borderColor: '#3b82f6',
-                            backgroundColor: 'rgba(59,130,246,0.04)',
-                            borderWidth: 2,
-                            borderDash: [6, 3],
-                            pointBackgroundColor: netData.map(v => v >= 0 ? '#3b82f6' : '#f59e0b'),
-                            pointBorderColor: '#fff',
-                            pointBorderWidth: 1.5,
-                            pointRadius: allZero ? 0 : 4,
-                            pointHoverRadius: allZero ? 0 : 7,
-                            tension: 0.4,
-                            fill: false,
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: { mode: 'index', intersect: false },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            enabled: !allZero,
-                            backgroundColor: isDark ? '#1e293b' : '#fff',
-                            titleColor:      isDark ? '#f1f5f9' : '#0f172a',
-                            bodyColor:       isDark ? '#94a3b8' : '#475569',
-                            borderColor:     isDark ? '#334155' : '#e2e8f0',
-                            borderWidth: 1,
-                            padding: 12,
-                            cornerRadius: 10,
-                            callbacks: {
-                                label: ctx => ` ${ctx.dataset.label}: ₱${ctx.parsed.y.toLocaleString('en-PH', {minimumFractionDigits:0})}`
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            grid: { color: gridColor, drawBorder: false },
-                            ticks: { color: tickColor, font: { size: 11 } }
-                        },
-                        y: {
-                            grid: { color: gridColor, drawBorder: false },
-                            ticks: {
-                                color: tickColor,
-                                font: { size: 10 },
-                                callback: v => '₱' + (v >= 1000 ? (v/1000).toFixed(0)+'k' : v)
-                            },
-                            beginAtZero: true,
-                            suggestedMax: allZero ? 100 : undefined
-                        }
-                    }
-                }
+                ctx.fillText(d.label, x, canvas.height - 10);
             });
+
+            // Draw Y-axis labels
+            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim() || '#6b7280';
+            ctx.font = '10px Arial';
+            ctx.textAlign = 'right';
+            ctx.fillText('₱' + (maxValue / 1000).toFixed(0) + 'k', padding.left - 5, padding.top + 10);
+            ctx.fillText('₱0', padding.left - 5, padding.top + chartHeight);
         }
-
-        // =====================
-        // JAROD'S AI ANALYSIS
-        // =====================
-        async function jarodsAnalysis() {
-            const panel   = document.getElementById('jarods-analysis-panel');
-            const textEl  = document.getElementById('jarods-analysis-text');
-            const loadingEl = document.getElementById('jarods-loading');
-            if (!panel || !textEl) return;
-
-            // Toggle off if already open
-            if (panel.style.display !== 'none' && textEl.innerHTML.trim()) {
-                panel.style.display = 'none';
-                return;
-            }
-
-            panel.style.display = 'block';
-            textEl.innerHTML = '';
-            if (loadingEl) loadingEl.style.display = 'inline';
-
-            const td = window._trendData;
-            if (!td || td.incomeData.every(v => v === 0) && td.expenseData.every(v => v === 0)) {
-                textEl.innerHTML = '<span style="color:#64748b;">⚠️ No financial data to analyze yet. Record some transactions first.</span>';
-                if (loadingEl) loadingEl.style.display = 'none';
-                return;
-            }
-
-            try {
-            // ── Smart rule-based financial analysis (works offline, no CORS) ──
-            const fmt  = v => '₱' + v.toLocaleString('en-PH', {minimumFractionDigits:0});
-            const pct  = (a,b) => b === 0 ? '—' : (a/b*100).toFixed(1) + '%';
-
-            const totalIncome  = td.incomeData.reduce((a,b)=>a+b,0);
-            const totalExpense = td.expenseData.reduce((a,b)=>a+b,0);
-            const totalNet     = totalIncome - totalExpense;
-            const avgIncome    = totalIncome  / 6;
-            const avgExpense   = totalExpense / 6;
-            const profitMargin = totalIncome > 0 ? (totalNet / totalIncome * 100) : 0;
-
-            const bestIncomeIdx  = td.incomeData.indexOf(Math.max(...td.incomeData));
-            const worstNetIdx    = td.netData.indexOf(Math.min(...td.netData));
-            const bestMonth      = td.months[bestIncomeIdx];
-            const worstMonth     = td.months[worstNetIdx];
-
-            const recentNet      = td.netData.slice(-3);
-            const trend          = recentNet[2] > recentNet[0] ? 'improving' :
-                                   recentNet[2] < recentNet[0] ? 'declining' : 'stable';
-
-            const negativeMonths = td.netData.filter(v => v < 0).length;
-            const highExpRatio   = td.expenseData.filter((e,i) => td.incomeData[i] > 0 && e/td.incomeData[i] > 0.8).length;
-            const zeroIncomeMonths = td.incomeData.filter(v => v === 0).length;
-
-            const incomeGrowth = td.incomeData[0] > 0
-                ? ((td.incomeData[5] - td.incomeData[0]) / td.incomeData[0] * 100).toFixed(1)
-                : null;
-            const expenseGrowth = td.expenseData[0] > 0
-                ? ((td.expenseData[5] - td.expenseData[0]) / td.expenseData[0] * 100).toFixed(1)
-                : null;
-
-            // ── Section 1: Overall Health ──
-            let healthColor = totalNet >= 0 ? '#10b981' : '#ef4444';
-            let healthIcon  = totalNet > avgIncome * 0.3 ? '💚' : totalNet >= 0 ? '🟡' : '🔴';
-            let healthText  = '';
-
-            if (profitMargin >= 30) {
-                healthText = `Business is performing <b style="color:#10b981;">strongly</b> with a ${profitMargin.toFixed(1)}% profit margin over the last 6 months. Total net cash flow stands at <b style="color:${healthColor};">${fmt(totalNet)}</b>.`;
-            } else if (profitMargin >= 10) {
-                healthText = `Business is <b style="color:#f59e0b;">moderately profitable</b> with a ${profitMargin.toFixed(1)}% margin. Total income of ${fmt(totalIncome)} against expenses of ${fmt(totalExpense)} gives a net of <b style="color:${healthColor};">${fmt(totalNet)}</b>.`;
-            } else if (profitMargin >= 0) {
-                healthText = `Business is <b style="color:#f59e0b;">barely breaking even</b> — profit margin is only ${profitMargin.toFixed(1)}%. Income of ${fmt(totalIncome)} barely covers expenses of ${fmt(totalExpense)}.`;
-            } else {
-                healthText = `Business is <b style="color:#ef4444;">operating at a loss</b> with a net deficit of <b style="color:#ef4444;">${fmt(totalNet)}</b>. Total expenses (${fmt(totalExpense)}) exceed income (${fmt(totalIncome)}) by ${pct(Math.abs(totalNet), totalIncome)}.`;
-            }
-
-            if (trend === 'improving') healthText += ` The trend is <b style="color:#10b981;">↑ improving</b> over the last 3 months.`;
-            else if (trend === 'declining') healthText += ` The trend is <b style="color:#ef4444;">↓ declining</b> over the last 3 months — needs attention.`;
-            else healthText += ` The trend has been <b>stable</b> recently.`;
-
-            // ── Section 2: Concerns ──
-            const concerns = [];
-
-            if (negativeMonths >= 3)
-                concerns.push(`<b>${negativeMonths} out of 6 months</b> had negative net cash flow — this is a recurring problem, not a one-time event.`);
-            else if (negativeMonths >= 1)
-                concerns.push(`<b>${negativeMonths} month(s)</b> ended with negative cash flow (worst: ${worstMonth} at ${fmt(td.netData[worstNetIdx])}).`);
-
-            if (highExpRatio >= 2)
-                concerns.push(`Expenses are consuming <b>over 80% of income</b> in ${highExpRatio} months — very little buffer for emergencies.`);
-
-            if (zeroIncomeMonths >= 2)
-                concerns.push(`<b>${zeroIncomeMonths} months</b> had zero recorded income — check if transactions were not recorded or if there were actual income gaps.`);
-
-            if (expenseGrowth !== null && parseFloat(expenseGrowth) > 20)
-                concerns.push(`Expenses have <b>grown ${expenseGrowth}%</b> from ${td.months[0]} to ${td.months[5]} — review what's driving this increase.`);
-
-            if (incomeGrowth !== null && parseFloat(incomeGrowth) < 0)
-                concerns.push(`Income has <b>dropped ${Math.abs(incomeGrowth)}%</b> since ${td.months[0]} — investigate causes (vacancies, non-payment, fewer sales?).`);
-
-            if (avgExpense > avgIncome * 0.7 && avgExpense > 0)
-                concerns.push(`Average monthly expenses (${fmt(avgExpense)}) are <b>${pct(avgExpense, avgIncome)}</b> of average income (${fmt(avgIncome)}) — leaving thin margins.`);
-
-            if (concerns.length === 0)
-                concerns.push(`No major concerns detected. Continue monitoring monthly to catch issues early.`);
-
-            // ── Section 3: Recommendations ──
-            const recs = [];
-
-            if (profitMargin < 20 && avgIncome > 0)
-                recs.push(`Target a <b>20–30% profit margin</b>. You need to either increase income by ~${fmt(avgExpense * 0.25)} or cut monthly expenses by that amount.`);
-
-            if (negativeMonths >= 1)
-                recs.push(`Review expenses in loss months. Categorize which expenses were <b>unavoidable vs. reducible</b> and build a monthly spending limit.`);
-
-            if (zeroIncomeMonths >= 1)
-                recs.push(`<b>Record all transactions consistently</b> — even small daily income. Gaps in recording make it hard to spot real trends.`);
-
-            if (trend === 'declining')
-                recs.push(`Declining trend: consider <b>collecting overdue rent/loans</b>, adding a new income stream, or reducing discretionary expenses this month.`);
-
-            if (bestMonth)
-                recs.push(`Study what made <b>${bestMonth}</b> your best income month and replicate those conditions (full occupancy, active collections, water sales).`);
-
-            recs.push(`Aim to build a <b>cash reserve of 2–3 months</b> of expenses (${fmt(avgExpense * 2)}–${fmt(avgExpense * 3)}) as an emergency buffer.`);
-
-            if (totalIncome > 0 && profitMargin > 25)
-                recs.push(`Good profitability — consider <b>reinvesting surplus</b> into property improvements or expanding rental units.`);
-
-            // ── Render ──
-            const rows = td.months.map((m,i) =>
-                `<tr style="border-bottom:1px solid rgba(148,163,184,0.08);">
-                    <td style="padding:4px 8px;color:#94a3b8;font-size:0.78rem;">${m}</td>
-                    <td style="padding:4px 8px;color:#10b981;font-size:0.78rem;text-align:right;">${fmt(td.incomeData[i])}</td>
-                    <td style="padding:4px 8px;color:#ef4444;font-size:0.78rem;text-align:right;">${fmt(td.expenseData[i])}</td>
-                    <td style="padding:4px 8px;font-size:0.78rem;text-align:right;color:${td.netData[i]>=0?'#3b82f6':'#f59e0b'};">${fmt(td.netData[i])}</td>
-                </tr>`
-            ).join('');
-
-            textEl.innerHTML = `
-                <table style="width:100%;border-collapse:collapse;margin-bottom:10px;background:rgba(0,0,0,0.2);border-radius:8px;overflow:hidden;">
-                    <thead><tr style="background:rgba(99,102,241,0.1);">
-                        <th style="padding:5px 8px;color:#64748b;font-size:0.72rem;text-align:left;font-weight:600;">MONTH</th>
-                        <th style="padding:5px 8px;color:#10b981;font-size:0.72rem;text-align:right;font-weight:600;">INCOME</th>
-                        <th style="padding:5px 8px;color:#ef4444;font-size:0.72rem;text-align:right;font-weight:600;">EXPENSES</th>
-                        <th style="padding:5px 8px;color:#3b82f6;font-size:0.72rem;text-align:right;font-weight:600;">NET</th>
-                    </tr></thead>
-                    <tbody>${rows}</tbody>
-                </table>
-
-                <div style="margin-bottom:10px;">
-                    <div style="font-weight:700;color:#f1f5f9;margin-bottom:6px;font-size:0.88rem;">${healthIcon} Overall Health</div>
-                    <div style="font-size:0.83rem;color:#cbd5e1;line-height:1.45;">${healthText}</div>
-                </div>
-
-                <div style="margin-bottom:10px;">
-                    <div style="font-weight:700;color:#fbbf24;margin-bottom:6px;font-size:0.88rem;">⚠️ Concerns</div>
-                    <ul style="margin:0;padding-left:16px;font-size:0.83rem;color:#cbd5e1;line-height:1.4;margin:4px 0;">
-                        ${concerns.filter(c=>c).map(c=>`<li style="margin-bottom:4px;">${c}</li>`).join('')}
-                    </ul>
-                </div>
-
-                <div>
-                    <div style="font-weight:700;color:#34d399;margin-bottom:6px;font-size:0.88rem;">💡 Recommendations</div>
-                    <ul style="margin:0;padding-left:16px;font-size:0.83rem;color:#cbd5e1;line-height:1.4;margin:4px 0;">
-                        ${recs.filter(r=>r).map(r=>`<li style="margin-bottom:4px;">${r}</li>`).join('')}
-                    </ul>
-                </div>
-
-                <div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(148,163,184,0.1);font-size:0.72rem;color:#475569;">
-                    Analysis based on 6-month data · ${new Date().toLocaleDateString('en-PH',{month:'long',year:'numeric'})}
-                </div>`;
-        } catch(err) {
-            textEl.innerHTML = '<div style="color:#f87171;padding:8px;background:rgba(239,68,68,0.1);border-radius:6px;font-size:0.82rem;">⚠️ Analysis error: ' + err.message + '</div>';
-            console.error('[Jarod Analysis]', err);
-        }
-        if (loadingEl) loadingEl.style.display = 'none';
-        }
-
 
         // Helper function for ordinal suffix
         // [REMOVED: duplicate getOrdinalSuffix]
@@ -18346,7 +17815,7 @@ async function showPayrollSummary() {
 
         // ── EARLY-OUT REQUEST ──
         async function prismRequestEarlyOut() {
-            const reason = await showInputModal('🕐 Early Out Request', null, 'e.g. medical, family emergency, etc.');
+            const reason = window.prompt('Enter reason for early out (e.g. medical, family emergency, etc.):');
             if (!reason || !reason.trim()) return;
 
             try {
@@ -18402,7 +17871,7 @@ async function showPayrollSummary() {
 
         // ── VOID REQUEST ──
         async function prismRequestVoid(type, recordId, details) {
-            const reason = await showInputModal('🗑️ Void Request', null, 'Enter reason for void...');
+            const reason = window.prompt('Reason for void request:');
             if (!reason || !reason.trim()) return;
 
             try {
@@ -18842,11 +18311,6 @@ async function showPayrollSummary() {
 
         // ══ DELETE SAMPLE DATA ONLY ══
         async function deleteSampleData() {
-        const _dsd_user = window.currentAppUser || null;
-        if (_dsd_user && !['owner','admin'].includes(_dsd_user.role)) {
-            showToast('❌ Only Owner or Admin can delete sample data.', 'error'); return;
-        }
-
             // Single native confirm — avoids custom dialog race conditions
             if (!confirm('Delete all sample/demo data?\n\nThis will remove all records tagged as sample data. Your real data will NOT be affected.')) return;
 
@@ -18915,34 +18379,6 @@ async function showPayrollSummary() {
                     console.warn('[DeleteSample] No Firebase — local delete only');
                 }
 
-        // Clear sample endorsements from localStorage
-        try {
-            const _endorse = JSON.parse(localStorage.getItem('prism_endorsements') || '[]');
-            const _realEndorse = _endorse.filter(e => e.isSample !== true)  // keep ALL non-sample endorsements;
-            localStorage.setItem('prism_endorsements', JSON.stringify(_realEndorse));
-            if (_endorse.length !== _realEndorse.length) {
-                console.log('[DeleteSample] Removed', _endorse.length - _realEndorse.length, 'sample endorsements');
-            }
-        } catch(e) {}
-        // Reset endorsement badge after sample delete
-        try {
-            const _aC2 = document.getElementById('admin-inbox-count');
-            const _remaining = JSON.parse(localStorage.getItem('prism_endorsements') || '[]').filter(e => !e.read).length;
-            if (_aC2) { _aC2.textContent = _remaining; _aC2.style.display = _remaining > 0 ? 'flex' : 'none'; }
-            const _inboxList = document.getElementById('admin-inbox-list');
-            if (_inboxList) { _inboxList.innerHTML = ''; }
-            const _panel2 = document.getElementById('admin-inbox-panel');
-            if (_panel2 && _panel2.classList.contains('open')) _panel2.classList.remove('open');
-        } catch(e2) {}
-        // Reset Jarod's analysis panel
-        try {
-            const _ap = document.getElementById('jarods-analysis-panel');
-            const _at = document.getElementById('jarods-analysis-text');
-            if (_ap) _ap.style.display = 'none';
-            if (_at) _at.innerHTML = '';
-            window._trendData = null;
-        } catch(e3) {}
-
                 showToast('✅ Done! ' + totalDeleted + ' sample records deleted. Reloading...', 'success');
 
                 // Step 7: Refresh UI from clean IndexedDB
@@ -18968,11 +18404,6 @@ async function showPayrollSummary() {
         // ── Full UI refresh — called after any bulk data operation ──
         async function prismFullRefresh() {
             // 1. Reset all in-memory caches
-        // Clear stale Jarod analysis on every full refresh
-        window._trendData = null;
-        try { const _jap = document.getElementById('jarods-analysis-panel'); if (_jap) _jap.style.display = 'none'; } catch(e) {}
-        try { const _jat = document.getElementById('jarods-analysis-text'); if (_jat) _jat.innerHTML = ''; } catch(e) {}
-
             window.allTenantsData        = [];
             window.allCreditsData        = [];
             window.allExpensesData       = [];
@@ -19014,12 +18445,6 @@ async function showPayrollSummary() {
         window.prismFullRefresh = prismFullRefresh;
 
 async function clearAllData() {
-        // Role check — only Owner/Admin can clear all data
-        const _cad_user = window.currentAppUser || null;
-        if (_cad_user && !['owner','admin'].includes(_cad_user.role)) {
-            showToast('❌ Only Owner or Admin can delete all data.', 'error'); return;
-        }
-
             // ── Step 0: Snapshot notes + tasks before asking (BEFORE wipe flag) ──
             let _snapNotes = [], _snapTasks = [];
             try { _snapNotes = await dbGetAll('customNotes') || []; } catch(e) {}
@@ -19090,32 +18515,6 @@ async function clearAllData() {
                     _lastSyncTimestamp = _clearTs;
                     try { showToast('\u2601\ufe0f Cloud data cleared', 'success'); } catch(e) {}
                 }
-
-        // Clear endorsements from localStorage
-        localStorage.removeItem('prism_endorsements');
-        // Reset endorsement badge to 0 and close any open panel
-        try {
-            const _aCount = document.getElementById('admin-inbox-count');
-            const _eFab   = document.getElementById('admin-inbox-fab');
-            const _eDot   = document.getElementById('admin-inbox-dot');
-            if (_aCount) { _aCount.textContent = '0'; _aCount.style.display = 'none'; }
-            if (_eFab)   { _eFab.style.animation = ''; }
-            if (_eDot)   { _eDot.style.display = 'none'; }
-            // Close panel if open
-            const _panel = document.getElementById('cashier-endorse-panel') || document.getElementById('admin-inbox-panel');
-            if (_panel) { _panel.style.display = 'none'; _panel.innerHTML = ''; }
-            if (_inboxList2) _inboxList2.innerHTML = '<div style="text-align:center;color:#475569;font-size:0.85rem;padding:20px;">No endorsements</div>';
-            const _inboxList2 = document.getElementById('admin-inbox-list');
-            if (_panel && _panel.classList.contains('open')) { _panel.classList.remove('open'); }
-        } catch(e2) {}
-        // Reset Jarod's analysis panel
-        try {
-            const _ap = document.getElementById('jarods-analysis-panel');
-            const _at = document.getElementById('jarods-analysis-text');
-            if (_ap) _ap.style.display = 'none';
-            if (_at) _at.innerHTML = '';
-            window._trendData = null;
-        } catch(e3) {}
 
                 showToast('\u2705 All done.', 'success');
                 // Wait 3s for Firebase to fully propagate before refreshing UI
@@ -20186,7 +19585,7 @@ Lender/Manager
             const dayOfMonth = now.getDate();
             
             switch(type) {
-                case 'properties': {
+                case 'properties':
                     titleText = '🏠 All Properties';
                     sectionName = 'properties';
                     // Use same logic as dashboard: occupied = has active tenant
@@ -20242,9 +19641,8 @@ Lender/Manager
                             `).join('')}
                     `;
                     break;
-            }
                     
-                case 'vacant': {
+                case 'vacant':
                     titleText = '🏠 Vacant Properties';
                     sectionName = 'properties';
                     // Match dashboard: vacant = no active tenant
@@ -20273,10 +19671,9 @@ Lender/Manager
                                 </div>
                             `).join('')}
                     `;
-            }
                     break;
                     
-                case 'tenants': {
+                case 'tenants':
                     titleText = '👥 All Tenants';
                     sectionName = 'tenants';
                     // Dashboard shows ALL tenants (tenants.length)
@@ -20326,10 +19723,9 @@ Lender/Manager
                             `).join('')}
                         ` : ''}
                     `;
-            }
                     break;
                     
-                case 'debtors': {
+                case 'debtors':
                     titleText = '💰 Debtors / Credits';
                     sectionName = 'credits';
                     // Dashboard shows ALL credits (credits.length), so show all with balance info
@@ -20387,10 +19783,9 @@ Lender/Manager
                             `).join('')}
                         ` : ''}
                     `;
-            }
                     break;
                     
-                case 'due-soon': {
+                case 'due-soon':
                     titleText = '📅 Due Soon';
                     sectionName = 'tenants';
                     // Match dashboard logic exactly: days 1-5 = due soon (before 5th of month)
@@ -20454,10 +19849,9 @@ Lender/Manager
                                 </div>
                             `).join('')}
                     `;
-            }
                     break;
                     
-                case 'overdue': {
+                case 'overdue':
                     titleText = '⚠️ Overdue Payments';
                     sectionName = 'tenants';
                     // Match dashboard exactly: tenants past day 5, debtors with 30+ days no payment
@@ -20521,10 +19915,9 @@ Lender/Manager
                                 </div>
                             `).join('')}
                     `;
-            }
                     break;
                     
-                case 'rent-collected': {
+                case 'rent-collected':
                     titleText = '✅ Rent Collected This Month';
                     sectionName = 'tenants';
                     // Match dashboard: payments filtered by date.startsWith(currentMonth) where type=rent
@@ -20554,10 +19947,9 @@ Lender/Manager
                                 `;
                             }).join('')}
                     `;
-            }
                     break;
                     
-                case 'credit-repaid': {
+                case 'credit-repaid':
                     titleText = '💳 Credit Repaid This Month';
                     sectionName = 'credits';
                     // Match dashboard: creditPayments filtered by date.startsWith(currentMonth)
@@ -20586,10 +19978,9 @@ Lender/Manager
                                 `;
                             }).join('')}
                     `;
-            }
                     break;
                     
-                case 'other-income': {
+                case 'other-income':
                     titleText = '💵 Other Income This Month';
                     sectionName = 'income';
                     // Match dashboard: additionalIncome filtered by date.startsWith(currentMonth)
@@ -20615,10 +20006,9 @@ Lender/Manager
                                 </div>
                             `).join('')}
                     `;
-            }
                     break;
                     
-                case 'total-income': {
+                case 'total-income':
                     titleText = '📊 Total Income This Month';
                     sectionName = 'dashboard';
                     // Match dashboard exactly: collected + creditRepaid + otherIncomeThisMonth
@@ -20663,10 +20053,9 @@ Lender/Manager
                         }).join('')}
                         ` : ''}
                     `;
-            }
                     break;
                     
-                case 'expected-rent': {
+                case 'expected-rent':
                     titleText = '📋 Expected Rent This Month';
                     sectionName = 'tenants';
                     // Match dashboard: all active tenants sum
@@ -20708,10 +20097,9 @@ Lender/Manager
                             `;
                         }).join('')}
                     `;
-            }
                     break;
                     
-                case 'outstanding-credit': {
+                case 'outstanding-credit':
                     titleText = '💰 Outstanding Credit';
                     sectionName = 'credits';
                     // Match dashboard: overallCreditDue - overallCreditCollected
@@ -20751,10 +20139,9 @@ Lender/Manager
                                 </div>
                             `).join('')}
                     `;
-            }
                     break;
                     
-                case 'pending-charges': {
+                case 'pending-charges':
                     titleText = '⏳ Pending Charges';
                     sectionName = 'tenants';
                     // Match dashboard: clientCharges with status === 'pending'
@@ -20782,10 +20169,9 @@ Lender/Manager
                                 `;
                             }).join('')}
                     `;
-            }
                     break;
                     
-                case 'total-receivables': {
+                case 'total-receivables':
                     titleText = '💰 Total Receivables';
                     sectionName = 'dashboard';
                     // Match dashboard exactly: outstandingRent + outstandingCredit + pendingCharges
@@ -20843,10 +20229,9 @@ Lender/Manager
                             </div>
                         </div>
                     `;
-            }
                     break;
                     
-                case 'tasks': {
+                case 'tasks':
                     titleText = '✅ Pending Tasks';
                     sectionName = 'tasks';
                     const allTasks = await dbGetAll('tasks');
@@ -20873,10 +20258,9 @@ Lender/Manager
                             <span class="badge ${t.priority==='high'?'badge-danger':t.priority==='medium'?'badge-warning':'badge-success'}">${t.priority||'normal'}</span>
                         </div>`).join('')}
                     `;
-            }
                     break;
 
-                case 'notes': {
+                case 'notes':
                     titleText = '📝 Notes & Reminders';
                     sectionName = 'notes';
                     const allNotes = await dbGetAll('customNotes');
@@ -20899,10 +20283,9 @@ Lender/Manager
                             <span class="badge badge-info">${n.category||'general'}</span>
                         </div>`).join('')}
                     `;
-            }
                     break;
 
-                case 'income': {
+                case 'income':
                     titleText = '💰 Additional Income';
                     sectionName = 'income';
                     const incList = await dbGetAll('additionalIncome');
@@ -20922,12 +20305,10 @@ Lender/Manager
                             <span style="font-weight:700;color:#10b981;">₱${(i.amount||0).toLocaleString()}</span>
                         </div>`).join('')}
                     `;
-
                     break;
-            }
-            default: {
-                html = '<p>No data available</p>';
-            }
+
+                default:
+                    html = '<p>No data available</p>';
             }
             
             title.textContent = titleText;
@@ -24231,7 +23612,6 @@ async function editTask(id) {
                 ];
                 
                 for (const p of properties) {
-                    p.isSample = true;
                     await dbAdd('properties', p);
                 }
                 
@@ -24250,7 +23630,6 @@ async function editTask(id) {
                 ];
                 
                 for (const t of tenants) {
-                    t.isSample = true;
                     await dbAdd('tenants', t);
                 }
                 
@@ -24261,10 +23640,10 @@ async function editTask(id) {
                 
                 // ===== PAYMENTS =====
                 if (tenant1) {
-                    await dbAdd('payments', { tenantId: tenant1.id, amount: 3000, method: 'cash', date: dateStr(5), forMonth: dateStr(1).substring(0, 7), createdAt: new Date().toISOString(), isSample: true , isSample: true });
+                    await dbAdd('payments', { tenantId: tenant1.id, amount: 3000, method: 'cash', date: dateStr(5), forMonth: dateStr(1).substring(0, 7), createdAt: new Date().toISOString(), isSample: true });
                 }
                 if (tenant2) {
-                    await dbAdd('payments', { tenantId: tenant2.id, amount: 5000, method: 'gcash', date: dateStr(10), forMonth: dateStr(1).substring(0, 7), createdAt: new Date().toISOString(), isSample: true , isSample: true });
+                    await dbAdd('payments', { tenantId: tenant2.id, amount: 5000, method: 'gcash', date: dateStr(10), forMonth: dateStr(1).substring(0, 7), createdAt: new Date().toISOString(), isSample: true });
                 }
                 
                 // ===== CREDITS/LOANS =====
@@ -24275,7 +23654,6 @@ async function editTask(id) {
                 ];
                 
                 for (const c of credits) {
-                    c.isSample = true;
                     await dbAdd('credits', c);
                 }
                 
@@ -24286,10 +23664,10 @@ async function editTask(id) {
                 
                 // ===== CREDIT PAYMENTS =====
                 if (credit1) {
-                    await dbAdd('creditPayments', { creditId: credit1.id, amount: 3000, date: dateStr(1), notes: 'Partial payment', createdAt: new Date().toISOString(), isSample: true , isSample: true });
+                    await dbAdd('creditPayments', { creditId: credit1.id, amount: 3000, date: dateStr(1), notes: 'Partial payment', createdAt: new Date().toISOString(), isSample: true });
                 }
                 if (credit3) {
-                    await dbAdd('creditPayments', { creditId: credit3.id, amount: 5000, date: dateStr(5), notes: 'Partial payment', createdAt: new Date().toISOString(), isSample: true , isSample: true });
+                    await dbAdd('creditPayments', { creditId: credit3.id, amount: 5000, date: dateStr(5), notes: 'Partial payment', createdAt: new Date().toISOString(), isSample: true });
                 }
                 
                 // ===== EMPLOYEES =====
@@ -24300,7 +23678,6 @@ async function editTask(id) {
                 ];
                 
                 for (const e of employees) {
-                    e.isSample = true;
                     await dbAdd('employees', e);
                 }
                 
@@ -24328,7 +23705,6 @@ async function editTask(id) {
                             createdAt: new Date().toISOString(),
                             isSample: true
                         };
-                        record.isSample = true;
                         await dbAdd('timeRecords', record);
                     }
                 }
@@ -24336,7 +23712,7 @@ async function editTask(id) {
                 // ===== CASH ADVANCES =====
                 const roger = allEmployees.find(e => e.name === 'Roger Ellioso');
                 if (roger) {
-                    await dbAdd('cashAdvances', { employeeId: roger.id, amount: 200, date: today.toISOString().split('T')[0], reason: 'Emergency', deducted: false, createdAt: new Date().toISOString(), isSample: true , isSample: true });
+                    await dbAdd('cashAdvances', { employeeId: roger.id, amount: 200, date: today.toISOString().split('T')[0], reason: 'Emergency', deducted: false, createdAt: new Date().toISOString(), isSample: true });
                 }
                 
                 // ===== WATER CUSTOMERS =====
@@ -24349,7 +23725,6 @@ async function editTask(id) {
                 ];
                 
                 for (const wc of waterCustomers) {
-                    wc.isSample = true;
                     await dbAdd('waterCustomers', wc);
                 }
                 
@@ -24376,7 +23751,7 @@ async function editTask(id) {
                         balance: total - (amountsPaid[i] || total),
                         paymentType: paymentTypes[i] || 'cash',
                         date: todayStr,
-                        createdAt: new Date().toISOString(),
+                        createdAt: new Date().toISOString()
                     });
                 }
                 
@@ -24389,7 +23764,6 @@ async function editTask(id) {
                 ];
                 
                 for (const exp of expenses) {
-                    exp.isSample = true;
                     await dbAdd('expenses', exp);
                 }
                 
@@ -24490,7 +23864,6 @@ async function editTask(id) {
                 ];
                 
                 for (const task of tasks) {
-                    task.isSample = true;
                     await dbAdd('tasks', task);
                 }
                 
@@ -24536,7 +23909,6 @@ async function editTask(id) {
                 ];
                 
                 for (const note of notes) {
-                    note.isSample = true;
                     await dbAdd('customNotes', note);
                 }
                 
@@ -24573,7 +23945,6 @@ async function editTask(id) {
                 ];
                 
                 for (const charge of clientCharges) {
-                    charge.isSample = true;
                     await dbAdd('clientCharges', charge);
                 }
                 
@@ -24608,7 +23979,6 @@ async function editTask(id) {
                 ];
                 
                 for (const income of additionalIncomes) {
-                    income.isSample = true;
                     await dbAdd('additionalIncome', income);
                 }
                 
@@ -24631,11 +24001,11 @@ async function editTask(id) {
                 if (existingEndorse.length === 0) {
                     const todayStr2 = today.toISOString().split('T')[0];
                     const sampleEndorse = [
-                        { id: 'end_1', type: 'sales', message: '🏠 Rent Payment Recorded:\n• Tenant: Juan Dela Cruz\n• Amount: ₱3,000\n• Method: Cash\n• Date: ' + todayStr2 + '\nRecorded by: Cenia Ellioso', sentByRole: 'cashier', sentBy: 'Cenia Ellioso', sentAt: new Date(today.getTime() - 2*60*60*1000).toISOString(), read: false , isSample: true },
-                        { id: 'end_2', type: 'water', message: '💧 Water Sale — CASH:\n• Customer: Aling Nena Store\n• Gallons: 5\n• Total: ₱125\n• Date: ' + todayStr2 + '\nRecorded by: Cenia Ellioso', sentByRole: 'cashier', sentBy: 'Cenia Ellioso', sentAt: new Date(today.getTime() - 1*60*60*1000).toISOString(), read: false , isSample: true },
-                        { id: 'end_3', type: 'credit', message: '💳 Loan Payment Recorded:\n• Borrower: Roberto Fernandez\n• Amount: ₱2,000\n• Date: ' + todayStr2 + '\nRecorded by: Roger Ellioso', sentByRole: 'cashier', sentBy: 'Roger Ellioso', sentAt: new Date(today.getTime() - 30*60*1000).toISOString(), read: false , isSample: true },
-                        { id: 'end_4', type: 'expense', message: '💸 Expense Recorded:\n• Description: Office Supplies\n• Amount: ₱350\n• Date: ' + todayStr2 + '\nRecorded by: Cenia Ellioso', sentByRole: 'cashier', sentBy: 'Cenia Ellioso', sentAt: new Date(today.getTime() - 3*60*60*1000).toISOString(), read: true , isSample: true },
-                        { id: 'end_5', type: 'income', message: '💰 Income Recorded:\n• Source: Parking Fee\n• Amount: ₱500\n• Date: ' + todayStr2 + '\nRecorded by: Roger Ellioso', sentByRole: 'cashier', sentBy: 'Roger Ellioso', sentAt: new Date(today.getTime() - 4*60*60*1000).toISOString(), read: true , isSample: true },
+                        { id: 'end_1', type: 'sales', message: '🏠 Rent Payment Recorded:\n• Tenant: Juan Dela Cruz\n• Amount: ₱3,000\n• Method: Cash\n• Date: ' + todayStr2 + '\nRecorded by: Cenia Ellioso', from: 'cashier1', fromName: 'Cenia Ellioso', timestamp: new Date(today.getTime() - 2*60*60*1000).toISOString(), read: false },
+                        { id: 'end_2', type: 'water', message: '💧 Water Sale — CASH:\n• Customer: Aling Nena Store\n• Gallons: 5\n• Total: ₱125\n• Date: ' + todayStr2 + '\nRecorded by: Cenia Ellioso', from: 'cashier1', fromName: 'Cenia Ellioso', timestamp: new Date(today.getTime() - 1*60*60*1000).toISOString(), read: false },
+                        { id: 'end_3', type: 'credit', message: '💳 Loan Payment Recorded:\n• Borrower: Roberto Fernandez\n• Amount: ₱2,000\n• Date: ' + todayStr2 + '\nRecorded by: Roger Ellioso', from: 'cashier2', fromName: 'Roger Ellioso', timestamp: new Date(today.getTime() - 30*60*1000).toISOString(), read: false },
+                        { id: 'end_4', type: 'expense', message: '💸 Expense Recorded:\n• Description: Office Supplies\n• Amount: ₱350\n• Date: ' + todayStr2 + '\nRecorded by: Cenia Ellioso', from: 'cashier1', fromName: 'Cenia Ellioso', timestamp: new Date(today.getTime() - 3*60*60*1000).toISOString(), read: true },
+                        { id: 'end_5', type: 'income', message: '💰 Income Recorded:\n• Source: Parking Fee\n• Amount: ₱500\n• Date: ' + todayStr2 + '\nRecorded by: Roger Ellioso', from: 'cashier2', fromName: 'Roger Ellioso', timestamp: new Date(today.getTime() - 4*60*60*1000).toISOString(), read: true },
                     ];
                     localStorage.setItem('prism_endorsements', JSON.stringify(sampleEndorse));
                 }
@@ -24651,7 +24021,6 @@ async function editTask(id) {
                         { description: 'Parking Fee - Monthly', category: 'parking', amount: 1500, date: dateStr(1), notes: '3 vehicles @ ₱500', createdAt: new Date().toISOString(), isSample: true },
                     ];
                     for (const inc of moreIncome) {
-                        inc.isSample = true;
                         await dbAdd('additionalIncome', inc);
                     }
                 }
@@ -24666,7 +24035,6 @@ async function editTask(id) {
                         { description: 'Water Station Filter Replacement', category: 'maintenance', amount: 2800, date: dateStr(6), notes: 'UV filter + carbon filter', createdAt: new Date().toISOString(), isSample: true },
                     ];
                     for (const exp of moreExp) {
-                        exp.isSample = true;
                         await dbAdd('expenses', exp);
                     }
                 }
@@ -24729,20 +24097,6 @@ async function editTask(id) {
 
                 // Initialize database - uses org-specific name if MT active
                 await initDB();
-
-        // ── Startup: purge stale sample endorsements from localStorage ──
-        try {
-            const _rawEndorse = JSON.parse(localStorage.getItem('prism_endorsements') || '[]');
-            const _cleanEndorse = _rawEndorse.filter(e =>
-                e.isSample !== true              // only remove sample-tagged endorsements
-
-            );
-            if (_cleanEndorse.length !== _rawEndorse.length) {
-                localStorage.setItem('prism_endorsements', JSON.stringify(_cleanEndorse));
-                console.log('[Startup] Purged', _rawEndorse.length - _cleanEndorse.length, 'stale endorsements');
-            }
-        } catch(e2) {}
-
 
                 // Initialize Guardian system (health check, auto-backup)
                 const guardianResult = await PrismGuardian.initialize();
@@ -25312,7 +24666,7 @@ async function _mtWaitForAuth(maxMs = 20000) {
         async function prismForgotPassword() {
             const emailEl = document.getElementById('mt-login-email');
             const email = emailEl ? emailEl.value.trim() : '';
-            const useEmail = email || await showInputModal('🔑 Password Reset', null, 'Enter your email address', '');
+            const useEmail = email || window.prompt('Enter your email address to receive a password reset link:');
             if (!useEmail) return;
             try {
                 const authInst = window.auth || (firebase && firebase.auth && firebase.auth());
@@ -26012,7 +25366,6 @@ function mtDemoLogin() {
         if (typeof loadDashboard === 'function') loadDashboard();
     }, 300);
 }
-        window.mtDemoLogin = mtDemoLogin;
 
 // ---- Org Setup Wizard ----
 function mtSelectBizType(type, el) {
@@ -26699,70 +26052,48 @@ function renderSentEndorsements() {
         <div class="endorse-item ${e.type === 'urgent' ? 'urgent' : ''}">
             <div class="endorse-item-type">${typeIcons[e.type] || '📋'} ${e.type.toUpperCase()}</div>
             <div class="endorse-item-desc" style="font-size:0.82rem;white-space:pre-line;">${e.message.substring(0,120)}${e.message.length>120?'...':''}</div>
-            <div class="endorse-item-meta">${e.sentAt || e.timestamp ? new Date(e.sentAt || e.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : ''} · ${e.read ? '✅ Seen by admin' : '⏳ Pending'}</div>
+            <div class="endorse-item-meta">${new Date(e.sentAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} · ${e.read ? '✅ Seen by admin' : '⏳ Pending'}</div>
         </div>
     `).join('');
 }
 
-        function renderAdminInbox() {
-            const list = getEndorsements();
-            let filtered = list.filter(e =>
-                e.orgId === (MT.currentOrg?.id || 'local') || !e.orgId
-            );
+function renderAdminInbox() {
+    const list = getEndorsements();
+    let filtered = list.filter(e =>
+        e.orgId === (MT.currentOrg?.id || 'local') || !e.orgId
+    );
 
-            if (inboxFilter === 'unread') filtered = filtered.filter(e => !e.read);
-            if (inboxFilter === 'urgent') filtered = filtered.filter(e => e.type === 'urgent');
+    if (inboxFilter === 'unread') filtered = filtered.filter(e => !e.read);
+    if (inboxFilter === 'urgent') filtered = filtered.filter(e => e.type === 'urgent');
 
-            filtered = [...filtered].reverse();
+    filtered = [...filtered].reverse();
 
-            const container = document.getElementById('admin-inbox-list');
-            if (!container) return;
+    const container = document.getElementById('admin-inbox-list');
+    if (!container) return;
 
-            if (filtered.length === 0) {
-                container.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:0.85rem;padding:20px;">No endorsements</div>';
-                updateEndorseUnreadBadge();
-                return;
-            }
+    if (filtered.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:0.85rem;padding:20px;">No endorsements found</div>';
+        return;
+    }
 
-            const typeIcons = { sales:'💰', credit:'💳', expense:'🧾', water:'💧', attendance:'👷', urgent:'🚨' };
-            const isSampleLabel = e => e.isSample ? '<span style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);color:#fbbf24;font-size:0.62rem;padding:1px 6px;border-radius:8px;margin-left:6px;">SAMPLE</span>' : '';
+    const typeIcons = { sales:'💰', credit:'💳', expense:'🧾', water:'💧', attendance:'👷', urgent:'🚨' };
+    container.innerHTML = filtered.map(e => `
+        <div class="endorse-item ${e.type === 'urgent' ? 'urgent' : ''} ${!e.read ? 'endorse-unread' : ''}"
+             onclick="markEndorseRead('${e.id}')"
+             style="${!e.read ? 'border-left-width:4px;' : 'opacity:0.75;'}">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div class="endorse-item-type">${typeIcons[e.type] || '📋'} ${e.type.toUpperCase()}</div>
+                ${!e.read ? '<span style="background:#ef4444;color:white;font-size:0.65rem;padding:2px 7px;border-radius:10px;font-weight:700;">NEW</span>' : ''}
+            </div>
+            <div class="endorse-item-desc" style="font-size:0.83rem;white-space:pre-line;margin:4px 0;">${e.message.substring(0,200)}${e.message.length>200?'...':''}</div>
+            <div class="endorse-item-meta">
+                From: <b>${e.sentBy}</b> · ${new Date(e.sentAt).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}
+            </div>
+        </div>
+    `).join('');
 
-            container.innerHTML = filtered.map(e => `
-                <div class="endorse-item ${e.type === 'urgent' ? 'urgent' : ''} ${!e.read ? 'endorse-unread' : ''}"
-                    style="${!e.read ? 'border-left-width:4px;' : 'opacity:0.85;'}position:relative;">
-                    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-                        <div style="display:flex;align-items:center;gap:4px;flex:1;min-width:0;">
-                            <div class="endorse-item-type" style="cursor:pointer;" onclick="markEndorseRead('${e.id}')">${typeIcons[e.type] || '📋'} ${e.type.toUpperCase()}${isSampleLabel(e)}</div>
-                            ${!e.read ? '<span style="background:#ef4444;color:white;font-size:0.62rem;padding:2px 7px;border-radius:10px;white-space:nowrap;">NEW</span>' : ''}
-                        </div>
-                        <button onclick="deleteEndorsement('${e.id}')" title="Delete"
-                            style="background:transparent;border:none;color:#475569;cursor:pointer;font-size:1rem;padding:2px 6px;border-radius:4px;line-height:1;flex-shrink:0;"
-                            onmouseover="this.style.color='#ef4444';this.style.background='rgba(239,68,68,0.1)'"
-                            onmouseout="this.style.color='#475569';this.style.background='transparent'">🗑️</button>
-                    </div>
-                    <div class="endorse-item-desc" onclick="markEndorseRead('${e.id}')" style="font-size:0.83rem;white-space:pre-line;margin:4px 0;cursor:pointer;">${e.message.substring(0,300)}${e.message.length>300?'…':''}</div>
-                    <div class="endorse-item-meta">
-                        From: <b>${e.sentBy || e.fromName || 'Cashier'}</b> · ${e.sentAt || e.timestamp ? new Date(e.sentAt || e.timestamp).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : ''}
-                    </div>
-                </div>
-            `).join('');
-
-            updateEndorseUnreadBadge();
-        }
-
-        function deleteEndorsement(id) {
-            const list = getEndorsements();
-            const item = list.find(e => e.id === id);
-            if (!item) return;
-            const label = item.isSample ? 'sample endorsement' : 'this endorsement';
-            if (!confirm('Delete ' + label + '?\n\nThis cannot be undone.')) return;
-            const updated = list.filter(e => e.id !== id);
-            saveEndorsements(updated);
-            renderAdminInbox();
-            updateEndorseUnreadBadge();
-            showToast('🗑️ Endorsement deleted.', 'success');
-        }
-        window.deleteEndorsement = deleteEndorsement;
+    updateEndorseUnreadBadge();
+}
 
 function markEndorseRead(id) {
     const list = getEndorsements();
@@ -27879,7 +27210,6 @@ window.mtSAToggleOrgStatus=mtSAToggleOrgStatus;
                                 <td style="padding:8px 10px;"><div style="display:flex;gap:5px;flex-wrap:wrap;">
                                     ${u.status!=='approved'?`<button onclick="mtSAApproveUserDirect('${u.id}')" style="padding:4px 10px;background:rgba(16,185,129,0.1);border:1px solid #10b981;color:#34d399;border-radius:5px;cursor:pointer;font-size:0.73rem;">Approve</button>`:''}
                                     ${u.status!=='suspended'?`<button onclick="mtSASuspendUser('${u.id}')" style="padding:4px 10px;background:rgba(239,68,68,0.08);border:1px solid #ef4444;color:#f87171;border-radius:5px;cursor:pointer;font-size:0.73rem;">Suspend</button>`:`<button onclick="mtSAUnsuspendUser('${u.id}')" style="padding:4px 10px;background:rgba(99,102,241,0.1);border:1px solid #6366f1;color:#818cf8;border-radius:5px;cursor:pointer;font-size:0.73rem;">Unsuspend</button>`}
-                                    <button onclick="mtSAEditUserEmail('${u.id}','${u.email}')" style="padding:4px 10px;background:rgba(99,102,241,0.08);border:1px solid #6366f1;color:#818cf8;border-radius:5px;cursor:pointer;font-size:0.73rem;">✏️ Email</button>
                                     <button onclick="mtSASendPasswordReset('${u.email}')" style="padding:4px 10px;background:rgba(251,191,36,0.08);border:1px solid #f59e0b;color:#fbbf24;border-radius:5px;cursor:pointer;font-size:0.73rem;">🔑 Reset PW</button>
                                     <button onclick="mtSADeleteUserAccount('${u.id}','${u.email}')" style="padding:4px 10px;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.4);color:#f87171;border-radius:5px;cursor:pointer;font-size:0.73rem;">🗑 Delete</button>
                                 </div></td>
@@ -27956,64 +27286,6 @@ window.mtSAToggleOrgStatus=mtSAToggleOrgStatus;
                 mtSALoadAllowlist();
             } catch(e){ mtToast('Error: '+e.message,'error'); }
         }
-        async function mtSAEditUserEmail(docId, currentEmail) {
-            // Build inline modal
-            const existing = document.getElementById('prism-edit-email-modal');
-            if (existing) existing.remove();
-
-            const modal = document.createElement('div');
-            modal.id = 'prism-edit-email-modal';
-            modal.style.cssText = 'position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;';
-            modal.innerHTML = `
-                <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:32px 28px;width:100%;max-width:420px;box-shadow:0 25px 50px rgba(0,0,0,0.5);">
-                    <div style="font-size:1.1rem;font-weight:700;color:#f1f5f9;margin-bottom:6px;">✏️ Edit Email</div>
-                    <div style="font-size:0.8rem;color:#64748b;margin-bottom:18px;">Current: <span style="color:#94a3b8;">${currentEmail}</span></div>
-                    <input id="edit-email-input" type="email" value="${currentEmail}"
-                        style="width:100%;padding:10px 14px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:0.9rem;outline:none;box-sizing:border-box;margin-bottom:18px;"
-                        placeholder="new@email.com" />
-                    <div style="display:flex;gap:10px;justify-content:flex-end;">
-                        <button onclick="document.getElementById('prism-edit-email-modal').remove()"
-                            style="padding:9px 20px;background:transparent;border:1px solid #334155;color:#94a3b8;border-radius:8px;cursor:pointer;font-size:0.85rem;">Cancel</button>
-                        <button id="edit-email-save-btn"
-                            style="padding:9px 20px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;color:#fff;border-radius:8px;cursor:pointer;font-size:0.85rem;font-weight:600;">Save</button>
-                    </div>
-                </div>`;
-            document.body.appendChild(modal);
-
-            // Focus input and select all
-            const inp = document.getElementById('edit-email-input');
-            setTimeout(() => { inp.focus(); inp.select(); }, 50);
-
-            // Close on backdrop click
-            modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
-
-            // Save handler
-            document.getElementById('edit-email-save-btn').onclick = async () => {
-                const trimmed = (inp.value || '').trim().toLowerCase();
-                if (!trimmed || trimmed === currentEmail) { modal.remove(); return; }
-                if (!trimmed.includes('@') || !trimmed.includes('.')) {
-                    inp.style.borderColor = '#ef4444';
-                    inp.placeholder = 'Enter a valid email!';
-                    return;
-                }
-                const btn = document.getElementById('edit-email-save-btn');
-                btn.textContent = 'Saving...';
-                btn.disabled = true;
-                try {
-                    const snap = await window.db.collection(PRISM_SECURITY.COLLECTION).where('email','==',trimmed).get();
-                    if (!snap.empty) { mtToast('⚠️ That email already exists', 'warning'); btn.textContent='Save'; btn.disabled=false; return; }
-                    await window.db.collection(PRISM_SECURITY.COLLECTION).doc(docId).update({ email: trimmed });
-                    mtToast('✅ Email updated to: ' + trimmed, 'success');
-                    modal.remove();
-                    mtSALoadAllowlist();
-                } catch(e) { mtToast('❌ Error: ' + e.message, 'error'); btn.textContent='Save'; btn.disabled=false; }
-            };
-
-            // Enter key saves
-            inp.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('edit-email-save-btn').click(); });
-        }
-        window.mtSAEditUserEmail = mtSAEditUserEmail;
-
         window.mtSALoadAllowlist=mtSALoadAllowlist;
         window.mtSAApproveUser=mtSAApproveUser;
         window.mtSAApproveUserDirect=mtSAApproveUserDirect;
