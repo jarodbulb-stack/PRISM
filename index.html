@@ -11987,6 +11987,7 @@ async function recordTenantPayment(tenantId) {
         </div>
     </div>
 
+
 </body>
                 </html>
             `);
@@ -28302,6 +28303,8 @@ window.addEventListener('DOMContentLoaded', () => {
             if (ov) ov.style.display = 'none';
             if (window._prismTypeConfirmResolve) { window._prismTypeConfirmResolve(null); window._prismTypeConfirmResolve = null; }
         }
+    window.prismTypeConfirmSubmit = prismTypeConfirmSubmit;
+    window.prismTypeConfirmCancel = prismTypeConfirmCancel;
 
         </script>
 
@@ -28323,6 +28326,33 @@ window.addEventListener('DOMContentLoaded', () => {
 </div>
 <!-- ========== END CALENDAR DAY DETAIL MODAL ========== -->
 
+
+
+<!-- ========== TYPE-TO-CONFIRM MODAL (real DOM) ========== -->
+<div id="prism-type-confirm-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:999999;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#1e293b;border:1px solid rgba(245,158,11,0.4);border-radius:16px;padding:28px 24px 22px;width:100%;max-width:400px;box-shadow:0 24px 60px rgba(0,0,0,0.7);">
+    <div style="font-size:2rem;text-align:center;margin-bottom:10px;">&#x2328;&#xFE0F;</div>
+    <div style="font-size:1rem;font-weight:700;color:#fbbf24;text-align:center;margin-bottom:8px;">Final Confirmation</div>
+    <div id="prism-type-confirm-msg" style="font-size:0.85rem;color:#94a3b8;text-align:center;line-height:1.55;margin-bottom:16px;">
+      Type <strong style="color:#f1f5f9;">DELETE ALL</strong> to confirm.<br>
+      <span style="font-size:0.75rem;color:#64748b;">This action cannot be undone.</span>
+    </div>
+    <input id="prism-type-confirm-input" type="text" autocomplete="off"
+      placeholder="Type DELETE ALL here..."
+      style="width:100%;padding:11px 14px;background:#0f172a;border:1px solid #334155;border-radius:9px;color:#f1f5f9;font-size:0.95rem;margin-bottom:14px;box-sizing:border-box;letter-spacing:0.05em;"
+      onfocus="this.style.borderColor='#f59e0b'" onblur="this.style.borderColor='#334155'"
+      onkeydown="if(event.key==='Enter')prismTypeConfirmSubmit()">
+    <button onclick="prismTypeConfirmSubmit()"
+      style="width:100%;padding:11px;background:linear-gradient(135deg,#ef4444,#b91c1c);border:none;border-radius:9px;color:white;font-weight:700;cursor:pointer;font-size:0.95rem;margin-bottom:8px;">
+      Confirm Delete
+    </button>
+    <button onclick="prismTypeConfirmCancel()"
+      style="width:100%;padding:9px;background:rgba(255,255,255,0.05);border:1px solid #334155;border-radius:9px;color:#94a3b8;cursor:pointer;font-size:0.9rem;">
+      Cancel
+    </button>
+  </div>
+</div>
+<!-- ========== END TYPE-TO-CONFIRM MODAL ========== -->
 
 </body>
 </html>
