@@ -7723,7 +7723,14 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
 
         async function syncFromFirebase() {
             // Block all pulls while a wipe/delete is in progress
-    if (window._prismWipeInProgress || sessionStorage.getItem('_prismWipeActive')) { console.log('[Sync] Wipe active — skipping pull'); return; }
+    const _wipeTs = localStorage.getItem('_prismLastWipeAt');
+    if (window._prismWipeInProgress || sessionStorage.getItem('_prismWipeActive')) {
+        console.log('[Sync] Wipe active — skipping pull'); return;
+    }
+    // Also block if we wiped within the last 30 seconds (handles reload race)
+    if (_wipeTs && (Date.now() - new Date(_wipeTs).getTime()) < 30000) {
+        console.log('[Sync] Recent wipe detected — skipping pull'); return;
+    }
             // STARTUP FIX: Wait for IndexedDB to be ready before syncing
             if (window._dbReadyPromise) await window._dbReadyPromise;
             const cu = currentUser || (typeof MT !== 'undefined' && MT.currentUser);
@@ -18248,6 +18255,7 @@ async function showPayrollSummary() {
             // Step 1: Kill the listener permanently — do NOT restart until reload
             window._prismWipeInProgress = true;
         sessionStorage.setItem('_prismWipeActive', '1'); // prevent flag reset on refresh
+        localStorage.setItem('_prismLastWipeAt', new Date().toISOString()); // 30s cooldown for sync
             try { if (typeof mtStopRealtimeSync === 'function') mtStopRealtimeSync(); } catch(e) {}
 
             showToast('🧹 Deleting sample data...', 'info');
@@ -18411,6 +18419,7 @@ async function clearAllData() {
             // ── All confirms passed — NOW lock out Firebase sync ──
             window._prismWipeInProgress = true;
         sessionStorage.setItem('_prismWipeActive', '1'); // prevent flag reset on refresh
+        localStorage.setItem('_prismLastWipeAt', new Date().toISOString()); // 30s cooldown for sync
             try { if (typeof mtStopRealtimeSync === 'function') mtStopRealtimeSync(); } catch(e) {}
 
             showToast('\u23f3 Deleting all data...', 'info');
@@ -24067,8 +24076,8 @@ async function editTask(id) {
                 updateAuthUI();
 
                 PrismGuardian.log('SUCCESS', '🎉 PRISM initialized successfully');
-    // Clear wipe flag after successful clean init — app is fresh now
-    sessionStorage.removeItem('_prismWipeActive');
+    // Wipe lock is cleared only after confirming Firebase has empty/wiped data
+    // sessionStorage._prismWipeActive clears naturally when tab closes
     window._prismWipeInProgress = false;
 
             } catch (error) {
@@ -27705,7 +27714,11 @@ window.addEventListener('DOMContentLoaded', () => {
                     // Use window._lastSyncTimestamp — wipe functions write here across scope boundaries
                     const _tsToCheck = window._lastSyncTimestamp || _lastSyncTimestamp;
                     if (_tsToCheck && data.lastSync === _tsToCheck) return;
-            if (window._prismWipeInProgress || sessionStorage.getItem('_prismWipeActive')) { console.log('[RealtimeSync] Wipe active — skipping snapshot'); return; }
+            const _snapWipeTs = localStorage.getItem('_prismLastWipeAt');
+            const _snapRecent = _snapWipeTs && (Date.now() - new Date(_snapWipeTs).getTime()) < 30000;
+            if (window._prismWipeInProgress || sessionStorage.getItem('_prismWipeActive') || _snapRecent) {
+                console.log('[RealtimeSync] Wipe active/recent — skipping snapshot'); return;
+            }
                     // Update both so future checks work
                     _lastSyncTimestamp = data.lastSync;
                     window._lastSyncTimestamp = data.lastSync;
