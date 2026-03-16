@@ -4160,11 +4160,15 @@
                     </div>
                 </div>
                 <div id="collection-calendar" class="calendar-grid"></div>
-                <div class="calendar-legend">
-                    <span class="legend-item"><span class="legend-dot tenant-dot"></span> Tenant Due</span>
-                    <span class="legend-item"><span class="legend-dot debtor-dot"></span> Debtor Due</span>
-                    <span class="legend-item"><span class="legend-dot both-dot"></span> Both Due</span>
+                <div class="calendar-legend" style="flex-wrap:wrap;gap:5px 12px;">
+                    <span class="legend-item"><span class="legend-dot tenant-dot"></span> Rent Due</span>
+                    <span class="legend-item"><span class="legend-dot debtor-dot"></span> Credit Due</span>
                     <span class="legend-item"><span class="legend-dot overdue-dot"></span> Overdue</span>
+                    <span class="legend-item"><span class="cal-dot dot-task" style="display:inline-block;width:7px;height:7px;border-radius:50%;"></span> Task</span>
+                    <span class="legend-item"><span class="cal-dot dot-reminder" style="display:inline-block;width:7px;height:7px;border-radius:50%;"></span> Reminder</span>
+                    <span class="legend-item"><span class="cal-dot dot-note" style="display:inline-block;width:7px;height:7px;border-radius:50%;"></span> Note</span>
+                    <span class="legend-item"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#06b6d4;"></span> Payroll</span>
+                    <span class="legend-item"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#8b5cf6;"></span> Water</span>
                 </div>
             </div>
 
@@ -14948,6 +14952,7 @@ async function showPayrollSummary() {
                 notePhotoData = null;
                 hideModal('note-modal');
                 loadNotes();
+        try { if (typeof loadDashboard === 'function') loadDashboard(); } catch(e) {}
                 // Sync to Firebase
                 debouncedSync();
             } catch (error) {
@@ -16501,6 +16506,8 @@ async function showPayrollSummary() {
             const credits = await dbGetAll('credits');
             const creditPayments = await dbGetAll('creditPayments');
             const expenses = await dbGetAll('expenses');
+    const employees      = await dbGetAll('employees') || [];
+    const salaryPayments = await dbGetAll('salaryPayments') || [];
 
             const now = new Date();
             const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -16808,7 +16815,7 @@ async function showPayrollSummary() {
             try { calendarNotes = await dbGetAll('customNotes') || []; } catch(e) {}
 
             try {
-                await renderCalendar(tenants, credits, payments, creditPayments, calendarTasks, calendarNotes);
+                await renderCalendar(tenants, credits, payments, creditPayments, calendarTasks, calendarNotes, employees, waterSales, salaryPayments);
             } catch (error) {
                 console.error('Error rendering calendar:', error);
             }
@@ -17073,7 +17080,7 @@ async function showPayrollSummary() {
             loadDashboard();
         }
 
-        async function renderCalendar(tenants, credits, payments, creditPayments, tasks, notes) {
+        async function renderCalendar(tenants, credits, payments, creditPayments, tasks, notes, employees, waterSales, salaryPayments) {
             tasks = tasks || []; notes = notes || [];
             const calendar = document.getElementById('collection-calendar');
             const monthLabel = document.getElementById('calendar-month-label');
@@ -17137,6 +17144,49 @@ async function showPayrollSummary() {
                     sd.debtors.push({ type:'debtor', label:`💳 ${credit.debtor||credit.name||'Debtor'}`, sub:`Balance: ${balance}` });
                 }
             });
+
+    // ── PAYROLL alerts ──
+    employees = employees || [];
+    salaryPayments = salaryPayments || [];
+    employees.forEach(function(emp) {
+        if (!emp || !emp.payFrequency) return;
+        var payDays = new Set();
+        var vEnd = new Date(year, month + 1, 0);
+        if (emp.payFrequency === 'daily') {
+            for (var d2 = 1; d2 <= vEnd.getDate(); d2++) payDays.add(d2);
+        } else if (emp.payFrequency === 'weekly') {
+            for (var d2 = 1; d2 <= vEnd.getDate(); d2++) {
+                if (new Date(year, month, d2).getDay() === 5) payDays.add(d2);
+            }
+        } else if (emp.payFrequency === 'semi-monthly') {
+            payDays.add(15); payDays.add(vEnd.getDate());
+        } else {
+            payDays.add(vEnd.getDate());
+        }
+        payDays.forEach(function(pd) {
+            var sd2 = getDay(pd);
+            if (!sd2.payroll) sd2.payroll = [];
+            sd2.payroll.push({ type: 'payroll', label: emp.name || 'Staff', sub: (emp.payFrequency || '') + ' payroll' });
+        });
+    });
+
+    // ── WATER SALES on calendar days ──
+    waterSales = waterSales || [];
+    var waterByDay = {};
+    waterSales.forEach(function(ws) {
+        if (!ws || !ws.date) return;
+        var wsDate = new Date(ws.date + 'T00:00:00');
+        if (isNaN(wsDate) || wsDate.getFullYear() !== year || wsDate.getMonth() !== month) return;
+        var d3 = wsDate.getDate();
+        if (!waterByDay[d3]) waterByDay[d3] = 0;
+        waterByDay[d3]++;
+    });
+    Object.keys(waterByDay).forEach(function(d3) {
+        var sd3 = getDay(parseInt(d3));
+        if (!sd3.water) sd3.water = [];
+        sd3.water.push({ type: 'water', label: 'Water Sales', sub: waterByDay[d3] + ' transaction' + (waterByDay[d3] > 1 ? 's' : '') });
+    });
+
 
             // ── TASKS with dueDate (+ repeat projection) ──
             tasks.forEach(task => {
@@ -17256,10 +17306,10 @@ async function showPayrollSummary() {
 
             for (let day=1; day<=totalDays; day++) {
                 const isToday  = today.getDate()===day && today.getMonth()===month && today.getFullYear()===year;
-                const sd       = scheduleData[day] || { tenants:[], debtors:[], overdue:[], tasks:[], notes:[] };
+                const sd       = scheduleData[day] || { tenants:[], debtors:[], overdue:[], tasks:[], notes:[], payroll:[], water:[] };
                 const hasTask  = sd.tasks.length > 0;
                 const hasNote  = sd.notes.length > 0;
-                const allItems = [...(sd.overdue||[]), ...(sd.tenants||[]), ...(sd.debtors||[]), ...(sd.tasks||[]), ...(sd.notes||[])];
+                const allItems = [...(sd.overdue||[]), ...(sd.tenants||[]), ...(sd.debtors||[]), ...(sd.tasks||[]), ...(sd.notes||[]), ...(sd.payroll||[]), ...(sd.water||[])];
 
                 let dayClass = 'calendar-day';
                 if (isToday) dayClass += ' today';
@@ -17279,13 +17329,15 @@ async function showPayrollSummary() {
                 const hasPlainNote = sd.notes.some(n => n.type==='note');
                 if (hasReminder)  dots += '<span class="cal-dot dot-reminder" title="Reminder"></span>';
                 if (hasPlainNote) dots += '<span class="cal-dot dot-note"></span>';
+        if (sd.payroll && sd.payroll.length > 0) dots += '<span class="cal-dot" style="background:#06b6d4;" title="Payroll"></span>';
+        if (sd.water   && sd.water.length   > 0) dots += '<span class="cal-dot" style="background:#8b5cf6;" title="Water Sales"></span>';
 
                 // Tooltip items
                 let tooltip = '';
                 if (allItems.length > 0) {
                     tooltip = `<div class="cal-tooltip"><div class="cal-tooltip-date">${day} ${calendarDate.toLocaleString('default',{month:'short'})}</div>`;
                     allItems.slice(0,6).forEach(item => {
-                        const cls = item.type==='task'?'cal-tt-task':item.type==='reminder'?'cal-tt-reminder':item.type==='note'?'cal-tt-note':item.type==='debtor'?'cal-tt-debtor':'cal-tt-tenant';
+                        const cls = item.type==='payroll'?'cal-tt-payroll':item.type==='water'?'cal-tt-water':item.type==='task'?'cal-tt-task':item.type==='reminder'?'cal-tt-reminder':item.type==='note'?'cal-tt-note':item.type==='debtor'?'cal-tt-debtor':'cal-tt-tenant';
                         tooltip += `<div class="cal-tt-item ${cls}"><div class="cal-tt-label">${item.label}</div><div class="cal-tt-sub">${item.sub||''}</div></div>`;
                     });
                     if (allItems.length > 6) tooltip += `<div class="cal-tt-more">+${allItems.length-6} more</div>`;
@@ -17293,7 +17345,7 @@ async function showPayrollSummary() {
                 }
 
                 const badge = allItems.length > 0 ? `<span class="cal-badge">${allItems.length}</span>` : '';
-                calHtml += `<div class="${dayClass}" data-day="${day}">${day}${badge}<div class="cal-dots">${dots}</div>${tooltip}</div>`;
+                calHtml += `<div class="${dayClass}" data-day="${day}" onclick="prismOpenCalendarDay(${year},${month},${day})" style="cursor:${allItems.length>0?'pointer':'default'};">${day}${badge}<div class="cal-dots">${dots}</div>${tooltip}</div>`;
             }
 
             calendar.innerHTML = calHtml;
@@ -17325,11 +17377,235 @@ async function showPayrollSummary() {
                     .cal-tt-task   { background:rgba(167,139,250,0.08); border-left:2px solid #a78bfa; }
                     .cal-tt-note     { background:rgba(74,222,128,0.08); border-left:2px solid #4ade80; }
                     .cal-tt-reminder { background:rgba(245,158,11,0.08); border-left:2px solid #f59e0b; }
+        .cal-tt-payroll { background:rgba(6,182,212,0.08); border-left:2px solid #06b6d4; }
+        .cal-tt-water   { background:rgba(139,92,246,0.08); border-left:2px solid #8b5cf6; }
                     .cal-tt-more   { font-size:0.7rem; color:#64748b; text-align:center; margin-top:4px; }
                 `;
                 document.head.appendChild(style);
             }
         }
+
+    // ================================================================
+    // CALENDAR DAY DETAIL — prismMakeCalCard + prismOpenCalendarDay
+    // + navigation helpers (Steps 4-6 of Calendar Intelligence spec)
+    // ================================================================
+    function prismMakeCalCard(bgRgb, borderColor, onclickFn, title, sub, extra) {
+        extra = extra || '';
+        return '<div onclick="' + onclickFn + '" style="padding:9px 12px;'
+            + 'background:rgba(' + bgRgb + ',0.07);'
+            + 'border:1px solid rgba(' + bgRgb + ',0.2);'
+            + 'border-left:3px solid ' + borderColor + ';'
+            + 'border-radius:9px;margin-bottom:6px;cursor:pointer;transition:opacity 0.15s;"'
+            + ' onmouseenter="this.style.opacity=0.8" onmouseleave="this.style.opacity=1">'
+            + '<div style="font-size:0.85rem;font-weight:600;color:var(--text-primary,#f1f5f9);">' + title + '</div>'
+            + (sub ? '<div style="font-size:0.73rem;color:#64748b;margin-top:2px;">' + sub + '</div>' : '')
+            + extra
+            + '</div>';
+    }
+    window.prismMakeCalCard = prismMakeCalCard;
+
+    function prismOpenCalendarDay(year, month, day) {
+        var modal   = document.getElementById('cal-day-modal');
+        var titleEl = document.getElementById('cal-day-modal-title');
+        var subEl   = document.getElementById('cal-day-modal-sub');
+        var body    = document.getElementById('cal-day-modal-body');
+        if (!modal || !body) return;
+
+        var dateObj = new Date(year, month, day);
+        var dateStr = dateObj.toLocaleDateString('en-PH', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+        var mo      = String(month + 1).padStart(2, '0');
+        var da      = String(day).padStart(2, '0');
+        var dateKey = year + '-' + mo + '-' + da;
+        var today   = new Date();
+        var isToday = today.getDate() === day && today.getMonth() === month && today.getFullYear() === year;
+        var isPast  = dateObj < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+        if (titleEl) titleEl.textContent = dateStr;
+        if (subEl)   subEl.textContent   = isToday ? 'Today' : isPast ? 'Past' : 'Upcoming';
+
+        body.innerHTML = '<div style="text-align:center;color:#64748b;padding:20px;">Loading...</div>';
+        modal.style.display = 'flex';
+
+        function repMatch(origin, rep, check) {
+            if (isNaN(origin) || origin > check) return false;
+            if (rep === 'daily')   return true;
+            if (rep === 'weekly')  return origin.getDay() === check.getDay();
+            if (rep === 'monthly') return origin.getDate() === check.getDate();
+            if (rep === 'yearly')  return origin.getMonth() === check.getMonth() && origin.getDate() === check.getDate();
+            return false;
+        }
+
+        Promise.all([
+            dbGetAll('tasks').catch(function() { return []; }),
+            dbGetAll('customNotes').catch(function() { return []; }),
+            dbGetAll('tenants').catch(function() { return []; }),
+            dbGetAll('credits').catch(function() { return []; }),
+            dbGetAll('payments').catch(function() { return []; }),
+            dbGetAll('creditPayments').catch(function() { return []; }),
+            dbGetAll('employees').catch(function() { return []; }),
+            dbGetAll('waterSales').catch(function() { return []; })
+        ]).then(function(res) {
+            var tasks = res[0] || [], notes = res[1] || [], tenants = res[2] || [],
+                credits = res[3] || [], payments = res[4] || [], creditPayments = res[5] || [],
+                employees = res[6] || [], waterSales = res[7] || [];
+            var sections = [];
+            var P = '\u20b1';
+
+            // Tasks (Step 1-3: dueDate + repeat)
+            var dayTasks = tasks.filter(function(t) {
+                if (!t || !t.id || !t.dueDate || t.status === 'completed') return false;
+                if (t.dueDate === dateKey) return true;
+                var o = new Date(t.dueDate + 'T00:00:00'), r = t.repeat || 'none';
+                return r !== 'none' && repMatch(o, r, dateObj);
+            });
+            if (dayTasks.length) {
+                var h = '<div style="margin-bottom:14px;"><div style="font-size:0.72rem;font-weight:700;color:#a78bfa;letter-spacing:0.08em;margin-bottom:7px;">TASKS (' + dayTasks.length + ')</div>';
+                dayTasks.forEach(function(t) {
+                    var pc  = t.priority === 'high' ? '#ef4444' : t.priority === 'medium' ? '#f59e0b' : '#10b981';
+                    var ov  = t.dueDate < dateKey ? ' [Overdue]' : '';
+                    var rp  = t.repeat && t.repeat !== 'none' ? '<div style="font-size:0.7rem;color:#818cf8;">repeat: ' + t.repeat + '</div>' : '';
+                    h += prismMakeCalCard('167,139,250', '#a78bfa', 'prismCalNavTask(' + t.id + ')',
+                        prismSafeString(t.title) + ov,
+                        t.description ? prismSafeString(t.description).substring(0, 80) : '',
+                        rp + '<div style="font-size:0.68rem;color:' + pc + ';margin-top:3px;">' + (t.priority || 'task') + '</div>');
+                });
+                sections.push(h + '</div>');
+            }
+
+            // Notes & Reminders (Step 7: repeat support)
+            var dayNotes = notes.filter(function(n) {
+                if (!n || !n.id || !n.date) return false;
+                if (n.date === dateKey) return true;
+                var isRep = n.category === 'reminder' || (n.category === 'general' && n.repeat && n.repeat !== 'none');
+                if (!isRep) return false;
+                var o = new Date(n.date + 'T00:00:00'), r = n.repeat || 'none';
+                return r !== 'none' && repMatch(o, r, dateObj);
+            });
+            if (dayNotes.length) {
+                var catC = { reminder: '#f59e0b', general: '#4ade80', client: '#38bdf8', area: '#f97316' };
+                var h2 = '<div style="margin-bottom:14px;"><div style="font-size:0.72rem;font-weight:700;color:#f59e0b;letter-spacing:0.08em;margin-bottom:7px;">NOTES (' + dayNotes.length + ')</div>';
+                dayNotes.forEach(function(n) {
+                    var cc = catC[n.category] || '#94a3b8';
+                    var ic = n.category === 'reminder' ? 'Reminder' : n.category === 'client' ? 'Client' : n.category === 'area' ? 'Area' : 'Note';
+                    var tm = n.reminderTime ? '<div style="font-size:0.7rem;color:#818cf8;">' + n.reminderTime + (n.repeat && n.repeat !== 'none' ? ' · ' + n.repeat : '') + '</div>' : '';
+                    h2 += prismMakeCalCard('245,158,11', cc, 'prismCalNavNote(' + n.id + ')',
+                        ic + ': ' + prismSafeString(n.title || 'Note'),
+                        n.description ? prismSafeString(n.description).substring(0, 80) : '',
+                        tm + '<div style="font-size:0.68rem;color:' + cc + ';margin-top:3px;">' + (n.category || 'note') + '</div>');
+                });
+                sections.push(h2 + '</div>');
+            }
+
+            // Rent Due
+            var rm = year + '-' + mo;
+            var rentDue = tenants.filter(function(t) {
+                if (!t || !t.id || t.status === 'inactive') return false;
+                var dd = parseInt(t.dueDay || t.rentDueDay || 5);
+                if (dd !== day) return false;
+                return !payments.some(function(p) { return p.tenantId === t.id && (p.monthCovered === rm || p.forMonth === rm); });
+            });
+            if (rentDue.length) {
+                var h3 = '<div style="margin-bottom:14px;"><div style="font-size:0.72rem;font-weight:700;color:#38bdf8;letter-spacing:0.08em;margin-bottom:7px;">RENT DUE (' + rentDue.length + ')</div>';
+                rentDue.forEach(function(t) {
+                    h3 += prismMakeCalCard('56,189,248', '#38bdf8', 'prismCalNavTenant(' + t.id + ')',
+                        prismSafeString(t.name),
+                        P + prismSafeNumber(t.rent || t.monthlyRent).toLocaleString() + ' · tap to collect', '');
+                });
+                sections.push(h3 + '</div>');
+            }
+
+            // Credit Due
+            var creditsDue = credits.filter(function(c) {
+                if (!c || !c.id || !c.dateLent || c.status === 'closed') return false;
+                var lent = new Date(c.dateLent + 'T00:00:00');
+                if (isNaN(lent) || lent.getDate() !== day) return false;
+                var paid = creditPayments.filter(function(p) { return p.creditId === c.id; })
+                    .reduce(function(s, p) { return s + prismSafeNumber(p.amount); }, 0);
+                return paid < prismSafeNumber(c.principal);
+            });
+            if (creditsDue.length) {
+                var h4 = '<div style="margin-bottom:14px;"><div style="font-size:0.72rem;font-weight:700;color:#f97316;letter-spacing:0.08em;margin-bottom:7px;">CREDIT DUE (' + creditsDue.length + ')</div>';
+                creditsDue.forEach(function(c) {
+                    h4 += prismMakeCalCard('249,115,22', '#f97316', 'prismCalNavCredit(' + c.id + ')',
+                        prismSafeString(c.debtor || c.name || c.borrowerName || 'Debtor'),
+                        P + prismSafeNumber(c.principal).toLocaleString() + ' principal', '');
+                });
+                sections.push(h4 + '</div>');
+            }
+
+            // Payroll
+            var vEnd = new Date(year, month + 1, 0);
+            var payDue = employees.filter(function(e) {
+                if (!e || !e.payFrequency) return false;
+                if (e.payFrequency === 'daily') return true;
+                if (e.payFrequency === 'weekly') return dateObj.getDay() === 5;
+                if (e.payFrequency === 'semi-monthly') return day === 15 || day === vEnd.getDate();
+                return day === vEnd.getDate();
+            });
+            if (payDue.length) {
+                var h5 = '<div style="margin-bottom:14px;"><div style="font-size:0.72rem;font-weight:700;color:#06b6d4;letter-spacing:0.08em;margin-bottom:7px;">PAYROLL (' + payDue.length + ' staff)</div>';
+                payDue.forEach(function(e) {
+                    h5 += prismMakeCalCard('6,182,212', '#06b6d4', 'showSection("employees")',
+                        prismSafeString(e.name),
+                        P + prismSafeNumber(e.dailyRate).toLocaleString() + '/day · ' + (e.payFrequency || ''), '');
+                });
+                sections.push(h5 + '</div>');
+            }
+
+            // Water Sales
+            var dayW = waterSales.filter(function(ws) { return ws && ws.date === dateKey && !ws.voided; });
+            if (dayW.length) {
+                var wTot = dayW.reduce(function(s, ws) { return s + prismSafeNumber(ws.amountPaid || ws.total); }, 0);
+                sections.push('<div style="margin-bottom:14px;"><div style="font-size:0.72rem;font-weight:700;color:#8b5cf6;letter-spacing:0.08em;margin-bottom:7px;">WATER SALES (' + dayW.length + ')</div>'
+                    + prismMakeCalCard('139,92,246', '#8b5cf6', 'showSection("water")',
+                        dayW.length + ' sale' + (dayW.length > 1 ? 's' : '') + ' \u00b7 ' + P + wTot.toLocaleString(),
+                        'Tap to open Water Station', '') + '</div>');
+            }
+
+            body.innerHTML = sections.length
+                ? sections.join('')
+                : '<div style="text-align:center;color:#64748b;padding:24px 0;"><div style="font-size:2rem;">&#x1F4ED;</div><div style="font-size:0.88rem;margin-top:8px;">Nothing scheduled.</div></div>';
+
+        }).catch(function(e) {
+            body.innerHTML = '<div style="color:#f87171;padding:12px;">Error: ' + e.message + '</div>';
+        });
+    }
+
+    // Step 6: Navigation helpers — jump to source record
+    function prismCalNavTask(id) {
+        document.getElementById('cal-day-modal').style.display = 'none';
+        showSection('tasks');
+        setTimeout(function() {
+            var el = document.querySelector('[data-task-id="' + id + '"]');
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.style.outline = '2px solid #a78bfa';
+                setTimeout(function() { el.style.outline = ''; }, 2500);
+            }
+        }, 400);
+    }
+    function prismCalNavNote(id) {
+        document.getElementById('cal-day-modal').style.display = 'none';
+        showSection('notes');
+        setTimeout(function() { if (typeof viewNoteDetails === 'function') viewNoteDetails(id); }, 350);
+    }
+    function prismCalNavTenant(id) {
+        document.getElementById('cal-day-modal').style.display = 'none';
+        showSection('tenants');
+        setTimeout(function() { if (typeof showTenantDetail === 'function') showTenantDetail(id); }, 350);
+    }
+    function prismCalNavCredit(id) {
+        document.getElementById('cal-day-modal').style.display = 'none';
+        showSection('credits');
+        setTimeout(function() { if (typeof showCreditDetail === 'function') showCreditDetail(id); }, 350);
+    }
+    window.prismOpenCalendarDay = prismOpenCalendarDay;
+    window.prismCalNavTask      = prismCalNavTask;
+    window.prismCalNavNote      = prismCalNavNote;
+    window.prismCalNavTenant    = prismCalNavTenant;
+    window.prismCalNavCredit    = prismCalNavCredit;
+
+
 
         async function showDaySchedule(day, month, year) {
             const tenants = await dbGetAll('tenants');
@@ -27732,5 +28008,25 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         </script>
+
+<!-- ========== CALENDAR DAY DETAIL MODAL ========== -->
+<div id="cal-day-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:99999;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--bg-card,#1e293b);border:1px solid var(--border-color,#334155);border-radius:16px;width:100%;max-width:480px;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.6);">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;border-bottom:1px solid var(--border-color,#334155);">
+      <div>
+        <div id="cal-day-modal-title" style="font-size:1.05rem;font-weight:700;color:var(--text-primary,#f1f5f9);"></div>
+        <div id="cal-day-modal-sub" style="font-size:0.75rem;color:#64748b;margin-top:2px;"></div>
+      </div>
+      <button onclick="document.getElementById('cal-day-modal').style.display='none'" style="background:transparent;border:none;color:#64748b;font-size:1.3rem;cursor:pointer;padding:4px 8px;border-radius:6px;" onmouseenter="this.style.color='#f1f5f9'" onmouseleave="this.style.color='#64748b'">&#x2715;</button>
+    </div>
+    <div id="cal-day-modal-body" style="overflow-y:auto;padding:14px 16px;flex:1;"></div>
+    <div style="padding:12px 16px;border-top:1px solid var(--border-color,#334155);display:flex;justify-content:flex-end;">
+      <button onclick="document.getElementById('cal-day-modal').style.display='none'" style="padding:8px 20px;background:rgba(255,255,255,0.06);border:1px solid var(--border-color,#334155);border-radius:8px;color:#94a3b8;cursor:pointer;font-size:0.85rem;">Close</button>
+    </div>
+  </div>
+</div>
+<!-- ========== END CALENDAR DAY DETAIL MODAL ========== -->
+
+
 </body>
 </html>
