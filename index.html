@@ -17475,7 +17475,7 @@ async function showPayrollSummary() {
         payDays.forEach(function(pd) {
             var sd2 = getDay(pd);
             if (!sd2.payroll) sd2.payroll = [];
-            sd2.payroll.push({ type: 'payroll', label: employee.name || 'Staff', sub: (emp.payFrequency || '') + ' payroll' });
+            sd2.payroll.push({ type: 'payroll', label: emp.name || 'Staff', sub: (emp.payFrequency || '') + ' payroll' });
         });
     });
 
