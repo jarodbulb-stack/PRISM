@@ -16212,6 +16212,7 @@ async function showPayrollSummary() {
             document.getElementById('expense-detail-title').textContent = 'Edit Expense';
             showModal('expense-detail-modal');
         }
+    window.editExpense = editExpense;
 
         async function updateExpense(event, id) {
             event.preventDefault();
@@ -16258,6 +16259,77 @@ async function showPayrollSummary() {
             loadDashboard();
             debouncedSync();
         }
+    window.deleteExpense = deleteExpense;
+
+    // ── Helper: build an expense records list with Edit/Delete for modals ──
+    function prismBuildExpenseList(expenses, modalToClose) {
+        if (!expenses || expenses.length === 0) {
+            return '<div style="color:var(--text-secondary);text-align:center;padding:16px 0;font-size:0.85rem;">No expense records found.</div>';
+        }
+        var catEmoji = function(cat) {
+            var m = { electric:'⚡', water:'💧', repairs:'🔧', taxes:'📋', insurance:'🛡️',
+                      fuel:'⛽', transport:'🚌', supplies:'📦', labor:'👷', food:'🍔',
+                      communication:'📱', utilities:'🔌', personal_loan:'💳', savings:'🏦', other:'📝' };
+            return m[cat] || '📝';
+        };
+        var isAdmin = window.currentAppUser && ['owner','admin','manager'].includes(window.currentAppUser.role);
+        var sorted = expenses.slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+        var html = '<div style="margin-top:14px;border-top:1px solid var(--border-color);padding-top:12px;">'
+            + '<div style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">'
+            + 'Expense Records (' + sorted.length + ')</div>'
+            + '<div style="max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">';
+        sorted.forEach(function(e) {
+            html += '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;'
+                + 'background:var(--bg-primary,#0f172a);border:1px solid var(--border-color,#334155);'
+                + 'border-radius:9px;">'
+                + '<div style="flex:1;min-width:0;">'
+                + '<div style="font-size:0.85rem;font-weight:600;color:var(--text-primary,#f1f5f9);">'
+                + catEmoji(e.category) + ' ' + prismSafeString(e.description || e.category || 'Expense') + '</div>'
+                + '<div style="font-size:0.75rem;color:#64748b;margin-top:2px;">'
+                + (e.date||'') + (e.category ? ' &middot; ' + e.category : '') + '</div>'
+                + '</div>'
+                + '<div style="font-weight:700;color:#ef4444;font-size:0.9rem;flex-shrink:0;">'
+                + '\u20b1' + (e.amount||0).toLocaleString() + '</div>';
+            if (isAdmin) {
+                html += '<div style="display:flex;gap:5px;flex-shrink:0;">'
+                    + '<button onclick="prismExpenseQuickEdit(' + e.id + ',\'' + modalToClose + '\')" '
+                    + 'style="padding:4px 10px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);'
+                    + 'border-radius:6px;color:#818cf8;cursor:pointer;font-size:0.75rem;">Edit</button>'
+                    + '<button onclick="prismExpenseQuickDelete(' + e.id + ',\'' + modalToClose + '\')" '
+                    + 'style="padding:4px 10px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);'
+                    + 'border-radius:6px;color:#f87171;cursor:pointer;font-size:0.75rem;">Delete</button>'
+                    + '</div>';
+            }
+            html += '</div>';
+        });
+        html += '</div></div>';
+        return html;
+    }
+    window.prismBuildExpenseList = prismBuildExpenseList;
+
+    async function prismExpenseQuickEdit(id, modalToClose) {
+        if (modalToClose) hideModal(modalToClose);
+        await editExpense(id);
+    }
+    window.prismExpenseQuickEdit = prismExpenseQuickEdit;
+
+    async function prismExpenseQuickDelete(id, modalToClose) {
+        if (!await showConfirm('Delete this expense record permanently?', 'danger', 'Delete Expense', 'Yes, Delete')) return;
+        await dbDelete('expenses', id);
+        showToast('Expense deleted.', 'success');
+        debouncedSync();
+        // Refresh the modal with updated data
+        if (modalToClose === 'financial-details-modal') {
+            hideModal('financial-details-modal');
+            loadDashboard();
+        } else {
+            hideModal(modalToClose);
+        }
+        loadExpenses();
+    }
+    window.prismExpenseQuickDelete = prismExpenseQuickDelete;
+
+
 
         async function populateExpensePropertyDropdown() {
             const properties = await dbGetAll('properties');
@@ -16662,8 +16734,13 @@ async function showPayrollSummary() {
             const statVacant = document.getElementById('stat-vacant');
             
             if (statProperties) statProperties.textContent = properties.length;
-            if (statTenants) statTenants.textContent = tenants.length;
-            if (statDebtors) statDebtors.textContent = credits.length;
+            if (statTenants) statTenants.textContent = tenants.filter(function(t){return t.status==="active"||!t.status;}).length;
+            // Count only credits with remaining balance
+        const _activeDebtors = credits.filter(function(c) {
+            const _paid = creditPayments.filter(function(p){ return p.creditId===c.id; }).reduce(function(s,p){return s+(p.amount||0);},0);
+            return _paid < (c.principal||0) && c.status !== "closed";
+        });
+        if (statDebtors) statDebtors.textContent = _activeDebtors.length;
 
             // Calculate vacant properties - only count properties with NO active tenant
             const occupiedPropertyIds = new Set(tenants.filter(t => t.status === 'active' || !t.status).map(t => t.propertyId));
@@ -16768,7 +16845,7 @@ async function showPayrollSummary() {
             renderNotificationsBanner();
 
             // Monthly rent collection
-            const monthlyPayments = payments.filter(p => p.type === 'rent' && p.date.startsWith(currentMonth));
+            const monthlyPayments = payments.filter(p => (p.type === 'rent' || (p.tenantId && !p.type)) && p.date && p.date.startsWith(currentMonth));
             const collected = monthlyPayments.reduce((sum, p) => sum + p.amount, 0);
             const expectedRent = tenants.reduce((sum, t) => sum + t.rent, 0);
 
@@ -16786,7 +16863,7 @@ async function showPayrollSummary() {
 
             // Overall rent collection
             let overallRentExpected = 0;
-            let overallRentCollected = payments.filter(p => p.type === 'rent').reduce((sum, p) => sum + p.amount, 0);
+            let overallRentCollected = payments.filter(p => p.type === 'rent' || (p.tenantId && !p.type)).reduce((sum, p) => sum + p.amount, 0);
             
             tenants.forEach(tenant => {
                 const moveInDate = new Date(tenant.moveIn);
@@ -16855,7 +16932,12 @@ async function showPayrollSummary() {
             safeSetText('stat-other-income', '₱' + otherIncomeThisMonth.toLocaleString());
 
             // Total Income this month
-            const totalIncomeThisMonth = collected + creditRepaid + otherIncomeThisMonth;
+        // Water sales income this month
+        const waterIncomeThisMonth = waterSales
+            .filter(function(s){ return s.date && s.date.startsWith(currentMonth) && !s.voided; })
+            .reduce(function(sum, s){ return sum + (s.amountPaid || 0); }, 0);
+
+        const totalIncomeThisMonth = collected + creditRepaid + otherIncomeThisMonth + waterIncomeThisMonth;
             document.getElementById('stat-total-income').textContent = '₱' + totalIncomeThisMonth.toLocaleString();
 
             // Pending Charges
@@ -19145,7 +19227,15 @@ async function clearAllData() {
                 .filter(i => !['store_sales', 'store_profit', 'business_income'].includes(i.source))
                 .reduce((sum, i) => sum + i.amount, 0);
             
-            const totalIncome = rentCollected + creditRepaid + storeIncome + otherIncome;
+        // Water Station income
+        let waterStationIncome = 0;
+        try {
+            const _ws = await dbGetAll('waterSales');
+            waterStationIncome = _ws.filter(function(s){ return !s.voided; })
+                .reduce(function(sum, s){ return sum + (s.amountPaid || 0); }, 0);
+        } catch(e) {}
+
+        const totalIncome = rentCollected + creditRepaid + storeIncome + otherIncome + waterStationIncome;
 
             // MONEY OUT (True Expenses - excluding allocations)
             const creditsReleased = credits.reduce((sum, c) => sum + c.principal, 0);
@@ -20809,6 +20899,15 @@ Lender/Manager
             
             const waterCustomers = await dbGetAll('waterCustomers');
             const waterSales = await dbGetAll('waterSales');
+
+    // Compute real-time balance for each customer from sales records
+    waterCustomers.forEach(function(c) {
+        const custSales = waterSales.filter(function(s){ return s.customerId === c.id; });
+        c.balance = custSales
+            .filter(function(s){ return s.status === "credit" || s.status === "partial"; })
+            .reduce(function(sum, s){ return sum + (s.balance || 0); }, 0);
+        c.totalPurchases = custSales.reduce(function(sum, s){ return sum + (s.total || 0); }, 0);
+    });
             const today = new Date().toISOString().split('T')[0];
             
             let html = '';
@@ -22749,7 +22848,7 @@ function initReportsPage() {
                 categoryHtml += `<div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span>${catEmoji} ${cat.charAt(0).toUpperCase() + cat.slice(1)}:</span><strong>₱${amt.toLocaleString()} (${percent}%)</strong></div>`;
             });
             document.getElementById('financial-details-title').textContent = '💸 Expense Details';
-            document.getElementById('financial-details-content').innerHTML = `<div style="text-align: center; margin-bottom: 20px;"><div style="font-size: 2.5rem;">💸</div><h2 style="margin: 10px 0; color: var(--danger);">₱${totalExpenses.toLocaleString()}</h2><p style="color: var(--text-secondary);">Total Expenses</p></div><div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px;"><h4 style="margin-bottom: 10px;">Expense Breakdown:</h4>${categoryHtml || '<p style="color: var(--text-secondary);">No expenses recorded</p>'}</div>`;
+            document.getElementById('financial-details-content').innerHTML = `<div style="text-align: center; margin-bottom: 20px;"><div style="font-size: 2.5rem;">💸</div><h2 style="margin: 10px 0; color: var(--danger);">₱${totalExpenses.toLocaleString()}</h2><p style="color: var(--text-secondary);">Total Expenses</p></div><div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px;"><h4 style="margin-bottom: 10px;">Expense Breakdown:</h4>${categoryHtml || '<p style="color: var(--text-secondary);">No expenses recorded</p>'}</div>${prismBuildExpenseList(expenses, "financial-details-modal")}`;
             createExpenseChart(categories);
             showModal('financial-details-modal');
         }
@@ -23577,6 +23676,7 @@ function initReportsPage() {
                         }
                     </p>
                 </div>
+    ${prismBuildExpenseList(expenses, "financial-details-modal")}
             `;
             
             if (Object.keys(categories).length > 0) {
