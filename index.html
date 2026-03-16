@@ -82,9 +82,15 @@
         
         // Load Chart.js in parallel (independent)
         // Chart.js — try cdnjs first, fallback to jsdelivr
-        loadScript('https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js', function(err) {
-            if (err) loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js', null);
-        });
+        loadScript(
+            'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js',
+            null,
+            function() { console.log('[PRISM] Chart.js loaded'); },
+            function() {
+                console.warn('[PRISM] Chart.js CDN failed, trying fallback...');
+                loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js', null);
+            }
+        );
         
         // Expose load status for diagnostics
         window._firebaseLoadStatus = loaded;
@@ -16521,7 +16527,7 @@ async function showPayrollSummary() {
             const creditPayments = await dbGetAll('creditPayments');
             const expenses = await dbGetAll('expenses');
     const additionalIncome = await dbGetAll('additionalIncome') || [];
-    const waterSalesData    = await dbGetAll('waterSales') || [];
+    const waterSales    = await dbGetAll('waterSales') || [];
     const employees      = await dbGetAll('employees') || [];
     const salaryPayments = await dbGetAll('salaryPayments') || [];
 
@@ -16876,7 +16882,7 @@ async function showPayrollSummary() {
 
             // Render monthly trend chart with error handling
             try {
-                renderTrendChart(payments, creditPayments, expenses, credits, additionalIncome, waterSalesData);
+                renderTrendChart(payments, creditPayments, expenses, credits, additionalIncome, waterSales);
             } catch (error) {
                 console.error('Error rendering trend chart:', error);
             }
@@ -16933,7 +16939,13 @@ async function showPayrollSummary() {
         // Destroy previous chart instance
         if (_dashTrendChart) { try { _dashTrendChart.destroy(); } catch(e){} _dashTrendChart = null; }
 
-        if (!window.Chart) { console.warn('[Trend] Chart.js not loaded'); return; }
+        if (!window.Chart) {
+            console.warn('[Trend] Chart.js not ready, retrying in 1s...');
+            setTimeout(function() {
+                if (typeof loadDashboard === 'function') loadDashboard();
+            }, 1000);
+            return;
+        }
 
         _dashTrendChart = new window.Chart(canvas, {
             type: 'line',
