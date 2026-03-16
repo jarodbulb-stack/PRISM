@@ -7863,7 +7863,8 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 const store = transaction.objectStore(storeName);
 
                 const doPut = () => {
-                    if (data.length === 0) { resolve(); return; }
+                // NOTE: don't bail on empty — authoritative clear already happened
+                if (!data || data.length === 0) { resolve(); return; }
                     let pending = data.length;
                     data.forEach(item => {
                         const req = store.put(item);
@@ -18327,9 +18328,9 @@ async function showPayrollSummary() {
                 // Step 8: Keep wipe flag TRUE — do NOT restart listener
                 // The listener will restart naturally on next page load with fresh timestamp
                 // This prevents any race condition from onSnapshot restoring old data
-                console.log('[DeleteSample] Complete. Listener stays off until reload.');
-        showToast('✅ Sample data deleted! Reloading...', 'success', 2000);
-        setTimeout(() => window.location.reload(), 2200);
+                console.log('[DeleteSample] IndexedDB + Firebase wiped. Reloading now.');
+        showToast('✅ Sample data deleted! Reloading...', 'success', 1500);
+        setTimeout(() => window.location.reload(), 1800);
 
             } catch(e) {
                 window._prismWipeInProgress = false;
@@ -18480,15 +18481,9 @@ async function clearAllData() {
                 }
 
                             try{localStorage.removeItem('prism_endorsements');}catch(ez1){} try{const _bx=document.getElementById('admin-inbox-count');if(_bx){_bx.textContent='0';_bx.style.display='none';}}catch(ez2){} try{const _ap=document.getElementById('jarods-analysis-panel');const _at=document.getElementById('jarods-analysis-text');if(_ap)_ap.style.display='none';if(_at)_at.innerHTML='';window._trendData=null;}catch(ez3){}
-            showToast('\u2705 All done.', 'success');
-                // Wait 3s for Firebase to fully propagate before refreshing UI
-                await new Promise(r => setTimeout(r, 3000));
-                await prismFullRefresh();
-                // ── Do NOT restart listener — keep wipe flag TRUE until next page load ──
-                // This prevents onSnapshot from restoring old data in the propagation window
-                console.log('[ClearAll] Complete. Listener stays off until reload.');
-        showToast('✅ All data cleared! Reloading...', 'success', 2000);
-        setTimeout(() => window.location.reload(), 2200);
+        console.log('[ClearAll] IndexedDB + Firebase wiped. Reloading now.');
+        showToast('✅ All data cleared! Reloading...', 'success', 1500);
+        setTimeout(() => window.location.reload(), 1800);
 
             } catch (error) {
                 window._prismWipeInProgress = false;
