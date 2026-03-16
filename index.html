@@ -12829,19 +12829,30 @@ async function loadWaterCustomers() {
                 return;
             }
 
-            // Admin/Manager: full list, name + position only (no salary shown)
-            container.innerHTML = employees.map(e => `
-                <div class="list-item" onclick="viewEmployeeDetails(${e.id})" style="cursor: pointer;">
-                    <div class="list-item-content">
-                        <div class="list-item-title">👷 ${e.name}</div>
-                        <div class="list-item-subtitle">${e.position || 'Staff'}</div>
-                    </div>
-                    <div style="text-align: right;">
-                        ${e.unpaidDays > 0 ? `<div class="badge badge-primary" style="margin-bottom: 4px;">${e.unpaidDays} unpaid days</div>` : ''}
-                        ${e.unpaidAdvances > 0 ? `<div class="badge badge-warning">Advance pending</div>` : ''}
-                    </div>
-                </div>
-            `).join('');
+    // Admin/Manager: clickable profile cards with rich info
+    container.innerHTML = employees.map(function(e) {
+        var initials = (e.name||'?').split(' ').map(function(w){return w[0];}).join('').substring(0,2).toUpperCase();
+        var statusColor = e.status === 'inactive' ? '#64748b' : '#10b981';
+        var payBadge = e.payFrequency ? '<span style="font-size:0.68rem;color:#818cf8;background:rgba(99,102,241,0.12);padding:2px 7px;border-radius:10px;">'+e.payFrequency+'</span>' : '';
+        var unpaidBadge = (e.unpaidDays > 0) ? '<span style="font-size:0.68rem;background:rgba(59,130,246,0.15);color:#60a5fa;padding:2px 7px;border-radius:10px;">'+e.unpaidDays+' unpaid days</span>' : '';
+        var advanceBadge = (e.unpaidAdvances > 0) ? '<span style="font-size:0.68rem;background:rgba(245,158,11,0.15);color:#fbbf24;padding:2px 7px;border-radius:10px;">Advance pending</span>' : '';
+        var rateTxt = e.dailyRate ? '\u20b1'+parseFloat(e.dailyRate).toLocaleString()+'/day' : '';
+        return '<div onclick="viewEmployeeDetails('+e.id+')"'
+            + ' style="display:flex;align-items:center;gap:14px;padding:14px 16px;'
+            + 'background:var(--bg-card,#1e293b);border:1px solid var(--border-color,#334155);'
+            + 'border-radius:12px;margin-bottom:10px;cursor:pointer;transition:border-color 0.18s;'
+            + 'border-left:3px solid '+statusColor+';"'
+            + ' onmouseenter="this.style.background=\'rgba(99,102,241,0.06)\';this.style.borderTopColor=\'#6366f1\';this.style.borderRightColor=\'#6366f1\';this.style.borderBottomColor=\'#6366f1\'"'
+            + ' onmouseleave="this.style.background=\'var(--bg-card)\';this.style.borderTopColor=\'var(--border-color)\';this.style.borderRightColor=\'var(--border-color)\';this.style.borderBottomColor=\'var(--border-color)\'">'
+            + '<div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:0.95rem;flex-shrink:0;">'+initials+'</div>'
+            + '<div style="flex:1;min-width:0;">'
+            + '<div style="font-weight:700;font-size:0.95rem;color:var(--text-primary,#f1f5f9);margin-bottom:3px;">'+e.name+'</div>'
+            + '<div style="font-size:0.78rem;color:#64748b;margin-bottom:5px;">'+(e.position||'Staff')+(rateTxt?' &middot; '+rateTxt:'')+'</div>'
+            + '<div style="display:flex;flex-wrap:wrap;gap:4px;">'+payBadge+unpaidBadge+advanceBadge+'</div>'
+            + '</div>'
+            + '<div style="color:#475569;font-size:1.1rem;flex-shrink:0;">&#x203A;</div>'
+            + '</div>';
+    }).join('');
         }
 
         function calculateOTRate() {
@@ -13081,6 +13092,7 @@ async function loadWaterCustomers() {
             
             showModal('employee-detail-modal');
         }
+    window.viewEmployeeDetails = viewEmployeeDetails;
 
         // Show Time Record Modal
         function showTimeRecordModal(employeeId, employeeName) {
@@ -13097,6 +13109,7 @@ async function loadWaterCustomers() {
             hideModal('employee-detail-modal');
             showModal('time-record-modal');
         }
+    window.showTimeRecordModal = showTimeRecordModal;
 
         function toggleTimeRecordFields() {
             const status = document.getElementById('timerecord-status').value;
@@ -13588,6 +13601,7 @@ async function showPayrollSummary() {
             // Show the salary modal
             showGiveSalaryModal(employeeId);
         }
+    window.showPayrollProcess = showPayrollProcess;
 
         async function showGiveSalaryModal(employeeId) {
             const employee = await dbGet('employees', employeeId);
@@ -13758,6 +13772,7 @@ async function showPayrollSummary() {
             hideModal('employee-detail-modal');
             showModal('advance-modal');
         }
+    window.showCashAdvanceModal = showCashAdvanceModal;
 
         async function saveCashAdvance(event) {
             event.preventDefault();
@@ -14016,6 +14031,7 @@ async function showPayrollSummary() {
             hideModal('employee-detail-modal');
             showModal('employee-modal');
         }
+    window.editEmployee = editEmployee;
 
         async function deleteEmployee(id) {
             // Only admin can delete employees
@@ -14047,6 +14063,7 @@ async function showPayrollSummary() {
             debouncedSync();
             showToast('Employee deleted successfully!', 'success');
         }
+    window.deleteEmployee = deleteEmployee;
 
         // =====================
         // CREDIT FUNCTIONS
@@ -14272,12 +14289,15 @@ async function showPayrollSummary() {
         function showBonusModal(empId, empName) {
             _showPayrollAdjustModal(empId, empName, 'bonus');
         }
+    window.showBonusModal = showBonusModal;
         function showOvertimeModal(empId, empName) {
             _showPayrollAdjustModal(empId, empName, 'overtime');
         }
+    window.showOvertimeModal = showOvertimeModal;
         function showIncentiveModal(empId, empName) {
             _showPayrollAdjustModal(empId, empName, 'incentive');
         }
+    window.showIncentiveModal = showIncentiveModal;
 
         function _showPayrollAdjustModal(empId, empName, type) {
             const labels = {
@@ -14400,6 +14420,7 @@ async function showPayrollSummary() {
                 else showToast('📋 Go to Staff section → find employee → Give Salary', 'info');
             }, 400);
         }
+    window.showPayrollForEmployee = showPayrollForEmployee;
 
         async function showWaterCustomerSalesHistory(customerId) {
             const sales = (await dbGetAll('waterSales')).filter(s => s.customerId === customerId && !s.voided);
