@@ -12,9 +12,9 @@
     <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
     <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
     <!-- Preload Firebase scripts to start download ASAP -->
-    <link rel="preload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js" as="script" crossorigin>
-    <link rel="preload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js" as="script" crossorigin>
-    <link rel="preload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js" as="script" crossorigin>
+    <link rel="preload" href="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js" as="script" crossorigin>
+    <link rel="preload" href="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js" as="script" crossorigin>
+    <link rel="preload" href="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js" as="script" crossorigin>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -48,7 +48,7 @@
     <script>
     // OPTIMIZED Firebase loading - preload all 3 scripts in parallel, then init in order
     (function() {
-        var FIREBASE_VER = '10.7.1';
+        var FIREBASE_VER = '10.14.1';
         var BASE = 'https://www.gstatic.com/firebasejs/' + FIREBASE_VER + '/';
         
         // Track loading state
@@ -73,11 +73,20 @@
             return s;
         }
         
-        // Step 1: Load firebase-app first (required base)
-        loadScript(BASE + 'firebase-app-compat.js', 'app', function() {
-            // Step 2: Load auth + firestore IN PARALLEL once app is ready
-            loadScript(BASE + 'firebase-auth-compat.js', 'auth');
-            loadScript(BASE + 'firebase-firestore-compat.js', 'firestore');
+        // Step 1: Load firebase-app-compat (primary: gstatic, fallback: jsdelivr)
+        var FB_FALLBACK = 'https://cdn.jsdelivr.net/npm/firebase@' + FIREBASE_VER + '/compat/';
+        var _fbFallback = false;
+        function _loadFBWithFallback(pkg, key, cb) {
+            loadScript(BASE + 'firebase-' + pkg + '-compat.js', key, cb, function() {
+                if (!_fbFallback) {
+                    console.warn('[PRISM] gstatic CDN failed for ' + pkg + ', trying jsdelivr...');
+                }
+                loadScript(FB_FALLBACK + pkg + '.js', key, cb);
+            });
+        }
+        _loadFBWithFallback('app', 'app', function() {
+            _loadFBWithFallback('auth', 'auth');
+            _loadFBWithFallback('firestore', 'firestore');
         });
         
         // Load Chart.js in parallel (independent)
@@ -3174,17 +3183,17 @@
 
                 <div class="prism-field">
                     <label>Email</label>
-                    <input type="email" id="mt-login-email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')document.getElementById('mt-login-password').focus()"/>
+                    <input type="email" id="prism-legacy-email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')document.getElementById('prism-legacy-password').focus()"/>
                 </div>
                 <div class="prism-field">
                     <label>Password</label>
                     <div style="position:relative;">
-                        <input type="password" id="mt-login-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')prismLoginSubmit()"/>
+                        <input type="password" id="prism-legacy-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')prismLoginSubmit()"/>
                         <button class="prism-eye-btn" onclick="mtTogglePass('mt-login-password',this)" tabindex="-1">👁</button>
                     </div>
                 </div>
 
-                <button class="prism-signin-btn" id="mt-login-btn" onclick="prismLoginSubmit()">Sign In</button>
+                <button class="prism-signin-btn" id="prism-legacy-btn" onclick="prismLoginSubmit()">Sign In</button>
 
                 <p style="text-align:center;margin:8px 0 4px;">
                     <span onclick="prismForgotPassword()" style="color:#818cf8;font-size:0.8rem;cursor:pointer;text-decoration:underline;text-underline-offset:3px;">Forgot password?</span>
@@ -7072,7 +7081,6 @@
         let toastContainer = null;
         let toastCounter = 0;
 
-        fu
 
         function showInputModal(title, message, placeholder, defaultVal) {
             return new Promise(resolve => {
@@ -7097,7 +7105,7 @@
             });
         }
         window.showInputModal = showInputModal;
-nction showToast(message, type = 'info', duration = 3000) {
+        function showToast(message, type = 'info', duration = 3000) {
             // Create container if doesn't exist
             if (!toastContainer) {
                 toastContainer = document.createElement('div');
@@ -8407,7 +8415,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             async storeBackup(backupData) {
                 try {
                     // Get existing backups
-                    const existingBackups = JSON.parse(localStorage.getItem('carent_autobackups') || '[]');
+                    const existingBackups = JSON.parse(localStorage.getItem('prism_autobackups') || '[]');
                     
                     // Add new backup
                     existingBackups.unshift(backupData);
@@ -8418,13 +8426,13 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     }
                     
                     // Store
-                    localStorage.setItem('carent_autobackups', JSON.stringify(existingBackups));
+                    localStorage.setItem('prism_autobackups', JSON.stringify(existingBackups));
                     this.log('INFO', `Stored backup. Total backups: ${existingBackups.length}`);
                 } catch (error) {
                     // localStorage might be full, try to clear old data
                     this.log('WARN', 'localStorage full, clearing old backups', error);
                     try {
-                        localStorage.setItem('carent_autobackups', JSON.stringify([backupData]));
+                        localStorage.setItem('prism_autobackups', JSON.stringify([backupData]));
                     } catch (e) {
                         this.log('ERROR', 'Cannot store backup', e);
                     }
@@ -8433,7 +8441,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
 
             getAutoBackups() {
                 try {
-                    return JSON.parse(localStorage.getItem('carent_autobackups') || '[]');
+                    return JSON.parse(localStorage.getItem('prism_autobackups') || '[]');
                 } catch (error) {
                     this.log('ERROR', 'Failed to read backups', error);
                     return [];
@@ -9042,8 +9050,8 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             const _perms = currentAppUser && currentAppUser.permissions;
             const _blockedSections = {
                 'properties': _perms && !_perms['access-properties'],
-                'expenses':   _perms && !_perms['view-expenses'],
-                'income':     _perms && !_perms['view-income'],
+                'expenses':   _perms && !_perms['view-expenses'] && currentAppUser?.role !== 'cashier',
+                'income':     _perms && !_perms['view-income'] && currentAppUser?.role !== 'cashier',
                 'employees':  _perms && !_perms['access-hr'],
                 'reports':    _perms && !_perms['view-reports'],
                 'settings':   _perms && !_perms['access-settings'],
@@ -12562,8 +12570,7 @@ async function loadWaterCustomers() {
 
         // Show water payment modal
         async function showWaterPaymentModal(customerId, customerName, balance) {
-            const amount = await showInputModal('Record Payment', 'Customer: ' + customerName + '
-Balance: ' + balance.toLocaleString(), 'Enter payment amount', '');
+            const amount = await showInputModal('Record Payment', 'Customer: ' + customerName + '\nBalance: ' + balance.toLocaleString(), 'Enter payment amount', '');
             if (!amount) return;
             
             const paymentAmount = parseFloat(amount.replace(/,/g, '')) || 0;
@@ -12773,7 +12780,7 @@ Balance: ' + balance.toLocaleString(), 'Enter payment amount', '');
             }
         }
 
-        async async function deleteAdvance(advanceId) {
+        async function deleteAdvance(advanceId) {
             const advance = await dbGet('cashAdvances', advanceId);
             if (!advance) return showToast('Advance not found.','error');
             if (!confirm('Delete cash advance? This cannot be undone.')) return;
@@ -12786,7 +12793,7 @@ Balance: ' + balance.toLocaleString(), 'Enter payment amount', '');
         }
         window.deleteAdvance = deleteAdvance;
 
-        function saveEmployee(event) {
+        async function saveEmployee(event) {
             event.preventDefault();
             
             const editId = document.getElementById('employee-edit-id').value;
@@ -13252,8 +13259,7 @@ async function showQuickAttendance() {
 
         // Void request system - cashier submits, admin approves
         async function requestVoidAttendance(recordId, employeeName, date) {
-            const reason = await showInputModal('Void Attendance', 'Employee: ' + employeeName + '
-Date: ' + date, 'Enter reason...');
+            const reason = await showInputModal('🗑️ Void Attendance Request', `Employee: ${employeeName}\nDate: ${date}`, 'Enter reason...');
             if (!reason) return;
 
             const voidRequests = JSON.parse(localStorage.getItem('prism_void_requests') || '[]');
@@ -18459,7 +18465,8 @@ async function clearAllData() {
                     try { showToast('\u2601\ufe0f Cloud data cleared', 'success'); } catch(e) {}
                 }
 
-                showToast('\u2705 All done.', 'success');
+                            try{localStorage.removeItem('prism_endorsements');}catch(ez1){} try{const _bx=document.getElementById('admin-inbox-count');if(_bx){_bx.textContent='0';_bx.style.display='none';}}catch(ez2){} try{const _ap=document.getElementById('jarods-analysis-panel');const _at=document.getElementById('jarods-analysis-text');if(_ap)_ap.style.display='none';if(_at)_at.innerHTML='';window._trendData=null;}catch(ez3){}
+            showToast('\u2705 All done.', 'success');
                 // Wait 3s for Firebase to fully propagate before refreshing UI
                 await new Promise(r => setTimeout(r, 3000));
                 await prismFullRefresh();
@@ -20623,7 +20630,7 @@ Lender/Manager
                         permissions: {
                             'add-property': true, 'edit-property': true, 'delete-property': true,
                             'add-tenant': true, 'edit-tenant': true, 'delete-tenant': true,
-                            'record-payment': true, 'water-sales': true, 'void-sale': true,
+                            'record-payment': true, 'water-sales': true, 'add-expense': true, 'add-income': true, 'void-sale': true,
                             'manage-staff': true, 'manage-users': true, 'view-reports': true,
                             'backup-restore': true
                         }
@@ -20721,8 +20728,8 @@ Lender/Manager
 
             const restrictedSections = {
                 'properties': !perms['access-properties'],
-                'expenses':   !perms['view-expenses'],
-                'income':     !perms['view-income'],
+                'expenses':   !perms['view-expenses'] && currentAppUser?.role !== 'cashier',
+                'income':     !perms['view-income'] && currentAppUser?.role !== 'cashier',
                 'employees':  !perms['access-hr'],
                 'reports':    !perms['view-reports'],
                 'settings':   !perms['access-settings'],
@@ -21165,7 +21172,7 @@ Lender/Manager
             const data = JSON.parse(document.getElementById('admin-passcode-data').value || '{}');
             
             // Check passcode (default or custom)
-            const storedPasscode = localStorage.getItem('carent_admin_passcode') || APP_ADMIN_PASSCODE;
+            const storedPasscode = localStorage.getItem('prism_admin_passcode') || APP_ADMIN_PASSCODE;
             
             if (enteredPasscode !== storedPasscode) {
                 showToast('⚠️ Please enter a reason for voiding this sale.', 'warning');
@@ -21257,7 +21264,7 @@ Lender/Manager
             const newPc   = document.getElementById('pc-new')?.value.trim();
             const confirm = document.getElementById('pc-confirm')?.value.trim();
             const errEl   = document.getElementById('passcode-error');
-            const stored  = localStorage.getItem('carent_admin_passcode') || '123456';
+            const stored  = localStorage.getItem('prism_admin_passcode') || '123456';
 
             const showErr = msg => { errEl.textContent = msg; errEl.style.display = 'block'; };
             errEl.style.display = 'none';
@@ -21268,7 +21275,7 @@ Lender/Manager
                 return showErr('❌ New passcode must be 4–6 digits (numbers only).');
             if (newPc !== confirm) return showErr('❌ Passcodes do not match.');
 
-            localStorage.setItem('carent_admin_passcode', newPc);
+            localStorage.setItem('prism_admin_passcode', newPc);
             document.getElementById('change-passcode-modal').remove();
             showToast('✅ Admin passcode updated successfully!', 'success');
         }
@@ -23692,7 +23699,8 @@ async function editTask(id) {
                 ];
                 
                 for (const exp of expenses) {
-                    await dbAdd('expenses', exp);
+                    exp.isSample=true;
+            await dbAdd('expenses', exp);
                 }
                 
                 console.log('✅ Expenses added');
@@ -23792,6 +23800,7 @@ async function editTask(id) {
                 ];
                 
                 for (const task of tasks) {
+                task.isSample = true;
                     await dbAdd('tasks', task);
                 }
                 
@@ -26491,8 +26500,8 @@ async function mtInit() {
                                 'manage-users':     _canAdmin,
                                 'view-reports':     _canAdmin,
                                 'backup-restore':   _canAdmin,
-                                'view-expenses':    _canAdmin,
-                                'view-income':      _canAdmin,
+                                'view-expenses':    _canAdmin || _isCashier,
+                                'view-income':      _canAdmin || _isCashier,
                                 'view-profiles':    _canAdmin,
                                 'delete-records':   _canAdmin,
                                 'access-settings':  _canAdmin,
@@ -26939,6 +26948,60 @@ window.mtSAToggleOrgStatus=mtSAToggleOrgStatus;
 
         
         // ── SA: SEND PASSWORD RESET EMAIL ──
+
+        // ── SA: EDIT USER EMAIL ──
+        async function mtSAEditUserEmail(docId, currentEmail) {
+            const newEmail = await showInputModal(
+                '✉️ Edit User Email',
+                `Current email: ${currentEmail}\n\nEnter the new email address:`,
+                'new@email.com', currentEmail
+            );
+            if (!newEmail || newEmail === currentEmail) return;
+            if (!newEmail.includes('@')) { showToast('❌ Invalid email address.', 'error'); return; }
+            try {
+                // Check duplicate
+                const snap = await window.db.collection(PRISM_SECURITY.COLLECTION).where('email','==',newEmail).get();
+                if (!snap.empty) { showToast('❌ That email already exists in the system.', 'error'); return; }
+                showToast('⏳ Updating email...', 'info');
+                await window.db.collection(PRISM_SECURITY.COLLECTION).doc(docId).update({ email: newEmail });
+                showToast('✅ Email updated to ' + newEmail, 'success');
+                mtSALoadAllowlist();
+            } catch(e) {
+                showToast('❌ Failed: ' + (e.message || e), 'error');
+            }
+        }
+        window.mtSAEditUserEmail = mtSAEditUserEmail;
+
+        // ── SA: RESEND INVITE / SEND WELCOME EMAIL ──
+        async function mtSAResendInvite(email, role) {
+            const appUrl = 'https://jarodbulb-stack.github.io/PRISM/';
+            showToast('⏳ Sending invite email...', 'info');
+            let emailSent = false;
+            if (window.auth) {
+                try {
+                    await window.auth.sendPasswordResetEmail(email);
+                    emailSent = true;
+                } catch(e) {
+                    // auth/user-not-found means they haven't created an account yet
+                    emailSent = false;
+                }
+            }
+            if (emailSent) {
+                showToast('📧 Invite/reset email sent to ' + email + ' — ask them to check inbox!', 'success');
+            } else {
+                // No Firebase account yet — show manual invite message
+                const msg = `Hi! You have been invited to PRISM (Property Management App).\n\nApp Link: ${appUrl}\nYour Email: ${email}\nRole: ${role||'staff'}\n\nSteps:\n1. Open the app link above\n2. Click "Create Staff Account" on the login screen\n3. Register with your email: ${email}\n4. Wait for admin approval if needed`;
+                await showInputModal(
+                    '📨 Manual Invite Required',
+                    `⚠️ ${email} doesn\'t have a Firebase account yet.\n\nCopy the message below and send it to them manually (SMS/Messenger/email):`,
+                    '', msg
+                );
+                showToast('ℹ️ Copy the invite message and send it to them manually.', 'info');
+            }
+        }
+        window.mtSAResendInvite = mtSAResendInvite;
+
+
         async function mtSASendPasswordReset(email) {
             if (!email) return;
             const ok = await showConfirm(
@@ -26952,7 +27015,7 @@ window.mtSAToggleOrgStatus=mtSAToggleOrgStatus;
                 await authInst.sendPasswordResetEmail(email);
                 showToast('✅ Password reset email sent to ' + email + ' — ask them to check their inbox!', 'success');
             } catch(e) {
-                showToast('❌ Failed: ' + (e.message || e), 'error');
+                const msg = e.code === 'auth/user-not-found' ? '❌ No Firebase account found for ' + email + '. They must register first via the app login screen.' : '❌ Failed: ' + (e.message || e); showToast(msg, 'error');
             }
         }
         window.mtSASendPasswordReset = mtSASendPasswordReset;
@@ -27125,6 +27188,8 @@ window.mtSAToggleOrgStatus=mtSAToggleOrgStatus;
                                 <td style="padding:8px 10px;"><div style="display:flex;gap:5px;flex-wrap:wrap;">
                                     ${u.status!=='approved'?`<button onclick="mtSAApproveUserDirect('${u.id}')" style="padding:4px 10px;background:rgba(16,185,129,0.1);border:1px solid #10b981;color:#34d399;border-radius:5px;cursor:pointer;font-size:0.73rem;">Approve</button>`:''}
                                     ${u.status!=='suspended'?`<button onclick="mtSASuspendUser('${u.id}')" style="padding:4px 10px;background:rgba(239,68,68,0.08);border:1px solid #ef4444;color:#f87171;border-radius:5px;cursor:pointer;font-size:0.73rem;">Suspend</button>`:`<button onclick="mtSAUnsuspendUser('${u.id}')" style="padding:4px 10px;background:rgba(99,102,241,0.1);border:1px solid #6366f1;color:#818cf8;border-radius:5px;cursor:pointer;font-size:0.73rem;">Unsuspend</button>`}
+                                    <button onclick="mtSAEditUserEmail('${u.id}','${u.email}')" style="padding:4px 10px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:6px;font-size:0.72rem;cursor:pointer;">✉️ Email</button>
+                                    <button onclick="mtSAResendInvite('${u.email}','${u.role}')" style="padding:4px 10px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);color:#34d399;border-radius:6px;font-size:0.72rem;cursor:pointer;">📨 Invite</button>
                                     <button onclick="mtSASendPasswordReset('${u.email}')" style="padding:4px 10px;background:rgba(251,191,36,0.08);border:1px solid #f59e0b;color:#fbbf24;border-radius:5px;cursor:pointer;font-size:0.73rem;">🔑 Reset PW</button>
                                     <button onclick="mtSADeleteUserAccount('${u.id}','${u.email}')" style="padding:4px 10px;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.4);color:#f87171;border-radius:5px;cursor:pointer;font-size:0.73rem;">🗑 Delete</button>
                                 </div></td>
