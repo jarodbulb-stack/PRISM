@@ -3180,17 +3180,17 @@
 
                 <div class="prism-field">
                     <label>Email</label>
-                    <input type="email" id="mt-login-email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')document.getElementById('mt-login-password').focus()"/>
+                    <input type="email" id="prism-email-old" placeholder="your@email.com" onkeydown="if(event.key==='Enter')document.getElementById('mt-login-password').focus()"/>
                 </div>
                 <div class="prism-field">
                     <label>Password</label>
                     <div style="position:relative;">
-                        <input type="password" id="mt-login-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')prismLoginSubmit()"/>
-                        <button class="prism-eye-btn" onclick="mtTogglePass('mt-login-password',this)" tabindex="-1">👁</button>
+                        <input type="password" id="prism-password-old" placeholder="••••••••" onkeydown="if(event.key==='Enter')prismLoginSubmit()"/>
+                        <button class="prism-eye-btn" onclick="mtTogglePass('prism-password-old',this)" tabindex="-1">👁</button>
                     </div>
                 </div>
 
-                <button class="prism-signin-btn" id="mt-login-btn" onclick="prismLoginSubmit()">Sign In</button>
+                <button class="prism-signin-btn" id="prism-btn-old" onclick="prismLoginSubmit()">Sign In</button>
 
                 <p style="text-align:center;margin:8px 0 4px;">
                     <span onclick="prismForgotPassword()" style="color:#818cf8;font-size:0.8rem;cursor:pointer;text-decoration:underline;text-underline-offset:3px;">Forgot password?</span>
@@ -12639,8 +12639,8 @@ async function loadWaterCustomers() {
         }
 
         // Show water payment modal
-        function showWaterPaymentModal(customerId, customerName, balance) {
-            const amount = prompt(`💵 Record Payment for ${customerName}\n\nOutstanding Balance: ₱${balance.toLocaleString()}\n\nEnter payment amount:`);
+        async function showWaterPaymentModal(customerId, customerName, balance) {
+            const amount = await showInputModal('Record Payment', `💵 Record Payment for ${customerName}\n\nOutstanding Balance: ₱${balance.toLocaleString()}\n\nEnter payment amount:`);
             if (!amount) return;
             
             const paymentAmount = parseFloat(amount.replace(/,/g, '')) || 0;
@@ -13331,7 +13331,7 @@ async function showQuickAttendance() {
 
         // Void request system - cashier submits, admin approves
         async function requestVoidAttendance(recordId, employeeName, date) {
-            const reason = prompt(`Request to void attendance for ${employeeName} on ${date}.
+            const reason = await showInputModal('Enter Reason', `Request to void attendance for ${employeeName} on ${date}.
 
 Enter reason for void request:`);
             if (!reason) return;
@@ -13353,7 +13353,7 @@ Enter reason for void request:`);
         }
 
         async function requestVoidAdvance(advanceId, employeeName, amount) {
-            const reason = prompt(`Request to void cash advance of ₱${amount.toLocaleString()} for ${employeeName}.
+            const reason = await showInputModal('Enter Reason', `Request to void cash advance of ₱${amount.toLocaleString()} for ${employeeName}.
 
 Enter reason:`);
             if (!reason) return;
@@ -15859,7 +15859,7 @@ async function showPayrollSummary() {
 
         // Add notes to client
         async function addClientNote(type, id) {
-            const note = prompt('Enter note for this client:');
+            const note = await showInputModal('Client Note', 'Enter a note for this client:', 'Note...', '');
             if (!note || !note.trim()) return;
 
             const client = type === 'tenant' ? await dbGet('tenants', id) : await dbGet('credits', id);
@@ -18260,7 +18260,7 @@ async function showPayrollSummary() {
 
         // ── EARLY-OUT REQUEST ──
         async function prismRequestEarlyOut() {
-            const reason = window.prompt('Enter reason for early out (e.g. medical, family emergency, etc.):');
+            const reason = await showInputModal('Early Out Reason', 'Why is this employee leaving early?', 'e.g. medical, family emergency...', '');
             if (!reason || !reason.trim()) return;
 
             try {
@@ -18316,7 +18316,7 @@ async function showPayrollSummary() {
 
         // ── VOID REQUEST ──
         async function prismRequestVoid(type, recordId, details) {
-            const reason = window.prompt('Reason for void request:');
+            const reason = await showInputModal('Void Request', 'Enter reason for void request:', 'Reason...', '');
             if (!reason || !reason.trim()) return;
 
             try {
@@ -25101,7 +25101,7 @@ async function _mtWaitForAuth(maxMs = 20000) {
         async function prismForgotPassword() {
             const emailEl = document.getElementById('mt-login-email');
             const email = emailEl ? emailEl.value.trim() : '';
-            const useEmail = email || window.prompt('Enter your email address to receive a password reset link:');
+            const useEmail = email || await showInputModal('Password Reset', 'Enter your email address:', 'your@email.com', '');
             if (!useEmail) return;
             try {
                 const authInst = window.auth || (firebase && firebase.auth && firebase.auth());
