@@ -12836,7 +12836,7 @@ async function loadWaterCustomers() {
         var payBadge = e.payFrequency ? '<span style="font-size:0.68rem;color:#818cf8;background:rgba(99,102,241,0.12);padding:2px 7px;border-radius:10px;">'+e.payFrequency+'</span>' : '';
         var unpaidBadge = (e.unpaidDays > 0) ? '<span style="font-size:0.68rem;background:rgba(59,130,246,0.15);color:#60a5fa;padding:2px 7px;border-radius:10px;">'+e.unpaidDays+' unpaid days</span>' : '';
         var advanceBadge = (e.unpaidAdvances > 0) ? '<span style="font-size:0.68rem;background:rgba(245,158,11,0.15);color:#fbbf24;padding:2px 7px;border-radius:10px;">Advance pending</span>' : '';
-        var rateTxt = e.dailyRate ? '\u20b1'+parseFloat(e.dailyRate).toLocaleString()+'/day' : '';
+        var rateTxt = ''; // salary hidden on list card
         return '<div onclick="viewEmployeeDetails('+e.id+')"'
             + ' style="display:flex;align-items:center;gap:14px;padding:14px 16px;'
             + 'background:var(--bg-card,#1e293b);border:1px solid var(--border-color,#334155);'
@@ -12847,7 +12847,7 @@ async function loadWaterCustomers() {
             + '<div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:0.95rem;flex-shrink:0;">'+initials+'</div>'
             + '<div style="flex:1;min-width:0;">'
             + '<div style="font-weight:700;font-size:0.95rem;color:var(--text-primary,#f1f5f9);margin-bottom:3px;">'+e.name+'</div>'
-            + '<div style="font-size:0.78rem;color:#64748b;margin-bottom:5px;">'+(e.position||'Staff')+(rateTxt?' &middot; '+rateTxt:'')+'</div>'
+            + '<div style="font-size:0.78rem;color:#64748b;margin-bottom:5px;">'+(e.position||'Staff')+'</div>'
             + '<div style="display:flex;flex-wrap:wrap;gap:4px;">'+payBadge+unpaidBadge+advanceBadge+'</div>'
             + '</div>'
             + '<div style="color:#475569;font-size:1.1rem;flex-shrink:0;">&#x203A;</div>'
@@ -12996,7 +12996,7 @@ async function loadWaterCustomers() {
                     <hr style="border-color: rgba(255,255,255,0.3); margin: 10px 0;">
                     <div style="display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: bold;">
                         <span>Est. Net Pay:</span>
-                        <span>₱${Math.max(0, estimatedGross).toLocaleString()}</span>
+                        <span>${_isAdminRole ? "₱"+Math.max(0, estimatedGross).toLocaleString() : "—"}</span>
                     </div>
                 </div>
                 ` : `
@@ -13037,12 +13037,11 @@ async function loadWaterCustomers() {
                 });
             }
             
+            if (_isAdminRole) {
             content += `
-                </div>
-                <h4 style="margin-bottom: 10px;">💰 Salary History</h4>
+                <h4 style="margin-bottom: 10px;">Salary History</h4>
                 <div style="max-height: 120px; overflow-y: auto; margin-bottom: 15px;">
             `;
-            
             if (empSalaries.length === 0) {
                 content += '<p style="color: var(--text-secondary); font-size: 0.9rem;">No salary payments yet.</p>';
             } else {
@@ -13051,14 +13050,15 @@ async function loadWaterCustomers() {
                         <div class="list-item" style="padding: 8px;">
                             <div class="list-item-content">
                                 <div class="list-item-title" style="font-size: 0.9rem;">💰 ${s.date}</div>
-                                <div class="list-item-subtitle" style="font-size: 0.8rem;">${s.daysWorked || 0} days • ${s.period || 'Custom'}</div>
+                                <div class="list-item-subtitle" style="font-size: 0.8rem;">${s.daysWorked || 0} days &bull; ${s.period || "Custom"}</div>
                             </div>
                             <div class="text-success" style="font-weight: bold;">₱${(s.netPay || 0).toLocaleString()}</div>
                         </div>
                     `;
                 });
             }
-            
+            content += `</div>`;
+            } // end salary admin gate
             // Role-based action buttons
             const _isAdmin = currentAppUser && (currentAppUser.role === 'admin' || currentAppUser.role === 'owner');
             if (_isAdmin) {
@@ -13068,9 +13068,9 @@ async function loadWaterCustomers() {
                 <div style="background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;padding:12px;margin-bottom:10px;">
                     <div style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">⚡ Quick Payroll Actions</div>
                     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-                        <button class="btn btn-sm" onclick="showBonusModal(${id},'${emp.name}')" style="background:rgba(16,185,129,0.15);border:1px solid #10b981;color:#10b981;font-weight:600;padding:8px 4px;font-size:0.78rem;">🎁 Bonus</button>
-                        <button class="btn btn-sm" onclick="showOvertimeModal(${id},'${emp.name}')" style="background:rgba(245,158,11,0.15);border:1px solid #f59e0b;color:#f59e0b;font-weight:600;padding:8px 4px;font-size:0.78rem;">⏰ Overtime</button>
-                        <button class="btn btn-sm" onclick="showIncentiveModal(${id},'${emp.name}')" style="background:rgba(99,102,241,0.15);border:1px solid #6366f1;color:#6366f1;font-weight:600;padding:8px 4px;font-size:0.78rem;">🏆 Incentive</button>
+                        <button class="btn btn-sm" onclick="showBonusModal(${id},'${employee.name}')" style="background:rgba(16,185,129,0.15);border:1px solid #10b981;color:#10b981;font-weight:600;padding:8px 4px;font-size:0.78rem;">🎁 Bonus</button>
+                        <button class="btn btn-sm" onclick="showOvertimeModal(${id},'${employee.name}')" style="background:rgba(245,158,11,0.15);border:1px solid #f59e0b;color:#f59e0b;font-weight:600;padding:8px 4px;font-size:0.78rem;">⏰ Overtime</button>
+                        <button class="btn btn-sm" onclick="showIncentiveModal(${id},'${employee.name}')" style="background:rgba(99,102,241,0.15);border:1px solid #6366f1;color:#6366f1;font-weight:600;padding:8px 4px;font-size:0.78rem;">🏆 Incentive</button>
                     </div>
                 </div>
                 <div style="display: flex; gap: 10px;">
@@ -13223,7 +13223,7 @@ async function showQuickAttendance() {
                 html += `
                     <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid var(--border);">
                         <div>
-                            <strong>${emp.name}</strong>
+                            <strong>${employee.name}</strong>
                             <div style="font-size: 0.8rem; color: var(--text-secondary);">${emp.position || 'Staff'}</div>
                         </div>
                         <div style="display: flex; gap: 5px;">
@@ -13532,7 +13532,7 @@ async function showPayrollSummary() {
                     html += `
                         <div class="list-item" onclick="showGiveSalaryModal(${emp.id})" style="cursor: pointer;" title="Click to process payment">
                             <div class="list-item-content">
-                                <div class="list-item-title">👷 ${emp.name}</div>
+                                <div class="list-item-title">👷 ${employee.name}</div>
                                 <div class="list-item-subtitle">${fullDays} full days + ${halfDays} half days${totalOT > 0 ? ' • OT: ' + totalOT + 'hrs' : ''}</div>
                             </div>
                             <div style="text-align: right;">
@@ -17475,7 +17475,7 @@ async function showPayrollSummary() {
         payDays.forEach(function(pd) {
             var sd2 = getDay(pd);
             if (!sd2.payroll) sd2.payroll = [];
-            sd2.payroll.push({ type: 'payroll', label: emp.name || 'Staff', sub: (emp.payFrequency || '') + ' payroll' });
+            sd2.payroll.push({ type: 'payroll', label: employee.name || 'Staff', sub: (emp.payFrequency || '') + ' payroll' });
         });
     });
 
@@ -18234,7 +18234,7 @@ async function showPayrollSummary() {
                 // Auto time-in — create present record
                 const timeInRecord = {
                     employeeId: emp.id,
-                    employeeName: emp.name,
+                    employeeName: employee.name,
                     date: today,
                     status: 'present',
                     timeIn: new Date().toLocaleTimeString('en-PH', {hour:'2-digit',minute:'2-digit'}),
@@ -21008,7 +21008,7 @@ Lender/Manager
                                 return `
                                     <div class="list-item">
                                         <div class="item-info">
-                                            <strong>${emp ? emp.name : 'Unknown'}</strong>
+                                            <strong>${emp ? employee.name : 'Unknown'}</strong>
                                             <div style="font-size: 0.85rem; color: var(--text-secondary);">
                                                 ${new Date(a.date).toLocaleDateString()} • ${a.reason || 'Cash advance'}
                                             </div>
@@ -21045,7 +21045,7 @@ Lender/Manager
                                 return `
                                     <div class="list-item" style="cursor: pointer;" onclick="viewEmployeeDetails(${empId}); hideModal('flashcard-detail-modal');">
                                         <div class="item-info">
-                                            <strong>${emp ? emp.name : 'Unknown'}</strong>
+                                            <strong>${emp ? employee.name : 'Unknown'}</strong>
                                             <div style="font-size: 0.85rem; color: var(--text-secondary);">
                                                 ${fullDays} full days, ${halfDays} half days
                                             </div>
@@ -21076,7 +21076,7 @@ Lender/Manager
                                 return `
                                     <div class="list-item">
                                         <div class="item-info">
-                                            <strong>${emp ? emp.name : 'Unknown'}</strong>
+                                            <strong>${emp ? employee.name : 'Unknown'}</strong>
                                             <div style="font-size: 0.85rem; color: var(--text-secondary);">
                                                 ${new Date(s.date).toLocaleDateString()} • ${s.period || ''}
                                             </div>
@@ -24145,7 +24145,7 @@ async function editTask(id) {
                 
                 // ===== TIME RECORDS (attendance for past 6 days) =====
                 for (const emp of allEmployees) {
-                    if (!emp.name.startsWith('Roger') && !emp.name.startsWith('Cenia') && !emp.name.startsWith('Mario')) continue;
+                    if (!employee.name.startsWith('Roger') && !employee.name.startsWith('Cenia') && !employee.name.startsWith('Mario')) continue;
                     
                     for (let d = 1; d <= 6; d++) {
                         const recordDate = new Date();
