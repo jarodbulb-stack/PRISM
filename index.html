@@ -16266,41 +16266,46 @@ async function showPayrollSummary() {
         if (!expenses || expenses.length === 0) {
             return '<div style="color:var(--text-secondary);text-align:center;padding:16px 0;font-size:0.85rem;">No expense records found.</div>';
         }
-        var catEmoji = function(cat) {
-            var m = { electric:'⚡', water:'💧', repairs:'🔧', taxes:'📋', insurance:'🛡️',
-                      fuel:'⛽', transport:'🚌', supplies:'📦', labor:'👷', food:'🍔',
-                      communication:'📱', utilities:'🔌', personal_loan:'💳', savings:'🏦', other:'📝' };
-            return m[cat] || '📝';
-        };
-        var isAdmin = window.currentAppUser && ['owner','admin','manager'].includes(window.currentAppUser.role);
+        var emojiMap = { electric:'\u26a1', water:'\ud83d\udca7', repairs:'\ud83d\udd27', taxes:'\ud83d\udccb',
+            insurance:'\ud83d\udee1\ufe0f', fuel:'\u26fd', transport:'\ud83d\ude8c', supplies:'\ud83d\udce6',
+            labor:'\ud83d\udc77', food:'\ud83c\udf54', communication:'\ud83d\udcf1', utilities:'\ud83d\udd0c',
+            personal_loan:'\ud83d\udcb3', savings:'\ud83c\udfe6', other:'\ud83d\udcdd' };
         var sorted = expenses.slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
-        var html = '<div style="margin-top:14px;border-top:1px solid var(--border-color);padding-top:12px;">'
-            + '<div style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">'
-            + 'Expense Records (' + sorted.length + ')</div>'
-            + '<div style="max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">';
+        var mc = modalToClose || 'financial-details-modal';
+        var html = '<div style="margin-top:16px;border-top:1px solid var(--border-color);padding-top:14px;">'
+            + '<div style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;'
+            + 'letter-spacing:0.08em;margin-bottom:10px;">Expense Records (' + sorted.length + ')</div>'
+            + '<div style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:7px;">';
         sorted.forEach(function(e) {
-            html += '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;'
+            var emoji = emojiMap[e.category] || '\ud83d\udcdd';
+            var desc  = (e.description || e.category || 'Expense');
+            var safeDesc = desc.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            html += '<div style="display:flex;align-items:center;gap:10px;padding:11px 13px;'
                 + 'background:var(--bg-primary,#0f172a);border:1px solid var(--border-color,#334155);'
-                + 'border-radius:9px;">'
+                + 'border-radius:10px;cursor:pointer;transition:border-color 0.15s;"'
+                + ' onmouseenter="this.style.borderColor=\'#6366f1\'"'
+                + ' onmouseleave="this.style.borderColor=\'var(--border-color)\'"'
+                + ' onclick="prismExpenseQuickEdit(' + e.id + ',\'' + mc + '\')">'
+                // Info block
                 + '<div style="flex:1;min-width:0;">'
-                + '<div style="font-size:0.85rem;font-weight:600;color:var(--text-primary,#f1f5f9);">'
-                + catEmoji(e.category) + ' ' + prismSafeString(e.description || e.category || 'Expense') + '</div>'
-                + '<div style="font-size:0.75rem;color:#64748b;margin-top:2px;">'
+                + '<div style="font-size:0.88rem;font-weight:600;color:var(--text-primary,#f1f5f9);">'
+                + emoji + ' ' + desc + '</div>'
+                + '<div style="font-size:0.74rem;color:#64748b;margin-top:2px;">'
                 + (e.date||'') + (e.category ? ' &middot; ' + e.category : '') + '</div>'
                 + '</div>'
-                + '<div style="font-weight:700;color:#ef4444;font-size:0.9rem;flex-shrink:0;">'
-                + '\u20b1' + (e.amount||0).toLocaleString() + '</div>';
-            if (isAdmin) {
-                html += '<div style="display:flex;gap:5px;flex-shrink:0;">'
-                    + '<button onclick="prismExpenseQuickEdit(' + e.id + ',\'' + modalToClose + '\')" '
-                    + 'style="padding:4px 10px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);'
-                    + 'border-radius:6px;color:#818cf8;cursor:pointer;font-size:0.75rem;">Edit</button>'
-                    + '<button onclick="prismExpenseQuickDelete(' + e.id + ',\'' + modalToClose + '\')" '
-                    + 'style="padding:4px 10px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);'
-                    + 'border-radius:6px;color:#f87171;cursor:pointer;font-size:0.75rem;">Delete</button>'
-                    + '</div>';
-            }
-            html += '</div>';
+                // Amount
+                + '<div style="font-weight:700;color:#ef4444;font-size:0.92rem;flex-shrink:0;margin-right:8px;">'
+                + '\u20b1' + (e.amount||0).toLocaleString() + '</div>'
+                // Action buttons (always visible — role guard at click time)
+                + '<div style="display:flex;gap:5px;flex-shrink:0;">'
+                + '<button onclick="event.stopPropagation();prismExpenseQuickEdit(' + e.id + ',\'' + mc + '\')" '
+                + 'style="padding:5px 11px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.35);'
+                + 'border-radius:7px;color:#818cf8;cursor:pointer;font-size:0.75rem;font-weight:600;">Edit</button>'
+                + '<button onclick="event.stopPropagation();prismExpenseQuickDelete(' + e.id + ',\'' + mc + '\')" '
+                + 'style="padding:5px 11px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);'
+                + 'border-radius:7px;color:#f87171;cursor:pointer;font-size:0.75rem;font-weight:600;">Delete</button>'
+                + '</div>'
+                + '</div>';
         });
         html += '</div></div>';
         return html;
@@ -16308,6 +16313,10 @@ async function showPayrollSummary() {
     window.prismBuildExpenseList = prismBuildExpenseList;
 
     async function prismExpenseQuickEdit(id, modalToClose) {
+        if (window.currentAppUser && window.currentAppUser.role === 'cashier') {
+            showToast('Only Admin or Owner can edit expenses.', 'warning');
+            return;
+        }
         if (modalToClose) hideModal(modalToClose);
         await editExpense(id);
     }
