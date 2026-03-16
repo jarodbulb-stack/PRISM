@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta name="build-version" content="20260316001733">
     <meta charset="UTF-8">
     <!-- CSP handled at server level via Firebase/GitHub Pages headers -->
     <!-- Firebase Performance: DNS prefetch + preconnect -->
@@ -13,9 +12,9 @@
     <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
     <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
     <!-- Preload Firebase scripts to start download ASAP -->
-    <link rel="preload" href="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js" as="script" crossorigin>
-    <link rel="preload" href="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js" as="script" crossorigin>
-    <link rel="preload" href="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js" as="script" crossorigin>
+    <link rel="preload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js" as="script" crossorigin>
+    <link rel="preload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js" as="script" crossorigin>
+    <link rel="preload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js" as="script" crossorigin>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -49,7 +48,7 @@
     <script>
     // OPTIMIZED Firebase loading - preload all 3 scripts in parallel, then init in order
     (function() {
-        var FIREBASE_VER = '10.14.1';
+        var FIREBASE_VER = '10.7.1';
         var BASE = 'https://www.gstatic.com/firebasejs/' + FIREBASE_VER + '/';
         
         // Track loading state
@@ -74,20 +73,11 @@
             return s;
         }
         
-        // Step 1: Load firebase-app-compat (primary: gstatic, fallback: jsdelivr)
-        var FB_FALLBACK = 'https://cdn.jsdelivr.net/npm/firebase@' + FIREBASE_VER + '/compat/';
-        var _fbFallback = false;
-        function _loadFBWithFallback(pkg, key, cb) {
-            loadScript(BASE + 'firebase-' + pkg + '-compat.js', key, cb, function() {
-                if (!_fbFallback) {
-                    console.warn('[PRISM] gstatic CDN failed for ' + pkg + ', trying jsdelivr...');
-                }
-                loadScript(FB_FALLBACK + pkg + '.js', key, cb);
-            });
-        }
-        _loadFBWithFallback('app', 'app', function() {
-            _loadFBWithFallback('auth', 'auth');
-            _loadFBWithFallback('firestore', 'firestore');
+        // Step 1: Load firebase-app first (required base)
+        loadScript(BASE + 'firebase-app-compat.js', 'app', function() {
+            // Step 2: Load auth + firestore IN PARALLEL once app is ready
+            loadScript(BASE + 'firebase-auth-compat.js', 'auth');
+            loadScript(BASE + 'firebase-firestore-compat.js', 'firestore');
         });
         
         // Load Chart.js in parallel (independent)
@@ -3184,17 +3174,17 @@
 
                 <div class="prism-field">
                     <label>Email</label>
-                    <input type="email" id="prism-legacy-email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')document.getElementById('prism-legacy-password').focus()"/>
+                    <input type="email" id="mt-login-email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')document.getElementById('mt-login-password').focus()"/>
                 </div>
                 <div class="prism-field">
                     <label>Password</label>
                     <div style="position:relative;">
-                        <input type="password" id="prism-legacy-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')prismLoginSubmit()"/>
+                        <input type="password" id="mt-login-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')prismLoginSubmit()"/>
                         <button class="prism-eye-btn" onclick="mtTogglePass('mt-login-password',this)" tabindex="-1">👁</button>
                     </div>
                 </div>
 
-                <button class="prism-signin-btn" id="prism-legacy-btn" onclick="prismLoginSubmit()">Sign In</button>
+                <button class="prism-signin-btn" id="mt-login-btn" onclick="prismLoginSubmit()">Sign In</button>
 
                 <p style="text-align:center;margin:8px 0 4px;">
                     <span onclick="prismForgotPassword()" style="color:#818cf8;font-size:0.8rem;cursor:pointer;text-decoration:underline;text-underline-offset:3px;">Forgot password?</span>
@@ -4061,32 +4051,18 @@
                 </div>
             </div>
 
-            <!-- Monthly Income vs Expenses Chart (Line) + Jarod Analysis -->
-            <div class="card" style="grid-column:1/-1;">
-              <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-                <div>
-                  <div class="card-title">📈 Financial Trend — Last 6 Months</div>
-                  <div class="card-subtitle" style="font-size:0.75rem;color:var(--text-secondary);margin-top:2px;">Income · Expenses · Net</div>
+            <!-- Monthly Income vs Expenses Chart -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">📊 Monthly Trend (Last 6 Months)</div>
                 </div>
-                <button onclick="jarodsAnalysis()" style="padding:6px 14px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;border-radius:8px;color:white;font-size:0.8rem;font-weight:600;cursor:pointer;">🤖 Jarod's Analysis</button>
-              </div>
-              <div style="position:relative;height:280px;padding:4px 0 8px;">
-                <canvas id="trend-chart"></canvas>
-              </div>
-              <div style="display:flex;justify-content:center;gap:24px;margin-top:4px;font-size:0.78rem;flex-wrap:wrap;">
-                <span style="display:flex;align-items:center;gap:6px;"><span style="width:24px;height:3px;background:#10b981;border-radius:2px;"></span>Income</span>
-                <span style="display:flex;align-items:center;gap:6px;"><span style="width:24px;height:3px;background:#ef4444;border-radius:2px;"></span>Expenses</span>
-                <span style="display:flex;align-items:center;gap:6px;"><span style="width:24px;height:3px;background:#3b82f6;border-radius:2px;border-top:2px dashed #3b82f6;"></span>Net</span>
-              </div>
-              <!-- Jarod Analysis Panel -->
-              <div id="jarods-analysis-panel" style="display:none;margin-top:12px;border-top:1px solid var(--border-color);padding-top:10px;">
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-                  <span style="font-size:1.3rem;">🤖</span>
-                  <span style="font-weight:700;font-size:0.9rem;background:linear-gradient(135deg,#6366f1,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Jarod's Financial Analysis</span>
-                  <span id="jarods-loading" style="font-size:0.75rem;color:var(--text-secondary);display:none;">analyzing...</span>
+                <div id="monthly-chart" style="height: 200px; position: relative;">
+                    <canvas id="trend-chart"></canvas>
                 </div>
-                <div id="jarods-analysis-text" style="font-size:0.84rem;color:var(--text-primary);line-height:1.5;"></div>
-              </div>
+                <div class="chart-legend" style="display: flex; justify-content: center; gap: 20px; margin-top: 10px; font-size: 0.8rem;">
+                    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 12px; height: 12px; background: #10b981; border-radius: 2px;"></span> Income</span>
+                    <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 12px; height: 12px; background: #ef4444; border-radius: 2px;"></span> Expenses</span>
+                </div>
             </div>
 
             <!-- Overall Rent Collection Progress -->
@@ -4184,33 +4160,13 @@
                     </div>
                 </div>
                 <div id="collection-calendar" class="calendar-grid"></div>
-                <div class="calendar-legend" style="flex-wrap:wrap;gap:5px 12px;">
-                    <span class="legend-item"><span class="legend-dot tenant-dot"></span> Rent Due</span>
-                    <span class="legend-item"><span class="legend-dot debtor-dot"></span> Credit Due</span>
+                <div class="calendar-legend">
+                    <span class="legend-item"><span class="legend-dot tenant-dot"></span> Tenant Due</span>
+                    <span class="legend-item"><span class="legend-dot debtor-dot"></span> Debtor Due</span>
+                    <span class="legend-item"><span class="legend-dot both-dot"></span> Both Due</span>
                     <span class="legend-item"><span class="legend-dot overdue-dot"></span> Overdue</span>
-                    <span class="legend-item"><span class="cal-dot dot-task" style="display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:2px;"></span> Task</span>
-                    <span class="legend-item"><span class="cal-dot dot-reminder" style="display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:2px;"></span> Reminder</span>
-                    <span class="legend-item"><span class="cal-dot dot-note" style="display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:2px;"></span> Note</span>
-                    <span class="legend-item"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#06b6d4;margin-right:2px;"></span> Payroll</span>
-                    <span class="legend-item"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#8b5cf6;margin-right:2px;"></span> Water</span>
                 </div>
             </div>
-
-
-<!-- ✅ Tasks Widget (Dashboard) -->
-<div class="card" style="grid-column: 1 / -1;">
-  <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
-    <div>
-      <div class="card-title">✅ Tasks Overview</div>
-      <div class="card-subtitle">Pending &amp; overdue tasks</div>
-    </div>
-    <button onclick="showSection('tasks')" style="padding:6px 14px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:8px;font-size:0.78rem;cursor:pointer;">View All →</button>
-  </div>
-  <div id="dashboard-tasks-list" style="min-height:48px;">
-    <div class="empty-state"><p>No pending tasks</p></div>
-  </div>
-</div>
-
 
             <!-- Recent Activity -->
             <div class="card">
@@ -4714,6 +4670,64 @@
 
         <!-- Employees Section -->
         <div id="employees" class="section">
+
+            <!-- ============================================================ -->
+            <!-- Today's Cashier Activity + Endorsement — Staff Page          -->
+            <!-- ============================================================ -->
+            <div class="card" id="staff-cashier-activity-card" style="margin-bottom:16px;">
+              <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                <div>
+                  <div class="card-title">Today&#x27;s Cashier Activity</div>
+                  <div id="staff-activity-date" class="card-subtitle" style="font-size:0.75rem;margin-top:2px;"></div>
+                </div>
+                <button class="btn btn-sm btn-secondary" onclick="loadStaffCashierActivity()" style="display:flex;align-items:center;gap:5px;">
+                  Refresh
+                </button>
+              </div>
+              <!-- Summary grid populated by loadStaffCashierActivity() -->
+              <div id="staff-cashier-summary">
+                <div style="color:var(--text-secondary);text-align:center;padding:20px;">Loading...</div>
+              </div>
+              <!-- Endorsement Compose (shown for cashier role) -->
+              <div id="staff-endorse-compose" style="display:none;margin-top:14px;border-top:1px solid var(--border-color);padding-top:14px;">
+                <div style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.08em;">
+                  Send Endorsement to Admin
+                </div>
+                <div class="endorse-type-pills" style="margin-bottom:10px;">
+                  <button class="endorse-pill active" onclick="selectEndorseType(this,&#x27;sales&#x27;)">Sales</button>
+                  <button class="endorse-pill" onclick="selectEndorseType(this,&#x27;credit&#x27;)">Credit</button>
+                  <button class="endorse-pill" onclick="selectEndorseType(this,&#x27;expense&#x27;)">Expense</button>
+                  <button class="endorse-pill" onclick="selectEndorseType(this,&#x27;water&#x27;)">Water</button>
+                  <button class="endorse-pill" onclick="selectEndorseType(this,&#x27;attendance&#x27;)">Staff</button>
+                  <button class="endorse-pill urgent-pill" onclick="selectEndorseType(this,&#x27;urgent&#x27;)">Urgent</button>
+                </div>
+                <textarea id="endorse-message-staff" rows="3"
+                  placeholder="Describe what needs admin attention..."
+                  style="width:100%;padding:10px;border-radius:9px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);font-size:0.88rem;resize:vertical;box-sizing:border-box;margin-bottom:10px;"></textarea>
+                <div style="display:flex;gap:8px;">
+                  <button onclick="submitStaffEndorsement()" style="flex:1;padding:10px;background:linear-gradient(135deg,#f59e0b,#d97706);color:white;border:none;border-radius:9px;font-weight:700;cursor:pointer;font-size:0.88rem;">
+                    Send Endorsement
+                  </button>
+                  <button onclick="autoEndorseReport()" title="Auto-generate from today transactions"
+                    style="padding:10px 14px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:9px;cursor:pointer;font-size:0.85rem;">
+                    Auto
+                  </button>
+                </div>
+                <div id="staff-endorse-sent" style="margin-top:10px;font-size:0.8rem;color:var(--text-secondary);"></div>
+              </div>
+              <!-- Admin Inbox Preview (shown for owner/admin/manager role) -->
+              <div id="staff-admin-inbox-preview" style="display:none;margin-top:14px;border-top:1px solid var(--border-color);padding-top:14px;">
+                <div style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.08em;">
+                  Pending Endorsements
+                </div>
+                <div id="staff-inbox-preview-list"></div>
+                <button onclick="openAdminInbox()" style="width:100%;padding:9px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:9px;color:#818cf8;cursor:pointer;font-size:0.85rem;margin-top:8px;">
+                  Open Full Inbox
+                </button>
+              </div>
+            </div>
+
+
             <div class="stats-grid">
                 <div class="stat-card" style="cursor: pointer;" onclick="showStaffFlashcardDetail('employees')">
                     <div class="stat-value" id="stat-employees">0</div>
@@ -5074,17 +5088,6 @@
                     <p style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 10px; text-align: center;">
                         Data syncs automatically when online
                     </p>
-                </div>
-            </div>
-
-            <!-- Admin: Cashier Activity Summary -->
-            <div class="card" id="admin-cashier-activity-card">
-                <div class="card-header">
-                    <div class="card-title">📬 Today's Cashier Activity</div>
-                    <button class="btn btn-sm btn-secondary" onclick="loadAdminCashierSummary()">🔄 Refresh</button>
-                </div>
-                <div id="admin-cashier-summary">
-                    <div style="color:var(--text-secondary);text-align:center;padding:20px;">Loading...</div>
                 </div>
             </div>
 
@@ -7116,30 +7119,6 @@
         let toastContainer = null;
         let toastCounter = 0;
 
-
-        function showInputModal(title, message, placeholder, defaultVal) {
-            return new Promise(resolve => {
-                const ex = document.getElementById('prism-input-modal'); if(ex) ex.remove();
-                const modal = document.createElement('div');
-                modal.id = 'prism-input-modal';
-                modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
-                modal.innerHTML = '<div style="background:var(--bg-card,#1e293b);border:1px solid var(--border-color,#334155);border-radius:14px;padding:24px;width:100%;max-width:420px;">'
-                    + '<div style="font-weight:700;font-size:1rem;color:var(--text-primary,#f1f5f9);margin-bottom:8px;">' + title + '</div>'
-                    + (message ? '<div style="font-size:0.85rem;color:var(--text-secondary,#94a3b8);margin-bottom:14px;white-space:pre-line;">' + message + '</div>' : '')
-                    + '<input id="prism-input-modal-field" type="text" value="' + (defaultVal||'') + '" placeholder="' + (placeholder||'') + '" style="width:100%;padding:10px 12px;background:var(--bg-primary,#0f172a);border:1px solid var(--border-color,#334155);border-radius:8px;color:var(--text-primary,#f1f5f9);font-size:0.9rem;box-sizing:border-box;margin-bottom:14px;" autocomplete="off" />'
-                    + '<div style="display:flex;gap:10px;justify-content:flex-end;"><button id="prism-input-cancel" style="padding:8px 18px;background:transparent;border:1px solid var(--border-color,#334155);border-radius:8px;color:var(--text-secondary,#94a3b8);cursor:pointer;">Cancel</button>'
-                    + '<button id="prism-input-ok" style="padding:8px 18px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;border-radius:8px;color:white;cursor:pointer;font-weight:600;">OK</button></div></div>';
-                document.body.appendChild(modal);
-                const field = document.getElementById('prism-input-modal-field');
-                const ok = () => { const v=(field?.value||'').trim(); modal.remove(); resolve(v||null); };
-                const cancel = () => { modal.remove(); resolve(null); };
-                if(field){field.focus();field.select();field.addEventListener('keydown',e=>{if(e.key==='Enter')ok();if(e.key==='Escape')cancel();});}
-                document.getElementById('prism-input-ok').addEventListener('click', ok);
-                document.getElementById('prism-input-cancel').addEventListener('click', cancel);
-                modal.addEventListener('click', e => { if(e.target===modal) cancel(); });
-            });
-        }
-        window.showInputModal = showInputModal;
         function showToast(message, type = 'info', duration = 3000) {
             // Create container if doesn't exist
             if (!toastContainer) {
@@ -7231,106 +7210,6 @@
 
             return toast;
         }
-
-    // ╔══════════════════════════════════════════════════════════╗
-    // ║         PRISM HARDENING LAYER v1.0                      ║
-    // ║  Rules 1-15 applied — additive, non-destructive         ║
-    // ╚══════════════════════════════════════════════════════════╝
-
-    // ── Rule 1: PRISM Core Guard Namespace ──────────────────────
-    window.PRISM_CORE = window.PRISM_CORE || {
-        version:     "1.0",
-        syncLock:    false,
-        wipeLock:    false,
-        lastWipe:    0,
-        crashCount:  0,
-        initialized: false
-    };
-
-    // ── Rule 2: Global Crash Protection ─────────────────────────
-    window.onerror = window.onerror || function(msg, src, line, col, err) {
-        PRISM_CORE.crashCount = (PRISM_CORE.crashCount || 0) + 1;
-        console.error('[PRISM CRASH]', msg, 'line:', line, err);
-        try { if (typeof showToast === 'function') showToast('⚠️ System error detected. Check console.', 'error'); } catch(e) {}
-        return false;
-    };
-    if (!window._prismUnhandledInstalled) {
-        window._prismUnhandledInstalled = true;
-        window.addEventListener('unhandledrejection', function(e) {
-            PRISM_CORE.crashCount = (PRISM_CORE.crashCount || 0) + 1;
-            console.error('[PRISM] Unhandled promise rejection:', e.reason);
-        });
-    }
-
-    // ── Rule 3: Sync Lock System ─────────────────────────────────
-    async function safeSyncWrapper(fn) {
-        if (PRISM_CORE.syncLock) { console.log('[PRISM] Sync already in progress — skipped'); return; }
-        PRISM_CORE.syncLock = true;
-        try { await fn(); }
-        catch(e) { console.error('[PRISM] Sync failure:', e); }
-        finally   { PRISM_CORE.syncLock = false; }
-    }
-    window.safeSyncWrapper = safeSyncWrapper;
-
-    // ── Rule 4: Wipe Operation Helpers ───────────────────────────
-    function prismStartWipe() {
-        PRISM_CORE.wipeLock = true;
-        PRISM_CORE.lastWipe = Date.now();
-        window._prismWipeInProgress = true;
-        sessionStorage.setItem('_prismWipeActive', '1');
-        localStorage.setItem('_prismLastWipeAt', new Date().toISOString());
-        prismLog('wipe_started', 'wipeLock=true');
-    }
-    function prismEndWipe() {
-        PRISM_CORE.wipeLock = false;
-        window._prismWipeInProgress = false;
-        prismLog('wipe_ended', 'wipeLock=false');
-    }
-    window.prismStartWipe = prismStartWipe;
-    window.prismEndWipe   = prismEndWipe;
-
-    // ── Rule 6: Data Validation Guards ───────────────────────────
-    function prismSafeNumber(v) { return Number.isFinite(Number(v)) ? Number(v) : 0; }
-    function prismSafeString(v) { return (v === null || v === undefined) ? '' : String(v); }
-    window.prismSafeNumber = prismSafeNumber;
-    window.prismSafeString = prismSafeString;
-
-    // ── Rule 7: Safe DB Write Wrapper ─────────────────────────────
-    async function prismSafeDBWrite(fn) {
-        try { return await fn(); }
-        catch(e) {
-            console.error('[PRISM] DB write failed:', e);
-            try { if (typeof showToast === 'function') showToast('❌ Database write failed: ' + e.message, 'error'); } catch(e2) {}
-        }
-    }
-    window.prismSafeDBWrite = prismSafeDBWrite;
-
-    // ── Rule 10: Init Guard ───────────────────────────────────────
-    function prismInitGuard() {
-        if (PRISM_CORE.initialized) { console.log('[PRISM] Init already ran — blocked duplicate'); return false; }
-        PRISM_CORE.initialized = true;
-        return true;
-    }
-    window.prismInitGuard = prismInitGuard;
-
-    // ── Rule 12: System Health Monitor (every 60s) ────────────────
-    if (!window._prismHealthMonitor) {
-        window._prismHealthMonitor = setInterval(function() {
-            console.log('[PRISM health]', {
-                syncLock:  PRISM_CORE.syncLock,
-                wipeLock:  PRISM_CORE.wipeLock,
-                crashes:   PRISM_CORE.crashCount,
-                init:      PRISM_CORE.initialized
-            });
-        }, 60000);
-    }
-
-    // ── Rule 13: Centralized Logging ─────────────────────────────
-    function prismLog(event, data) {
-        console.log('[PRISM]', prismSafeString(event), data !== undefined ? data : '');
-    }
-    window.prismLog = prismLog;
-
 
         // Loading Spinner Helper
         function setButtonLoading(buttonElement, loading, originalText = '') {
@@ -7472,7 +7351,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                         updateSyncStatus('syncing');
                         // Push local data first, then pull from cloud
                         try { await syncToFirebase(); } catch(e) {}
-                        await safeSyncWrapper(syncFromFirebase);
+                        await syncFromFirebase();
                         updateSyncStatus('synced');
                     } else {
                         console.log('[Auth] User signed out');
@@ -7842,7 +7721,6 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 };
 
                 _lastSyncTimestamp = data.lastSync;
-                window._lastSyncTimestamp = data.lastSync; // shared with MT onSnapshot scope
                 await dataRef.set(data);
                 console.log('[Sync] Data synced to Firestore — org:', orgId);
                 updateSyncStatus('synced');
@@ -7856,15 +7734,6 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
         }
 
         async function syncFromFirebase() {
-            // Block all pulls while a wipe/delete is in progress
-    const _wipeTs = localStorage.getItem('_prismLastWipeAt');
-    if (window._prismWipeInProgress || sessionStorage.getItem('_prismWipeActive') || (window.PRISM_CORE && PRISM_CORE.wipeLock)) {
-        console.log('[Sync] Wipe active — skipping pull'); return;
-    }
-    // Also block if we wiped within the last 30 seconds (handles reload race)
-    if (_wipeTs && (Date.now() - new Date(_wipeTs).getTime()) < 30000) {
-        console.log('[Sync] Recent wipe detected — skipping pull'); return;
-    }
             // STARTUP FIX: Wait for IndexedDB to be ready before syncing
             if (window._dbReadyPromise) await window._dbReadyPromise;
             const cu = currentUser || (typeof MT !== 'undefined' && MT.currentUser);
@@ -7997,8 +7866,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 const store = transaction.objectStore(storeName);
 
                 const doPut = () => {
-                // NOTE: don't bail on empty — authoritative clear already happened
-                if (!data || data.length === 0) { resolve(); return; }
+                    if (data.length === 0) { resolve(); return; }
                     let pending = data.length;
                     data.forEach(item => {
                         const req = store.put(item);
@@ -8061,7 +7929,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             try { showToast('⏳ Syncing... (users: ' + _localUsers.length + ')', 'info'); } catch(e) {}
             try {
                 await syncToFirebase();
-                await safeSyncWrapper(syncFromFirebase);
+                await syncFromFirebase();
                 updateSyncStatus('synced');
                 const _afterUsers = JSON.parse(localStorage.getItem('prism_app_users') || '[]');
                 try { showToast('✅ Sync complete! Users: ' + _afterUsers.length, 'success'); } catch(e) {}
@@ -8285,8 +8153,8 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
 
                 try {
                     // Check if total payments don't exceed unreasonable amounts
-                    const totalRentPayments = payments.reduce((sum, p) => sum + (this.isValidNumber((prismSafeNumber(p.amount))) ? (prismSafeNumber(p.amount)) : 0), 0);
-                    const totalCreditPayments = creditPayments.reduce((sum, p) => sum + (this.isValidNumber((prismSafeNumber(p.amount))) ? (prismSafeNumber(p.amount)) : 0), 0);
+                    const totalRentPayments = payments.reduce((sum, p) => sum + (this.isValidNumber(p.amount) ? p.amount : 0), 0);
+                    const totalCreditPayments = creditPayments.reduce((sum, p) => sum + (this.isValidNumber(p.amount) ? p.amount : 0), 0);
                     const totalCreditsLent = credits.reduce((sum, c) => sum + (this.isValidNumber(c.principal) ? c.principal : 0), 0);
 
                     // Basic sanity: Credit payments shouldn't exceed 10x the total principal (accounting for interest)
@@ -8558,7 +8426,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             async storeBackup(backupData) {
                 try {
                     // Get existing backups
-                    const existingBackups = JSON.parse(localStorage.getItem('prism_autobackups') || '[]');
+                    const existingBackups = JSON.parse(localStorage.getItem('carent_autobackups') || '[]');
                     
                     // Add new backup
                     existingBackups.unshift(backupData);
@@ -8569,13 +8437,13 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     }
                     
                     // Store
-                    localStorage.setItem('prism_autobackups', JSON.stringify(existingBackups));
+                    localStorage.setItem('carent_autobackups', JSON.stringify(existingBackups));
                     this.log('INFO', `Stored backup. Total backups: ${existingBackups.length}`);
                 } catch (error) {
                     // localStorage might be full, try to clear old data
                     this.log('WARN', 'localStorage full, clearing old backups', error);
                     try {
-                        localStorage.setItem('prism_autobackups', JSON.stringify([backupData]));
+                        localStorage.setItem('carent_autobackups', JSON.stringify([backupData]));
                     } catch (e) {
                         this.log('ERROR', 'Cannot store backup', e);
                     }
@@ -8584,7 +8452,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
 
             getAutoBackups() {
                 try {
-                    return JSON.parse(localStorage.getItem('prism_autobackups') || '[]');
+                    return JSON.parse(localStorage.getItem('carent_autobackups') || '[]');
                 } catch (error) {
                     this.log('ERROR', 'Failed to read backups', error);
                     return [];
@@ -9193,8 +9061,8 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             const _perms = currentAppUser && currentAppUser.permissions;
             const _blockedSections = {
                 'properties': _perms && !_perms['access-properties'],
-                'expenses':   _perms && !_perms['view-expenses'] && currentAppUser?.role !== 'cashier',
-                'income':     _perms && !_perms['view-income'] && currentAppUser?.role !== 'cashier',
+                'expenses':   _perms && !_perms['view-expenses'],
+                'income':     _perms && !_perms['view-income'],
                 'employees':  _perms && !_perms['access-hr'],
                 'reports':    _perms && !_perms['view-reports'],
                 'settings':   _perms && !_perms['access-settings'],
@@ -10078,7 +9946,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
 
                 // Calculate status
                 const payments = creditPayments.filter(p => p.creditId === credit.id);
-                const totalPaid = payments.reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0);
+                const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
                 
                 let totalDue = credit.principal;
                 if (credit.interestType === 'simple') {
@@ -10298,7 +10166,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             const propTenants = tenants.filter(t => t.propertyId === id);
             const expenses = await dbGetAll('expenses');
             const propExpenses = expenses.filter(e => e.propertyId === id);
-            const totalExpenses = propExpenses.reduce((sum, e) => sum + (prismSafeNumber(e.amount)), 0);
+            const totalExpenses = propExpenses.reduce((sum, e) => sum + e.amount, 0);
 
             // Create property detail modal content
             const modalContent = `
@@ -10382,7 +10250,6 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
         }
 
         async function deleteProperty(id) {
-        const _dp=window.currentAppUser||null;if(_dp&&!['owner','admin'].includes(_dp.role)){showToast('Only Owner or Admin can delete properties.','error');return;}
             // Check for tenants
             const tenants = await dbGetAll('tenants');
             const propTenants = tenants.filter(t => t.propertyId === id);
@@ -10783,7 +10650,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 const moveInDate = new Date(tenant.moveIn);
                 const monthsDiff = (now.getFullYear() - moveInDate.getFullYear()) * 12 + (now.getMonth() - moveInDate.getMonth()) + 1;
                 const expectedTotal = monthsDiff * tenant.rent;
-                const paidTotal = tenantPayments.reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0);
+                const paidTotal = tenantPayments.reduce((sum, p) => sum + p.amount, 0);
                 const progressPercent = expectedTotal > 0 ? Math.min(100, (paidTotal / expectedTotal) * 100) : 0;
 
                 // Current month payment status
@@ -10838,7 +10705,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             const moveInDate = new Date(tenant.moveIn);
             const monthsDiff = (now.getFullYear() - moveInDate.getFullYear()) * 12 + (now.getMonth() - moveInDate.getMonth()) + 1;
             const expectedTotal = monthsDiff * tenant.rent;
-            const paidTotal = payments.reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0);
+            const paidTotal = payments.reduce((sum, p) => sum + p.amount, 0);
             const balance = expectedTotal - paidTotal;
 
             // Calculate due date and late fees
@@ -10951,7 +10818,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     <button class="btn btn-info" onclick="printTenantReport(${id})">🖨️ Print</button>
                     ${currentAppUser && currentAppUser.role !== 'cashier' ? `
                         <button class="btn btn-warning" onclick="addChargeToClient('tenant', ${id})">💵 Add Charge</button>
-                        ${tenant.status==='inactive' ? '<button class="btn" onclick="terminateTenant(${id})" style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);color:#34d399;">Reactivate</button>' : '<button class="btn" onclick="terminateTenant(${id})" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;">Terminate</button>'}<button class="btn btn-danger" onclick="deleteTenant(${id})">Delete</button>
+                        <button class="btn btn-danger" onclick="deleteTenant(${id})">Delete</button>
                     ` : `
                         <button class="btn btn-primary" onclick="quickEndorse('sales', '🏠 Rent payment recorded for tenant. Admin please review.')">📋 Endorse to Admin</button>
                     `}
@@ -10975,7 +10842,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
 
             const pendingCharges = charges.filter(c => c.status === 'pending');
             const paidCharges = charges.filter(c => c.status === 'paid');
-            const totalPending = pendingCharges.reduce((sum, c) => sum + (prismSafeNumber(c.amount)), 0);
+            const totalPending = pendingCharges.reduce((sum, c) => sum + c.amount, 0);
 
             return `
                 <div class="card mt-4">
@@ -11245,7 +11112,6 @@ async function recordTenantPayment(tenantId) {
             loadTenants();
             loadDashboard();
             debouncedSync();
-            prismLog('payment_recorded');
             showToast('Payment recorded successfully!', 'success');
             if (currentAppUser && currentAppUser.role === 'cashier' && typeof loadCashierDashboard === 'function') {
                 setTimeout(loadCashierDashboard, 400);
@@ -11278,60 +11144,7 @@ async function recordTenantPayment(tenantId) {
             debouncedSync();
         }
 
-        
-        async function terminateTenant(id) {
-            const tenant = await dbGet('tenants', id);
-            if (!tenant) return showToast('Tenant not found.', 'error');
-            if (tenant.status === 'inactive') {
-                if (!confirm('Reactivate this tenant?')) return;
-                tenant.status = 'active';
-                delete tenant.terminatedAt; delete tenant.terminationReason; delete tenant.terminationNotes;
-                if (tenant.propertyId) { const p = await dbGet('properties', tenant.propertyId); if(p){p.status='occupied';await dbUpdate('properties',p);} }
-                await dbUpdate('tenants', tenant); await syncToFirebase('tenants'); await syncToFirebase('properties');
-                showToast('Tenant reactivated.', 'success'); showTenantDetail(id); return;
-            }
-            const reasons = ['Contract Expired','Eviction - Non-payment','Eviction - Violation','Tenant Move-out','Property Sold','Renovation','Other'];
-            const modal = document.createElement('div');
-            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
-            modal.innerHTML = `<div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:14px;padding:24px;width:100%;max-width:400px;"><div style="font-weight:700;font-size:1rem;color:#f87171;margin-bottom:14px;">Terminate Tenant</div><div style="font-size:0.85rem;color:#cbd5e1;margin-bottom:14px;">Tenant: <b>${tenant.name}</b></div><select id="term-reason" style="width:100%;padding:9px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);margin-bottom:10px;">${reasons.map(r=>'<option>'+r+'</option>').join('')}</select><textarea id="term-notes" placeholder="Additional notes (optional)" rows="3" style="width:100%;padding:9px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);resize:none;box-sizing:border-box;margin-bottom:14px;"></textarea><div style="display:flex;gap:10px;justify-content:flex-end;"><button onclick="this.closest('[style*=fixed]').remove()" style="padding:8px 18px;background:transparent;border:1px solid var(--border-color);border-radius:8px;color:var(--text-secondary);cursor:pointer;">Cancel</button><button id="term-confirm-btn" style="padding:8px 18px;background:#ef4444;border:none;border-radius:8px;color:white;cursor:pointer;font-weight:600;">Terminate</button></div></div>`;
-            document.body.appendChild(modal);
-            document.getElementById('term-confirm-btn').onclick = async () => {
-                const reason = document.getElementById('term-reason').value;
-                const notes = document.getElementById('term-notes').value.trim();
-                modal.remove();
-                tenant.status='inactive'; tenant.terminatedAt=new Date().toISOString(); tenant.terminationReason=reason; tenant.terminationNotes=notes;
-                if(tenant.propertyId){const p=await dbGet('properties',tenant.propertyId);if(p){p.status='vacant';await dbUpdate('properties',p);await syncToFirebase('properties');}}
-                await dbUpdate('tenants',tenant); await syncToFirebase('tenants');
-                showToast('Tenant terminated.', 'success'); showTenantDetail(id);
-            };
-        }
-        window.terminateTenant = terminateTenant;
-
-        async function freezeCredit(id) {
-            const credit = await dbGet('credits', id);
-            if (!credit) return showToast('Credit not found.', 'error');
-            if (credit.status === 'closed') {
-                if (!confirm('Reopen this debt record?')) return;
-                credit.status='active'; delete credit.closedAt; delete credit.closureReason; delete credit.closureNotes;
-                await dbUpdate('credits',credit); await syncToFirebase('credits');
-                showToast('Debt reopened.', 'success'); showCreditDetail(id); return;
-            }
-            const remaining = (credit.principal||0)+(credit.totalInterest||0)-(credit.totalPaid||0);
-            const reasons = ['Fully Paid','Written Off','Partial Settlement','Deceased','Legal Action','Stop Interest Only','Other'];
-            const modal = document.createElement('div');
-            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
-            modal.innerHTML = `<div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:14px;padding:24px;width:100%;max-width:400px;"><div style="font-weight:700;font-size:1rem;color:#fbbf24;margin-bottom:14px;">Close / Freeze Debt</div><div style="font-size:0.85rem;color:#cbd5e1;margin-bottom:4px;">Borrower: <b>${credit.borrowerName}</b></div><div style="font-size:0.85rem;color:#f87171;margin-bottom:14px;">Balance: ${remaining.toLocaleString('en-PH',{minimumFractionDigits:2})}</div><select id="close-reason" style="width:100%;padding:9px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);margin-bottom:10px;">${reasons.map(r=>'<option>'+r+'</option>').join('')}</select><textarea id="close-notes" placeholder="Notes (optional)" rows="3" style="width:100%;padding:9px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);resize:none;box-sizing:border-box;margin-bottom:14px;"></textarea><div style="display:flex;gap:10px;justify-content:flex-end;"><button onclick="this.closest('[style*=fixed]').remove()" style="padding:8px 18px;background:transparent;border:1px solid var(--border-color);border-radius:8px;color:var(--text-secondary);cursor:pointer;">Cancel</button><button id="close-confirm-btn" style="padding:8px 18px;background:#f59e0b;border:none;border-radius:8px;color:white;cursor:pointer;font-weight:600;">Close Debt</button></div></div>`;
-            document.body.appendChild(modal);
-            document.getElementById('close-confirm-btn').onclick = async () => {
-                const reason=document.getElementById('close-reason').value; const notes=document.getElementById('close-notes').value.trim(); modal.remove();
-                credit.status='closed'; credit.closedAt=new Date().toISOString(); credit.closureReason=reason; credit.closureNotes=notes;
-                await dbUpdate('credits',credit); await syncToFirebase('credits');
-                showToast('Debt closed.', 'success'); showCreditDetail(id);
-            };
-        }
-        window.freezeCredit = freezeCredit;
-
-async function deleteTenant(id) {
+        async function deleteTenant(id) {
             if (currentAppUser && currentAppUser.role === 'cashier') {
                 showToast('⛔ Cashiers cannot delete tenant records. Contact admin.', 'error');
                 return;
@@ -11489,14 +11302,14 @@ async function deleteTenant(id) {
                     
                     // Check if this is a partial payment for the month
                     const thisMonthPayments = tenantPayments.filter(p => p.monthCovered === payment.monthCovered);
-                    const thisMonthTotal = thisMonthPayments.reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0);
+                    const thisMonthTotal = thisMonthPayments.reduce((sum, p) => sum + p.amount, 0);
                     const thisMonthBalance = monthlyRent - thisMonthTotal;
                     
                     // Check for advance payment
                     const isAdvance = payment.type === 'advance' || (payment.notes && payment.notes.toLowerCase().includes('advance'));
                     
                     // Calculate total outstanding
-                    const totalPaid = tenantPayments.reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0);
+                    const totalPaid = tenantPayments.reduce((sum, p) => sum + p.amount, 0);
                     const moveInDate = new Date(tenant.moveIn);
                     const today = new Date();
                     const monthsOccupied = Math.max(1, Math.ceil((today - moveInDate) / (30 * 24 * 60 * 60 * 1000)));
@@ -11552,7 +11365,7 @@ async function deleteTenant(id) {
                 // Calculate balance info for credit
                 if (credit) {
                     const creditPayments = allCreditPayments.filter(p => p.creditId === credit.id);
-                    const totalPaid = creditPayments.reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0);
+                    const totalPaid = creditPayments.reduce((sum, p) => sum + p.amount, 0);
                     
                     // Calculate with interest
                     let totalDue = credit.principal;
@@ -11705,7 +11518,7 @@ async function deleteTenant(id) {
                 // Calculate months occupied
                 const monthsOccupied = Math.max(1, Math.ceil((todayDate - moveInDate) / (30 * 24 * 60 * 60 * 1000)));
                 const totalExpected = monthlyRent * monthsOccupied;
-                const totalPaid = payments.reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0);
+                const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
                 const totalBalance = Math.max(0, totalExpected - totalPaid);
 
                 // Check for advance
@@ -11812,7 +11625,7 @@ async function deleteTenant(id) {
                     totalDue = credit.principal + interestAmount;
                 }
 
-                const totalPaid = payments.reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0);
+                const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
                 const remainingBalance = Math.max(0, totalDue - totalPaid);
 
                 // Check overdue status
@@ -11964,7 +11777,7 @@ async function deleteTenant(id) {
             const moveInDate = new Date(tenant.moveIn);
             const monthsDiff = (now.getFullYear() - moveInDate.getFullYear()) * 12 + (now.getMonth() - moveInDate.getMonth()) + 1;
             const expectedTotal = monthsDiff * tenant.rent;
-            const paidTotal = payments.reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0);
+            const paidTotal = payments.reduce((sum, p) => sum + p.amount, 0);
             const balance = expectedTotal - paidTotal;
 
             const dueDay = tenant.dueDay || 5;
@@ -12086,7 +11899,7 @@ async function deleteTenant(id) {
                 totalDue = credit.principal + interestAmount;
             }
 
-            const totalPaid = payments.reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0);
+            const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
             const balance = totalDue - totalPaid;
 
             const isOverdue = credit.dueDate && new Date(credit.dueDate) < new Date() && balance > 0;
@@ -12713,8 +12526,8 @@ async function loadWaterCustomers() {
         }
 
         // Show water payment modal
-        async function showWaterPaymentModal(customerId, customerName, balance) {
-            const amount = await showInputModal('Record Payment', 'Customer: ' + customerName + '\nBalance: ' + balance.toLocaleString(), 'Enter payment amount', '');
+        function showWaterPaymentModal(customerId, customerName, balance) {
+            const amount = prompt(`💵 Record Payment for ${customerName}\n\nOutstanding Balance: ₱${balance.toLocaleString()}\n\nEnter payment amount:`);
             if (!amount) return;
             
             const paymentAmount = parseFloat(amount.replace(/,/g, '')) || 0;
@@ -12861,6 +12674,8 @@ async function loadWaterCustomers() {
             document.getElementById('stat-paid-salaries').textContent = '₱' + paidThisMonth.toLocaleString();
             
             renderEmployeesList(employees);
+    // Refresh staff activity card
+    try { if (typeof loadStaffCashierActivity === 'function') loadStaffCashierActivity(); } catch(e) {}
         }
 
         function filterEmployees() {
@@ -12923,19 +12738,6 @@ async function loadWaterCustomers() {
                 otRateField.placeholder = Math.round(dailyRate / 8 * 1.25) + ' (auto)';
             }
         }
-
-        async function deleteAdvance(advanceId) {
-            const advance = await dbGet('cashAdvances', advanceId);
-            if (!advance) return showToast('Advance not found.','error');
-            if (!confirm('Delete cash advance? This cannot be undone.')) return;
-            try {
-                await dbDelete('cashAdvances', advanceId);
-                await syncToFirebase('cashAdvances');
-                showToast('Cash advance deleted.','success');
-                if (typeof showEmployeeDetail==='function' && advance.employeeId) showEmployeeDetail(advance.employeeId);
-            } catch(e) { showToast('Delete failed: '+e.message,'error'); }
-        }
-        window.deleteAdvance = deleteAdvance;
 
         async function saveEmployee(event) {
             event.preventDefault();
@@ -13403,7 +13205,9 @@ async function showQuickAttendance() {
 
         // Void request system - cashier submits, admin approves
         async function requestVoidAttendance(recordId, employeeName, date) {
-            const reason = await showInputModal('🗑️ Void Attendance Request', `Employee: ${employeeName}\nDate: ${date}`, 'Enter reason...');
+            const reason = prompt(`Request to void attendance for ${employeeName} on ${date}.
+
+Enter reason for void request:`);
             if (!reason) return;
 
             const voidRequests = JSON.parse(localStorage.getItem('prism_void_requests') || '[]');
@@ -13423,7 +13227,9 @@ async function showQuickAttendance() {
         }
 
         async function requestVoidAdvance(advanceId, employeeName, amount) {
-            const reason = await showInputModal('Void Cash Advance', 'Employee: ' + employeeName, 'Enter reason...');
+            const reason = prompt(`Request to void cash advance of ₱${amount.toLocaleString()} for ${employeeName}.
+
+Enter reason:`);
             if (!reason) return;
 
             const voidRequests = JSON.parse(localStorage.getItem('prism_void_requests') || '[]');
@@ -14199,7 +14005,7 @@ async function showPayrollSummary() {
             credits.forEach(credit => {
                 totalLent += credit.principal;
                 const payments = creditPayments.filter(p => p.creditId === credit.id);
-                totalRepaid += payments.reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0);
+                totalRepaid += payments.reduce((sum, p) => sum + p.amount, 0);
             });
 
             document.getElementById('stat-total-lent').textContent = '₱' + totalLent.toLocaleString();
@@ -14242,7 +14048,7 @@ async function showPayrollSummary() {
 
             container.innerHTML = credits.map(credit => {
                 const payments = creditPayments.filter(p => p.creditId === credit.id);
-                const totalPaid = payments.reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0);
+                const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
 
                 // Calculate total with interest
                 let totalDue = credit.principal;
@@ -14553,7 +14359,7 @@ async function showPayrollSummary() {
 
             const allCreditPayments = await dbGetAll('creditPayments');
             const payments = allCreditPayments.filter(p => p.creditId === id);
-            const totalPaid = payments.reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0);
+            const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
 
             // Calculate total with interest
             let totalDue = credit.principal;
@@ -14660,7 +14466,7 @@ async function showPayrollSummary() {
                     <button class="btn btn-secondary" onclick="showStatementOfAccount(${id}, 'credit')">📊 Statement</button>
                     <button class="btn btn-info" onclick="printCreditReport(${id})">🖨️ Print</button>
                     ${currentAppUser && currentAppUser.role !== 'cashier' ? `
-                        ${credit.status==='closed' ? '<button class="btn" onclick="freezeCredit(${id})" style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);color:#34d399;">Reopen Debt</button>' : '<button class="btn" onclick="freezeCredit(${id})" style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);color:#fbbf24;">Freeze Debt</button>'}<button class="btn btn-danger" onclick="deleteCredit(${id})">Delete Credit</button>
+                        <button class="btn btn-danger" onclick="deleteCredit(${id})">Delete Credit</button>
                     ` : `
                         <button class="btn btn-primary" onclick="quickEndorse('credit', '💳 Credit account needs admin attention: ' + '${credit.debtor}' + ' — Balance: ₱' + balance.toLocaleString())">📋 Endorse to Admin</button>
                     `}
@@ -14843,7 +14649,7 @@ async function showPayrollSummary() {
             const credit = await dbGet('credits', creditId);
             const allPayments = await dbGetAll('creditPayments');
             const creditPayments = allPayments.filter(p => p.creditId === creditId);
-            const totalPaid = creditPayments.reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0);
+            const totalPaid = creditPayments.reduce((sum, p) => sum + p.amount, 0);
             
             // Calculate total due (principal + interest)
             let totalDue = credit.principal;
@@ -14927,7 +14733,7 @@ async function showPayrollSummary() {
             
             const creditPayments = await dbGetAll('creditPayments');
             const payments = creditPayments.filter(p => p.creditId === creditId);
-            const totalPaid = payments.reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0);
+            const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
             
             // Calculate total due with interest
             let totalDue = credit.principal;
@@ -15126,7 +14932,7 @@ async function showPayrollSummary() {
                     createdAt: new Date().toISOString(),
                     // Reminder fields (only meaningful for category='reminder')
                     reminderTime: category === 'reminder' ? reminderTime : null,
-                    repeat:       (category === 'reminder' || category === 'general') ? repeat : 'none',
+                    repeat:       category === 'reminder' ? repeat : 'none',
                     dismissed:    false,  // reset dismissed on save/edit
                 };
 
@@ -15142,7 +14948,6 @@ async function showPayrollSummary() {
                 notePhotoData = null;
                 hideModal('note-modal');
                 loadNotes();
-        try { if (typeof loadDashboard === 'function') loadDashboard(); } catch(e) {} // Refresh calendar
                 // Sync to Firebase
                 debouncedSync();
             } catch (error) {
@@ -15159,12 +14964,8 @@ async function showPayrollSummary() {
         function prismToggleReminderFields(category) {
             const el = document.getElementById('reminder-extra-fields');
             if (!el) return;
-            if (category === 'reminder' || category === 'general') {
+            if (category === 'reminder') {
                 el.classList.remove('reminder-hidden');
-            // Hide time picker for general notes — repeat only
-            const _tg = document.getElementById('note-reminder-time');
-            const _tgWrap = _tg ? _tg.closest('.form-group') : null;
-            if (_tgWrap) _tgWrap.style.display = (category === 'general') ? 'none' : '';
             } else {
                 el.classList.add('reminder-hidden');
             }
@@ -15206,7 +15007,7 @@ async function showPayrollSummary() {
                 if (!db || !db.objectStoreNames.contains('customNotes')) return;
                 const notes = await dbGetAll('customNotes');
                 const reminders = (notes || []).filter(n =>
-                    (n.category === 'reminder' || (n.category === 'general' && n.repeat && n.repeat !== 'none')) && prismIsReminderDueToday(n)
+                    n.category === 'reminder' && prismIsReminderDueToday(n)
                 );
 
                 // Also include recurring tasks due today (not completed)
@@ -15395,15 +15196,15 @@ async function showPayrollSummary() {
 
             // Sort: active reminders first, then by date desc
             const sorted = [...notes].sort((a,b) => {
-                const aRec = (a.category==='reminder'||a.category==='general') && a.repeat && a.repeat!=='none';
-                const bRec = (b.category==='reminder'||b.category==='general') && b.repeat && b.repeat!=='none';
+                const aRec = a.category==='reminder' && a.repeat && a.repeat!=='none';
+                const bRec = b.category==='reminder' && b.repeat && b.repeat!=='none';
                 if (aRec && !bRec) return -1;
                 if (!aRec && bRec) return 1;
                 return new Date(b.date) - new Date(a.date);
             });
 
             container.innerHTML = sorted.map(note => {
-                const isRecurring = (note.category==='reminder' || note.category==='general') && note.repeat && note.repeat!=='none';
+                const isRecurring = note.category==='reminder' && note.repeat && note.repeat!=='none';
                 const borderStyle = isRecurring ? 'border-left:3px solid #f59e0b;' : '';
                 const repeatBadge = isRecurring
                     ? `<span style="display:inline-block;background:rgba(245,158,11,0.15);color:#f59e0b;font-size:0.68rem;padding:1px 8px;border-radius:10px;font-weight:600;margin-left:5px;">🔁 ${note.repeat}</span>`
@@ -15613,7 +15414,7 @@ async function showPayrollSummary() {
                     </div>
                     <p><strong>Date:</strong> ${note.date}
                         ${note.category==='reminder' && note.reminderTime ? `&nbsp;&nbsp;⏰ <strong>${note.reminderTime}</strong>` : ''}
-                        ${(note.category==='reminder' || note.category==='general') && note.repeat && note.repeat!=='none' ? `&nbsp;&nbsp;🔁 <strong>${note.repeat}</strong>` : ''}
+                        ${note.category==='reminder' && note.repeat && note.repeat!=='none' ? `&nbsp;&nbsp;🔁 <strong>${note.repeat}</strong>` : ''}
                     </p>
                     <div style="margin-top: 12px; padding: 12px; background: var(--gray-50); border-radius: 8px;">
                         <p style="white-space: pre-wrap;">${note.description}</p>
@@ -15653,7 +15454,7 @@ async function showPayrollSummary() {
             document.getElementById('note-date').value = note.date;
             // Restore reminder fields
             prismToggleReminderFields(note.category);
-            if (note.category === 'reminder' || note.category === 'general') {
+            if (note.category === 'reminder') {
                 const rtEl = document.getElementById('note-reminder-time');
                 const rpEl = document.getElementById('note-repeat');
                 if (rtEl) rtEl.value = note.reminderTime || '08:00';
@@ -15923,7 +15724,7 @@ async function showPayrollSummary() {
 
         // Add notes to client
         async function addClientNote(type, id) {
-            const note = await showInputModal('Add Note', null, 'Enter note for this client...');
+            const note = prompt('Enter note for this client:');
             if (!note || !note.trim()) return;
 
             const client = type === 'tenant' ? await dbGet('tenants', id) : await dbGet('credits', id);
@@ -16096,8 +15897,8 @@ async function showPayrollSummary() {
             const now = new Date();
             const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
             const monthlyExpenses = expenses.filter(e => e.date.startsWith(currentMonth));
-            const monthlyTotal = monthlyExpenses.reduce((sum, e) => sum + (prismSafeNumber(e.amount)), 0);
-            const totalExpenses = expenses.reduce((sum, e) => sum + (prismSafeNumber(e.amount)), 0);
+            const monthlyTotal = monthlyExpenses.reduce((sum, e) => sum + e.amount, 0);
+            const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
 
             document.getElementById('stat-expenses-month').textContent = '₱' + monthlyTotal.toLocaleString();
             document.getElementById('stat-expenses-total').textContent = '₱' + totalExpenses.toLocaleString();
@@ -16700,10 +16501,6 @@ async function showPayrollSummary() {
             const credits = await dbGetAll('credits');
             const creditPayments = await dbGetAll('creditPayments');
             const expenses = await dbGetAll('expenses');
-    const additionalIncome = await dbGetAll('additionalIncome') || [];
-    const waterSales       = await dbGetAll('waterSales') || [];
-    const employees     = await dbGetAll('employees') || [];
-    const salaryPayments = await dbGetAll('salaryPayments') || [];
 
             const now = new Date();
             const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -16780,7 +16577,7 @@ async function showPayrollSummary() {
             // Check credits/debtors
             credits.forEach(credit => {
                 const creditPmts = creditPayments.filter(p => p.creditId === credit.id);
-                const totalPaid = creditPmts.reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0);
+                const totalPaid = creditPmts.reduce((sum, p) => sum + p.amount, 0);
                 let totalDue = credit.principal;
                 if (credit.interestType === 'simple') {
                     const months = Math.ceil((now - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
@@ -16833,7 +16630,7 @@ async function showPayrollSummary() {
 
             // Monthly rent collection
             const monthlyPayments = payments.filter(p => p.type === 'rent' && p.date.startsWith(currentMonth));
-            const collected = monthlyPayments.reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0);
+            const collected = monthlyPayments.reduce((sum, p) => sum + p.amount, 0);
             const expectedRent = tenants.reduce((sum, t) => sum + t.rent, 0);
 
             document.getElementById('stat-collected').textContent = '₱' + collected.toLocaleString();
@@ -16850,7 +16647,7 @@ async function showPayrollSummary() {
 
             // Overall rent collection
             let overallRentExpected = 0;
-            let overallRentCollected = payments.filter(p => p.type === 'rent').reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0);
+            let overallRentCollected = payments.filter(p => p.type === 'rent').reduce((sum, p) => sum + p.amount, 0);
             
             tenants.forEach(tenant => {
                 const moveInDate = new Date(tenant.moveIn);
@@ -16870,7 +16667,7 @@ async function showPayrollSummary() {
 
             // Overall credit collection
             let overallCreditDue = 0;
-            let overallCreditCollected = creditPayments.reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0);
+            let overallCreditCollected = creditPayments.reduce((sum, p) => sum + p.amount, 0);
             
             credits.forEach(credit => {
                 let totalDue = credit.principal;
@@ -16895,7 +16692,7 @@ async function showPayrollSummary() {
 
             // Credit repaid this month
             const monthlyCreditPayments = creditPayments.filter(p => p.date.startsWith(currentMonth));
-            const creditRepaid = monthlyCreditPayments.reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0);
+            const creditRepaid = monthlyCreditPayments.reduce((sum, p) => sum + p.amount, 0);
             safeSetText('stat-credit-repaid', '₱' + creditRepaid.toLocaleString());
 
             // Other Income this month
@@ -16912,7 +16709,7 @@ async function showPayrollSummary() {
                 const clientCharges = await dbGetAll('clientCharges');
                 pendingChargesTotal = clientCharges
                     .filter(c => c.status === 'pending')
-                    .reduce((sum, c) => sum + (prismSafeNumber(c.amount)), 0);
+                    .reduce((sum, c) => sum + c.amount, 0);
             } catch (e) {}
 
             // Update Other Income stat
@@ -16960,7 +16757,7 @@ async function showPayrollSummary() {
 
             // Monthly expenses and net income
             const monthlyExpenses = expenses.filter(e => e.date.startsWith(currentMonth));
-            const totalExpenses = monthlyExpenses.reduce((sum, e) => sum + (prismSafeNumber(e.amount)), 0);
+            const totalExpenses = monthlyExpenses.reduce((sum, e) => sum + e.amount, 0);
             const netIncome = collected + creditRepaid - totalExpenses;
             
             safeSetText('stat-expenses', '₱' + totalExpenses.toLocaleString());
@@ -16988,12 +16785,12 @@ async function showPayrollSummary() {
 
             // Calculate expense category totals for this month
             const expenseByCategory = {
-                electric: monthlyExpenses.filter(e => e.category === 'electric').reduce((sum, e) => sum + (prismSafeNumber(e.amount)), 0),
-                water: monthlyExpenses.filter(e => e.category === 'water').reduce((sum, e) => sum + (prismSafeNumber(e.amount)), 0),
-                fuel: monthlyExpenses.filter(e => e.category === 'fuel').reduce((sum, e) => sum + (prismSafeNumber(e.amount)), 0),
-                repairs: monthlyExpenses.filter(e => e.category === 'repairs').reduce((sum, e) => sum + (prismSafeNumber(e.amount)), 0),
-                personal_loan: monthlyExpenses.filter(e => e.category === 'personal_loan').reduce((sum, e) => sum + (prismSafeNumber(e.amount)), 0),
-                savings: monthlyExpenses.filter(e => e.category === 'savings').reduce((sum, e) => sum + (prismSafeNumber(e.amount)), 0)
+                electric: monthlyExpenses.filter(e => e.category === 'electric').reduce((sum, e) => sum + e.amount, 0),
+                water: monthlyExpenses.filter(e => e.category === 'water').reduce((sum, e) => sum + e.amount, 0),
+                fuel: monthlyExpenses.filter(e => e.category === 'fuel').reduce((sum, e) => sum + e.amount, 0),
+                repairs: monthlyExpenses.filter(e => e.category === 'repairs').reduce((sum, e) => sum + e.amount, 0),
+                personal_loan: monthlyExpenses.filter(e => e.category === 'personal_loan').reduce((sum, e) => sum + e.amount, 0),
+                savings: monthlyExpenses.filter(e => e.category === 'savings').reduce((sum, e) => sum + e.amount, 0)
             };
 
             // Update expense category breakdown UI
@@ -17011,7 +16808,7 @@ async function showPayrollSummary() {
             try { calendarNotes = await dbGetAll('customNotes') || []; } catch(e) {}
 
             try {
-                await renderCalendar(tenants, credits, payments, creditPayments, calendarTasks, calendarNotes, employees, waterSales, salaryPayments);
+                await renderCalendar(tenants, credits, payments, creditPayments, calendarTasks, calendarNotes);
             } catch (error) {
                 console.error('Error rendering calendar:', error);
             }
@@ -17056,353 +16853,87 @@ async function showPayrollSummary() {
 
             // Render monthly trend chart with error handling
             try {
-                renderTrendChart(payments, creditPayments, expenses, credits, additionalIncome, waterSales);
+                renderTrendChart(payments, creditPayments, expenses, credits);
             } catch (error) {
                 console.error('Error rendering trend chart:', error);
             }
-
-    // Load tasks widget
-    try { await loadDashboardTasks(); } catch(e) {}
         }
-
-    async function loadDashboardTasks() {
-        const container = document.getElementById('dashboard-tasks-list');
-        if (!container) return;
-
-        const tasks = await dbGetAll('tasks');
-        if (!tasks || tasks.length === 0) {
-            container.innerHTML = '<div class="empty-state" onclick="showSection(\'tasks\')" style="cursor:pointer"><p>No tasks yet — click to add one</p></div>';
-            return;
-        }
-
-        const today = new Date().toISOString().split('T')[0];
-
-        const priorityScore = function(t) {
-            if (t.status === 'completed') return 99;
-            if (t.dueDate && t.dueDate < today) return 0;
-            if (t.dueDate && t.dueDate === today) return 1;
-            if (t.status === 'in-progress') return 2;
-            return 3;
-        };
-
-        const active = tasks
-            .filter(function(t) { return t.status !== 'completed'; })
-            .sort(function(a, b) {
-                return priorityScore(a) - priorityScore(b) || (a.dueDate||'').localeCompare(b.dueDate||'');
-            });
-
-        if (active.length === 0) {
-            container.innerHTML = '<div style="text-align:center;color:#10b981;padding:16px 0;font-size:0.88rem;">All tasks completed!</div>';
-            return;
-        }
-
-        const show = active.slice(0, 6);
-        const remaining = active.length - show.length;
-        const priColors = { high:'#ef4444', medium:'#f59e0b', low:'#10b981' };
-        const stColors  = { pending:'#f59e0b', 'in-progress':'#6366f1', completed:'#10b981' };
-        const stLabels  = { pending:'Pending', 'in-progress':'In Progress', completed:'Done' };
-
-        let html = '<div style="display:grid;gap:8px;padding:4px 0;">';
-        show.forEach(function(t) {
-            const overdue  = t.dueDate && t.dueDate < today;
-            const dueToday = t.dueDate && t.dueDate === today;
-            const priColor = priColors[t.priority] || '#6366f1';
-            const borderColor = overdue ? '#ef4444' : dueToday ? '#f59e0b' : priColor;
-            const stColor = stColors[t.status] || '#94a3b8';
-            const stLabel = stLabels[t.status] || t.status;
-
-            let badge = '';
-            if (overdue)  badge = '<span style="background:rgba(239,68,68,0.15);color:#ef4444;font-size:0.68rem;padding:2px 7px;border-radius:8px;font-weight:700;">Overdue</span>';
-            else if (dueToday) badge = '<span style="background:rgba(245,158,11,0.15);color:#fbbf24;font-size:0.68rem;padding:2px 7px;border-radius:8px;font-weight:700;">Today</span>';
-            else if (t.dueDate) badge = '<span style="color:#64748b;font-size:0.72rem;">' + t.dueDate + '</span>';
-
-            const dot = t.priority ? '<span style="width:8px;height:8px;border-radius:50%;background:' + priColor + ';display:inline-block;flex-shrink:0;margin-top:2px;"></span>' : '';
-            const desc = t.description ? '<div style="font-size:0.73rem;color:var(--text-secondary);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + t.description + '</div>' : '';
-
-            html += '<div onclick="showSection(\'tasks\')" style="display:flex;align-items:flex-start;gap:10px;padding:9px 12px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:10px;cursor:pointer;border-left:3px solid ' + borderColor + ';" onmouseover="this.style.background=\'rgba(99,102,241,0.07)\'" onmouseout="this.style.background=\'var(--bg-card)\'">'
-                + dot
-                + '<div style="flex:1;min-width:0;"><div style="font-size:0.85rem;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + t.title + '</div>' + desc + '</div>'
-                + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0;">' + badge + '<span style="font-size:0.68rem;color:' + stColor + ';">' + stLabel + '</span></div>'
-                + '</div>';
-        });
-        if (remaining > 0) {
-            html += '<div onclick="showSection(\'tasks\')" style="text-align:center;padding:8px;color:#818cf8;font-size:0.8rem;cursor:pointer;border-radius:8px;border:1px dashed rgba(99,102,241,0.3);">+' + remaining + ' more tasks → View All</div>';
-        }
-        html += '</div>';
-        container.innerHTML = html;
-    }
-    window.loadDashboardTasks = loadDashboardTasks;
-
 
         // Render Monthly Trend Chart (simple canvas-based)
-    let _dashTrendChart = null;
+        function renderTrendChart(payments, creditPayments, expenses, credits) {
+            const canvas = document.getElementById('trend-chart');
+            if (!canvas) return;
 
-    function renderTrendChart(payments, creditPayments, expenses, credits, additionalIncome, waterSales) {
-        const canvas = document.getElementById('trend-chart');
-        if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const container = canvas.parentElement;
+            canvas.width = container.offsetWidth;
+            canvas.height = 200;
 
-        additionalIncome = additionalIncome || [];
-        waterSales       = waterSales       || [];
-
-        // Get last 6 months
-        const months = [];
-        const now = new Date();
-        for (let i = 5; i >= 0; i--) {
-            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            months.push({
-                key:   d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'),
-                label: d.toLocaleString('default', { month: 'short', year: '2-digit' })
-            });
-        }
-
-        const incomeData  = [];
-        const expenseData = [];
-        const netData     = [];
-
-        months.forEach(function(m) {
-            // ALL income sources
-            const rentIn     = payments.filter(function(p){ return p.date && p.date.startsWith(m.key) && !p.voided; }).reduce(function(s,p){ return s+(p.amount||0); }, 0);
-            const creditIn   = creditPayments.filter(function(p){ return p.date && p.date.startsWith(m.key); }).reduce(function(s,p){ return s+(p.amount||0); }, 0);
-            const addIn      = additionalIncome.filter(function(p){ return p.date && p.date.startsWith(m.key); }).reduce(function(s,p){ return s+(p.amount||0); }, 0);
-            const waterIn    = waterSales.filter(function(p){ return p.date && p.date.startsWith(m.key) && !p.voided; }).reduce(function(s,p){ return s+(p.amountPaid||p.total||0); }, 0);
-            const totalIncome = rentIn + creditIn + addIn + waterIn;
-
-            // ALL expense sources
-            const expOut     = expenses.filter(function(e){ return e.date && e.date.startsWith(m.key); }).reduce(function(s,e){ return s+(e.amount||0); }, 0);
-            const creditOut  = credits.filter(function(c){ return c.dateLent && c.dateLent.startsWith(m.key); }).reduce(function(s,c){ return s+(c.principal||0); }, 0);
-            const totalExpense = expOut + creditOut;
-
-            incomeData.push(totalIncome);
-            expenseData.push(totalExpense);
-            netData.push(totalIncome - totalExpense);
-        });
-
-        // Store for Jarod's Analysis
-        window._trendData = {
-            months:      months.map(function(m){ return m.label; }),
-            incomeData:  incomeData,
-            expenseData: expenseData,
-            netData:     netData
-        };
-
-        const labels = months.map(function(m){ return m.label; });
-        const allZero = incomeData.every(function(v){ return v===0; }) && expenseData.every(function(v){ return v===0; });
-
-        // Destroy previous chart
-        if (_dashTrendChart) { try { _dashTrendChart.destroy(); } catch(e){} _dashTrendChart = null; }
-
-        if (!window.Chart) {
-            console.warn('[Trend] Chart.js not loaded yet');
-            return;
-        }
-
-        _dashTrendChart = new window.Chart(canvas, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Income',
-                        data: incomeData,
-                        borderColor: '#10b981',
-                        backgroundColor: 'rgba(16,185,129,0.08)',
-                        fill: true,
-                        tension: 0.35,
-                        pointRadius: 4,
-                        pointHoverRadius: 6,
-                        borderWidth: 2.5,
-                        pointBackgroundColor: '#10b981'
-                    },
-                    {
-                        label: 'Expenses',
-                        data: expenseData,
-                        borderColor: '#ef4444',
-                        backgroundColor: 'rgba(239,68,68,0.08)',
-                        fill: true,
-                        tension: 0.35,
-                        pointRadius: 4,
-                        pointHoverRadius: 6,
-                        borderWidth: 2.5,
-                        pointBackgroundColor: '#ef4444'
-                    },
-                    {
-                        label: 'Net',
-                        data: netData,
-                        borderColor: '#3b82f6',
-                        backgroundColor: 'transparent',
-                        fill: false,
-                        tension: 0.35,
-                        pointRadius: 4,
-                        pointHoverRadius: 6,
-                        borderWidth: 2,
-                        borderDash: [5, 4],
-                        pointBackgroundColor: '#3b82f6'
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: { mode: 'index', intersect: false },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        backgroundColor: '#1e293b',
-                        borderColor: '#334155',
-                        borderWidth: 1,
-                        titleColor: '#f1f5f9',
-                        bodyColor: '#94a3b8',
-                        callbacks: {
-                            label: function(ctx) {
-                                return ' ' + ctx.dataset.label + ': ₱' + (ctx.parsed.y||0).toLocaleString('en-PH');
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        grid: { color: 'rgba(255,255,255,0.04)' },
-                        ticks: { color: '#64748b', font: { size: 11 } }
-                    },
-                    y: {
-                        grid: { color: 'rgba(255,255,255,0.04)' },
-                        ticks: {
-                            color: '#64748b',
-                            font: { size: 11 },
-                            callback: function(v) {
-                                if (v >= 1000) return '₱' + (v/1000).toFixed(0) + 'k';
-                                return '₱' + v;
-                            }
-                        },
-                        suggestedMin: 0,
-                        suggestedMax: allZero ? 100 : undefined
-                    }
-                }
+            // Get last 6 months
+            const months = [];
+            const now = new Date();
+            for (let i = 5; i >= 0; i--) {
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                months.push({
+                    key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+                    label: d.toLocaleString('default', { month: 'short' })
+                });
             }
-        });
 
-        // Auto-close Jarod panel when data refreshes
-        const jp = document.getElementById('jarods-analysis-panel');
-        const jt = document.getElementById('jarods-analysis-text');
-        if (jp) jp.style.display = 'none';
-        if (jt) jt.innerHTML = '';
-        window._trendData = { months: labels, incomeData, expenseData, netData };
-    }
+            // Calculate income and expenses per month
+            const data = months.map(m => {
+                const rentIncome = payments.filter(p => p.date && p.date.startsWith(m.key)).reduce((sum, p) => sum + (p.amount||0), 0);
+                const creditIncome = creditPayments.filter(p => p.date && p.date.startsWith(m.key)).reduce((sum, p) => sum + (p.amount||0), 0);
+                const totalIncome = rentIncome + creditIncome;
 
-    async function jarodsAnalysis() {
-        const panel   = document.getElementById('jarods-analysis-panel');
-        const textEl  = document.getElementById('jarods-analysis-text');
-        const loadingEl = document.getElementById('jarods-loading');
-        if (!panel || !textEl) return;
+                const monthExpenses = expenses.filter(e => e.date && e.date.startsWith(m.key)).reduce((sum, e) => sum + (e.amount||0), 0);
+                const monthCreditsReleased = credits.filter(c => c.dateLent && c.dateLent.startsWith(m.key)).reduce((sum, c) => sum + (c.principal||0), 0);
+                const totalExpenses = monthExpenses + monthCreditsReleased;
 
-        // Toggle off if already open
-        if (panel.style.display !== 'none' && textEl.innerHTML.trim()) {
-            panel.style.display = 'none';
-            return;
+                return { label: m.label, income: totalIncome, expenses: totalExpenses };
+            });
+
+            // Find max value for scaling
+            const maxValue = Math.max(...data.map(d => Math.max(d.income, d.expenses)), 1);
+
+            // Chart dimensions
+            const padding = { top: 20, right: 20, bottom: 30, left: 50 };
+            const chartWidth = canvas.width - padding.left - padding.right;
+            const chartHeight = canvas.height - padding.top - padding.bottom;
+            const barWidth = (chartWidth / months.length) * 0.35;
+            const groupWidth = chartWidth / months.length;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw bars
+            data.forEach((d, i) => {
+                const x = padding.left + (i * groupWidth) + (groupWidth / 2);
+                
+                // Income bar (green)
+                const incomeHeight = (d.income / maxValue) * chartHeight;
+                ctx.fillStyle = '#10b981';
+                ctx.fillRect(x - barWidth - 2, padding.top + chartHeight - incomeHeight, barWidth, incomeHeight);
+
+                // Expenses bar (red)
+                const expenseHeight = (d.expenses / maxValue) * chartHeight;
+                ctx.fillStyle = '#ef4444';
+                ctx.fillRect(x + 2, padding.top + chartHeight - expenseHeight, barWidth, expenseHeight);
+
+                // Month label
+                ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim() || '#6b7280';
+                ctx.font = '11px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(d.label, x, canvas.height - 10);
+            });
+
+            // Draw Y-axis labels
+            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim() || '#6b7280';
+            ctx.font = '10px Arial';
+            ctx.textAlign = 'right';
+            ctx.fillText('₱' + (maxValue / 1000).toFixed(0) + 'k', padding.left - 5, padding.top + 10);
+            ctx.fillText('₱0', padding.left - 5, padding.top + chartHeight);
         }
-
-        panel.style.display = 'block';
-        textEl.innerHTML = '';
-        if (loadingEl) loadingEl.style.display = 'inline';
-
-        const td = window._trendData;
-        if (!td || (td.incomeData.every(function(v){return v===0;}) && td.expenseData.every(function(v){return v===0;}))) {
-            textEl.innerHTML = '<span style="color:#64748b;">No financial data to analyze yet. Record some transactions first.</span>';
-            if (loadingEl) loadingEl.style.display = 'none';
-            return;
-        }
-
-        try {
-            const fmt  = function(v){ return '\u20b1' + v.toLocaleString('en-PH', {minimumFractionDigits:0}); };
-            const pct  = function(a,b){ return b===0 ? '\u2014' : (a/b*100).toFixed(1) + '%'; };
-
-            const totalIncome  = td.incomeData.reduce(function(a,b){return a+b;},0);
-            const totalExpense = td.expenseData.reduce(function(a,b){return a+b;},0);
-            const totalNet     = totalIncome - totalExpense;
-            const avgIncome    = totalIncome  / 6;
-            const avgExpense   = totalExpense / 6;
-            const profitMargin = totalIncome > 0 ? (totalNet / totalIncome * 100) : 0;
-
-            const bestIdx   = td.incomeData.indexOf(Math.max.apply(null, td.incomeData));
-            const worstIdx  = td.netData.indexOf(Math.min.apply(null, td.netData));
-            const bestMonth = td.months[bestIdx];
-            const worstMonth = td.months[worstIdx];
-
-            const lastInc  = td.incomeData[5],  prevInc  = td.incomeData[4];
-            const lastExp  = td.expenseData[5], prevExp  = td.expenseData[4];
-            const incGrowth = prevInc > 0 ? ((lastInc - prevInc) / prevInc * 100).toFixed(1) : null;
-            const expGrowth = prevExp > 0 ? ((lastExp - prevExp) / prevExp * 100).toFixed(1) : null;
-
-            const trend = (function(){
-                const vals = td.incomeData.filter(function(v){return v>0;});
-                if (vals.length < 2) return 'insufficient';
-                const half = Math.floor(vals.length/2);
-                const first = vals.slice(0,half).reduce(function(a,b){return a+b;},0)/half;
-                const second = vals.slice(half).reduce(function(a,b){return a+b;},0)/(vals.length-half);
-                return second > first*1.05 ? 'growing' : second < first*0.95 ? 'declining' : 'stable';
-            })();
-
-            const healthIcon = profitMargin >= 30 ? '\ud83d\udfe2' : profitMargin >= 10 ? '\ud83d\udfe1' : profitMargin >= 0 ? '\ud83d\udfe0' : '\ud83d\udd34';
-            const healthText = profitMargin >= 30 ? 'Strong — consistent surplus above 30%' :
-                               profitMargin >= 10 ? 'Moderate — profitable but room to improve' :
-                               profitMargin >= 0  ? 'Tight — barely breaking even' :
-                               'Critical — spending exceeds income';
-
-            const zeroIncomeMonths = td.incomeData.filter(function(v){return v===0;}).length;
-
-            // Build concerns & recommendations
-            const concerns = [];
-            const recs     = [];
-
-            if (totalNet < 0) concerns.push('Total net is negative (' + fmt(totalNet) + ') — expenses exceed income over 6 months.');
-            if (zeroIncomeMonths >= 2) concerns.push(zeroIncomeMonths + ' months had zero recorded income — check for missing entries.');
-            if (expGrowth !== null && parseFloat(expGrowth) > 20) concerns.push('Expenses jumped ' + expGrowth + '% last month vs prior month.');
-            if (incGrowth !== null && parseFloat(incGrowth) < 0) concerns.push('Income dropped ' + Math.abs(incGrowth) + '% last month.');
-            if (totalExpense > totalIncome * 0.85) concerns.push('Expense-to-income ratio is ' + pct(totalExpense, totalIncome) + ' — very high.');
-            if (concerns.length === 0) concerns.push('No major concerns detected this period.');
-
-            if (zeroIncomeMonths >= 1) recs.push('Record all transactions consistently — gaps make trends unreliable.');
-            if (trend === 'declining') recs.push('Declining trend: review overdue collections, reduce discretionary expenses.');
-            if (bestMonth) recs.push('Study what drove your best month (' + bestMonth + ') and replicate it.');
-            recs.push('Target 2\u20133 months of expenses (' + fmt(avgExpense*2) + '\u2013' + fmt(avgExpense*3) + ') as cash reserve.');
-            if (profitMargin > 25) recs.push('Good margins \u2014 consider reinvesting surplus into property improvements.');
-
-            // Build table
-            const rows = td.months.map(function(m, i) {
-                return '<tr style="border-bottom:1px solid rgba(148,163,184,0.08);">'
-                    + '<td style="padding:4px 8px;color:#94a3b8;font-size:0.78rem;">' + m + '</td>'
-                    + '<td style="padding:4px 8px;color:#10b981;font-size:0.78rem;text-align:right;">' + fmt(td.incomeData[i]) + '</td>'
-                    + '<td style="padding:4px 8px;color:#ef4444;font-size:0.78rem;text-align:right;">' + fmt(td.expenseData[i]) + '</td>'
-                    + '<td style="padding:4px 8px;font-size:0.78rem;text-align:right;color:' + (td.netData[i]>=0?'#3b82f6':'#f59e0b') + ';">' + fmt(td.netData[i]) + '</td>'
-                    + '</tr>';
-            }).join('');
-
-            textEl.innerHTML =
-                '<table style="width:100%;border-collapse:collapse;margin-bottom:10px;background:rgba(0,0,0,0.2);border-radius:8px;overflow:hidden;">'
-                + '<thead><tr style="background:rgba(99,102,241,0.1);">'
-                + '<th style="padding:5px 8px;color:#64748b;font-size:0.72rem;text-align:left;font-weight:600;">MONTH</th>'
-                + '<th style="padding:5px 8px;color:#10b981;font-size:0.72rem;text-align:right;font-weight:600;">INCOME</th>'
-                + '<th style="padding:5px 8px;color:#ef4444;font-size:0.72rem;text-align:right;font-weight:600;">EXPENSES</th>'
-                + '<th style="padding:5px 8px;color:#3b82f6;font-size:0.72rem;text-align:right;font-weight:600;">NET</th>'
-                + '</tr></thead><tbody>' + rows + '</tbody></table>'
-                + '<div style="margin-bottom:10px;"><div style="font-weight:700;color:#f1f5f9;margin-bottom:6px;font-size:0.88rem;">' + healthIcon + ' Overall Health</div>'
-                + '<div style="font-size:0.83rem;color:#cbd5e1;line-height:1.45;">' + healthText + ' &nbsp;|&nbsp; Profit margin: <b>' + profitMargin.toFixed(1) + '%</b> &nbsp;|&nbsp; Trend: <b>' + trend + '</b></div></div>'
-                + '<div style="margin-bottom:10px;"><div style="font-weight:700;color:#fbbf24;margin-bottom:6px;font-size:0.88rem;">\u26a0\ufe0f Concerns</div>'
-                + '<ul style="margin:0;padding-left:16px;font-size:0.83rem;color:#cbd5e1;line-height:1.4;margin:4px 0;">'
-                + concerns.filter(function(c){return c;}).map(function(c){return '<li style="margin-bottom:4px;">' + c + '</li>';}).join('') + '</ul></div>'
-                + '<div><div style="font-weight:700;color:#34d399;margin-bottom:6px;font-size:0.88rem;">\ud83d\udca1 Recommendations</div>'
-                + '<ul style="margin:0;padding-left:16px;font-size:0.83rem;color:#cbd5e1;line-height:1.4;margin:4px 0;">'
-                + recs.filter(function(r){return r;}).map(function(r){return '<li style="margin-bottom:4px;">' + r + '</li>';}).join('') + '</ul></div>'
-                + '<div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(148,163,184,0.1);font-size:0.72rem;color:#475569;">Analysis based on 6-month data &middot; ' + new Date().toLocaleDateString('en-PH',{month:'long',year:'numeric'}) + '</div>';
-
-        } catch(err) {
-            textEl.innerHTML = '<div style="color:#f87171;padding:8px;background:rgba(239,68,68,0.1);border-radius:6px;font-size:0.82rem;">Analysis error: ' + err.message + '</div>';
-            console.error('[Jarod Analysis]', err);
-        }
-        if (loadingEl) loadingEl.style.display = 'none';
-    }
-    window.jarodsAnalysis = jarodsAnalysis;
-
 
         // Helper function for ordinal suffix
         // [REMOVED: duplicate getOrdinalSuffix]
@@ -17542,7 +17073,7 @@ async function showPayrollSummary() {
             loadDashboard();
         }
 
-        async function renderCalendar(tenants, credits, payments, creditPayments, tasks, notes, employees, waterSales, salaryPayments) {
+        async function renderCalendar(tenants, credits, payments, creditPayments, tasks, notes) {
             tasks = tasks || []; notes = notes || [];
             const calendar = document.getElementById('collection-calendar');
             const monthLabel = document.getElementById('calendar-month-label');
@@ -17606,54 +17137,6 @@ async function showPayrollSummary() {
                     sd.debtors.push({ type:'debtor', label:`💳 ${credit.debtor||credit.name||'Debtor'}`, sub:`Balance: ${balance}` });
                 }
             });
-
-    // ── PAYROLL alerts (weekly = Mon, daily = every day, monthly = payday) ──
-    employees = employees || [];
-    salaryPayments = salaryPayments || [];
-    employees.forEach(function(emp) {
-        if (!emp.payFrequency) return;
-        const paidIds = salaryPayments.filter(function(sp){ return sp.employeeId === emp.id; }).map(function(sp){ return sp.periodEnd || sp.date || ''; });
-        // Generate payroll hit days for this month
-        const payDays = new Set();
-        const viewEnd = new Date(year, month + 1, 0);
-        if (emp.payFrequency === 'daily') {
-            for (let d = 1; d <= viewEnd.getDate(); d++) payDays.add(d);
-        } else if (emp.payFrequency === 'weekly') {
-            // Pay on every Friday (day 5) of the month
-            for (let d = 1; d <= viewEnd.getDate(); d++) {
-                if (new Date(year, month, d).getDay() === 5) payDays.add(d);
-            }
-        } else if (emp.payFrequency === 'semi-monthly') {
-            payDays.add(15); payDays.add(viewEnd.getDate());
-        } else {
-            payDays.add(viewEnd.getDate()); // monthly — end of month
-        }
-        payDays.forEach(function(pd) {
-            const sd = getDay(pd);
-            if (!sd.payroll) sd.payroll = [];
-            sd.payroll.push({ type:'payroll', label:'💰 ' + (emp.name||'Employee'), sub: (emp.payFrequency||'') + ' payroll', empId: emp.id });
-        });
-    });
-
-    // ── WATER delivery schedule (recurring water sales per customer) ──
-    waterSales = waterSales || [];
-    const waterByDay = {};
-    waterSales.forEach(function(ws) {
-        if (!ws.date) return;
-        const wsDate = new Date(ws.date + 'T00:00:00');
-        if (isNaN(wsDate)) return;
-        if (wsDate.getFullYear() === year && wsDate.getMonth() === month) {
-            const d = wsDate.getDate();
-            if (!waterByDay[d]) waterByDay[d] = 0;
-            waterByDay[d]++;
-        }
-    });
-    Object.keys(waterByDay).forEach(function(d) {
-        const sd = getDay(parseInt(d));
-        if (!sd.water) sd.water = [];
-        sd.water.push({ type:'water', label:'💧 Water Sales', sub: waterByDay[d] + ' transaction' + (waterByDay[d]>1?'s':'') });
-    });
-
 
             // ── TASKS with dueDate (+ repeat projection) ──
             tasks.forEach(task => {
@@ -17773,10 +17256,10 @@ async function showPayrollSummary() {
 
             for (let day=1; day<=totalDays; day++) {
                 const isToday  = today.getDate()===day && today.getMonth()===month && today.getFullYear()===year;
-        const sd       = scheduleData[day] || { tenants:[], debtors:[], overdue:[], tasks:[], notes:[], payroll:[], water:[] };
+                const sd       = scheduleData[day] || { tenants:[], debtors:[], overdue:[], tasks:[], notes:[] };
                 const hasTask  = sd.tasks.length > 0;
                 const hasNote  = sd.notes.length > 0;
-        const allItems = [...(sd.overdue||[]), ...(sd.tenants||[]), ...(sd.debtors||[]), ...(sd.tasks||[]), ...(sd.notes||[]), ...(sd.payroll||[]), ...(sd.water||[])];
+                const allItems = [...(sd.overdue||[]), ...(sd.tenants||[]), ...(sd.debtors||[]), ...(sd.tasks||[]), ...(sd.notes||[])];
 
                 let dayClass = 'calendar-day';
                 if (isToday) dayClass += ' today';
@@ -17795,16 +17278,14 @@ async function showPayrollSummary() {
                 const hasReminder = sd.notes.some(n => n.type==='reminder');
                 const hasPlainNote = sd.notes.some(n => n.type==='note');
                 if (hasReminder)  dots += '<span class="cal-dot dot-reminder" title="Reminder"></span>';
-        if (hasPlainNote) dots += '<span class="cal-dot dot-note"></span>';
-        if (sd.payroll && sd.payroll.length > 0) dots += '<span class="cal-dot" style="background:#06b6d4;" title="Payroll"></span>';
-        if (sd.water   && sd.water.length   > 0) dots += '<span class="cal-dot" style="background:#8b5cf6;" title="Water Sales"></span>';
+                if (hasPlainNote) dots += '<span class="cal-dot dot-note"></span>';
 
                 // Tooltip items
                 let tooltip = '';
                 if (allItems.length > 0) {
                     tooltip = `<div class="cal-tooltip"><div class="cal-tooltip-date">${day} ${calendarDate.toLocaleString('default',{month:'short'})}</div>`;
                     allItems.slice(0,6).forEach(item => {
-                        const cls = item.type==='task'?'cal-tt-task':item.type==='payroll'?'cal-tt-payroll':item.type==='water'?'cal-tt-water':item.type==='reminder'?'cal-tt-reminder':item.type==='note'?'cal-tt-note':item.type==='debtor'?'cal-tt-debtor':'cal-tt-tenant';
+                        const cls = item.type==='task'?'cal-tt-task':item.type==='reminder'?'cal-tt-reminder':item.type==='note'?'cal-tt-note':item.type==='debtor'?'cal-tt-debtor':'cal-tt-tenant';
                         tooltip += `<div class="cal-tt-item ${cls}"><div class="cal-tt-label">${item.label}</div><div class="cal-tt-sub">${item.sub||''}</div></div>`;
                     });
                     if (allItems.length > 6) tooltip += `<div class="cal-tt-more">+${allItems.length-6} more</div>`;
@@ -17812,7 +17293,7 @@ async function showPayrollSummary() {
                 }
 
                 const badge = allItems.length > 0 ? `<span class="cal-badge">${allItems.length}</span>` : '';
-                calHtml += `<div class="${dayClass}" data-day="${day}" onclick="prismOpenCalendarDay(${year},${month},${day})" style="cursor:${allItems.length>0?'pointer':'default'};">${day}${badge}<div class="cal-dots">${dots}</div>${tooltip}</div>`;
+                calHtml += `<div class="${dayClass}" data-day="${day}">${day}${badge}<div class="cal-dots">${dots}</div>${tooltip}</div>`;
             }
 
             calendar.innerHTML = calHtml;
@@ -17844,222 +17325,11 @@ async function showPayrollSummary() {
                     .cal-tt-task   { background:rgba(167,139,250,0.08); border-left:2px solid #a78bfa; }
                     .cal-tt-note     { background:rgba(74,222,128,0.08); border-left:2px solid #4ade80; }
                     .cal-tt-reminder { background:rgba(245,158,11,0.08); border-left:2px solid #f59e0b; }
-        .cal-tt-payroll { background:rgba(6,182,212,0.08); border-left:2px solid #06b6d4; }
-        .cal-tt-water   { background:rgba(139,92,246,0.08); border-left:2px solid #8b5cf6; }
-        .calendar-day.has-task, .calendar-day.has-note { cursor:pointer; }
                     .cal-tt-more   { font-size:0.7rem; color:#64748b; text-align:center; margin-top:4px; }
                 `;
                 document.head.appendChild(style);
             }
         }
-
-
-    // ── Calendar Day Detail Modal (Step 4-6: click → view → navigate) ──
-    function prismMakeCalCard(bgRgb, borderColor, onclickFn, title, sub, extra) {
-        extra = extra || '';
-        return '<div onclick="' + onclickFn + '" style="padding:9px 12px;background:rgba('
-            + bgRgb + ',0.07);border:1px solid rgba(' + bgRgb + ',0.2);border-left:3px solid '
-            + borderColor + ';border-radius:9px;margin-bottom:6px;cursor:pointer;transition:opacity 0.15s;"'
-            + ' onmouseenter="this.style.opacity=0.8" onmouseleave="this.style.opacity=1">'
-            + '<div style="font-size:0.85rem;font-weight:600;color:var(--text-primary,#f1f5f9);">' + title + '</div>'
-            + (sub ? '<div style="font-size:0.73rem;color:#64748b;margin-top:2px;">' + sub + '</div>' : '')
-            + extra + '</div>';
-    }
-    window.prismMakeCalCard = prismMakeCalCard;
-
-    function prismOpenCalendarDay(year, month, day) {
-        var modal = document.getElementById('cal-day-modal');
-        var titleEl = document.getElementById('cal-day-modal-title');
-        var subEl   = document.getElementById('cal-day-modal-sub');
-        var body    = document.getElementById('cal-day-modal-body');
-        if (!modal || !body) return;
-
-        var dateObj = new Date(year, month, day);
-        var dateStr = dateObj.toLocaleDateString('en-PH', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-        var mo = String(month+1).padStart(2,'0');
-        var da = String(day).padStart(2,'0');
-        var dateKey = year + '-' + mo + '-' + da;
-        var today   = new Date();
-        var isToday = today.getDate()===day && today.getMonth()===month && today.getFullYear()===year;
-        var isPast  = dateObj < new Date(today.getFullYear(), today.getMonth(), today.getDate());
-
-        if (titleEl) titleEl.textContent = '📅 ' + dateStr;
-        if (subEl)   subEl.textContent   = isToday ? '🟢 Today' : isPast ? '⏪ Past' : '🔜 Upcoming';
-
-        body.innerHTML = '<div style="text-align:center;color:#64748b;padding:20px;">⏳ Loading...</div>';
-        modal.style.display = 'flex';
-
-        function repMatch(origin, rep, check) {
-            if (isNaN(origin) || origin > check) return false;
-            if (rep==='daily')   return true;
-            if (rep==='weekly')  return origin.getDay() === check.getDay();
-            if (rep==='monthly') return origin.getDate() === check.getDate();
-            if (rep==='yearly')  return origin.getMonth()===check.getMonth() && origin.getDate()===check.getDate();
-            return false;
-        }
-
-        Promise.all([
-            dbGetAll('tasks').catch(function(){return[];}),
-            dbGetAll('customNotes').catch(function(){return[];}),
-            dbGetAll('tenants').catch(function(){return[];}),
-            dbGetAll('credits').catch(function(){return[];}),
-            dbGetAll('payments').catch(function(){return[];}),
-            dbGetAll('creditPayments').catch(function(){return[];}),
-            dbGetAll('employees').catch(function(){return[];}),
-            dbGetAll('waterSales').catch(function(){return[];})
-        ]).then(function(res) {
-            var tasks=res[0]||[], notes=res[1]||[], tenants=res[2]||[],
-                credits=res[3]||[], payments=res[4]||[], creditPayments=res[5]||[],
-                employees=res[6]||[], waterSales=res[7]||[];
-            var sections = [];
-
-            // Tasks
-            var dayTasks = tasks.filter(function(t) {
-                if (!t.dueDate || t.status==='completed') return false;
-                if (t.dueDate===dateKey) return true;
-                var o = new Date(t.dueDate+'T00:00:00'), r = t.repeat||'none';
-                return r!=='none' && repMatch(o, r, dateObj);
-            });
-            if (dayTasks.length) {
-                var h = '<div style="margin-bottom:14px;"><div style="font-size:0.72rem;font-weight:700;color:#a78bfa;letter-spacing:0.08em;margin-bottom:7px;">' + String.fromCharCode(10003) + ' TASKS (' + dayTasks.length + ')</div>';
-                dayTasks.forEach(function(t) {
-                    var pc = t.priority==='high'?'#ef4444':t.priority==='medium'?'#f59e0b':'#10b981';
-                    var ov = t.dueDate<dateKey ? ' [Overdue]' : '';
-                    var rp = t.repeat&&t.repeat!=='none' ? '<div style="font-size:0.7rem;color:#818cf8;">repeat: '+t.repeat+'</div>' : '';
-                    h += prismMakeCalCard('167,139,250','#a78bfa','prismCalNavTask('+t.id+')',
-                        prismSafeString(t.title)+ov,
-                        t.description?prismSafeString(t.description).substring(0,80):'',
-                        rp+'<div style="font-size:0.68rem;color:'+pc+';">'+(t.priority||'task')+'</div>');
-                });
-                sections.push(h+'</div>');
-            }
-
-            // Notes
-            var dayNotes = notes.filter(function(n) {
-                if (!n.date) return false;
-                if (n.date===dateKey) return true;
-                var isRep = n.category==='reminder'||(n.category==='general'&&n.repeat&&n.repeat!=='none');
-                if (!isRep) return false;
-                var o = new Date(n.date+'T00:00:00'), r = n.repeat||'none';
-                return r!=='none' && repMatch(o, r, dateObj);
-            });
-            if (dayNotes.length) {
-                var catC = {reminder:'#f59e0b',general:'#4ade80',client:'#38bdf8',area:'#f97316'};
-                var h2 = '<div style="margin-bottom:14px;"><div style="font-size:0.72rem;font-weight:700;color:#f59e0b;letter-spacing:0.08em;margin-bottom:7px;">📝 NOTES (' + dayNotes.length + ')</div>';
-                dayNotes.forEach(function(n) {
-                    var cc = catC[n.category]||'#94a3b8';
-                    var ic = n.category==='reminder'?'🔔':n.category==='client'?'👤':n.category==='area'?'📍':'📝';
-                    var tm = n.reminderTime?'<div style="font-size:0.7rem;color:#818cf8;">'+n.reminderTime+(n.repeat&&n.repeat!=='none'?' · '+n.repeat:'')+'</div>':'';
-                    h2 += prismMakeCalCard('245,158,11',cc,'prismCalNavNote('+n.id+')',
-                        ic+' '+prismSafeString(n.title||'Note'),
-                        n.description?prismSafeString(n.description).substring(0,80):'',
-                        tm+'<div style="font-size:0.68rem;color:'+cc+';">'+(n.category||'note')+'</div>');
-                });
-                sections.push(h2+'</div>');
-            }
-
-            // Rent Due
-            var rm = year+'-'+mo;
-            var rentDue = tenants.filter(function(t) {
-                var dd = parseInt(t.dueDay||t.rentDueDay||5);
-                if (dd!==day||t.status==='inactive') return false;
-                return !payments.some(function(p){ return p.tenantId===t.id&&(p.monthCovered===rm||p.forMonth===rm); });
-            });
-            if (rentDue.length) {
-                var h3 = '<div style="margin-bottom:14px;"><div style="font-size:0.72rem;font-weight:700;color:#38bdf8;letter-spacing:0.08em;margin-bottom:7px;">🏠 RENT DUE ('+rentDue.length+')</div>';
-                rentDue.forEach(function(t) {
-                    h3 += prismMakeCalCard('56,189,248','#38bdf8','prismCalNavTenant('+t.id+')',
-                        '🏠 '+prismSafeString(t.name),
-                        String.fromCharCode(8369)+prismSafeNumber(t.rent||t.monthlyRent).toLocaleString()+' · tap to collect','');
-                });
-                sections.push(h3+'</div>');
-            }
-
-            // Credit Due
-            var creditsDue = credits.filter(function(c) {
-                if (!c.dateLent||c.status==='closed') return false;
-                var lent = new Date(c.dateLent+'T00:00:00');
-                if (isNaN(lent)||lent.getDate()!==day) return false;
-                var paid = creditPayments.filter(function(p){return p.creditId===c.id;}).reduce(function(s,p){return s+prismSafeNumber(p.amount);},0);
-                return paid < prismSafeNumber(c.principal);
-            });
-            if (creditsDue.length) {
-                var h4 = '<div style="margin-bottom:14px;"><div style="font-size:0.72rem;font-weight:700;color:#f97316;letter-spacing:0.08em;margin-bottom:7px;">💳 CREDIT DUE ('+creditsDue.length+')</div>';
-                creditsDue.forEach(function(c) {
-                    h4 += prismMakeCalCard('249,115,22','#f97316','prismCalNavCredit('+c.id+')',
-                        '💳 '+prismSafeString(c.debtor||c.name||c.borrowerName||'Debtor'),
-                        String.fromCharCode(8369)+prismSafeNumber(c.principal).toLocaleString()+' principal · tap to view','');
-                });
-                sections.push(h4+'</div>');
-            }
-
-            // Payroll
-            var vEnd = new Date(year,month+1,0);
-            var payDue = employees.filter(function(e) {
-                if (!e.payFrequency) return false;
-                if (e.payFrequency==='daily') return true;
-                if (e.payFrequency==='weekly') return dateObj.getDay()===5;
-                if (e.payFrequency==='semi-monthly') return day===15||day===vEnd.getDate();
-                return day===vEnd.getDate();
-            });
-            if (payDue.length) {
-                var h5 = '<div style="margin-bottom:14px;"><div style="font-size:0.72rem;font-weight:700;color:#06b6d4;letter-spacing:0.08em;margin-bottom:7px;">💰 PAYROLL ('+payDue.length+' staff)</div>';
-                payDue.forEach(function(e) {
-                    h5 += prismMakeCalCard('6,182,212','#06b6d4','showSection("employees")',
-                        '👷 '+prismSafeString(e.name),
-                        String.fromCharCode(8369)+prismSafeNumber(e.dailyRate).toLocaleString()+'/day · '+(e.payFrequency||''),'');
-                });
-                sections.push(h5+'</div>');
-            }
-
-            // Water Sales
-            var dayW = waterSales.filter(function(ws){return ws.date===dateKey&&!ws.voided;});
-            if (dayW.length) {
-                var wTot = dayW.reduce(function(s,ws){return s+prismSafeNumber(ws.amountPaid||ws.total);},0);
-                sections.push('<div style="margin-bottom:14px;"><div style="font-size:0.72rem;font-weight:700;color:#8b5cf6;letter-spacing:0.08em;margin-bottom:7px;">💧 WATER SALES ('+dayW.length+')</div>'
-                    + prismMakeCalCard('139,92,246','#8b5cf6','showSection("water")',
-                        '💧 '+dayW.length+' sale'+(dayW.length>1?'s':'')+' · '+String.fromCharCode(8369)+wTot.toLocaleString(),
-                        'Tap to open Water Station','')+'</div>');
-            }
-
-            body.innerHTML = sections.length
-                ? sections.join('')
-                : '<div style="text-align:center;color:#64748b;padding:24px 0;"><div style="font-size:2rem;">📭</div><div style="font-size:0.88rem;margin-top:8px;">Nothing scheduled.</div></div>';
-
-        }).catch(function(e) {
-            body.innerHTML = '<div style="color:#f87171;padding:12px;">Error: '+e.message+'</div>';
-        });
-    }
-
-    function prismCalNavTask(id) {
-        document.getElementById('cal-day-modal').style.display='none';
-        showSection('tasks');
-        setTimeout(function(){
-            var el=document.querySelector('[data-task-id="'+id+'"]');
-            if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.style.outline='2px solid #a78bfa';setTimeout(function(){el.style.outline='';},2500);}
-        },400);
-    }
-    function prismCalNavNote(id) {
-        document.getElementById('cal-day-modal').style.display='none';
-        showSection('notes');
-        setTimeout(function(){ if(typeof viewNoteDetails==='function') viewNoteDetails(id); },350);
-    }
-    function prismCalNavTenant(id) {
-        document.getElementById('cal-day-modal').style.display='none';
-        showSection('tenants');
-        setTimeout(function(){ if(typeof showTenantDetail==='function') showTenantDetail(id); },350);
-    }
-    function prismCalNavCredit(id) {
-        document.getElementById('cal-day-modal').style.display='none';
-        showSection('credits');
-        setTimeout(function(){ if(typeof showCreditDetail==='function') showCreditDetail(id); },350);
-    }
-    window.prismOpenCalendarDay = prismOpenCalendarDay;
-    window.prismCalNavTask   = prismCalNavTask;
-    window.prismCalNavNote   = prismCalNavNote;
-    window.prismCalNavTenant = prismCalNavTenant;
-    window.prismCalNavCredit = prismCalNavCredit;
-
 
         async function showDaySchedule(day, month, year) {
             const tenants = await dbGetAll('tenants');
@@ -18108,7 +17378,7 @@ async function showPayrollSummary() {
                 const lentDate = new Date(credit.dateLent);
                 if (lentDate.getDate() === day) {
                     const creditPmts = creditPayments.filter(p => p.creditId === credit.id);
-                    const totalPaid = creditPmts.reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0);
+                    const totalPaid = creditPmts.reduce((sum, p) => sum + p.amount, 0);
                     let totalDue = credit.principal;
                     if (credit.interestType === 'simple') {
                         const months = Math.ceil((today - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
@@ -18405,7 +17675,7 @@ async function showPayrollSummary() {
 
         // ── EARLY-OUT REQUEST ──
         async function prismRequestEarlyOut() {
-            const reason = await showInputModal('Early Out Request', null, 'e.g. medical, family emergency...');
+            const reason = window.prompt('Enter reason for early out (e.g. medical, family emergency, etc.):');
             if (!reason || !reason.trim()) return;
 
             try {
@@ -18461,7 +17731,7 @@ async function showPayrollSummary() {
 
         // ── VOID REQUEST ──
         async function prismRequestVoid(type, recordId, details) {
-            const reason = await showInputModal('Void Request', null, 'Enter reason...');
+            const reason = window.prompt('Reason for void request:');
             if (!reason || !reason.trim()) return;
 
             try {
@@ -18809,7 +18079,7 @@ async function showPayrollSummary() {
                     _fbWasOnline = true;
                     showToast('✅ Connection restored — syncing...', 'success');
                     await prismRecordError('HealthPing', 'Connection restored after outage', '', false);
-                    try { await safeSyncWrapper(syncFromFirebase); } catch(e) {}
+                    try { await syncFromFirebase(); } catch(e) {}
                 }
                 if (dot) { dot.style.background = '#22c55e'; dot.title = 'Firebase: Connected ✅'; }
 
@@ -18901,8 +18171,9 @@ async function showPayrollSummary() {
 
         // ══ DELETE SAMPLE DATA ONLY ══
         async function deleteSampleData() {
-        const _dsd=window.currentAppUser||null;if(_dsd&&!['owner','admin'].includes(_dsd.role)){showToast('Only Owner or Admin can delete sample data.','error');return;}
-            // Step 1 — Initial confirm (BEFORE setting wipe flag)
+            // Pause realtime sync during deletion
+            try { if (typeof mtStopRealtimeSync === 'function') mtStopRealtimeSync(); } catch(e) {}
+            // Step 1 — Initial confirm
             const step1 = await showConfirm(
                 'This will permanently delete all sample/demo data across every module — properties, tenants, payments, credits, employees, water, tasks, notes and more.\n\nYour REAL recorded data will NOT be affected.',
                 'warning', '🧹 Delete Sample Data', 'Yes, continue'
@@ -18920,94 +18191,49 @@ async function showPayrollSummary() {
             const typed = await prismShowTypeConfirm('DELETE SAMPLE');
             if (typed !== 'DELETE SAMPLE') {
                 showToast('❌ Cancelled — text did not match.', 'error');
+                // Resume sync if cancelled
+                try { if (typeof mtStartRealtimeSync === 'function') mtStartRealtimeSync(); } catch(e) {}
                 return;
             }
-
-            // ── All confirms passed ──
-            // Step 1: Kill the listener permanently — do NOT restart until reload
-            if (typeof prismStartWipe === "function") prismStartWipe();
-            else { window._prismWipeInProgress = true; sessionStorage.setItem("_prismWipeActive","1"); localStorage.setItem("_prismLastWipeAt", new Date().toISOString()); }
-        sessionStorage.setItem('_prismWipeActive', '1'); // prevent flag reset on refresh
-        localStorage.setItem('_prismLastWipeAt', new Date().toISOString()); // 30s cooldown for sync
-            try { if (typeof mtStopRealtimeSync === 'function') mtStopRealtimeSync(); } catch(e) {}
 
             showToast('🧹 Deleting sample data...', 'info');
             let totalDeleted = 0;
 
             try {
                 const tables = ['properties', 'tenants', 'payments', 'credits', 'creditPayments', 'employees', 'timeRecords', 'cashAdvances', 'waterCustomers', 'waterSales', 'expenses', 'tasks', 'customNotes', 'clientCharges', 'additionalIncome'];
-
-                // Step 2: Delete sample records from IndexedDB
                 let realDataCount = 0;
                 for (const table of tables) {
                     try {
                         const allRecords = await dbGetAll(table);
                         realDataCount += allRecords.filter(r => r.isSample !== true).length;
+
+                        // TRIPLE SAFETY: only touch records where isSample is STRICTLY true
                         const sampleRecords = allRecords.filter(r => r.isSample === true);
+
                         for (const record of sampleRecords) {
+                            // Final guard — never delete a record without the exact flag
+                            if (record.isSample !== true) {
+                                console.warn('[DeleteSample] BLOCKED non-sample delete:', table, record.id);
+                                continue;
+                            }
                             await dbDelete(table, record.id);
                             totalDeleted++;
                         }
                     } catch(e) { console.warn('[DeleteSample] Skipping table:', table, e); }
                 }
-                console.log('[DeleteSample] Deleted sample:', totalDeleted, '| Real records kept:', realDataCount);
 
-                // Step 3: Build clean data from IndexedDB (real data only, no sample)
-                const _fdb = window.db || (typeof firestore !== 'undefined' ? firestore : null);
-                const _cu = currentUser || (MT && MT.currentUser);
-                const _orgId = (MT && MT.currentOrg && MT.currentOrg.id) || localStorage.getItem('mt_current_org_id') || (_cu && _cu.uid);
+                console.log('[DeleteSample] Protected real records:', realDataCount, '| Deleted sample:', totalDeleted);
 
-                if (_fdb && _orgId && _orgId !== 'local_org') {
-                    const _cleanData = {};
-                    for (const t of tables) {
-                        try {
-                            _cleanData[t] = (await dbGetAll(t) || []).map(r => { const x = Object.assign({}, r); delete x.id; return x; });
-                        } catch(e2) { _cleanData[t] = []; }
-                    }
-                    const _ts = new Date().toISOString();
-                    _cleanData.lastSync = _ts;
-                    _cleanData.clearedAt = _ts;
-                    _cleanData.appUsers = JSON.parse(localStorage.getItem('prism_app_users') || '[]');
-                    _cleanData.orgId = _orgId;
+                // Sync to Firebase — push the cleaned state (real data only)
+                try { await syncToFirebase(); } catch(e) {}
 
-                    // Step 4: Write to Firebase and WAIT for confirmation
-                    await _fdb.collection('prism_data').doc(_orgId).set(_cleanData);
-                    window._lastSyncTimestamp = _ts;
-                    _lastSyncTimestamp = _ts;
-                    console.log('[DeleteSample] ✅ Firebase confirmed write. lastSync:', _ts);
-
-                    // Step 5: Wait 3 seconds for Firebase to fully propagate
-                    await new Promise(r => setTimeout(r, 3000));
-
-                    // Step 6: Verify Firebase has the clean data
-                    const _verify = await _fdb.collection('prism_data').doc(_orgId).get();
-                    if (_verify.exists) {
-                        const _vdata = _verify.data();
-                        const _vProps = (_vdata.properties || []).length;
-                        const _vTenants = (_vdata.tenants || []).length;
-                        console.log('[DeleteSample] ✅ Firebase verified — properties:', _vProps, 'tenants:', _vTenants);
-                    }
-                } else {
-                    console.warn('[DeleteSample] No Firebase — local delete only');
-                }
-
-        try { const _ae=JSON.parse(localStorage.getItem('prism_endorsements')||'[]'); localStorage.setItem('prism_endorsements',JSON.stringify(_ae.filter(e=>e.isSample!==true))); const _b=document.getElementById('admin-inbox-count'); const _un=JSON.parse(localStorage.getItem('prism_endorsements')||'[]').filter(e=>!e.read).length; if(_b){_b.textContent=_un;_b.style.display=_un>0?'flex':'none';} } catch(e3){}
-                showToast('✅ Done! ' + totalDeleted + ' sample records deleted. Reloading...', 'success');
-
-                // Step 7: Refresh UI from clean IndexedDB
+                showToast(`✅ Done! ${totalDeleted} sample records deleted. Your real data is safe.`, 'success');
+                await new Promise(r => setTimeout(r, 1500));
                 await prismFullRefresh();
-
-                // Step 8: Keep wipe flag TRUE — do NOT restart listener
-                // The listener will restart naturally on next page load with fresh timestamp
-                // This prevents any race condition from onSnapshot restoring old data
-                console.log('[DeleteSample] IndexedDB + Firebase wiped. Reloading now.');
-        showToast('✅ Sample data deleted! Reloading...', 'success', 1500);
-        setTimeout(() => window.location.reload(), 1800);
+                try { if (typeof mtStartRealtimeSync === 'function') mtStartRealtimeSync(); } catch(e) {}
 
             } catch(e) {
-                window._prismWipeInProgress = false;
-                console.error('[DeleteSample] Error:', e);
-                showToast('❌ Error: ' + e.message, 'error');
+                showToast('❌ Error deleting sample data: ' + e.message, 'error');
             }
         }
         window.deleteSampleData = deleteSampleData;
@@ -19015,10 +18241,6 @@ async function showPayrollSummary() {
         
         // ── Full UI refresh — called after any bulk data operation ──
         async function prismFullRefresh() {
-    // Rule 9: Prevent concurrent refresh calls
-    if (window._prismRefreshInProgress) { console.log("[PRISM] Refresh already in progress"); return; }
-    window._prismRefreshInProgress = true;
-    try {
             // 1. Reset all in-memory caches
             window.allTenantsData        = [];
             window.allCreditsData        = [];
@@ -19027,17 +18249,6 @@ async function showPayrollSummary() {
             window.allTasksData          = [];
             window.allEmployeesData      = [];
             window.allWaterCustomersData = [];
-    // Reset trend chart and Jarod analysis
-    try {
-        if (typeof _dashTrendChart !== 'undefined' && _dashTrendChart) {
-            _dashTrendChart.destroy(); _dashTrendChart = null;
-        }
-        const _jp = document.getElementById('jarods-analysis-panel');
-        const _jt = document.getElementById('jarods-analysis-text');
-        if (_jp) _jp.style.display = 'none';
-        if (_jt) _jt.innerHTML = '';
-        window._trendData = null;
-    } catch(e) {}
 
             // 1b. Immediately zero the Notes badge and clear reminder banner
             try { prismUpdateReminderBadge(0); } catch(e) {}
@@ -19056,6 +18267,7 @@ async function showPayrollSummary() {
             for (const fn of loaders) {
                 try { await fn(); } catch(e) { console.warn('[prismFullRefresh] skipped:', fn.name, e.message); }
             }
+    try { if (typeof loadStaffCashierActivity === 'function') setTimeout(loadStaffCashierActivity, 400); } catch(e) {}
 
             // 3. Force re-render the currently visible tab
             try {
@@ -19068,15 +18280,14 @@ async function showPayrollSummary() {
 
             // 4. Re-run reminder check so badge reflects fresh (empty) data
             try { await prismCheckReminders(); } catch(e) {}
-        } finally {
-            window._prismRefreshInProgress = false;
-        }
         }
         window.prismFullRefresh = prismFullRefresh;
 
 async function clearAllData() {
-        const _cad_user = window.currentAppUser||null; if(_cad_user && !['owner','admin'].includes(_cad_user.role)){showToast('Only Owner or Admin can delete all data.','error');return;}
-            // ── Step 0: Snapshot notes + tasks before asking (BEFORE wipe flag) ──
+            // ── Pause realtime sync so it doesn't race against the wipe ──
+            try { if (typeof mtStopRealtimeSync === 'function') mtStopRealtimeSync(); } catch(e) {}
+
+            // ── Step 0: Snapshot notes + tasks before asking ──
             let _snapNotes = [], _snapTasks = [];
             try { _snapNotes = await dbGetAll('customNotes') || []; } catch(e) {}
             try { _snapTasks = await dbGetAll('tasks') || [];        } catch(e) {}
@@ -19106,13 +18317,6 @@ async function clearAllData() {
             // ── Step 5: Type confirm ──
             const _ca5 = await prismShowTypeConfirm();
             if (_ca5 !== 'DELETE ALL') { showToast('\u274c Cancelled \u2014 text did not match.', 'error'); return; }
-
-            // ── All confirms passed — NOW lock out Firebase sync ──
-            if (typeof prismStartWipe === "function") prismStartWipe();
-            else { window._prismWipeInProgress = true; sessionStorage.setItem("_prismWipeActive","1"); localStorage.setItem("_prismLastWipeAt", new Date().toISOString()); }
-        sessionStorage.setItem('_prismWipeActive', '1'); // prevent flag reset on refresh
-        localStorage.setItem('_prismLastWipeAt', new Date().toISOString()); // 30s cooldown for sync
-            try { if (typeof mtStopRealtimeSync === 'function') mtStopRealtimeSync(); } catch(e) {}
 
             showToast('\u23f3 Deleting all data...', 'info');
 
@@ -19155,7 +18359,6 @@ async function clearAllData() {
                 if (firebaseReady && (window.db || firestore) && (currentUser || MT.currentUser)) {
                     const _fdb = window.db || firestore;
                     const _orgId = (MT && MT.currentOrg && MT.currentOrg.id) || localStorage.getItem('mt_current_org_id') || (currentUser && currentUser.uid);
-                    const _clearTs = new Date().toISOString();
                     await _fdb.collection('prism_data').doc(_orgId).set({
                         properties: [], tenants: [], payments: [], credits: [],
                         creditPayments: [], expenses: [], additionalIncome: [],
@@ -19163,21 +18366,20 @@ async function clearAllData() {
                         employees: [], cashAdvances: [], salaryPayments: [], timeRecords: [],
                         customNotes: _keepNotes.map(function(n){ var x=Object.assign({},n); delete x.id; return x; }),
                         tasks:       _keepTasks.map(function(t){ var x=Object.assign({},t); delete x.id; return x; }),
-                        lastSync: _clearTs,
-                        clearedAt: _clearTs
+                        lastSync: new Date().toISOString(),
+                        clearedAt: new Date().toISOString()
                     });
-                    window._lastSyncTimestamp = _clearTs;
-                    _lastSyncTimestamp = _clearTs;
                     try { showToast('\u2601\ufe0f Cloud data cleared', 'success'); } catch(e) {}
                 }
 
-                            try{localStorage.removeItem('prism_endorsements');}catch(ez1){} try{const _bx=document.getElementById('admin-inbox-count');if(_bx){_bx.textContent='0';_bx.style.display='none';}}catch(ez2){} try{const _ap=document.getElementById('jarods-analysis-panel');const _at=document.getElementById('jarods-analysis-text');if(_ap)_ap.style.display='none';if(_at)_at.innerHTML='';window._trendData=null;}catch(ez3){}
-        console.log('[ClearAll] IndexedDB + Firebase wiped. Reloading now.');
-        showToast('✅ All data cleared! Reloading...', 'success', 1500);
-        setTimeout(() => window.location.reload(), 1800);
+                showToast('\u2705 All done.', 'success');
+                // Wait briefly so Firestore write propagates before resuming listener
+                await new Promise(r => setTimeout(r, 1500));
+                await prismFullRefresh();
+                // ── Resume realtime sync after everything is refreshed ──
+                try { if (typeof mtStartRealtimeSync === 'function') mtStartRealtimeSync(); } catch(e) {}
 
             } catch (error) {
-                window._prismWipeInProgress = false;
                 console.error('[Clear] Error:', error);
                 showToast('\u274c Error clearing data: ' + error.message, 'error');
             }
@@ -19277,10 +18479,10 @@ async function clearAllData() {
 
             document.getElementById('stats-properties').textContent = `${properties.length} properties`;
             document.getElementById('stats-tenants').textContent = `${tenants.length} tenants`;
-            document.getElementById('stats-payments').textContent = `${payments.length} payments (₱${payments.reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0).toLocaleString()} total)`;
+            document.getElementById('stats-payments').textContent = `${payments.length} payments (₱${payments.reduce((sum, p) => sum + p.amount, 0).toLocaleString()} total)`;
             document.getElementById('stats-credits').textContent = `${credits.length} credits (₱${credits.reduce((sum, c) => sum + c.principal, 0).toLocaleString()} total)`;
-            document.getElementById('stats-credit-payments').textContent = `${creditPayments.length} payments (₱${creditPayments.reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0).toLocaleString()} total)`;
-            document.getElementById('stats-expenses').textContent = `${expenses.length} expenses (₱${expenses.reduce((sum, e) => sum + (prismSafeNumber(e.amount)), 0).toLocaleString()} total)`;
+            document.getElementById('stats-credit-payments').textContent = `${creditPayments.length} payments (₱${creditPayments.reduce((sum, p) => sum + p.amount, 0).toLocaleString()} total)`;
+            document.getElementById('stats-expenses').textContent = `${expenses.length} expenses (₱${expenses.reduce((sum, e) => sum + e.amount, 0).toLocaleString()} total)`;
 
             // Update system health UI
             updateSystemHealthUI();
@@ -19290,6 +18492,7 @@ async function clearAllData() {
             // Load admin cashier activity summary
             if (typeof loadAdminCashierSummary === 'function' && (!window.currentAppUser || window.currentAppUser.role !== 'cashier')) {
                 setTimeout(loadAdminCashierSummary, 500);
+    if (typeof loadStaffCashierActivity === 'function') setTimeout(loadStaffCashierActivity, 600);
             }
         }
 
@@ -19310,8 +18513,8 @@ async function clearAllData() {
             }
 
             // MONEY IN
-            const rentCollected = payments.reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0);
-            const creditRepaid = creditPayments.reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0);
+            const rentCollected = payments.reduce((sum, p) => sum + p.amount, 0);
+            const creditRepaid = creditPayments.reduce((sum, p) => sum + p.amount, 0);
             
             // Store/Business Income
             const storeIncome = additionalIncome
@@ -19331,36 +18534,36 @@ async function clearAllData() {
             // Utilities
             const utilities = expenses
                 .filter(e => ['electric', 'water'].includes(e.category))
-                .reduce((sum, e) => sum + (prismSafeNumber(e.amount)), 0);
+                .reduce((sum, e) => sum + e.amount, 0);
             
             // Maintenance/Repairs
             const maintenance = expenses
                 .filter(e => ['maintenance', 'repairs', 'repair'].includes(e.category))
-                .reduce((sum, e) => sum + (prismSafeNumber(e.amount)), 0);
+                .reduce((sum, e) => sum + e.amount, 0);
             
             // Operations
             const operations = expenses
                 .filter(e => ['fuel', 'transport', 'supplies', 'labor'].includes(e.category))
-                .reduce((sum, e) => sum + (prismSafeNumber(e.amount)), 0);
+                .reduce((sum, e) => sum + e.amount, 0);
             
             // Allocations (not true expenses)
             const allocationCategories = ['savings', 'investment', 'capital_reserve', 'owners_draw'];
             
             const savingsAmount = expenses
                 .filter(e => e.category === 'savings')
-                .reduce((sum, e) => sum + (prismSafeNumber(e.amount)), 0);
+                .reduce((sum, e) => sum + e.amount, 0);
             
             const investmentAmount = expenses
                 .filter(e => e.category === 'investment')
-                .reduce((sum, e) => sum + (prismSafeNumber(e.amount)), 0);
+                .reduce((sum, e) => sum + e.amount, 0);
             
             const capitalReserve = expenses
                 .filter(e => e.category === 'capital_reserve')
-                .reduce((sum, e) => sum + (prismSafeNumber(e.amount)), 0);
+                .reduce((sum, e) => sum + e.amount, 0);
             
             const ownersDraw = expenses
                 .filter(e => e.category === 'owners_draw')
-                .reduce((sum, e) => sum + (prismSafeNumber(e.amount)), 0);
+                .reduce((sum, e) => sum + e.amount, 0);
             
             const totalAllocated = savingsAmount + investmentAmount + capitalReserve + ownersDraw;
             
@@ -19369,30 +18572,30 @@ async function clearAllData() {
             
             const sssAmount = expenses
                 .filter(e => e.category === 'sss')
-                .reduce((sum, e) => sum + (prismSafeNumber(e.amount)), 0);
+                .reduce((sum, e) => sum + e.amount, 0);
             
             const philhealthAmount = expenses
                 .filter(e => e.category === 'philhealth')
-                .reduce((sum, e) => sum + (prismSafeNumber(e.amount)), 0);
+                .reduce((sum, e) => sum + e.amount, 0);
             
             const pagibigAmount = expenses
                 .filter(e => e.category === 'pagibig')
-                .reduce((sum, e) => sum + (prismSafeNumber(e.amount)), 0);
+                .reduce((sum, e) => sum + e.amount, 0);
             
             const birAmount = expenses
                 .filter(e => e.category === 'bir')
-                .reduce((sum, e) => sum + (prismSafeNumber(e.amount)), 0);
+                .reduce((sum, e) => sum + e.amount, 0);
             
             const accountantAmount = expenses
                 .filter(e => e.category === 'accountant')
-                .reduce((sum, e) => sum + (prismSafeNumber(e.amount)), 0);
+                .reduce((sum, e) => sum + e.amount, 0);
             
             const totalGovt = sssAmount + philhealthAmount + pagibigAmount + birAmount + accountantAmount;
             
             // Other Expenses (excluding allocations and government)
             const otherExpenses = expenses
                 .filter(e => !['electric', 'water', 'maintenance', 'repairs', 'repair', 'fuel', 'transport', 'supplies', 'labor', ...allocationCategories, ...govtCategories].includes(e.category))
-                .reduce((sum, e) => sum + (prismSafeNumber(e.amount)), 0);
+                .reduce((sum, e) => sum + e.amount, 0);
             
             const totalExpenses = creditsReleased + utilities + maintenance + operations + otherExpenses;
 
@@ -19671,7 +18874,7 @@ async function clearAllData() {
             for (const tenant of tenants) {
                 const property = properties.find(p => p.id === tenant.propertyId);
                 const tenantPayments = payments.filter(p => p.tenantId === tenant.id && p.type === 'rent');
-                const totalPaid = tenantPayments.reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0);
+                const totalPaid = tenantPayments.reduce((sum, p) => sum + p.amount, 0);
 
                 const now = new Date();
                 const moveInDate = new Date(tenant.moveIn);
@@ -19699,7 +18902,7 @@ async function clearAllData() {
 
             for (const credit of credits) {
                 const payments = creditPayments.filter(p => p.creditId === credit.id);
-                const totalPaid = payments.reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0);
+                const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
 
                 let totalDue = credit.principal;
                 if (credit.interestType === 'simple') {
@@ -20381,7 +19584,7 @@ Lender/Manager
                     sectionName = 'credits';
                     // Dashboard shows ALL credits (credits.length), so show all with balance info
                     const creditsWithBalance = credits.map(c => {
-                        const totalPaid = creditPayments.filter(p => p.creditId === c.id).reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0);
+                        const totalPaid = creditPayments.filter(p => p.creditId === c.id).reduce((sum, p) => sum + p.amount, 0);
                         let totalDue = c.principal;
                         if (c.interestType === 'simple') {
                             const months = Math.ceil((now - new Date(c.dateLent)) / (1000 * 60 * 60 * 24 * 30));
@@ -20460,7 +19663,7 @@ Lender/Manager
                     // Debtors: 25-30 days since last payment
                     credits.forEach(credit => {
                         const creditPmts = creditPayments.filter(p => p.creditId === credit.id);
-                        const totalPaid = creditPmts.reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0);
+                        const totalPaid = creditPmts.reduce((sum, p) => sum + p.amount, 0);
                         let totalDue = credit.principal;
                         if (credit.interestType === 'simple') {
                             const months = Math.ceil((now - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
@@ -20526,7 +19729,7 @@ Lender/Manager
                     // Debtors overdue: 30+ days without payment
                     credits.forEach(credit => {
                         const creditPmts = creditPayments.filter(p => p.creditId === credit.id);
-                        const totalPaid = creditPmts.reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0);
+                        const totalPaid = creditPmts.reduce((sum, p) => sum + p.amount, 0);
                         let totalDue = credit.principal;
                         if (credit.interestType === 'simple') {
                             const months = Math.ceil((now - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
@@ -21332,7 +20535,7 @@ Lender/Manager
                         permissions: {
                             'add-property': true, 'edit-property': true, 'delete-property': true,
                             'add-tenant': true, 'edit-tenant': true, 'delete-tenant': true,
-                            'record-payment': true, 'water-sales': true, 'add-expense': true, 'add-income': true, 'void-sale': true,
+                            'record-payment': true, 'water-sales': true, 'void-sale': true,
                             'manage-staff': true, 'manage-users': true, 'view-reports': true,
                             'backup-restore': true
                         }
@@ -21430,8 +20633,8 @@ Lender/Manager
 
             const restrictedSections = {
                 'properties': !perms['access-properties'],
-                'expenses':   !perms['view-expenses'] && currentAppUser?.role !== 'cashier',
-                'income':     !perms['view-income'] && currentAppUser?.role !== 'cashier',
+                'expenses':   !perms['view-expenses'],
+                'income':     !perms['view-income'],
                 'employees':  !perms['access-hr'],
                 'reports':    !perms['view-reports'],
                 'settings':   !perms['access-settings'],
@@ -21581,7 +20784,7 @@ Lender/Manager
             if (!window._syncInProgress) {
                 const _firebaseUser = (window.auth && window.auth.currentUser) || currentUser;
                 if (_firebaseUser && !(_firebaseUser.uid || '').startsWith('local_')) {
-                    try { await safeSyncWrapper(syncFromFirebase); } catch(e) { console.warn('Sync before users:', e); }
+                    try { await syncFromFirebase(); } catch(e) { console.warn('Sync before users:', e); }
                 }
             }
             
@@ -21874,7 +21077,7 @@ Lender/Manager
             const data = JSON.parse(document.getElementById('admin-passcode-data').value || '{}');
             
             // Check passcode (default or custom)
-            const storedPasscode = localStorage.getItem('prism_admin_passcode') || APP_ADMIN_PASSCODE;
+            const storedPasscode = localStorage.getItem('carent_admin_passcode') || APP_ADMIN_PASSCODE;
             
             if (enteredPasscode !== storedPasscode) {
                 showToast('⚠️ Please enter a reason for voiding this sale.', 'warning');
@@ -21966,7 +21169,7 @@ Lender/Manager
             const newPc   = document.getElementById('pc-new')?.value.trim();
             const confirm = document.getElementById('pc-confirm')?.value.trim();
             const errEl   = document.getElementById('passcode-error');
-            const stored  = localStorage.getItem('prism_admin_passcode') || '123456';
+            const stored  = localStorage.getItem('carent_admin_passcode') || '123456';
 
             const showErr = msg => { errEl.textContent = msg; errEl.style.display = 'block'; };
             errEl.style.display = 'none';
@@ -21977,7 +21180,7 @@ Lender/Manager
                 return showErr('❌ New passcode must be 4–6 digits (numbers only).');
             if (newPc !== confirm) return showErr('❌ Passcodes do not match.');
 
-            localStorage.setItem('prism_admin_passcode', newPc);
+            localStorage.setItem('carent_admin_passcode', newPc);
             document.getElementById('change-passcode-modal').remove();
             showToast('✅ Admin passcode updated successfully!', 'success');
         }
@@ -23262,7 +22465,7 @@ function initReportsPage() {
             
             let filtered = credits.filter(c => {
                 const payments = creditPayments.filter(p => p.creditId === c.id);
-                const totalPaid = payments.reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0);
+                const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
                 const totalDue = (c.principal || 0) + (c.interest || 0);
                 const isPaid = totalPaid >= totalDue;
                 const isOverdue = !isPaid && new Date(c.dueDate) < new Date();
@@ -23287,7 +22490,7 @@ function initReportsPage() {
             
             filtered.forEach(c => {
                 const payments = creditPayments.filter(p => p.creditId === c.id);
-                const totalPaid = payments.reduce((sum, p) => sum + (prismSafeNumber(p.amount)), 0);
+                const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
                 content += `
                     <div class="list-item" onclick="viewCreditDetails(${c.id}); hideModal('financial-details-modal');" style="cursor: pointer;">
                         <div class="list-item-content">
@@ -23811,8 +23014,6 @@ function initReportsPage() {
             } catch (error) {
                 console.error('Error loading tasks:', error);
             }
-    // Refresh dashboard tasks widget
-    try { if (typeof loadDashboardTasks === "function") loadDashboardTasks(); } catch(e) {}
         }
 
         async function ensureTasksStore() {
@@ -24279,10 +23480,10 @@ async function editTask(id) {
                 
                 // ===== PAYMENTS =====
                 if (tenant1) {
-                    await dbAdd('payments', { isSample:true, tenantId: tenant1.id, amount: 3000, method: 'cash', date: dateStr(5), forMonth: dateStr(1).substring(0, 7), createdAt: new Date().toISOString(), isSample: true });
+                    await dbAdd('payments', { tenantId: tenant1.id, amount: 3000, method: 'cash', date: dateStr(5), forMonth: dateStr(1).substring(0, 7), createdAt: new Date().toISOString(), isSample: true });
                 }
                 if (tenant2) {
-                    await dbAdd('payments', { isSample:true, tenantId: tenant2.id, amount: 5000, method: 'gcash', date: dateStr(10), forMonth: dateStr(1).substring(0, 7), createdAt: new Date().toISOString(), isSample: true });
+                    await dbAdd('payments', { tenantId: tenant2.id, amount: 5000, method: 'gcash', date: dateStr(10), forMonth: dateStr(1).substring(0, 7), createdAt: new Date().toISOString(), isSample: true });
                 }
                 
                 // ===== CREDITS/LOANS =====
@@ -24303,10 +23504,10 @@ async function editTask(id) {
                 
                 // ===== CREDIT PAYMENTS =====
                 if (credit1) {
-                    await dbAdd('creditPayments', { isSample:true, creditId: credit1.id, amount: 3000, date: dateStr(1), notes: 'Partial payment', createdAt: new Date().toISOString(), isSample: true });
+                    await dbAdd('creditPayments', { creditId: credit1.id, amount: 3000, date: dateStr(1), notes: 'Partial payment', createdAt: new Date().toISOString(), isSample: true });
                 }
                 if (credit3) {
-                    await dbAdd('creditPayments', { isSample:true, creditId: credit3.id, amount: 5000, date: dateStr(5), notes: 'Partial payment', createdAt: new Date().toISOString(), isSample: true });
+                    await dbAdd('creditPayments', { creditId: credit3.id, amount: 5000, date: dateStr(5), notes: 'Partial payment', createdAt: new Date().toISOString(), isSample: true });
                 }
                 
                 // ===== EMPLOYEES =====
@@ -24351,7 +23552,7 @@ async function editTask(id) {
                 // ===== CASH ADVANCES =====
                 const roger = allEmployees.find(e => e.name === 'Roger Ellioso');
                 if (roger) {
-                    await dbAdd('cashAdvances', { isSample:true, employeeId: roger.id, amount: 200, date: today.toISOString().split('T')[0], reason: 'Emergency', deducted: false, createdAt: new Date().toISOString(), isSample: true });
+                    await dbAdd('cashAdvances', { employeeId: roger.id, amount: 200, date: today.toISOString().split('T')[0], reason: 'Emergency', deducted: false, createdAt: new Date().toISOString(), isSample: true });
                 }
                 
                 // ===== WATER CUSTOMERS =====
@@ -24379,7 +23580,7 @@ async function editTask(id) {
                     const paymentTypes = ['cash', 'credit', 'partial', 'cash'];
                     const amountsPaid = [125, 0, 100, 500];
                     
-                    await dbAdd('waterSales', { isSample:true,
+                    await dbAdd('waterSales', {
                         customerId: cust.id,
                         customerName: cust.name,
                         isSample: true,
@@ -24403,8 +23604,7 @@ async function editTask(id) {
                 ];
                 
                 for (const exp of expenses) {
-                    exp.isSample=true;
-            await dbAdd('expenses', exp);
+                    await dbAdd('expenses', exp);
                 }
                 
                 console.log('✅ Expenses added');
@@ -24504,7 +23704,6 @@ async function editTask(id) {
                 ];
                 
                 for (const task of tasks) {
-                task.isSample = true;
                     await dbAdd('tasks', task);
                 }
                 
@@ -24648,7 +23847,7 @@ async function editTask(id) {
                         { id: 'end_4', type: 'expense', message: '💸 Expense Recorded:\n• Description: Office Supplies\n• Amount: ₱350\n• Date: ' + todayStr2 + '\nRecorded by: Cenia Ellioso', from: 'cashier1', fromName: 'Cenia Ellioso', timestamp: new Date(today.getTime() - 3*60*60*1000).toISOString(), read: true },
                         { id: 'end_5', type: 'income', message: '💰 Income Recorded:\n• Source: Parking Fee\n• Amount: ₱500\n• Date: ' + todayStr2 + '\nRecorded by: Roger Ellioso', from: 'cashier2', fromName: 'Roger Ellioso', timestamp: new Date(today.getTime() - 4*60*60*1000).toISOString(), read: true },
                     ];
-                    const taggedE = sampleEndorse.map(e => ({...e, isSample:true, sentBy:'Cashier (Demo)', sentByRole:'cashier', sentAt:new Date().toISOString(), read:false, orgId:(MT?.currentOrg?.id||'local')})); localStorage.setItem('prism_endorsements', JSON.stringify(taggedE));
+                    localStorage.setItem('prism_endorsements', JSON.stringify(sampleEndorse));
                 }
 
                 // ===== MORE INCOME for this month (so income section shows data) =====
@@ -24726,8 +23925,6 @@ async function editTask(id) {
         // INITIALIZATION
         // =====================
         async function init() {
-    // Rule 10: Guard against duplicate initialization
-    if (typeof prismInitGuard === "function" && !prismInitGuard()) { console.log("[PRISM] init() already ran — skipping"); return; }
             try {
                 // Load theme first (no DB needed)
                 loadTheme();
@@ -24766,9 +23963,6 @@ async function editTask(id) {
                 updateAuthUI();
 
                 PrismGuardian.log('SUCCESS', '🎉 PRISM initialized successfully');
-    // Wipe lock is cleared only after confirming Firebase has empty/wiped data
-    // sessionStorage._prismWipeActive clears naturally when tab closes
-    window._prismWipeInProgress = false;
 
             } catch (error) {
                 console.error('Initialization error:', error);
@@ -25051,7 +24245,6 @@ async function editTask(id) {
 #prism-confirm-ok.warning{background:#f59e0b}#prism-confirm-ok.success{background:#10b981}
 #prism-confirm-ok.info{background:#3b82f6}
 </style>
-</div><!-- /prism-app-wrapper -->
 <div id="prism-confirm-overlay">
   <div id="prism-confirm-box">
     <div id="prism-confirm-icon">❓</div>
@@ -25063,6 +24256,7 @@ async function editTask(id) {
     </div>
   </div>
 </div>
+</div><!-- /prism-app-wrapper -->
 <script>
 // ================================================================
 // PRISM MULTI-TENANT LAYER
@@ -25160,30 +24354,6 @@ function _mtShowAppActual() {
     const app = document.querySelector('.prism-app-wrapper');
     if (app) app.classList.add('mt-active');
     mtUpdateOrgBadge();
-
-    // ── ROLE FIX: Ensure currentAppUser always reflects actual MT org role ──
-    // SA users bypass normal login so currentAppUser can be null or stale
-    const _mtActualRole = (MT && MT.currentOrgRole) || localStorage.getItem('mt_current_org_role') || null;
-    const _mtUser = MT && MT.currentUser;
-    if (_mtActualRole && _mtUser) {
-        if (!currentAppUser || ['viewer','cashier'].includes(currentAppUser.role)) {
-            // Only upgrade — never downgrade a legitimately set role
-            if (['owner','admin'].includes(_mtActualRole)) {
-                const _fixedUser = {
-                    id: currentAppUser ? currentAppUser.id : 1,
-                    username: currentAppUser ? currentAppUser.username : (_mtUser.email||'').split('@')[0],
-                    fullname: currentAppUser ? currentAppUser.fullname : (_mtUser.displayName || _mtUser.email),
-                    role: _mtActualRole,
-                    email: currentAppUser ? currentAppUser.email : (_mtUser.email||''),
-                    orgId: MT.currentOrg ? MT.currentOrg.id : '',
-                    permissions: { 'add-property':true,'edit-property':true,'delete-property':true,'add-tenant':true,'edit-tenant':true,'delete-tenant':true,'record-payment':true,'water-sales':true,'void-sale':true,'manage-staff':true,'manage-users':true,'view-reports':true,'backup-restore':true,'view-expenses':true,'view-income':true,'view-profiles':true,'delete-records':true,'access-settings':true,'access-hr':true,'access-properties':true }
-                };
-                currentAppUser = _fixedUser;
-                localStorage.setItem('carent_current_user', JSON.stringify(_fixedUser));
-                console.log('[PRISM] Role corrected to:', _mtActualRole, 'for', _mtUser.email);
-            }
-        }
-    }
     
     // Initialize PRISM app if not done yet
     if (!_prismAppInitialized) {
@@ -25312,7 +24482,7 @@ async function _mtWaitForAuth(maxMs = 20000) {
         async function prismForgotPassword() {
             const emailEl = document.getElementById('mt-login-email');
             const email = emailEl ? emailEl.value.trim() : '';
-            const useEmail = email || await showInputModal('Password Reset', null, 'Enter your email address', '');
+            const useEmail = email || window.prompt('Enter your email address to receive a password reset link:');
             if (!useEmail) return;
             try {
                 const authInst = window.auth || (firebase && firebase.auth && firebase.auth());
@@ -26645,8 +25815,8 @@ async function autoEndorseReport() {
         const todayAttend     = timeRecords.filter(r => r.date === today);
         const overdueCredits  = credits.filter(c => c.status === 'active' && c.dueDate && new Date(c.dueDate) < new Date());
 
-        const totalExpenses        = todayExpenses.reduce((s,e) => s + (prismSafeNumber(e.amount)), 0);
-        const totalCreditCollected = todayCreditPay.reduce((s,p) => s + (prismSafeNumber(p.amount)), 0);
+        const totalExpenses        = todayExpenses.reduce((s,e) => s + e.amount, 0);
+        const totalCreditCollected = todayCreditPay.reduce((s,p) => s + p.amount, 0);
         const totalWaterSales      = todayWater.reduce((s,w) => s + w.total, 0);
         const totalAdvances        = todayAdvances.reduce((s,a) => s + a.amount, 0);
         const presentCount  = todayAttend.filter(r => r.status === 'present').length;
@@ -26705,28 +25875,41 @@ function renderSentEndorsements() {
 
 function renderAdminInbox() {
     const list = getEndorsements();
-    let filtered = list.filter(e => e.orgId === (MT.currentOrg?.id || 'local') || !e.orgId);
+    let filtered = list.filter(e =>
+        e.orgId === (MT.currentOrg?.id || 'local') || !e.orgId
+    );
+
     if (inboxFilter === 'unread') filtered = filtered.filter(e => !e.read);
     if (inboxFilter === 'urgent') filtered = filtered.filter(e => e.type === 'urgent');
+
     filtered = [...filtered].reverse();
+
     const container = document.getElementById('admin-inbox-list');
     if (!container) return;
-    if (filtered.length === 0) { container.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:0.85rem;padding:20px;">No endorsements</div>'; updateEndorseUnreadBadge(); return; }
+
+    if (filtered.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:0.85rem;padding:20px;">No endorsements found</div>';
+        return;
+    }
+
     const typeIcons = { sales:'💰', credit:'💳', expense:'🧾', water:'💧', attendance:'👷', urgent:'🚨' };
-    container.innerHTML = filtered.map(e => `<div class="endorse-item ${e.type==='urgent'?'urgent':''} ${!e.read?'endorse-unread':''}" style="${!e.read?'border-left-width:4px;':'opacity:0.85;'}position:relative;"><div style="display:flex;justify-content:space-between;align-items:flex-start;"><div style="cursor:pointer;flex:1;" onclick="markEndorseRead('${e.id}')"><span class="endorse-item-type">${typeIcons[e.type]||'📋'} ${e.type.toUpperCase()}</span>${e.isSample?'<span style="background:rgba(245,158,11,0.15);color:#fbbf24;font-size:0.6rem;padding:1px 5px;border-radius:6px;margin-left:5px;">SAMPLE</span>':''}${!e.read?'<span style="background:#ef4444;color:white;font-size:0.6rem;padding:1px 6px;border-radius:8px;margin-left:4px;">NEW</span>':''}</div><button onclick="deleteEndorsement('${e.id}')" style="background:transparent;border:none;color:#64748b;cursor:pointer;font-size:0.9rem;padding:2px 5px;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#64748b'">🗑</button></div><div class="endorse-item-desc" onclick="markEndorseRead('${e.id}')" style="font-size:0.83rem;white-space:pre-line;margin:4px 0;cursor:pointer;">${e.message.substring(0,300)}${e.message.length>300?'...':''}</div><div class="endorse-item-meta">From: <b>${e.sentBy||e.fromName||'Cashier'}</b> · ${(e.sentAt||e.timestamp)?new Date(e.sentAt||e.timestamp).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):''}</div></div>`).join('');
+    container.innerHTML = filtered.map(e => `
+        <div class="endorse-item ${e.type === 'urgent' ? 'urgent' : ''} ${!e.read ? 'endorse-unread' : ''}"
+             onclick="markEndorseRead('${e.id}')"
+             style="${!e.read ? 'border-left-width:4px;' : 'opacity:0.75;'}">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div class="endorse-item-type">${typeIcons[e.type] || '📋'} ${e.type.toUpperCase()}</div>
+                ${!e.read ? '<span style="background:#ef4444;color:white;font-size:0.65rem;padding:2px 7px;border-radius:10px;font-weight:700;">NEW</span>' : ''}
+            </div>
+            <div class="endorse-item-desc" style="font-size:0.83rem;white-space:pre-line;margin:4px 0;">${e.message.substring(0,200)}${e.message.length>200?'...':''}</div>
+            <div class="endorse-item-meta">
+                From: <b>${e.sentBy}</b> · ${new Date(e.sentAt).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}
+            </div>
+        </div>
+    `).join('');
+
     updateEndorseUnreadBadge();
 }
-
-function deleteEndorsement(id) {
-    const list = getEndorsements();
-    const item = list.find(e => e.id === id);
-    if (!item) return;
-    if (!confirm('Delete ' + (item.isSample?'sample':'this') + ' endorsement? Cannot be undone.')) return;
-    saveEndorsements(list.filter(e => e.id !== id));
-    renderAdminInbox(); updateEndorseUnreadBadge();
-    if (typeof showToast==='function') showToast('Endorsement deleted.','success');
-}
-window.deleteEndorsement = deleteEndorsement;
 
 function markEndorseRead(id) {
     const list = getEndorsements();
@@ -26817,11 +26000,11 @@ async function loadCashierDashboard() {
         const todayAdvance = advances.filter(a => a.date === today);
 
         // Totals
-        const rentTotal    = todayRent.reduce((s,p) => s + (prismSafeNumber(p.amount)), 0);
-        const creditTotal  = todayCredit.reduce((s,p) => s + (prismSafeNumber(p.amount)), 0);
+        const rentTotal    = todayRent.reduce((s,p) => s + p.amount, 0);
+        const creditTotal  = todayCredit.reduce((s,p) => s + p.amount, 0);
         const waterTotal   = todayWater.reduce((s,w) => s + w.amountPaid, 0);
         const incomeTotal  = todayIncome.reduce((s,i) => s + i.amount, 0);
-        const expTotal     = todayExp.reduce((s,e) => s + (prismSafeNumber(e.amount)), 0);
+        const expTotal     = todayExp.reduce((s,e) => s + e.amount, 0);
         const advTotal     = todayAdvance.reduce((s,a) => s + a.amount, 0);
         const totalCollected = rentTotal + creditTotal + waterTotal + incomeTotal;
         const txnCount     = todayRent.length + todayCredit.length + todayWater.length + todayIncome.length + todayExp.length;
@@ -26987,6 +26170,191 @@ async function loadAdminCashierSummary() {
         container.innerHTML = '<div style="color:var(--text-secondary);text-align:center;padding:20px;">No cashier activity yet today.</div>';
     }
 }
+    // ================================================================
+    // loadStaffCashierActivity — Staff page activity card
+    // ================================================================
+    async function loadStaffCashierActivity() {
+        var container = document.getElementById('staff-cashier-summary');
+        var dateEl    = document.getElementById('staff-activity-date');
+        if (!container) return;
+
+        var now   = new Date();
+        var today = now.toISOString().split('T')[0];
+        if (dateEl) dateEl.textContent = now.toLocaleDateString('en-PH', {weekday:'long',month:'long',day:'numeric',year:'numeric'});
+
+        var role      = window.currentAppUser ? window.currentAppUser.role : 'viewer';
+        var isCashier = (role === 'cashier');
+        var isAdmin   = ['owner','admin','manager'].includes(role);
+
+        try {
+            var results = await Promise.all([
+                dbGetAll('payments').catch(function(){ return []; }),
+                dbGetAll('waterSales').catch(function(){ return []; }),
+                dbGetAll('creditPayments').catch(function(){ return []; }),
+                dbGetAll('expenses').catch(function(){ return []; }),
+                dbGetAll('additionalIncome').catch(function(){ return []; })
+            ]);
+            var payments = results[0] || [];
+            var waterSales = results[1] || [];
+            var creditPayments = results[2] || [];
+            var expenses = results[3] || [];
+            var income = results[4] || [];
+
+            var todayPay    = payments.filter(function(p){ return p.date === today && !p.voided; });
+            var todayWater  = waterSales.filter(function(w){ return w.date === today && !w.voided; });
+            var todayCredit = creditPayments.filter(function(c){ return c.date === today; });
+            var todayExp    = expenses.filter(function(e){ return e.date === today; });
+            var todayInc    = income.filter(function(i){ return i.date === today; });
+
+            var totalIn =
+                todayPay.reduce(function(s,p){ return s + prismSafeNumber(p.amount); }, 0) +
+                todayWater.reduce(function(s,w){ return s + prismSafeNumber(w.amountPaid); }, 0) +
+                todayCredit.reduce(function(s,c){ return s + prismSafeNumber(c.amount); }, 0) +
+                todayInc.reduce(function(s,i){ return s + prismSafeNumber(i.amount); }, 0);
+            var totalOut  = todayExp.reduce(function(s,e){ return s + prismSafeNumber(e.amount); }, 0);
+            var txnCount  = todayPay.length + todayWater.length + todayCredit.length + todayExp.length + todayInc.length;
+            var rentTotal  = todayPay.reduce(function(s,p){ return s + prismSafeNumber(p.amount); }, 0);
+            var waterTotal = todayWater.reduce(function(s,w){ return s + prismSafeNumber(w.amountPaid); }, 0);
+            var creditTotal= todayCredit.reduce(function(s,c){ return s + prismSafeNumber(c.amount); }, 0);
+            var incTotal   = todayInc.reduce(function(s,i){ return s + prismSafeNumber(i.amount); }, 0);
+
+            var P = '\u20b1';
+            container.innerHTML =
+                '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">'
+                + '<div onclick="showSection(\'income\')" style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:10px;padding:12px;text-align:center;cursor:pointer;">'
+                +   '<div style="font-size:1.2rem;font-weight:700;color:#10b981;">' + P + totalIn.toLocaleString() + '</div>'
+                +   '<div style="font-size:0.75rem;color:var(--text-secondary);">Collected</div></div>'
+                + '<div onclick="showSection(\'expenses\')" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:12px;text-align:center;cursor:pointer;">'
+                +   '<div style="font-size:1.2rem;font-weight:700;color:#ef4444;">' + P + totalOut.toLocaleString() + '</div>'
+                +   '<div style="font-size:0.75rem;color:var(--text-secondary);">Expenses</div></div>'
+                + '<div onclick="showCashierTodayTransactions()" style="background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:10px;padding:12px;text-align:center;cursor:pointer;">'
+                +   '<div style="font-size:1.2rem;font-weight:700;color:#6366f1;">' + txnCount + '</div>'
+                +   '<div style="font-size:0.75rem;color:var(--text-secondary);">Transactions</div></div>'
+                + '</div>'
+                + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;">'
+                + '<div onclick="showSection(\'tenants\')" style="background:var(--bg-primary);border-radius:8px;padding:8px;text-align:center;cursor:pointer;">'
+                +   '<div style="font-weight:700;color:#f59e0b;">' + P + rentTotal.toLocaleString() + '</div>'
+                +   '<div style="font-size:0.7rem;color:var(--text-secondary);">Rent</div></div>'
+                + '<div onclick="showSection(\'water\')" style="background:var(--bg-primary);border-radius:8px;padding:8px;text-align:center;cursor:pointer;">'
+                +   '<div style="font-weight:700;color:#06b6d4;">' + P + waterTotal.toLocaleString() + '</div>'
+                +   '<div style="font-size:0.7rem;color:var(--text-secondary);">Water</div></div>'
+                + '<div onclick="showSection(\'credits\')" style="background:var(--bg-primary);border-radius:8px;padding:8px;text-align:center;cursor:pointer;">'
+                +   '<div style="font-weight:700;color:#8b5cf6;">' + P + creditTotal.toLocaleString() + '</div>'
+                +   '<div style="font-size:0.7rem;color:var(--text-secondary);">Credits</div></div>'
+                + '<div onclick="showSection(\'income\')" style="background:var(--bg-primary);border-radius:8px;padding:8px;text-align:center;cursor:pointer;">'
+                +   '<div style="font-weight:700;color:#10b981;">' + P + incTotal.toLocaleString() + '</div>'
+                +   '<div style="font-size:0.7rem;color:var(--text-secondary);">Income</div></div>'
+                + '</div>'
+                + '<div style="display:flex;gap:8px;">'
+                + '<button class="btn btn-sm btn-secondary" style="flex:1;" onclick="showSection(\'reports\')">Full Reports</button>'
+                + (isAdmin ? '<button class="btn btn-sm btn-primary" style="flex:1;" onclick="openAdminInbox()">Admin Inbox</button>' : '')
+                + '</div>';
+
+            // Show endorsement compose for cashier, inbox preview for admin
+            var composeEl = document.getElementById('staff-endorse-compose');
+            var inboxEl   = document.getElementById('staff-admin-inbox-preview');
+            if (composeEl) composeEl.style.display = isCashier ? 'block' : 'none';
+            if (inboxEl)   inboxEl.style.display   = isAdmin   ? 'block' : 'none';
+
+            // Populate sent log (cashier)
+            if (isCashier) {
+                var endorsements = [];
+                try { endorsements = JSON.parse(localStorage.getItem('prism_endorsements') || '[]'); } catch(ex) {}
+                var todayE = endorsements.filter(function(e){ return e.sentAt && e.sentAt.startsWith(today); });
+                var sentEl = document.getElementById('staff-endorse-sent');
+                if (sentEl) {
+                    if (todayE.length > 0) {
+                        var sentHtml = '<div style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:4px;">Sent today (' + todayE.length + '):</div>';
+                        todayE.slice(-3).forEach(function(e) {
+                            sentHtml += '<div style="padding:5px 0;border-bottom:1px solid var(--border-color);font-size:0.78rem;display:flex;justify-content:space-between;">'
+                                + '<span>[' + prismSafeString(e.type) + '] ' + prismSafeString(e.message || '').substring(0,50) + '</span>'
+                                + '<span style="color:#64748b;">' + (e.sentAt ? new Date(e.sentAt).toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'}) : '') + '</span>'
+                                + '</div>';
+                        });
+                        sentEl.innerHTML = sentHtml;
+                    } else {
+                        sentEl.innerHTML = '<div style="color:#64748b;font-size:0.78rem;text-align:center;padding:6px 0;">No endorsements sent today</div>';
+                    }
+                }
+            }
+
+            // Populate inbox preview (admin)
+            if (isAdmin) {
+                var allE = [];
+                try { allE = JSON.parse(localStorage.getItem('prism_endorsements') || '[]'); } catch(ex) {}
+                var unread = allE.filter(function(e){ return !e.read; });
+                var previewEl = document.getElementById('staff-inbox-preview-list');
+                if (previewEl) {
+                    if (unread.length === 0) {
+                        previewEl.innerHTML = '<div style="color:#10b981;text-align:center;font-size:0.82rem;padding:8px 0;">No pending endorsements</div>';
+                    } else {
+                        var pvHtml = '';
+                        unread.slice(0,3).forEach(function(e) {
+                            pvHtml += '<div style="padding:8px;background:rgba(239,68,68,0.07);border-left:3px solid #ef4444;border-radius:6px;margin-bottom:6px;font-size:0.82rem;">'
+                                + '<div style="font-weight:600;color:var(--text-primary);">[' + prismSafeString(e.type || '').toUpperCase() + '] ' + prismSafeString(e.message || '').substring(0,60) + '</div>'
+                                + '<div style="color:#64748b;font-size:0.72rem;margin-top:2px;">From: ' + prismSafeString(e.sentBy || 'Cashier') + '</div>'
+                                + '</div>';
+                        });
+                        if (unread.length > 3) pvHtml += '<div style="text-align:center;color:#64748b;font-size:0.75rem;">+' + (unread.length - 3) + ' more unread</div>';
+                        previewEl.innerHTML = pvHtml;
+                    }
+                }
+            }
+
+        } catch(err) {
+            container.innerHTML = '<div style="color:var(--text-secondary);text-align:center;padding:20px;">Unable to load activity data.</div>';
+            console.error('[StaffActivity]', err);
+        }
+    }
+    window.loadStaffCashierActivity = loadStaffCashierActivity;
+
+    // ================================================================
+    // submitStaffEndorsement — uses the staff page compose textarea
+    // ================================================================
+    async function submitStaffEndorsement() {
+        var msgEl = document.getElementById('endorse-message-staff');
+        var msg   = msgEl ? msgEl.value.trim() : '';
+        if (!msg) { showToast('Please write a message first.', 'warning'); return; }
+
+        // Mirror into main endorse textarea then call existing submitEndorsement
+        var mainEl = document.getElementById('endorse-message');
+        if (mainEl) {
+            var orig = mainEl.value;
+            mainEl.value = msg;
+            if (typeof submitEndorsement === 'function') await submitEndorsement();
+            mainEl.value = orig;
+        } else {
+            // Direct fallback
+            var list = [];
+            try { list = JSON.parse(localStorage.getItem('prism_endorsements') || '[]'); } catch(ex) {}
+            var activePill = document.querySelector('.endorse-pill.active');
+            var eType = 'general';
+            if (activePill) {
+                var t = activePill.textContent.trim().toLowerCase();
+                var types = ['sales','credit','expense','water','attendance','urgent'];
+                for (var k = 0; k < types.length; k++) { if (t.indexOf(types[k]) !== -1) { eType = types[k]; break; } }
+            }
+            var user = window.currentAppUser;
+            list.push({
+                id:      'end_' + Date.now(),
+                type:    eType,
+                message: msg,
+                sentBy:  user ? (user.fullname || user.username || user.email || 'Cashier') : 'Cashier',
+                sentByRole: user ? user.role : 'cashier',
+                sentAt:  new Date().toISOString(),
+                read:    false,
+                orgId:   (window.MT && window.MT.currentOrg) ? window.MT.currentOrg.id : 'local'
+            });
+            localStorage.setItem('prism_endorsements', JSON.stringify(list));
+            if (typeof updateEndorseUnreadBadge === 'function') updateEndorseUnreadBadge();
+            showToast('Endorsement sent to admin!', 'success');
+        }
+        if (msgEl) msgEl.value = '';
+        loadStaffCashierActivity();
+    }
+    window.submitStaffEndorsement = submitStaffEndorsement;
+
+
 
 // Show cashier dashboard vs admin dashboard based on role
 function mtShowRoleDashboard() {
@@ -27209,8 +26577,8 @@ async function mtInit() {
                                 'manage-users':     _canAdmin,
                                 'view-reports':     _canAdmin,
                                 'backup-restore':   _canAdmin,
-                                'view-expenses':    _canAdmin || _isCashier,
-                                'view-income':      _canAdmin || _isCashier,
+                                'view-expenses':    _canAdmin,
+                                'view-income':      _canAdmin,
                                 'view-profiles':    _canAdmin,
                                 'delete-records':   _canAdmin,
                                 'access-settings':  _canAdmin,
@@ -27243,7 +26611,7 @@ async function mtInit() {
                             // Pull from cloud after push (catches up mobile/fresh device)
                             if (typeof syncFromFirebase === 'function') {
                                 setTimeout(() => {
-                                    safeSyncWrapper(syncFromFirebase).then(() => {
+                                    syncFromFirebase().then(() => {
                                         if (typeof loadDashboard === 'function') loadDashboard();
                                     }).catch(e => console.warn('[MT] Sync on load failed:', e));
                                 }, 1500); // wait 1.5s after push before pulling
@@ -27657,60 +27025,6 @@ window.mtSAToggleOrgStatus=mtSAToggleOrgStatus;
 
         
         // ── SA: SEND PASSWORD RESET EMAIL ──
-
-        // ── SA: EDIT USER EMAIL ──
-        async function mtSAEditUserEmail(docId, currentEmail) {
-            const newEmail = await showInputModal(
-                '✉️ Edit User Email',
-                `Current email: ${currentEmail}\n\nEnter the new email address:`,
-                'new@email.com', currentEmail
-            );
-            if (!newEmail || newEmail === currentEmail) return;
-            if (!newEmail.includes('@')) { showToast('❌ Invalid email address.', 'error'); return; }
-            try {
-                // Check duplicate
-                const snap = await window.db.collection(PRISM_SECURITY.COLLECTION).where('email','==',newEmail).get();
-                if (!snap.empty) { showToast('❌ That email already exists in the system.', 'error'); return; }
-                showToast('⏳ Updating email...', 'info');
-                await window.db.collection(PRISM_SECURITY.COLLECTION).doc(docId).update({ email: newEmail });
-                showToast('✅ Email updated to ' + newEmail, 'success');
-                mtSALoadAllowlist();
-            } catch(e) {
-                showToast('❌ Failed: ' + (e.message || e), 'error');
-            }
-        }
-        window.mtSAEditUserEmail = mtSAEditUserEmail;
-
-        // ── SA: RESEND INVITE / SEND WELCOME EMAIL ──
-        async function mtSAResendInvite(email, role) {
-            const appUrl = 'https://jarodbulb-stack.github.io/PRISM/';
-            showToast('⏳ Sending invite email...', 'info');
-            let emailSent = false;
-            if (window.auth) {
-                try {
-                    await window.auth.sendPasswordResetEmail(email);
-                    emailSent = true;
-                } catch(e) {
-                    // auth/user-not-found means they haven't created an account yet
-                    emailSent = false;
-                }
-            }
-            if (emailSent) {
-                showToast('📧 Invite/reset email sent to ' + email + ' — ask them to check inbox!', 'success');
-            } else {
-                // No Firebase account yet — show manual invite message
-                const msg = `Hi! You have been invited to PRISM (Property Management App).\n\nApp Link: ${appUrl}\nYour Email: ${email}\nRole: ${role||'staff'}\n\nSteps:\n1. Open the app link above\n2. Click "Create Staff Account" on the login screen\n3. Register with your email: ${email}\n4. Wait for admin approval if needed`;
-                await showInputModal(
-                    '📨 Manual Invite Required',
-                    `⚠️ ${email} doesn\'t have a Firebase account yet.\n\nCopy the message below and send it to them manually (SMS/Messenger/email):`,
-                    '', msg
-                );
-                showToast('ℹ️ Copy the invite message and send it to them manually.', 'info');
-            }
-        }
-        window.mtSAResendInvite = mtSAResendInvite;
-
-
         async function mtSASendPasswordReset(email) {
             if (!email) return;
             const ok = await showConfirm(
@@ -27724,7 +27038,7 @@ window.mtSAToggleOrgStatus=mtSAToggleOrgStatus;
                 await authInst.sendPasswordResetEmail(email);
                 showToast('✅ Password reset email sent to ' + email + ' — ask them to check their inbox!', 'success');
             } catch(e) {
-                const msg = e.code === 'auth/user-not-found' ? '❌ No Firebase account found for ' + email + '. They must register first via the app login screen.' : '❌ Failed: ' + (e.message || e); showToast(msg, 'error');
+                showToast('❌ Failed: ' + (e.message || e), 'error');
             }
         }
         window.mtSASendPasswordReset = mtSASendPasswordReset;
@@ -27897,8 +27211,6 @@ window.mtSAToggleOrgStatus=mtSAToggleOrgStatus;
                                 <td style="padding:8px 10px;"><div style="display:flex;gap:5px;flex-wrap:wrap;">
                                     ${u.status!=='approved'?`<button onclick="mtSAApproveUserDirect('${u.id}')" style="padding:4px 10px;background:rgba(16,185,129,0.1);border:1px solid #10b981;color:#34d399;border-radius:5px;cursor:pointer;font-size:0.73rem;">Approve</button>`:''}
                                     ${u.status!=='suspended'?`<button onclick="mtSASuspendUser('${u.id}')" style="padding:4px 10px;background:rgba(239,68,68,0.08);border:1px solid #ef4444;color:#f87171;border-radius:5px;cursor:pointer;font-size:0.73rem;">Suspend</button>`:`<button onclick="mtSAUnsuspendUser('${u.id}')" style="padding:4px 10px;background:rgba(99,102,241,0.1);border:1px solid #6366f1;color:#818cf8;border-radius:5px;cursor:pointer;font-size:0.73rem;">Unsuspend</button>`}
-                                    <button onclick="mtSAEditUserEmail('${u.id}','${u.email}')" style="padding:4px 10px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:6px;font-size:0.72rem;cursor:pointer;">✉️ Email</button>
-                                    <button onclick="mtSAResendInvite('${u.email}','${u.role}')" style="padding:4px 10px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);color:#34d399;border-radius:6px;font-size:0.72rem;cursor:pointer;">📨 Invite</button>
                                     <button onclick="mtSASendPasswordReset('${u.email}')" style="padding:4px 10px;background:rgba(251,191,36,0.08);border:1px solid #f59e0b;color:#fbbf24;border-radius:5px;cursor:pointer;font-size:0.73rem;">🔑 Reset PW</button>
                                     <button onclick="mtSADeleteUserAccount('${u.id}','${u.email}')" style="padding:4px 10px;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.4);color:#f87171;border-radius:5px;cursor:pointer;font-size:0.73rem;">🗑 Delete</button>
                                 </div></td>
@@ -27956,14 +27268,14 @@ window.mtSAToggleOrgStatus=mtSAToggleOrgStatus;
             catch(e){ mtToast('Error: '+e.message,'error'); }
         }
         async function mtSAAddUser() {
-            const email = (document.getElementById('sa-add-email')?.value||'').trim().toLowerCase();
-            const role  = document.getElementById('sa-add-role')?.value||'cashier';
-            const status= document.getElementById('sa-add-status')?.value||'approved';
+            const email  = (document.getElementById('sa-add-email')?.value||'').trim().toLowerCase();
+            const role   = document.getElementById('sa-add-role')?.value||'cashier';
+            const status = document.getElementById('sa-add-status')?.value||'approved';
             if(!email||!email.includes('@')){ mtToast('Enter a valid email','error'); return; }
             try {
-                mtToast('Adding user to allowlist...', 'info');
-                const snap = await window.db.collection(PRISM_SECURITY.COLLECTION).where('email','==',email).get();
-                if(!snap.empty){ mtToast('User already exists','warning'); return; }
+                mtToast('⏳ Adding user to allowlist...', 'info');
+            const snap = await window.db.collection(PRISM_SECURITY.COLLECTION).where('email','==',email).get();
+                if(!snap.empty){ mtToast('⚠️ User already exists','warning'); return; }
                 await window.db.collection(PRISM_SECURITY.COLLECTION).add({
                     email, role, status, organization_id: null,
                     created_at: new Date().toISOString(),
@@ -27971,37 +27283,8 @@ window.mtSAToggleOrgStatus=mtSAToggleOrgStatus;
                     pending_uid_migration: true,
                 });
                 document.getElementById('sa-add-email').value='';
+                mtToast('✅ Added: '+email,'success');
                 mtSALoadAllowlist();
-
-                // Try to send invite email (works if Firebase Auth account exists)
-                const appUrl = 'https://jarodbulb-stack.github.io/PRISM/';
-                let emailSent = false;
-                if (window.auth) {
-                    try { await window.auth.sendPasswordResetEmail(email); emailSent = true; }
-                    catch(emailErr) { emailSent = false; }
-                }
-
-                // Show result notice
-                const ex2 = document.getElementById('sa-invite-note'); if(ex2) ex2.remove();
-                const note = document.createElement('div');
-                note.id = 'sa-invite-note';
-                note.style.cssText = 'margin-top:14px;padding:14px 16px;border-radius:10px;font-size:0.83rem;line-height:1.6;'
-                    + (emailSent ? 'background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);' : 'background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);');
-                if (emailSent) {
-                    note.innerHTML = '<div style="font-weight:700;color:#34d399;margin-bottom:4px;">User added and invitation email sent!</div>'
-                        + '<div style="color:#cbd5e1;"><b>' + email + '</b> will receive a link to set their password. They can then log in to PRISM.</div>';
-                    mtToast('Added and email sent to ' + email, 'success');
-                } else {
-                    const msg = 'Hi! You have been invited to PRISM.\n\nApp: ' + appUrl + '\nYour email: ' + email + '\nRole: ' + role
-                        + '\n\nSteps:\n1. Open the app link above\n2. Click "Create Staff Account"\n3. Enter your email (' + email + ') and create a password\n4. You are in!';
-                    note.innerHTML = '<div style="font-weight:700;color:#fbbf24;margin-bottom:4px;">User added - please notify them manually</div>'
-                        + '<div style="color:#cbd5e1;margin-bottom:8px;">No Firebase account found yet. Send them this invitation:</div>'
-                        + '<textarea readonly id="sa-invite-text" style="width:100%;padding:8px;background:#0f172a;border:1px solid #334155;border-radius:6px;color:#94a3b8;font-size:0.75rem;font-family:monospace;resize:vertical;min-height:100px;box-sizing:border-box;">' + msg + '</textarea>'
-                        + '<button onclick="const t=document.getElementById(\'sa-invite-text\');t.select();document.execCommand(\'copy\');mtToast(\'Copied!\',\'success\');" style="margin-top:8px;padding:6px 14px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:6px;color:#818cf8;cursor:pointer;font-size:0.78rem;">Copy Invite Message</button>';
-                    mtToast('Added: ' + email + ' - send them the invite', 'warning');
-                }
-                const addForm = document.getElementById('sa-add-email')?.closest('div');
-                if(addForm && addForm.parentNode) addForm.parentNode.insertBefore(note, addForm.nextSibling);
             } catch(e){ mtToast('Error: '+e.message,'error'); }
         }
         window.mtSALoadAllowlist=mtSALoadAllowlist;
@@ -28134,13 +27417,7 @@ window.mtSAToggleOrgStatus=mtSAToggleOrgStatus;
             const _origSyncToFirebase = typeof window.syncToFirebase === 'function' ? window.syncToFirebase : null;
             if (_origSyncToFirebase && !_origSyncToFirebase._req7guarded) {
                 window.syncToFirebase = async function(...args) {
-                    // Always allow sync during wipe/delete operations
-                    // Also allow if MT org role is owner/admin (SA users may have stale currentAppUser)
-                    if (window._prismWipeInProgress) return _origSyncToFirebase(...args);
-                    const _mtRole = (typeof MT !== 'undefined' && MT.currentOrgRole) || null;
-                    // SA/Owner via MT always allowed regardless of currentAppUser
-                    if (_mtRole && ['owner','admin'].includes(_mtRole)) return _origSyncToFirebase(...args);
-                    const _role = currentAppUser?.role || _mtRole || 'viewer';
+                    const _role = currentAppUser?.role || 'viewer';
                     if (['viewer','cashier'].includes(_role)) {
                         console.info('[Security REQ7] Sync blocked for role:', _role);
                         return;
@@ -28375,11 +27652,6 @@ window.addEventListener('DOMContentLoaded', () => {
         
 
         // ========== REAL-TIME CROSS-DEVICE SYNC ==========
-        // Safety: always reset wipe flag on page load — prevents stuck state from cancelled operations
-        // Only reset on true fresh page load — not during in-session refresh
-        if (!sessionStorage.getItem("_prismWipeActive")) {
-            window._prismWipeInProgress = false;
-        }
         let _realtimeSyncUnsubscribe = null;
         let _lastSyncTimestamp = null;
 
@@ -28401,17 +27673,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     if (!doc.exists) return;
                     const data = doc.data();
                     if (!data || !data.lastSync) return;
-                    // Use window._lastSyncTimestamp — wipe functions write here across scope boundaries
-                    const _tsToCheck = window._lastSyncTimestamp || _lastSyncTimestamp;
-                    if (_tsToCheck && data.lastSync === _tsToCheck) return;
-            const _snapWipeTs = localStorage.getItem('_prismLastWipeAt');
-            const _snapRecent = _snapWipeTs && (Date.now() - new Date(_snapWipeTs).getTime()) < 30000;
-            if (window._prismWipeInProgress || sessionStorage.getItem('_prismWipeActive') || (window.PRISM_CORE && PRISM_CORE.wipeLock) || _snapRecent) {
-                console.log('[RealtimeSync] Wipe active/recent — skipping snapshot'); return;
-            }
-                    // Update both so future checks work
-                    _lastSyncTimestamp = data.lastSync;
-                    window._lastSyncTimestamp = data.lastSync;
+                    if (_lastSyncTimestamp && data.lastSync === _lastSyncTimestamp) return;
 
                     console.log('[RealtimeSync] Remote change detected — updating local data...');
 
@@ -28468,48 +27730,7 @@ window.addEventListener('DOMContentLoaded', () => {
             if (ov) ov.style.display = 'none';
             if (window._prismTypeConfirmResolve) { window._prismTypeConfirmResolve(null); window._prismTypeConfirmResolve = null; }
         }
-        window.prismTypeConfirmSubmit = prismTypeConfirmSubmit;
-        window.prismTypeConfirmCancel = prismTypeConfirmCancel;
 
         </script>
-
-<!-- ========== CALENDAR DAY DETAIL MODAL ========== -->
-<div id="cal-day-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:99999;align-items:center;justify-content:center;padding:16px;">
-  <div style="background:var(--bg-card,#1e293b);border:1px solid var(--border-color,#334155);border-radius:16px;padding:0;width:100%;max-width:480px;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.6);">
-    <!-- Header -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;border-bottom:1px solid var(--border-color,#334155);">
-      <div>
-        <div id="cal-day-modal-title" style="font-size:1.05rem;font-weight:700;color:var(--text-primary,#f1f5f9);"></div>
-        <div id="cal-day-modal-sub" style="font-size:0.75rem;color:#64748b;margin-top:2px;"></div>
-      </div>
-      <button onclick="document.getElementById('cal-day-modal').style.display='none'" style="background:transparent;border:none;color:#64748b;font-size:1.3rem;cursor:pointer;padding:4px 8px;border-radius:6px;" onmouseover="this.style.color='#f1f5f9'" onmouseout="this.style.color='#64748b'">✕</button>
-    </div>
-    <!-- Body -->
-    <div id="cal-day-modal-body" style="overflow-y:auto;padding:14px 16px;flex:1;"></div>
-    <!-- Footer -->
-    <div style="padding:12px 16px;border-top:1px solid var(--border-color,#334155);display:flex;justify-content:flex-end;">
-      <button onclick="document.getElementById('cal-day-modal').style.display='none'" style="padding:8px 20px;background:rgba(255,255,255,0.06);border:1px solid var(--border-color,#334155);border-radius:8px;color:#94a3b8;cursor:pointer;font-size:0.85rem;">Close</button>
-    </div>
-  </div>
-</div>
-<!-- ========== END CALENDAR DAY DETAIL MODAL ========== -->
-
-
-<!-- ========== TYPE-TO-CONFIRM MODAL (live DOM) ========== -->
-<div id="prism-type-confirm-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:999999;align-items:center;justify-content:center;padding:16px;">
-  <div style="background:#1e293b;border:1px solid rgba(245,158,11,0.35);border-radius:16px;padding:28px 24px 22px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.6);">
-    <div style="font-size:2rem;text-align:center;margin-bottom:10px;">⌨️</div>
-    <div style="font-size:1rem;font-weight:700;color:#fbbf24;text-align:center;margin-bottom:8px;">Final Confirmation</div>
-    <div id="prism-type-confirm-msg" style="font-size:0.85rem;color:#94a3b8;text-align:center;line-height:1.55;margin-bottom:16px;">Type <strong style="color:#f1f5f9;">DELETE ALL</strong> to confirm.</div>
-    <input id="prism-type-confirm-input" type="text" autocomplete="off" placeholder="Type DELETE ALL here..."
-      style="width:100%;padding:11px 14px;background:#0f172a;border:1px solid #334155;border-radius:9px;color:#f1f5f9;font-size:0.95rem;box-sizing:border-box;margin-bottom:14px;outline:none;"
-      onfocus="this.style.borderColor='#f59e0b'" onblur="this.style.borderColor='#334155'"
-      onkeydown="if(event.key==='Enter')prismTypeConfirmSubmit()">
-    <button onclick="prismTypeConfirmSubmit()" style="width:100%;padding:11px;background:linear-gradient(135deg,#ef4444,#dc2626);border:none;border-radius:9px;color:white;font-weight:700;font-size:0.95rem;cursor:pointer;margin-bottom:8px;">✅ Confirm Delete</button>
-    <button onclick="prismTypeConfirmCancel()" style="width:100%;padding:9px;background:rgba(255,255,255,0.05);color:#94a3b8;border:1px solid #334155;border-radius:9px;cursor:pointer;font-size:0.88rem;">Cancel</button>
-  </div>
-</div>
-<!-- ========== END TYPE-TO-CONFIRM MODAL ========== -->
-
 </body>
 </html>
