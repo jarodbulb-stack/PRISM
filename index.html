@@ -7723,7 +7723,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
 
         async function syncFromFirebase() {
             // Block all pulls while a wipe/delete is in progress
-            if (window._prismWipeInProgress) { console.log('[Sync] Wipe in progress — skipping pull'); return; }
+    if (window._prismWipeInProgress || sessionStorage.getItem('_prismWipeActive')) { console.log('[Sync] Wipe active — skipping pull'); return; }
             // STARTUP FIX: Wait for IndexedDB to be ready before syncing
             if (window._dbReadyPromise) await window._dbReadyPromise;
             const cu = currentUser || (typeof MT !== 'undefined' && MT.currentUser);
@@ -18247,6 +18247,7 @@ async function showPayrollSummary() {
             // ── All confirms passed ──
             // Step 1: Kill the listener permanently — do NOT restart until reload
             window._prismWipeInProgress = true;
+        sessionStorage.setItem('_prismWipeActive', '1'); // prevent flag reset on refresh
             try { if (typeof mtStopRealtimeSync === 'function') mtStopRealtimeSync(); } catch(e) {}
 
             showToast('🧹 Deleting sample data...', 'info');
@@ -18319,6 +18320,8 @@ async function showPayrollSummary() {
                 // The listener will restart naturally on next page load with fresh timestamp
                 // This prevents any race condition from onSnapshot restoring old data
                 console.log('[DeleteSample] Complete. Listener stays off until reload.');
+        showToast('✅ Sample data deleted! Reloading...', 'success', 2000);
+        setTimeout(() => window.location.reload(), 2200);
 
             } catch(e) {
                 window._prismWipeInProgress = false;
@@ -18407,6 +18410,7 @@ async function clearAllData() {
 
             // ── All confirms passed — NOW lock out Firebase sync ──
             window._prismWipeInProgress = true;
+        sessionStorage.setItem('_prismWipeActive', '1'); // prevent flag reset on refresh
             try { if (typeof mtStopRealtimeSync === 'function') mtStopRealtimeSync(); } catch(e) {}
 
             showToast('\u23f3 Deleting all data...', 'info');
@@ -18474,6 +18478,8 @@ async function clearAllData() {
                 // ── Do NOT restart listener — keep wipe flag TRUE until next page load ──
                 // This prevents onSnapshot from restoring old data in the propagation window
                 console.log('[ClearAll] Complete. Listener stays off until reload.');
+        showToast('✅ All data cleared! Reloading...', 'success', 2000);
+        setTimeout(() => window.location.reload(), 2200);
 
             } catch (error) {
                 window._prismWipeInProgress = false;
@@ -24061,6 +24067,9 @@ async function editTask(id) {
                 updateAuthUI();
 
                 PrismGuardian.log('SUCCESS', '🎉 PRISM initialized successfully');
+    // Clear wipe flag after successful clean init — app is fresh now
+    sessionStorage.removeItem('_prismWipeActive');
+    window._prismWipeInProgress = false;
 
             } catch (error) {
                 console.error('Initialization error:', error);
@@ -27668,7 +27677,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
         // ========== REAL-TIME CROSS-DEVICE SYNC ==========
         // Safety: always reset wipe flag on page load — prevents stuck state from cancelled operations
-        window._prismWipeInProgress = false;
+        // Only reset on true fresh page load — not during in-session refresh
+        if (!sessionStorage.getItem("_prismWipeActive")) {
+            window._prismWipeInProgress = false;
+        }
         let _realtimeSyncUnsubscribe = null;
         let _lastSyncTimestamp = null;
 
@@ -27693,7 +27705,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     // Use window._lastSyncTimestamp — wipe functions write here across scope boundaries
                     const _tsToCheck = window._lastSyncTimestamp || _lastSyncTimestamp;
                     if (_tsToCheck && data.lastSync === _tsToCheck) return;
-                    if (window._prismWipeInProgress) { console.log('[RealtimeSync] Wipe in progress — skipping snapshot'); return; }
+            if (window._prismWipeInProgress || sessionStorage.getItem('_prismWipeActive')) { console.log('[RealtimeSync] Wipe active — skipping snapshot'); return; }
                     // Update both so future checks work
                     _lastSyncTimestamp = data.lastSync;
                     window._lastSyncTimestamp = data.lastSync;
