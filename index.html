@@ -24254,7 +24254,7 @@ async function editTask(id) {
                 
                 // ===== TIME RECORDS (attendance for past 6 days) =====
                 for (const emp of allEmployees) {
-                    if (!employee.name.startsWith('Roger') && !employee.name.startsWith('Cenia') && !employee.name.startsWith('Mario')) continue;
+                    if (!emp.name.startsWith('Roger') && !emp.name.startsWith('Cenia') && !emp.name.startsWith('Mario')) continue;
                     
                     for (let d = 1; d <= 6; d++) {
                         const recordDate = new Date();
