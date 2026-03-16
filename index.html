@@ -21242,6 +21242,11 @@ Lender/Manager
                 const loggedInUser = localStorage.getItem('carent_current_user');
                 if (loggedInUser) {
                     currentAppUser = JSON.parse(loggedInUser);
+                    // Correct role for SUPER_ADMINS in case localStorage has stale viewer/cashier role
+                    if (MT.SUPER_ADMINS && currentAppUser.email &&
+                        MT.SUPER_ADMINS.map(e=>e.toLowerCase()).includes(currentAppUser.email.toLowerCase())) {
+                        currentAppUser.role = 'owner';
+                    }
                     updateUserDisplay();
                     const mainContent = document.querySelector('.main');
                     if (mainContent) mainContent.style.display = 'block';
@@ -27127,12 +27132,29 @@ async function mtInit() {
             const u = JSON.parse(savedUser);
             const o = JSON.parse(savedOrg);
             if (u && o && o.name) {
-                // Don't auto-restore if this looks like a super admin session —
-                // let Firebase onAuthStateChanged handle navigation to SA panel
+                // For SUPER_ADMINS: restore session immediately then verify Firebase in background
+                // (no longer force them to sit at landing waiting for Firebase)
                 const isSAEmail = MT.SUPER_ADMINS.map(e=>e.toLowerCase()).includes((u.email||'').toLowerCase());
                 if (isSAEmail) {
-                    mtShowLanding(); // wait for Firebase to confirm SA identity
+                    // Immediately restore with corrected owner role
+                    currentAppUser   = { ...u, role: 'owner' };
+                    MT.currentOrg   = o;
+                    MT.currentOrgRole = 'owner';
+                    MT.currentUser  = { uid: 'local_' + (u.id||1), email: u.email||'local@prism.app', displayName: u.fullname };
+                    mtShowApp();
+                    mtUpdateOrgBadge();
+                    setTimeout(async () => {
+                        if (typeof updateUserDisplay === 'function') updateUserDisplay();
+                        if (typeof applyRoleNav === 'function') applyRoleNav();
+                        if (window._dbReadyPromise) await window._dbReadyPromise;
+                        if (typeof loadDashboard === 'function') loadDashboard();
+                        setTimeout(() => {
+                            if (typeof prismAddCashierButtons === 'function') prismAddCashierButtons();
+                            if (typeof prismLoadAdminNotifications === 'function') prismLoadAdminNotifications();
+                        }, 800);
+                    }, 300);
                 } else {
+                    // Non-SA: restore session normally
                     currentAppUser   = u;
                     MT.currentOrg   = o;
                     MT.currentOrgRole = u.role || 'admin';
@@ -27142,11 +27164,9 @@ async function mtInit() {
                     setTimeout(async () => {
                         if (typeof updateUserDisplay === 'function') updateUserDisplay();
                         if (typeof applyRoleNav === 'function') applyRoleNav();
-                        // Auto time-in for cashier on login
                         if (currentAppUser && currentAppUser.role === 'cashier') {
                             await prismCashierAutoTimeIn();
                         }
-                        // Wait for DB ready before loading dashboard
                         if (window._dbReadyPromise) await window._dbReadyPromise;
                         if (typeof loadDashboard === 'function') loadDashboard();
                         setTimeout(() => {
@@ -27279,7 +27299,11 @@ async function mtInit() {
                     if (!currentAppUser) {
                         // Build owner user from Firebase profile
                         // ── Read role from allowlist entry ──
-                        const _secRole = (MT._securityData && MT._securityData.role) ? MT._securityData.role : 'admin';
+                        let _secRole = (MT._securityData && MT._securityData.role) ? MT._securityData.role : 'admin';
+                        // SUPER_ADMINS always get owner role regardless of stored allowlist value
+                        if (MT.SUPER_ADMINS && MT.SUPER_ADMINS.map(e=>e.toLowerCase()).includes((user.email||'').toLowerCase())) {
+                            _secRole = 'owner';
+                        }
                         const _isCashier = _secRole === 'cashier';
                         const _isViewer  = _secRole === 'viewer';
                         const _canAdmin  = ['owner','admin','manager'].includes(_secRole);
@@ -28146,6 +28170,10 @@ window.mtSAToggleOrgStatus=mtSAToggleOrgStatus;
             if (_origSyncToFirebase && !_origSyncToFirebase._req7guarded) {
                 window.syncToFirebase = async function(...args) {
                     const _role = currentAppUser?.role || 'viewer';
+                    // Always allow SUPER_ADMINS through regardless of stored role
+                    const _email = (currentAppUser?.email || MT?.currentUser?.email || '').toLowerCase();
+                    const _isSuperAdmin = MT?.SUPER_ADMINS && MT.SUPER_ADMINS.map(e=>e.toLowerCase()).includes(_email);
+                    if (_isSuperAdmin) return _origSyncToFirebase(...args);
                     if (['viewer','cashier'].includes(_role)) {
                         console.info('[Security REQ7] Sync blocked for role:', _role);
                         return;
@@ -28429,6 +28457,55 @@ window.addEventListener('DOMContentLoaded', () => {
         function mtStopRealtimeSync() {
             if (_realtimeSyncUnsubscribe) { _realtimeSyncUnsubscribe(); _realtimeSyncUnsubscribe = null; }
         }
+
+        // ── Inline input modal (replaces window.prompt for text input) ──
+        // Returns a Promise<string|null>. null = cancelled, string = entered value.
+        window._prismInputResolve = null;
+        function showInputModal(title, message, placeholder, defaultValue) {
+            return new Promise(resolve => {
+                window._prismInputResolve = resolve;
+                // Build modal HTML dynamically
+                let el = document.getElementById('prism-input-modal-overlay');
+                if (!el) {
+                    el = document.createElement('div');
+                    el.id = 'prism-input-modal-overlay';
+                    el.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:999998;align-items:center;justify-content:center;padding:20px;';
+                    el.innerHTML = `
+                    <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:26px 22px 20px;width:100%;max-width:400px;box-shadow:0 24px 60px rgba(0,0,0,0.7);">
+                        <div id="prism-input-modal-title" style="font-size:1rem;font-weight:700;color:#f1f5f9;margin-bottom:8px;"></div>
+                        <div id="prism-input-modal-msg" style="font-size:0.83rem;color:#94a3b8;line-height:1.5;margin-bottom:14px;white-space:pre-wrap;"></div>
+                        <input id="prism-input-modal-field" type="text" autocomplete="off"
+                            style="width:100%;padding:10px 13px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:0.95rem;margin-bottom:14px;box-sizing:border-box;"
+                            onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#334155'"
+                            onkeydown="if(event.key==='Enter'){window._prismInputSubmit();}if(event.key==='Escape'){window._prismInputCancel();}">
+                        <div style="display:flex;gap:8px;">
+                            <button onclick="window._prismInputSubmit()" style="flex:1;padding:10px;background:#3b82f6;border:none;border-radius:8px;color:white;font-weight:600;cursor:pointer;font-size:0.9rem;">OK</button>
+                            <button onclick="window._prismInputCancel()" style="flex:1;padding:10px;background:rgba(255,255,255,0.06);border:1px solid #334155;border-radius:8px;color:#94a3b8;cursor:pointer;font-size:0.9rem;">Cancel</button>
+                        </div>
+                    </div>`;
+                    document.body.appendChild(el);
+                }
+                document.getElementById('prism-input-modal-title').textContent = title || '';
+                document.getElementById('prism-input-modal-msg').textContent = message || '';
+                const inp = document.getElementById('prism-input-modal-field');
+                inp.placeholder = placeholder || '';
+                inp.value = (defaultValue !== undefined && defaultValue !== null) ? defaultValue : '';
+                el.style.display = 'flex';
+                setTimeout(() => inp.focus(), 150);
+            });
+        }
+        window._prismInputSubmit = function() {
+            const val = (document.getElementById('prism-input-modal-field') || {}).value || '';
+            const el = document.getElementById('prism-input-modal-overlay');
+            if (el) el.style.display = 'none';
+            if (window._prismInputResolve) { window._prismInputResolve(val); window._prismInputResolve = null; }
+        };
+        window._prismInputCancel = function() {
+            const el = document.getElementById('prism-input-modal-overlay');
+            if (el) el.style.display = 'none';
+            if (window._prismInputResolve) { window._prismInputResolve(null); window._prismInputResolve = null; }
+        };
+        window.showInputModal = showInputModal;
 
         // ── Inline type-confirm (replaces window.prompt) ──
         window._prismTypeConfirmResolve = null;
