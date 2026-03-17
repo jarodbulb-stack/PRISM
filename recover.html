@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRISM Recovery</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#0f172a;color:#e2e8f0;padding:20px;min-height:100vh}
+h1{color:#6366f1;font-size:1.3rem;margin-bottom:4px}
+.sub{color:#64748b;font-size:0.8rem;margin-bottom:20px}
+.card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:16px;margin-bottom:14px}
+h3{font-size:0.85rem;color:#94a3b8;margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em}
+.btn{padding:10px 18px;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;margin-right:8px;margin-top:4px}
+.btn-blue{background:#6366f1;color:white}
+.btn-green{background:#10b981;color:white}
+.btn-sm{padding:5px 12px;font-size:0.78rem}
+.btn:disabled{opacity:0.4;cursor:not-allowed}
+.doc-row{background:#0f172a;border:1px solid #334155;border-radius:8px;padding:12px;margin-bottom:8px}
+.doc-row.best{border-color:#10b981}
+.doc-id{font-size:0.72rem;color:#818cf8;font-family:monospace;word-break:break-all;margin-bottom:6px}
+.pills{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.pill{font-size:0.7rem;padding:2px 8px;border-radius:10px;font-weight:600}
+.g{background:rgba(16,185,129,.15);color:#10b981}
+.b{background:rgba(99,102,241,.15);color:#818cf8}
+.a{background:rgba(245,158,11,.15);color:#f59e0b}
+.logbox{background:#0f172a;border:1px solid #334155;border-radius:8px;padding:12px;font-family:monospace;font-size:0.73rem;max-height:220px;overflow-y:auto;margin-top:10px}
+.ok{color:#10b981}.er{color:#ef4444}.in{color:#818cf8}
+input{width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:0.85rem;margin:8px 0}
+.wbox{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:12px;font-size:0.82rem;color:#fca5a5;margin-bottom:12px}
+.sbox{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:8px;padding:12px;font-size:0.82rem;color:#6ee7b7;margin-top:12px}
+</style>
+</head>
+<body>
+<h1>⚡ PRISM Data Recovery</h1>
+<p class="sub">Restores your real data from Firebase — carent-c4017</p>
+
+<div class="card" id="c-sdk"><h3>Initializing...</h3><div id="sdk-msg" style="color:#f59e0b;font-size:0.85rem">Loading Firebase SDK...</div></div>
+<div class="card" id="c-auth" style="display:none"><h3>Step 1 — Sign In</h3>
+  <button class="btn btn-blue" id="btn-signin" onclick="doSignIn()">Sign In with Google (jarodbulb@gmail.com)</button>
+  <div id="auth-msg" style="margin-top:8px;font-size:0.82rem"></div>
+</div>
+<div class="card" id="c-scan" style="display:none"><h3>Step 2 — Find Your Data</h3>
+  <button class="btn btn-blue" id="btn-scan" onclick="doScan()">Scan Firebase for All Data</button>
+  <div id="scan-status" style="font-size:0.83rem;color:#f59e0b;margin:8px 0;min-height:18px"></div>
+  <div id="doc-list"></div>
+</div>
+<div class="card" id="c-restore" style="display:none"><h3>Step 3 — Restore</h3>
+  <div class="wbox" id="rw"></div>
+  <p style="font-size:0.82rem;color:#64748b;margin-bottom:6px">Type <strong>RESTORE</strong> to confirm:</p>
+  <input id="confirm-inp" placeholder="Type RESTORE" oninput="chkConfirm()">
+  <button class="btn btn-green" id="btn-restore" disabled onclick="doRestore()">Restore Data to App</button>
+  <div id="restore-result"></div>
+</div>
+<div class="logbox" id="logbox" style="display:none"></div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script>
+var auth,db,selId,selData,docs={};
+
+function L(m,c){
+  var e=document.getElementById('logbox');
+  e.style.display='block';
+  e.innerHTML+='<div class="'+(c||'in')+'">['+new Date().toLocaleTimeString()+'] '+m+'</div>';
+  e.scrollTop=e.scrollHeight;
+}
+
+window.addEventListener('load',function(){
+  try{
+    var cfg={
+      apiKey:"AIzaSyB9yyIJudc5eQAgisohE7Jbh_ECE6wXWCQ",
+      authDomain:"carent-c4017.firebaseapp.com",
+      projectId:"carent-c4017",
+      storageBucket:"carent-c4017.firebasestorage.app",
+      messagingSenderId:"869655431614",
+      appId:"1:869655431614:web:488b396da3aeabec9b91ef"
+    };
+    if(!firebase.apps.length) firebase.initializeApp(cfg);
+    auth=firebase.auth();
+    db=firebase.firestore();
+    document.getElementById('c-sdk').style.display='none';
+    document.getElementById('c-auth').style.display='block';
+    L('Firebase ready','ok');
+    auth.onAuthStateChanged(function(u){
+      if(u){
+        document.getElementById('auth-msg').innerHTML='<span style="color:#10b981">Signed in as <b>'+u.email+'</b></span>';
+        document.getElementById('btn-signin').disabled=true;
+        document.getElementById('c-scan').style.display='block';
+        L('User: '+u.email,'ok');
+      }
+    });
+  }catch(e){
+    document.getElementById('sdk-msg').innerHTML='<span style="color:#ef4444">Init error: '+e.message+'</span>';
+    L('Init error: '+e.message,'er');
+  }
+});
+
+function doSignIn(){
+  document.getElementById('btn-signin').disabled=true;
+  var p=new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(p).then(function(r){
+    document.getElementById('auth-msg').innerHTML='<span style="color:#10b981">Signed in as <b>'+r.user.email+'</b></span>';
+    document.getElementById('c-scan').style.display='block';
+  }).catch(function(e){
+    document.getElementById('auth-msg').innerHTML='<span style="color:#ef4444">'+e.message+'</span>';
+    document.getElementById('btn-signin').disabled=false;
+    L('Sign-in err: '+e.message,'er');
+  });
+}
+
+async function doScan(){
+  document.getElementById('btn-scan').disabled=true;
+  document.getElementById('scan-status').textContent='Scanning...';
+  var u=auth.currentUser;
+  L('UID: '+u.uid);
+  var orgIds=[u.uid];
+
+  try{
+    var ms=await db.collection('mt_org_members').where('userId','==',u.uid).get();
+    L('mt_org_members: '+ms.docs.length);
+    ms.docs.forEach(function(d){
+      var dd=d.data();
+      L('  org:'+dd.orgId+' role:'+dd.role);
+      if(dd.orgId&&!orgIds.includes(dd.orgId)) orgIds.push(dd.orgId);
+    });
+  }catch(e){L('members: '+e.message,'er');}
+
+  var rows=[];
+  function addRow(id,data){
+    if(docs[id]) return;
+    docs[id]=data;
+    var r={id:id,data:data,
+      props:(data.properties||[]).length,
+      tenants:(data.tenants||[]).length,
+      pays:(data.payments||[]).length,
+      creds:(data.credits||[]).length,
+      water:(data.waterSales||[]).length,
+      emps:(data.employees||[]).length,
+      exps:(data.expenses||[]).length
+    };
+    r.score=r.props*5+r.tenants*3+r.pays*2+r.creds*2+r.water+r.emps+r.exps;
+    rows.push(r);
+    L('Doc '+id+': props='+r.props+' tenants='+r.tenants+' pays='+r.pays+' water='+r.water,'ok');
+  }
+
+  for(var oid of orgIds){
+    try{
+      var doc=await db.collection('prism_data').doc(oid).get();
+      if(doc.exists) addRow(doc.id,doc.data());
+      else L('No doc: '+oid);
+    }catch(e){L('Read '+oid+': '+e.message,'er');}
+  }
+
+  try{
+    var snap=await db.collection('prism_data').get();
+    L('Full scan: '+snap.docs.length+' docs');
+    snap.docs.forEach(function(d){ addRow(d.id,d.data()); });
+  }catch(e){L('Full scan: '+e.message);}
+
+  if(!rows.length){
+    document.getElementById('scan-status').textContent='No data found in Firebase.';
+    document.getElementById('btn-scan').disabled=false;
+    return;
+  }
+
+  rows.sort(function(a,b){return b.score-a.score;});
+  var best=rows[0].id;
+  document.getElementById('doc-list').innerHTML=rows.map(function(r){
+    return '<div class="doc-row '+(r.id===best?'best':'')+'">' +
+      '<div class="doc-id">'+r.id+(r.id===best?' ← MOST DATA':'')+'</div>' +
+      '<div class="pills">' +
+        '<span class="pill g">'+r.props+' Properties</span>' +
+        '<span class="pill g">'+r.tenants+' Tenants</span>' +
+        '<span class="pill a">'+r.pays+' Payments</span>' +
+        '<span class="pill b">'+r.creds+' Credits</span>' +
+        '<span class="pill b">'+r.water+' Water</span>' +
+        '<span class="pill b">'+r.emps+' Staff</span>' +
+        '<span class="pill b">'+r.exps+' Expenses</span>' +
+      '</div>' +
+      '<button class="btn btn-green btn-sm" onclick="selDoc(\''+r.id+'\','+r.props+','+r.tenants+')">Select & Restore</button>' +
+    '</div>';
+  }).join('');
+  document.getElementById('scan-status').textContent='Found '+rows.length+' document(s). Choose yours.';
+}
+
+function selDoc(id,props,tenants){
+  selId=id; selData=docs[id];
+  document.getElementById('c-restore').style.display='block';
+  document.getElementById('rw').innerHTML='Document: <b>'+id+'</b><br><b>'+props+' properties</b> and <b>'+tenants+' tenants</b>.<br>This will overwrite your local PRISM database.';
+  document.getElementById('confirm-inp').value='';
+  document.getElementById('btn-restore').disabled=true;
+  document.getElementById('c-restore').scrollIntoView({behavior:'smooth'});
+}
+
+function chkConfirm(){
+  document.getElementById('btn-restore').disabled=
+    document.getElementById('confirm-inp').value.trim()!=='RESTORE';
+}
+
+async function doRestore(){
+  document.getElementById('btn-restore').disabled=true;
+  var STORES=['properties','tenants','payments','credits','creditPayments',
+    'expenses','customNotes','additionalIncome','clientCharges',
+    'waterCustomers','waterSales','employees','cashAdvances',
+    'salaryPayments','timeRecords','tasks'];
+
+  // Open the PRISM IndexedDB
+  var idb=null, usedName='';
+  var candidates=['PRISMdb','prismDB','PRISM','carentDB'];
+  try{
+    var all=await indexedDB.databases();
+    L('IndexedDBs: '+all.map(function(x){return x.name;}).join(', '));
+    all.forEach(function(x){if(x.name&&!candidates.includes(x.name)) candidates.unshift(x.name);});
+  }catch(e){}
+
+  for(var name of candidates){
+    try{
+      var r=await new Promise(function(res,rej){
+        var req=indexedDB.open(name);
+        req.onsuccess=function(e){res(e.target.result);};
+        req.onerror=function(){res(null);};
+        req.onupgradeneeded=function(e){e.target.transaction.abort();res(null);};
+      });
+      if(r&&r.objectStoreNames.length>5){idb=r;usedName=name;break;}
+      if(r) r.close();
+    }catch(e){}
+  }
+
+  if(!idb){
+    L('Cannot open PRISM IndexedDB. Open the PRISM app first, then retry.','er');
+    document.getElementById('btn-restore').disabled=false;
+    return;
+  }
+  L('Using DB: '+usedName+' ('+idb.objectStoreNames.length+' stores)','ok');
+
+  var total=0;
+  for(var s of STORES){
+    if(!idb.objectStoreNames.contains(s)){L('Skip (no store): '+s);continue;}
+    var arr=Array.isArray(selData[s])?selData[s]:[];
+    if(!arr.length){L('Skip (empty): '+s);continue;}
+    try{
+      await new Promise(function(res,rej){
+        var tx=idb.transaction([s],'readwrite');
+        var st=tx.objectStore(s);
+        st.clear().onsuccess=function(){
+          var p=arr.length;
+          arr.forEach(function(item){
+            var r2=st.put(item);
+            r2.onsuccess=function(){p--;if(!p)res();};
+            r2.onerror=function(){p--;if(!p)res();};
+          });
+          if(!p) res();
+        };
+        tx.onerror=function(e){rej(e);};
+      });
+      L('Restored '+s+': '+arr.length,'ok');
+      total+=arr.length;
+    }catch(e){L('Error '+s+': '+e.message,'er');}
+  }
+
+  localStorage.setItem('mt_current_org_id',selId);
+  L('orgId saved: '+selId,'ok');
+  L('COMPLETE: '+total+' records restored','ok');
+  document.getElementById('restore-result').innerHTML=
+    '<div class="sbox"><b>Done! '+total+' records restored.</b><br>' +
+    'Go to PRISM and press <b>Ctrl+Shift+R</b> to hard refresh. Your data will be back.</div>';
+}
+</script>
+</body>
+</html>
