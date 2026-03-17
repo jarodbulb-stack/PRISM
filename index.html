@@ -10635,17 +10635,33 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             const lateFeeStr = document.getElementById('tenant-late-fee').value.trim();
             const lateFee = parseFloat(lateFeeStr.replace(/,/g, '')) || 0;
 
-            if (!name || !propertyId || rent <= 0 || !moveIn) {
-                showToast('⚠️ Please fill in all required fields.', 'warning');
+            if (!name) {
+                showToast('⚠️ Tenant name is required.', 'warning');
+                document.getElementById('tenant-name')?.focus();
+                return;
+            }
+            if (!propertyId || isNaN(propertyId)) {
+                showToast('⚠️ Please select a Property.', 'warning');
+                return;
+            }
+            if (rent <= 0) {
+                showToast('⚠️ Monthly Rent must be greater than 0.', 'warning');
+                document.getElementById('tenant-rent')?.focus();
+                return;
+            }
+            if (!moveIn) {
+                showToast('⚠️ Move-in Date is required.', 'warning');
+                document.getElementById('tenant-movein')?.focus();
                 return;
             }
 
-            // Check if property is already occupied
+            // Check if property is already occupied by another active tenant
             const allTenants = await dbGetAll('tenants');
             const propertyOccupied = allTenants.some(t => t.propertyId === propertyId && t.status === 'active' && (!editId || t.id !== parseInt(editId)));
             
             if (propertyOccupied) {
-                showToast('⚠️ Please fill in all required fields.', 'warning');
+                const _occTenant = allTenants.find(t => t.propertyId === propertyId && t.status === 'active');
+                showToast('⚠️ This property is already occupied by ' + (_occTenant ? _occTenant.name : 'another tenant') + '.', 'warning');
                 return;
             }
 
@@ -11410,7 +11426,8 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             const lateFee = parseFloat(lateFeeStr.replace(/,/g, '')) || 0;
 
             if (!name || !propertyId || rent <= 0 || !moveIn) {
-                showToast('⚠️ Please fill in all required fields.', 'warning');
+                const _missing = !name?'Name':!propertyId?'Property':rent<=0?'Rent amount':!moveIn?'Move-in date':'';
+                showToast('⚠️ ' + _missing + ' is required.', 'warning');
                 return;
             }
 
@@ -13817,7 +13834,7 @@ async function loadWaterCustomers() {
             const dutyDays = Object.values(workDays).filter(v => v).length;
             
             if (!name || !dailyRate) {
-                showToast('⚠️ Please fill in all required fields.', 'warning');
+                showToast('⚠️ ' + (!name ? 'Employee name' : 'Daily rate') + ' is required.', 'warning');
                 return;
             }
             
@@ -15020,7 +15037,7 @@ async function showPayrollSummary() {
             const purpose = document.getElementById('credit-purpose').value.trim();
 
             if (!debtor || principal <= 0 || !dateLent) {
-                showToast('⚠️ Please fill in all required fields.', 'warning');
+                showToast('⚠️ ' + (!debtor?'Debtor name':principal<=0?'Principal amount':'Date lent') + ' is required.', 'warning');
                 return;
             }
 
@@ -15625,7 +15642,7 @@ async function showPayrollSummary() {
             const purpose = document.getElementById('edit-credit-purpose').value.trim();
 
             if (!debtor || principal <= 0 || !dateLent) {
-                showToast('⚠️ Please fill in all required fields.', 'warning');
+                showToast('⚠️ ' + (!debtor?'Debtor name':principal<=0?'Principal amount':'Date lent') + ' is required.', 'warning');
                 return;
             }
 
@@ -16051,7 +16068,7 @@ async function showPayrollSummary() {
                 const link = document.getElementById('note-link').value;
 
                 if (!category || !title || !description || !date) {
-                    showToast('⚠️ Please fill in all required fields.', 'warning');
+                    showToast('⚠️ ' + (!category?'Category':!title?'Title':!description?'Description':'Date') + ' is required.', 'warning');
                     return;
                 }
 
@@ -16977,7 +16994,7 @@ async function showPayrollSummary() {
             const notes = document.getElementById('expense-notes').value.trim();
 
             if (!category || !description || amount <= 0 || !date) {
-                showToast('⚠️ Please fill in all required fields.', 'warning');
+                showToast('⚠️ ' + (!category?'Category':!description?'Description':amount<=0?'Amount':'Date') + ' is required.', 'warning');
                 return;
             }
 
@@ -17339,7 +17356,7 @@ async function showPayrollSummary() {
             const notes = document.getElementById('edit-expense-notes').value.trim();
 
             if (!category || !description || amount <= 0 || !date) {
-                showToast('⚠️ Please fill in all required fields.', 'warning');
+                showToast('⚠️ ' + (!category?'Category':!description?'Description':amount<=0?'Amount':'Date') + ' is required.', 'warning');
                 return;
             }
 
@@ -22978,7 +22995,7 @@ Lender/Manager
             const role = document.getElementById('user-role').value;
             
             if (!fullname || !username || !role) {
-                showToast('⚠️ Please fill in all required fields.', 'warning');
+                showToast('⚠️ ' + (!fullname?'Full name':!username?'Username':'Role') + ' is required.', 'warning');
                 return;
             }
             
@@ -22994,7 +23011,7 @@ Lender/Manager
             // Check for duplicate username
             const duplicate = users.find(u => u.username === username && (!editId || u.id !== parseInt(editId)));
             if (duplicate) {
-                showToast('⚠️ Please fill in all required fields.', 'warning');
+                showToast('⚠️ Username already exists. Please choose a different username.', 'warning');
                 return;
             }
             
