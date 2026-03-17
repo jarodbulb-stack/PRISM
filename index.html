@@ -5515,6 +5515,8 @@
                 <div class="action-buttons">
                     <button class="btn btn-secondary" onclick="runManualHealthCheck()">🏥 Run Health Check</button>
                     <button class="btn btn-primary" onclick="createManualBackup()">💾 Create Backup</button>
+                    <button class="btn btn-success" onclick="downloadJSONBackup()" title="Download all your data as a JSON file for safekeeping">⬇️ Download JSON Backup</button>
+                    <button class="btn btn-warning" onclick="forceSyncNow()" title="Force immediate sync to Firebase now">☁️ Force Sync Now</button>
                 </div>
             </div>
 
@@ -7864,7 +7866,14 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 // Use orgId for multi-tenant data isolation
                 const db = window.db || firestore;
                 let orgId = (() => {
-                    try { return (MT && MT.currentOrg && MT.currentOrg.id) || localStorage.getItem('mt_current_org_id') || null; } catch(e) { return null; }
+                    try {
+                        // Always prefer locked orgId for SUPER_ADMINS
+                        const _cu2 = currentUser || (typeof MT !== 'undefined' ? MT.currentUser : null);
+                        if (_cu2 && MT && MT.LOCKED_ORG_ID && MT.SUPER_ADMINS && MT.SUPER_ADMINS.map(e=>e.toLowerCase()).includes((_cu2.email||'').toLowerCase())) {
+                            return MT.LOCKED_ORG_ID;
+                        }
+                        return (MT && MT.currentOrg && MT.currentOrg.id) || localStorage.getItem('mt_current_org_id') || null;
+                    } catch(e) { return null; }
                 })();
                 // Find PRIMARY org — query by userId only (no composite index needed)
                 try {
@@ -10259,8 +10268,8 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 loadProperties();
                 loadDashboard();
                 loadTenants();
-                // Sync to Firebase
-                debouncedSync();
+                // Immediate sync for critical data
+                try { await syncToFirebase(); } catch(e) { debouncedSync(); }
             } catch (error) {
                 console.error('Error saving property:', error);
                 showToast('❌ Error saving property: ' + error.message, 'error');
@@ -10642,8 +10651,8 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 loadTenants();
                 loadProperties();
                 loadDashboard();
-                // Sync to Firebase
-                debouncedSync();
+                // Immediate sync for critical data
+                try { await syncToFirebase(); } catch(e) { debouncedSync(); }
                 showToast('Tenant saved successfully! Property is now occupied.', 'success');
             } catch (error) {
                 console.error('Error saving tenant:', error);
@@ -14434,8 +14443,8 @@ async function showPayrollSummary() {
                 document.getElementById('credit-form').reset();
                 loadCredits();
                 loadDashboard();
-                // Sync to Firebase
-                debouncedSync();
+                // Immediate sync for critical data
+                try { await syncToFirebase(); } catch(e) { debouncedSync(); }
                 showToast('Credit/Loan saved successfully!', 'success');
 
                 // Auto-endorse new credits to admin
@@ -20067,6 +20076,58 @@ async function clearAllData() {
                 showToast('❌ Health check failed: ' + error.message, 'error');
             }
         }
+
+        // ── JSON Backup Download ──
+        async function downloadJSONBackup() {
+            try {
+                showToast('⏳ Preparing backup...', 'info');
+                const STORES = ['properties','tenants','payments','credits','creditPayments',
+                    'expenses','customNotes','additionalIncome','clientCharges',
+                    'waterCustomers','waterSales','employees','cashAdvances',
+                    'salaryPayments','timeRecords','tasks'];
+                const backup = {
+                    version: '1.0',
+                    exportedAt: new Date().toISOString(),
+                    orgId: (MT && MT.currentOrg && MT.currentOrg.id) || localStorage.getItem('mt_current_org_id') || 'unknown',
+                    orgName: (MT && MT.currentOrg && MT.currentOrg.name) || 'PRISM',
+                    data: {}
+                };
+                for (const s of STORES) {
+                    backup.data[s] = await dbGetAll(s);
+                }
+                backup.data.appUsers = JSON.parse(localStorage.getItem('prism_app_users') || '[]');
+
+                const json = JSON.stringify(backup, null, 2);
+                const blob = new Blob([json], { type: 'application/json' });
+                const url  = URL.createObjectURL(blob);
+                const a    = document.createElement('a');
+                const date = new Date().toISOString().split('T')[0];
+                a.href = url;
+                a.download = 'PRISM_backup_' + date + '.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                const totalRecords = Object.values(backup.data).reduce((s, arr) => s + (Array.isArray(arr) ? arr.length : 0), 0);
+                showToast('✅ Backup downloaded! ' + totalRecords + ' total records.', 'success');
+            } catch(e) {
+                showToast('❌ Backup failed: ' + e.message, 'error');
+            }
+        }
+        window.downloadJSONBackup = downloadJSONBackup;
+
+        // ── Force Sync Now ──
+        async function forceSyncNow() {
+            try {
+                showToast('☁️ Syncing to Firebase...', 'info');
+                await syncToFirebase();
+                showToast('✅ Sync complete! Your data is safe in Firebase.', 'success');
+            } catch(e) {
+                showToast('❌ Sync failed: ' + e.message, 'error');
+            }
+        }
+        window.forceSyncNow = forceSyncNow;
 
         async function createManualBackup() {
             try {
@@ -25760,6 +25821,8 @@ async function editTask(id) {
 const MT = {
     // Super admin emails - only these see the SA panel
     SUPER_ADMINS: ['jarodbulb@gmail.com', 'danomandam@yahoo.com'],
+    // Locked primary orgId for jarodbulb — prevents sync from using wrong doc
+    LOCKED_ORG_ID: 'org_1771565060031_l3df7n',
     
     // Current session state
     currentUser: null,     // Firebase auth user
