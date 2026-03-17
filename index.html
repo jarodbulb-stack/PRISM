@@ -21402,20 +21402,38 @@ Lender/Manager
             if (typeof mtSetupEndorseFAB === 'function') setTimeout(mtSetupEndorseFAB, 200);
             if (typeof mtShowRoleDashboard === 'function') setTimeout(mtShowRoleDashboard, 400);
             if (userDisplay) {
-                if (currentAppUser) {
-                    // Show user name only — logout button is in the header
-                    const roleLabel = currentAppUser.role === 'cashier' ? '🧾' : currentAppUser.role === 'admin' ? '🛡️' : '👤';
+                // Resolve name — try currentAppUser first, then MT.currentUser, then email
+                const _user = currentAppUser;
+                const _mtUser = (typeof MT !== 'undefined') ? MT.currentUser : null;
+                const _name = (_user && (_user.fullname || _user.username)) ||
+                              (_mtUser && (_mtUser.displayName || _mtUser.email)) ||
+                              'User';
+                const _role = (_user && _user.role) ||
+                              (typeof MT !== 'undefined' && MT.currentOrgRole) ||
+                              'admin';
+                if (_user || _mtUser) {
+                    const roleLabel = _role === 'cashier' ? '🧾' :
+                                      _role === 'owner'   ? '👑' :
+                                      _role === 'admin'   ? '🛡️' :
+                                      _role === 'manager' ? '📋' :
+                                      _role === 'viewer'  ? '👁️' : '👤';
                     userDisplay.innerHTML = `
-                        <span style="font-size: 0.85rem; color: white; margin-right: 4px;">${roleLabel} ${currentAppUser.fullname}</span>
+                        <span style="font-size: 0.85rem; color: white; margin-right: 4px;" title="Role: ${_role}">${roleLabel} ${_name}</span>
                     `;
+                    // If name resolved to just email or 'User', retry once after Firebase loads
+                    if (_name === 'User' || _name.includes('@')) {
+                        setTimeout(() => {
+                            const _retry = currentAppUser;
+                            const _retryMT = (typeof MT !== 'undefined') ? MT.currentUser : null;
+                            const _retryName = (_retry && (_retry.fullname || _retry.username)) ||
+                                               (_retryMT && (_retryMT.displayName || _retryMT.email)) || '';
+                            if (_retryName && _retryName !== _name) updateUserDisplay();
+                        }, 2000);
+                    }
                 } else {
                     userDisplay.innerHTML = '';
-                    // no login button needed here — handled by landing page
-                    setTimeout(() => {
-                        const loginBtn = null; // removed
-                        if (loginBtn) {
-                        }
-                    }, 100);
+                    // No user yet — retry after short delay (handles fast-restore race)
+                    setTimeout(() => { if (currentAppUser || MT?.currentUser) updateUserDisplay(); }, 1500);
                 }
             }
         }
@@ -21429,7 +21447,8 @@ Lender/Manager
                     id: 1,
                     username: MT.currentUser.email || 'admin',
                     fullname: MT.currentUser.displayName || MT.currentUser.email || 'Administrator',
-                    role: 'admin',
+                    role: MT.currentOrgRole || 'admin',
+                    email: MT.currentUser.email || '',
                     permissions: ['all']
                 };
                 localStorage.setItem('prism_app_user', JSON.stringify(currentAppUser));
@@ -21594,10 +21613,16 @@ Lender/Manager
         function updatePermissionsChecklist() {
             const role = document.getElementById('user-role').value;
             const permissionSettings = {
-                'admin': ['add-property', 'edit-property', 'delete-property', 'add-tenant', 'edit-tenant', 'delete-tenant', 'record-payment', 'water-sales', 'void-sale', 'manage-staff', 'manage-users', 'view-reports', 'backup-restore'],
-                'owner': ['add-property', 'edit-property', 'add-tenant', 'edit-tenant', 'record-payment', 'water-sales', 'manage-staff', 'view-reports'],
-                'cashier': ['record-payment', 'water-sales', 'add-expense', 'add-credit', 'add-income', 'add-tenant-payment', 'record-rent'],
-                'encoder': ['add-property', 'edit-property', 'add-tenant', 'edit-tenant']
+                // Owner = full access (same as admin — org creator)
+                'owner':   ['add-property','edit-property','delete-property','add-tenant','edit-tenant','delete-tenant','record-payment','water-sales','void-sale','manage-staff','manage-users','view-reports','backup-restore'],
+                // Admin = full access (trusted manager with all rights)
+                'admin':   ['add-property','edit-property','delete-property','add-tenant','edit-tenant','delete-tenant','record-payment','water-sales','void-sale','manage-staff','manage-users','view-reports','backup-restore'],
+                // Manager = can edit and record but cannot delete or manage users
+                'manager': ['add-property','edit-property','add-tenant','edit-tenant','record-payment','water-sales','void-sale','manage-staff','view-reports'],
+                // Cashier = recording only, no edit/delete of master records
+                'cashier': ['record-payment','water-sales','add-expense','add-income','add-tenant-payment','record-rent'],
+                // Viewer = read only
+                'viewer':  []
             };
             
             const perms = permissionSettings[role] || [];
@@ -21606,7 +21631,7 @@ Lender/Manager
             document.querySelectorAll('#permissions-checklist input[type="checkbox"]').forEach(cb => {
                 const permName = cb.id.replace('perm-', '');
                 cb.checked = perms.includes(permName);
-                cb.disabled = role === 'admin'; // Admin has all, can't change
+                cb.disabled = (role === 'owner' || role === 'admin'); // Owner/Admin have all fixed perms
             });
         }
 
@@ -25087,12 +25112,42 @@ function _mtShowAppActual() {
     const app = document.querySelector('.prism-app-wrapper');
     if (app) app.classList.add('mt-active');
     mtUpdateOrgBadge();
-    
+
+    // ── Safety net: ensure currentAppUser is always set when app shows ──
+    if (!currentAppUser && MT.currentUser) {
+        const _savedUser = localStorage.getItem('carent_current_user');
+        if (_savedUser) {
+            try { currentAppUser = JSON.parse(_savedUser); } catch(e) {}
+        }
+        if (!currentAppUser) {
+            // Build from MT session as last resort
+            currentAppUser = {
+                id: 1,
+                username: (MT.currentUser.email || 'owner').split('@')[0],
+                fullname: MT.currentUser.displayName || MT.currentUser.email || 'Owner',
+                email: MT.currentUser.email || '',
+                role: MT.currentOrgRole || 'owner',
+                orgId: MT.currentOrg ? MT.currentOrg.id : '',
+                permissions: { 'add-property':true,'edit-property':true,'delete-property':true,
+                    'add-tenant':true,'edit-tenant':true,'delete-tenant':true,
+                    'record-payment':true,'water-sales':true,'void-sale':true,
+                    'manage-staff':true,'manage-users':true,'view-reports':true,
+                    'backup-restore':true,'view-expenses':true,'view-income':true,'view-profiles':true }
+            };
+            localStorage.setItem('carent_current_user', JSON.stringify(currentAppUser));
+        }
+        // Correct role for SUPER_ADMINS
+        if (MT.SUPER_ADMINS && currentAppUser.email &&
+            MT.SUPER_ADMINS.map(e=>e.toLowerCase()).includes(currentAppUser.email.toLowerCase())) {
+            currentAppUser.role = 'owner';
+        }
+        if (typeof updateUserDisplay === 'function') updateUserDisplay();
+    }
+
     // Initialize PRISM app if not done yet
     if (!_prismAppInitialized) {
         _prismAppInitialized = true;
         if (typeof init === 'function') {
-            // Await init so IndexedDB is ready before any sync calls that follow
             init().catch(e => console.error('[PRISM] init() failed:', e));
         }
     }
@@ -26335,23 +26390,54 @@ async function mtSAToggleOrgStatus(orgId, currentStatus) {
 }
 
 async function mtSAGoToApp() {
+    // Helper: build and save the owner currentAppUser from MT session
+    function _setOwnerUser(org) {
+        const u = {
+            id: 1,
+            username: (MT.currentUser?.email || 'owner').split('@')[0],
+            fullname: MT.currentUser?.displayName || MT.currentUser?.email || 'Owner',
+            email: MT.currentUser?.email || '',
+            role: 'owner',
+            orgId: org ? org.id : '',
+            permissions: {
+                'add-property':true,'edit-property':true,'delete-property':true,
+                'add-tenant':true,'edit-tenant':true,'delete-tenant':true,
+                'record-payment':true,'water-sales':true,'void-sale':true,
+                'manage-staff':true,'manage-users':true,'view-reports':true,
+                'backup-restore':true,'view-expenses':true,'view-income':true,
+                'view-profiles':true
+            }
+        };
+        currentAppUser = u;
+        MT.currentOrgRole = 'owner';
+        localStorage.setItem('carent_current_user', JSON.stringify(u));
+        if (typeof updateUserDisplay === 'function') updateUserDisplay();
+    }
+
     // Already have org loaded
-    if (MT.currentOrg) { mtShowApp(); return; }
+    if (MT.currentOrg) {
+        _setOwnerUser(MT.currentOrg);
+        mtShowApp();
+        mtUpdateOrgBadge();
+        setTimeout(() => { if (typeof loadDashboard === 'function') loadDashboard(); }, 400);
+        return;
+    }
 
     // Try localStorage first — but verify against Firestore if online
-    // (in case device has wrong/old org cached)
     const localOrgs = JSON.parse(localStorage.getItem('mt_user_orgs') || '[]');
     if (localOrgs.length > 0 && !window.db) {
         // Offline: use cached org
         MT.currentOrg = localOrgs[0];
         localStorage.setItem('mt_current_org', JSON.stringify(localOrgs[0]));
         localStorage.setItem('mt_current_org_id', localOrgs[0].id);
+        _setOwnerUser(localOrgs[0]);
         mtShowApp();
+        mtUpdateOrgBadge();
+        setTimeout(() => { if (typeof loadDashboard === 'function') loadDashboard(); }, 400);
         return;
     }
-    // Online: always verify with Firestore to get correct primary org
 
-    // Try Firestore (fresh device — no local data)
+    // Online: verify with Firestore
     if (window.db && MT.currentUser) {
         mtToast('⏳ Loading your organization...', 'info');
         try {
@@ -26374,7 +26460,6 @@ async function mtSAGoToApp() {
                 if (doc.exists) {
                     const org = { id: doc.id, ...doc.data() };
                     MT.currentOrg = org;
-                    // Save locally for future use
                     localStorage.setItem('mt_current_org', JSON.stringify(org));
                     localStorage.setItem('mt_current_org_id', org.id);
                     localStorage.setItem('mt_current_org_role', 'owner');
@@ -26383,7 +26468,10 @@ async function mtSAGoToApp() {
                         saved.push(org);
                         localStorage.setItem('mt_user_orgs', JSON.stringify(saved));
                     }
+                    _setOwnerUser(org);
                     mtShowApp();
+                    mtUpdateOrgBadge();
+                    setTimeout(() => { if (typeof loadDashboard === 'function') loadDashboard(); }, 400);
                     return;
                 }
             }
