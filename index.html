@@ -6115,18 +6115,80 @@
                         <label>Or New Customer Name</label>
                         <input type="text" id="water-sale-new-customer" placeholder="Enter name if new customer">
                     </div>
+
+                    <!-- Container Type Toggle -->
                     <div class="form-group">
-                        <label>Gallons *</label>
-                        <input type="number" id="water-sale-gallons" required min="1" placeholder="Number of gallons" oninput="calculateWaterTotal()">
+                        <label>Container Type</label>
+                        <div style="display:flex;gap:8px;margin-top:4px;">
+                            <button type="button" id="ws-type-big" onclick="wsSetType('big')"
+                                style="flex:1;padding:10px;border-radius:8px;border:2px solid #3b82f6;background:rgba(59,130,246,0.15);color:#60a5fa;font-weight:700;cursor:pointer;font-size:0.85rem;">
+                                🔵 Big Round (5-gal)
+                            </button>
+                            <button type="button" id="ws-type-small" onclick="wsSetType('small')"
+                                style="flex:1;padding:10px;border-radius:8px;border:2px solid #334155;background:transparent;color:#64748b;font-weight:600;cursor:pointer;font-size:0.85rem;">
+                                🫙 Small Bottle
+                            </button>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Price per Gallon (₱)</label>
-                        <input type="text" id="water-sale-price" value="25" placeholder="25" oninput="calculateWaterTotal()">
+
+                    <!-- BIG BOTTLE SECTION -->
+                    <div id="ws-big-section">
+                        <div class="form-group">
+                            <label>Price per Bottle</label>
+                            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;" id="ws-big-price-btns">
+                                <button type="button" onclick="wsSetBigPrice(20)" class="ws-price-btn" data-price="20" style="padding:8px 14px;border-radius:7px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-weight:600;font-size:0.85rem;">₱20</button>
+                                <button type="button" onclick="wsSetBigPrice(25)" class="ws-price-btn" data-price="25" style="padding:8px 14px;border-radius:7px;border:2px solid #3b82f6;background:rgba(59,130,246,0.15);color:#60a5fa;cursor:pointer;font-weight:700;font-size:0.85rem;">₱25</button>
+                                <button type="button" onclick="wsSetBigPrice(30)" class="ws-price-btn" data-price="30" style="padding:8px 14px;border-radius:7px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-weight:600;font-size:0.85rem;">₱30</button>
+                                <button type="button" onclick="wsSetBigPrice(35)" class="ws-price-btn" data-price="35" style="padding:8px 14px;border-radius:7px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-weight:600;font-size:0.85rem;">₱35</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Number of Bottles *</label>
+                            <input type="number" id="ws-big-qty" min="1" placeholder="e.g. 3" oninput="wsCalcBig()" style="font-size:1.1rem;font-weight:600;">
+                        </div>
+                        <!-- Package deal notice - shows when ₱35 + multiple of 3 -->
+                        <div id="ws-package-notice" style="display:none;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:0.83rem;color:#10b981;">
+                            🎉 <strong>Package Deal!</strong> <span id="ws-package-label"></span>
+                        </div>
                     </div>
-                    <div class="form-group">
+
+                    <!-- SMALL BOTTLE SECTION -->
+                    <div id="ws-small-section" style="display:none;">
+                        <div class="form-group">
+                            <label>Bottle Size</label>
+                            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;" id="ws-small-size-btns">
+                                <button type="button" onclick="wsSetSmallSize('1L',5)" class="ws-size-btn" data-size="1L" style="flex:1;padding:9px;border-radius:7px;border:2px solid #3b82f6;background:rgba(59,130,246,0.15);color:#60a5fa;cursor:pointer;font-weight:700;font-size:0.82rem;">1L<br><span style="font-size:0.7rem;">₱5</span></button>
+                                <button type="button" onclick="wsSetSmallSize('10L',15)" class="ws-size-btn" data-size="10L" style="flex:1;padding:9px;border-radius:7px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-weight:600;font-size:0.82rem;">4–10L<br><span style="font-size:0.7rem;">₱15</span></button>
+                                <button type="button" onclick="wsSetSmallSize('15L',20)" class="ws-size-btn" data-size="15L" style="flex:1;padding:9px;border-radius:7px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-weight:600;font-size:0.82rem;">15L<br><span style="font-size:0.7rem;">₱20</span></button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Quantity *</label>
+                            <input type="number" id="ws-small-qty" min="1" placeholder="e.g. 2" oninput="wsCalcSmall()" style="font-size:1.1rem;font-weight:600;">
+                        </div>
+                    </div>
+
+                    <!-- Hidden fields for saveWaterSale compatibility -->
+                    <input type="hidden" id="water-sale-gallons" value="0">
+                    <input type="hidden" id="water-sale-price" value="25">
+
+                    <!-- Calculation Summary -->
+                    <div id="ws-summary" style="background:var(--bg-secondary);border-radius:8px;padding:12px;margin-bottom:12px;display:none;">
+                        <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--text-secondary);margin-bottom:4px;">
+                            <span id="ws-calc-line"></span>
+                        </div>
+                        <div id="ws-discount-line" style="display:none;font-size:0.82rem;color:#10b981;margin-bottom:4px;"></div>
+                        <div style="display:flex;justify-content:space-between;font-weight:700;font-size:1.05rem;">
+                            <span style="color:var(--text-primary);">Total:</span>
+                            <span style="color:#10b981;" id="ws-total-display">₱0</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="display:none;">
                         <label>Total Amount (₱)</label>
                         <input type="text" id="water-sale-total" readonly style="background: var(--bg-secondary);">
                     </div>
+
                     <div class="form-group">
                         <label>Payment Type *</label>
                         <select id="water-sale-payment-type" required onchange="toggleWaterPaymentFields()">
@@ -11015,7 +11077,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                                         <td>${p.date}</td>
                                         <td>${p.monthCovered || (p.type === 'advance' ? 'Advance' : 'N/A')}</td>
                                         <td><span class="payment-method ${methodClass}">${methodLabel}</span></td>
-                                        <td class="text-success">₱${p.amount.toLocaleString()}</td>
+                                        <td class="text-success">₱${p.amount.toLocaleString()}${p.discount > 0 ? `<span title="Discount: ₱${p.discount} — ${p.discountReason||''}" style="font-size:0.65rem;background:rgba(16,185,129,0.15);color:#10b981;padding:1px 5px;border-radius:4px;margin-left:3px;">−₱${p.discount}</span>` : ''}${p.balanceOverride ? `<span title="Balance override — ${p.overrideReason||''}" style="font-size:0.65rem;background:rgba(245,158,11,0.15);color:#f59e0b;padding:1px 5px;border-radius:4px;margin-left:3px;">🔧</span>` : ''}</td>
                                         <td>
                                             <button class="btn btn-sm btn-secondary" onclick="showReceipt(${p.id}, 'rent')" title="View Receipt">📄</button>
                                             ${currentAppUser && currentAppUser.role === 'cashier'
@@ -11255,9 +11317,32 @@ async function recordTenantPayment(tenantId) {
                         <input type="text" id="view-tenant-name" value="${tenant.name}" disabled>
                     </div>
                     <div class="form-group">
-                        <label>Amount (₱)</label>
-                        <input type="text" id="tenant-payment-amount" value="${tenant.rent}" required>
+                        <label>Monthly Rent: ₱${tenant.rent.toLocaleString()}</label>
+                        <input type="text" id="tenant-payment-amount" value="${tenant.rent}" required oninput="calcTenantPayNet()">
                     </div>
+
+                    <!-- Discount -->
+                    <div class="form-group">
+                        <label style="display:flex;align-items:center;gap:8px;">
+                            Discount
+                            <span style="display:flex;border:1px solid #334155;border-radius:6px;overflow:hidden;">
+                                <button type="button" id="td-type-fixed" onclick="setTenantDiscType('fixed')" style="padding:2px 10px;background:rgba(99,102,241,0.2);color:#818cf8;border:none;cursor:pointer;font-size:0.75rem;font-weight:700;">₱</button>
+                                <button type="button" id="td-type-pct" onclick="setTenantDiscType('pct')" style="padding:2px 10px;background:transparent;color:#64748b;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;">%</button>
+                            </span>
+                        </label>
+                        <input type="number" id="tenant-discount" value="0" min="0" placeholder="0" oninput="calcTenantPayNet()" style="margin-bottom:6px;">
+                        <input type="text" id="tenant-discount-reason" placeholder="Reason for discount (e.g. early payment)" style="font-size:0.82rem;">
+                    </div>
+
+                    <!-- Net amount display -->
+                    <div id="tenant-pay-net-display" style="background:var(--bg-secondary);border-radius:8px;padding:10px 12px;margin-bottom:12px;display:none;">
+                        <div id="tenant-pay-breakdown" style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:4px;"></div>
+                        <div style="display:flex;justify-content:space-between;font-weight:700;">
+                            <span>Net Payable:</span>
+                            <span style="color:#10b981;" id="tenant-pay-net-amount"></span>
+                        </div>
+                    </div>
+
                     <div class="form-group">
                         <label>Payment Method</label>
                         <select id="tenant-payment-method" required>
@@ -11283,6 +11368,21 @@ async function recordTenantPayment(tenantId) {
                         <label>Date</label>
                         <input type="date" id="tenant-payment-date" value="${now.toISOString().split('T')[0]}" required>
                     </div>
+
+                    <!-- Balance Override (Owner/Admin only) -->
+                    ${currentAppUser && ['owner','admin'].includes(currentAppUser.role) ? \`
+                    <div class="form-group" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:10px 12px;">
+                        <label style="color:#f59e0b;font-size:0.82rem;font-weight:700;">🔧 Balance Override (Admin Only)</label>
+                        <div style="display:flex;align-items:center;gap:8px;margin:6px 0;">
+                            <input type="checkbox" id="tenant-balance-override-check" onchange="toggleTenantBalanceOverride()" style="width:16px;height:16px;cursor:pointer;">
+                            <label for="tenant-balance-override-check" style="font-size:0.82rem;color:var(--text-secondary);cursor:pointer;">Manually set remaining balance</label>
+                        </div>
+                        <div id="tenant-balance-override-fields" style="display:none;margin-top:8px;">
+                            <input type="number" id="tenant-manual-balance" min="0" placeholder="Enter manual balance amount" style="margin-bottom:6px;">
+                            <input type="text" id="tenant-override-reason" placeholder="Reason for override (required)" style="font-size:0.82rem;">
+                        </div>
+                    </div>\` : ''}
+
                     <div class="form-group">
                         <label>Notes (Optional)</label>
                         <textarea id="tenant-payment-notes" rows="2" placeholder="Additional notes"></textarea>
@@ -11310,7 +11410,24 @@ async function recordTenantPayment(tenantId) {
             const date = document.getElementById('tenant-payment-date').value;
             const notes = document.getElementById('tenant-payment-notes').value.trim();
 
-            if (amount <= 0 || !date) {
+            // Discount
+            const _tdDiscRaw = parseFloat((document.getElementById('tenant-discount')||{}).value) || 0;
+            const _tdDiscType = window._tenantDiscType || 'fixed';
+            const _tdDiscReason = (document.getElementById('tenant-discount-reason')||{}).value?.trim() || '';
+            const discountAmt = _tdDiscType === 'pct' ? Math.round(amount * _tdDiscRaw / 100) : _tdDiscRaw;
+            const netAmount = Math.max(0, amount - discountAmt);
+
+            // Balance override
+            const _overrideCheck = document.getElementById('tenant-balance-override-check');
+            const _overrideActive = _overrideCheck && _overrideCheck.checked;
+            const _manualBalance = _overrideActive ? (parseFloat((document.getElementById('tenant-manual-balance')||{}).value) || 0) : null;
+            const _overrideReason = _overrideActive ? ((document.getElementById('tenant-override-reason')||{}).value?.trim() || '') : '';
+
+            if (_overrideActive && !_overrideReason) {
+                showToast('⚠️ Please enter a reason for the balance override.', 'warning');
+                return;
+            }
+            if (netAmount <= 0 || !date) {
                 showToast('⚠️ Please enter a valid amount.', 'warning');
                 return;
             }
@@ -11319,7 +11436,14 @@ async function recordTenantPayment(tenantId) {
                 type: paymentType,
                 tenantId,
                 monthCovered: paymentType === 'advance' ? 'Advance' : monthCovered,
-                amount,
+                amount: netAmount,
+                originalAmount: amount,
+                discount: discountAmt,
+                discountType: _tdDiscType,
+                discountReason: _tdDiscReason,
+                balanceOverride: _overrideActive || false,
+                manualBalance: _manualBalance,
+                overrideReason: _overrideReason,
                 paymentMethod,
                 date,
                 notes: paymentType === 'advance' ? (notes ? notes + ' (1 Month Advance)' : '1 Month Advance') : notes,
@@ -12124,7 +12248,7 @@ async function recordTenantPayment(tenantId) {
                                         <tr>
                                             <td>${p.date}</td>
                                             <td>${p.paymentMethod || 'N/A'}</td>
-                                            <td class="text-success">₱${p.amount.toLocaleString()}</td>
+                                            <td class="text-success">₱${p.amount.toLocaleString()}${p.discount > 0 ? `<span title="Discount: ₱${p.discount} — ${p.discountReason||''}" style="font-size:0.65rem;background:rgba(16,185,129,0.15);color:#10b981;padding:1px 5px;border-radius:4px;margin-left:3px;">−₱${p.discount}</span>` : ''}${p.balanceOverride ? `<span title="Balance override — ${p.overrideReason||''}" style="font-size:0.65rem;background:rgba(245,158,11,0.15);color:#f59e0b;padding:1px 5px;border-radius:4px;margin-left:3px;">🔧</span>` : ''}</td>
                                         </tr>
                                     `).join('')}
                                 </tbody>
@@ -12782,10 +12906,303 @@ async function loadWaterCustomers() {
             document.getElementById('water-sale-date').value = new Date().toISOString().split('T')[0];
             document.getElementById('water-sale-form').reset();
             document.getElementById('water-sale-date').value = new Date().toISOString().split('T')[0];
+            // Reset pricing state
+            window._wsContainerType    = 'big';
+            window._wsCurrentPrice     = 25;
+            window._wsCurrentDiscount  = 0;
+            window._wsPackageDeal      = false;
+            window._wsPackageLabel     = '';
+            window._wsBottleSize       = null;
             document.getElementById('water-sale-price').value = '25';
-            calculateWaterTotal();
+            document.getElementById('water-sale-gallons').value = '0';
+            // Initialize UI
+            setTimeout(function() {
+                wsSetType('big');
+                wsSetBigPrice(25);
+            }, 50);
             showModal('water-sale-modal');
         }
+
+        // ═══════════════════════════════════════════
+        // WATER SALE PRICING UI
+        // ═══════════════════════════════════════════
+        window._wsContainerType = 'big';
+        window._wsCurrentPrice  = 25;
+        window._wsBottleSize    = null;
+        window._wsCurrentDiscount = 0;
+        window._wsPackageDeal   = false;
+        window._wsPackageLabel  = '';
+
+        function wsSetType(type) {
+            window._wsContainerType = type;
+            // Toggle button styles
+            const bigBtn   = document.getElementById('ws-type-big');
+            const smallBtn = document.getElementById('ws-type-small');
+            const bigSec   = document.getElementById('ws-big-section');
+            const smallSec = document.getElementById('ws-small-section');
+            if (!bigBtn) return;
+            if (type === 'big') {
+                bigBtn.style.borderColor   = '#3b82f6';
+                bigBtn.style.background    = 'rgba(59,130,246,0.15)';
+                bigBtn.style.color         = '#60a5fa';
+                smallBtn.style.borderColor = '#334155';
+                smallBtn.style.background  = 'transparent';
+                smallBtn.style.color       = '#64748b';
+                bigSec.style.display   = 'block';
+                smallSec.style.display = 'none';
+                // Reset
+                window._wsCurrentPrice = 25;
+                wsSetBigPrice(25);
+            } else {
+                smallBtn.style.borderColor = '#3b82f6';
+                smallBtn.style.background  = 'rgba(59,130,246,0.15)';
+                smallBtn.style.color       = '#60a5fa';
+                bigBtn.style.borderColor   = '#334155';
+                bigBtn.style.background    = 'transparent';
+                bigBtn.style.color         = '#64748b';
+                bigSec.style.display   = 'none';
+                smallSec.style.display = 'block';
+                window._wsCurrentPrice = 5;
+                window._wsBottleSize   = '1L';
+                wsSetSmallSize('1L', 5);
+            }
+            wsCalcBig();
+        }
+
+        function wsSetBigPrice(price) {
+            window._wsCurrentPrice = price;
+            // Update button styles
+            document.querySelectorAll('.ws-price-btn').forEach(function(btn) {
+                var p = parseInt(btn.dataset.price);
+                if (p === price) {
+                    btn.style.borderColor = '#3b82f6';
+                    btn.style.borderWidth = '2px';
+                    btn.style.background  = 'rgba(59,130,246,0.15)';
+                    btn.style.color       = '#60a5fa';
+                    btn.style.fontWeight  = '700';
+                } else {
+                    btn.style.borderColor = '#334155';
+                    btn.style.borderWidth = '1px';
+                    btn.style.background  = 'transparent';
+                    btn.style.color       = '#94a3b8';
+                    btn.style.fontWeight  = '600';
+                }
+            });
+            // Update hidden field
+            var pEl = document.getElementById('water-sale-price');
+            if (pEl) pEl.value = price;
+            wsCalcBig();
+        }
+
+        function wsSetSmallSize(size, price) {
+            window._wsBottleSize    = size;
+            window._wsCurrentPrice  = price;
+            // Update button styles
+            document.querySelectorAll('.ws-size-btn').forEach(function(btn) {
+                if (btn.dataset.size === size) {
+                    btn.style.borderColor = '#3b82f6';
+                    btn.style.borderWidth = '2px';
+                    btn.style.background  = 'rgba(59,130,246,0.15)';
+                    btn.style.color       = '#60a5fa';
+                } else {
+                    btn.style.borderColor = '#334155';
+                    btn.style.borderWidth = '1px';
+                    btn.style.background  = 'transparent';
+                    btn.style.color       = '#94a3b8';
+                }
+            });
+            var pEl = document.getElementById('water-sale-price');
+            if (pEl) pEl.value = price;
+            wsCalcSmall();
+        }
+
+        function wsCalcBig() {
+            var qty    = parseInt((document.getElementById('ws-big-qty')||{}).value) || 0;
+            var price  = window._wsCurrentPrice || 25;
+            var gross  = qty * price;
+            var discount = 0;
+            var packageDeal = false;
+            var packageLabel = '';
+
+            // Package deal: price=35, qty multiple of 3 → ₱5 off per group of 3
+            if (price === 35 && qty >= 3) {
+                var groups = Math.floor(qty / 3);
+                discount = groups * 5;
+                packageDeal = true;
+                packageLabel = groups + ' package' + (groups > 1 ? 's' : '') +
+                    ' (' + groups + '×3 bottles) = ' + groups + '×₱5 discount = −₱' + discount;
+            }
+
+            window._wsCurrentDiscount = discount;
+            window._wsPackageDeal     = packageDeal;
+            window._wsPackageLabel    = packageLabel;
+
+            var total = Math.max(0, gross - discount);
+
+            // Update hidden fields
+            var gEl = document.getElementById('water-sale-gallons');
+            if (gEl) gEl.value = qty * 5; // each bottle = 5 gallons
+            var tEl = document.getElementById('water-sale-total');
+            if (tEl) tEl.value = total;
+
+            // Show/hide package notice
+            var notice = document.getElementById('ws-package-notice');
+            var pkgLabel = document.getElementById('ws-package-label');
+            if (notice) notice.style.display = packageDeal ? 'block' : 'none';
+            if (pkgLabel && packageDeal) pkgLabel.textContent = packageLabel;
+
+            // Show summary
+            wsShowSummary(qty, price, gross, discount, total,
+                qty + ' bottle' + (qty!==1?'s':'') + ' × ₱' + price);
+        }
+
+        function wsCalcSmall() {
+            var qty   = parseInt((document.getElementById('ws-small-qty')||{}).value) || 0;
+            var price = window._wsCurrentPrice || 5;
+            var size  = window._wsBottleSize || '1L';
+            var gross = qty * price;
+            var total = gross;
+
+            window._wsCurrentDiscount = 0;
+            window._wsPackageDeal     = false;
+
+            var gEl = document.getElementById('water-sale-gallons');
+            if (gEl) gEl.value = qty; // store qty as gallons for small bottles
+            var pEl = document.getElementById('water-sale-price');
+            if (pEl) pEl.value = price;
+            var tEl = document.getElementById('water-sale-total');
+            if (tEl) tEl.value = total;
+
+            wsShowSummary(qty, price, gross, 0, total,
+                qty + ' × ' + size + ' bottle' + (qty!==1?'s':'') + ' @ ₱' + price);
+        }
+
+        function wsShowSummary(qty, price, gross, discount, total, calcLine) {
+            var sumEl  = document.getElementById('ws-summary');
+            var calcEl = document.getElementById('ws-calc-line');
+            var discEl = document.getElementById('ws-discount-line');
+            var totEl  = document.getElementById('ws-total-display');
+            if (!sumEl) return;
+            if (qty <= 0) { sumEl.style.display = 'none'; return; }
+            sumEl.style.display  = 'block';
+            if (calcEl) calcEl.textContent = calcLine + ' = ₱' + gross.toLocaleString();
+            if (discEl) {
+                discEl.style.display = discount > 0 ? 'block' : 'none';
+                if (discount > 0) discEl.textContent = 'Package discount: −₱' + discount;
+            }
+            if (totEl) totEl.textContent = '₱' + total.toLocaleString();
+        }
+
+        // ═══════════════════════════════════════════
+        // TENANT PAYMENT DISCOUNT UI
+        // ═══════════════════════════════════════════
+        window._tenantDiscType = 'fixed';
+
+        function setTenantDiscType(type) {
+            window._tenantDiscType = type;
+            var fixedBtn = document.getElementById('td-type-fixed');
+            var pctBtn   = document.getElementById('td-type-pct');
+            if (!fixedBtn) return;
+            if (type === 'fixed') {
+                fixedBtn.style.background = 'rgba(99,102,241,0.2)';
+                fixedBtn.style.color      = '#818cf8';
+                pctBtn.style.background   = 'transparent';
+                pctBtn.style.color        = '#64748b';
+            } else {
+                pctBtn.style.background   = 'rgba(99,102,241,0.2)';
+                pctBtn.style.color        = '#818cf8';
+                fixedBtn.style.background = 'transparent';
+                fixedBtn.style.color      = '#64748b';
+            }
+            calcTenantPayNet();
+        }
+
+        function calcTenantPayNet() {
+            var amt     = parseFloat((document.getElementById('tenant-payment-amount')||{}).value) || 0;
+            var disc    = parseFloat((document.getElementById('tenant-discount')||{}).value) || 0;
+            var type    = window._tenantDiscType || 'fixed';
+            var discAmt = type === 'pct' ? Math.round(amt * disc / 100) : disc;
+            var net     = Math.max(0, amt - discAmt);
+            var dispEl  = document.getElementById('tenant-pay-net-display');
+            var brkEl   = document.getElementById('tenant-pay-breakdown');
+            var netEl   = document.getElementById('tenant-pay-net-amount');
+            if (disc > 0 && amt > 0) {
+                if (dispEl) dispEl.style.display = 'block';
+                if (brkEl) brkEl.textContent = '₱' + amt.toLocaleString() +
+                    ' − ₱' + discAmt.toLocaleString() + ' discount' +
+                    (type === 'pct' ? ' (' + disc + '%)' : '');
+                if (netEl) netEl.textContent = '₱' + net.toLocaleString();
+            } else {
+                if (dispEl) dispEl.style.display = 'none';
+            }
+        }
+
+        function toggleTenantBalanceOverride() {
+            var chk = document.getElementById('tenant-balance-override-check');
+            var flds = document.getElementById('tenant-balance-override-fields');
+            if (flds) flds.style.display = (chk && chk.checked) ? 'block' : 'none';
+        }
+        window.toggleTenantBalanceOverride = toggleTenantBalanceOverride;
+        window.setTenantDiscType           = setTenantDiscType;
+        window.calcTenantPayNet            = calcTenantPayNet;
+
+        // ═══════════════════════════════════════════
+        // CREDIT PAYMENT DISCOUNT UI
+        // ═══════════════════════════════════════════
+        window._creditDiscType = 'fixed';
+
+        function setCreditDiscType(type) {
+            window._creditDiscType = type;
+            var fixedBtn = document.getElementById('cd-type-fixed');
+            var pctBtn   = document.getElementById('cd-type-pct');
+            if (!fixedBtn) return;
+            if (type === 'fixed') {
+                fixedBtn.style.background = 'rgba(99,102,241,0.2)';
+                fixedBtn.style.color      = '#818cf8';
+                pctBtn.style.background   = 'transparent';
+                pctBtn.style.color        = '#64748b';
+            } else {
+                pctBtn.style.background   = 'rgba(99,102,241,0.2)';
+                pctBtn.style.color        = '#818cf8';
+                fixedBtn.style.background = 'transparent';
+                fixedBtn.style.color      = '#64748b';
+            }
+            calcCreditPayNet();
+        }
+
+        function calcCreditPayNet() {
+            var amt     = parseFloat((document.getElementById('credit-payment-amount')||{}).value) || 0;
+            var disc    = parseFloat((document.getElementById('credit-discount')||{}).value) || 0;
+            var type    = window._creditDiscType || 'fixed';
+            var discAmt = type === 'pct' ? Math.round(amt * disc / 100) : disc;
+            var total   = amt + discAmt; // total settled = paid + waiver
+            var dispEl  = document.getElementById('credit-pay-net-display');
+            var brkEl   = document.getElementById('credit-pay-breakdown');
+            var netEl   = document.getElementById('credit-pay-net-amount');
+            if (disc > 0 && amt > 0) {
+                if (dispEl) dispEl.style.display = 'block';
+                if (brkEl) brkEl.textContent = '₱' + amt.toLocaleString() + ' paid + ₱' +
+                    discAmt.toLocaleString() + ' waiver' +
+                    (type === 'pct' ? ' (' + disc + '%)' : '');
+                if (netEl) netEl.textContent = '₱' + total.toLocaleString() + ' settled';
+            } else {
+                if (dispEl) dispEl.style.display = 'none';
+            }
+        }
+
+        function toggleCreditBalanceOverride() {
+            var chk = document.getElementById('credit-balance-override-check');
+            var flds = document.getElementById('credit-balance-override-fields');
+            if (flds) flds.style.display = (chk && chk.checked) ? 'block' : 'none';
+        }
+        window.toggleCreditBalanceOverride = toggleCreditBalanceOverride;
+        window.setCreditDiscType           = setCreditDiscType;
+        window.calcCreditPayNet            = calcCreditPayNet;
+        window.wsSetType                   = wsSetType;
+        window.wsSetBigPrice               = wsSetBigPrice;
+        window.wsSetSmallSize              = wsSetSmallSize;
+        window.wsCalcBig                   = wsCalcBig;
+        window.wsCalcSmall                 = wsCalcSmall;
 
         function calculateWaterTotal() {
             const gallons = parseFloat(document.getElementById('water-sale-gallons').value) || 0;
@@ -12803,9 +13220,15 @@ async function loadWaterCustomers() {
             
             let customerId = document.getElementById('water-sale-customer').value;
             const newCustomer = document.getElementById('water-sale-new-customer').value.trim();
+            // Read from new pricing UI
             const gallons = parseInt(document.getElementById('water-sale-gallons').value) || 0;
             const price = parseFloat(document.getElementById('water-sale-price').value) || 25;
-            const total = gallons * price;
+            const _wsDiscount = window._wsCurrentDiscount || 0;
+            const _wsContainerType = window._wsContainerType || 'big';
+            const _wsBottleSize = window._wsBottleSize || null;
+            const _wsPackageDeal = window._wsPackageDeal || false;
+            const _wsPackageLabel = window._wsPackageLabel || '';
+            const total = Math.max(0, (gallons * price) - _wsDiscount);
             const paymentType = document.getElementById('water-sale-payment-type').value;
             const paidNow = paymentType === 'partial' ? (parseFloat(document.getElementById('water-sale-paid').value.replace(/,/g, '')) || 0) : (paymentType === 'cash' ? total : 0);
             const date = document.getElementById('water-sale-date').value;
@@ -12834,6 +13257,12 @@ async function loadWaterCustomers() {
                 customerId: parseInt(customerId),
                 gallons,
                 pricePerGallon: price,
+                containerType: _wsContainerType,
+                bottleSize: _wsBottleSize,
+                packageDeal: _wsPackageDeal,
+                packageLabel: _wsPackageLabel,
+                discount: _wsDiscount,
+                grossTotal: gallons * price,
                 total,
                 amountPaid: paidNow,
                 balance: total - paidNow,
@@ -12924,7 +13353,7 @@ async function loadWaterCustomers() {
                     content += `
                         <div class="list-item" style="cursor:pointer;" onclick="editWaterSaleRecord(${s.id},${id})">
                             <div class="list-item-content" style="flex:1;">
-                                <div class="list-item-title">${s.gallons} gallons @ ₱${s.pricePerGallon}</div>
+                                <div class="list-item-title">${s.containerType==='small'?(s.gallons||0)+' × '+(s.bottleSize||'bottle')+' @ ₱'+s.pricePerGallon:s.gallons+' gal @ ₱'+s.pricePerGallon}${s.packageDeal?' <span style="font-size:0.68rem;color:#10b981;">(Package)</span>':''}</div>
                                 <div class="list-item-subtitle">${s.date} ${statusBadge}</div>
                             </div>
                             <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
@@ -15059,9 +15488,46 @@ async function showPayrollSummary() {
                         <input type="text" id="view-credit-debtor" value="${credit.debtor}" disabled>
                     </div>
                     <div class="form-group">
-                        <label>Amount (₱)</label>
-                        <input type="text" id="credit-payment-amount" required placeholder="0">
+                        <label>Amount Paid (₱)</label>
+                        <input type="text" id="credit-payment-amount" required placeholder="0" oninput="calcCreditPayNet()">
                     </div>
+
+                    <!-- Discount -->
+                    <div class="form-group">
+                        <label style="display:flex;align-items:center;gap:8px;">
+                            Discount / Waiver
+                            <span style="display:flex;border:1px solid #334155;border-radius:6px;overflow:hidden;">
+                                <button type="button" id="cd-type-fixed" onclick="setCreditDiscType('fixed')" style="padding:2px 10px;background:rgba(99,102,241,0.2);color:#818cf8;border:none;cursor:pointer;font-size:0.75rem;font-weight:700;">₱</button>
+                                <button type="button" id="cd-type-pct" onclick="setCreditDiscType('pct')" style="padding:2px 10px;background:transparent;color:#64748b;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;">%</button>
+                            </span>
+                        </label>
+                        <input type="number" id="credit-discount" value="0" min="0" placeholder="0" oninput="calcCreditPayNet()" style="margin-bottom:6px;">
+                        <input type="text" id="credit-discount-reason" placeholder="Reason (e.g. interest waiver, goodwill)" style="font-size:0.82rem;">
+                    </div>
+
+                    <!-- Net display -->
+                    <div id="credit-pay-net-display" style="background:var(--bg-secondary);border-radius:8px;padding:10px 12px;margin-bottom:12px;display:none;">
+                        <div id="credit-pay-breakdown" style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:4px;"></div>
+                        <div style="display:flex;justify-content:space-between;font-weight:700;">
+                            <span>Total Settled:</span>
+                            <span style="color:#10b981;" id="credit-pay-net-amount"></span>
+                        </div>
+                    </div>
+
+                    <!-- Balance Override (Admin/Owner only) -->
+                    ${currentAppUser && ['owner','admin'].includes(currentAppUser.role) ? `
+                    <div class="form-group" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:10px 12px;">
+                        <label style="color:#f59e0b;font-size:0.82rem;font-weight:700;">🔧 Balance Override (Admin Only)</label>
+                        <div style="display:flex;align-items:center;gap:8px;margin:6px 0;">
+                            <input type="checkbox" id="credit-balance-override-check" onchange="toggleCreditBalanceOverride()" style="width:16px;height:16px;cursor:pointer;">
+                            <label for="credit-balance-override-check" style="font-size:0.82rem;color:var(--text-secondary);cursor:pointer;">Manually set remaining balance</label>
+                        </div>
+                        <div id="credit-balance-override-fields" style="display:none;margin-top:8px;">
+                            <input type="number" id="credit-manual-balance" min="0" placeholder="Enter manual balance amount" style="margin-bottom:6px;">
+                            <input type="text" id="credit-override-reason" placeholder="Reason for override (required)" style="font-size:0.82rem;">
+                        </div>
+                    </div>` : ''}
+
                     <div class="form-group">
                         <label>Payment Method</label>
                         <select id="credit-payment-method" required>
@@ -15101,6 +15567,22 @@ async function showPayrollSummary() {
             const date = document.getElementById('credit-payment-date').value;
             const notes = document.getElementById('credit-payment-notes').value.trim();
 
+            // Discount
+            const _cdDiscRaw = parseFloat((document.getElementById('credit-discount')||{}).value) || 0;
+            const _cdDiscType = window._creditDiscType || 'fixed';
+            const _cdDiscReason = (document.getElementById('credit-discount-reason')||{}).value?.trim() || '';
+            const cdDiscountAmt = _cdDiscType === 'pct' ? Math.round(amount * _cdDiscRaw / 100) : _cdDiscRaw;
+
+            // Balance override
+            const _cdOverrideCheck = document.getElementById('credit-balance-override-check');
+            const _cdOverrideActive = _cdOverrideCheck && _cdOverrideCheck.checked;
+            const _cdManualBalance = _cdOverrideActive ? (parseFloat((document.getElementById('credit-manual-balance')||{}).value) || 0) : null;
+            const _cdOverrideReason = _cdOverrideActive ? ((document.getElementById('credit-override-reason')||{}).value?.trim() || '') : '';
+
+            if (_cdOverrideActive && !_cdOverrideReason) {
+                showToast('⚠️ Please enter a reason for the balance override.', 'warning');
+                return;
+            }
             if (amount <= 0 || !date) {
                 showToast('⚠️ Please enter a valid amount.', 'warning');
                 return;
@@ -15109,6 +15591,12 @@ async function showPayrollSummary() {
             const creditPayment = {
                 creditId,
                 amount,
+                discount: cdDiscountAmt,
+                discountType: _cdDiscType,
+                discountReason: _cdDiscReason,
+                balanceOverride: _cdOverrideActive || false,
+                manualBalance: _cdManualBalance,
+                overrideReason: _cdOverrideReason,
                 paymentMethod,
                 date,
                 notes,
@@ -16923,7 +17411,7 @@ async function showPayrollSummary() {
                     txns.push(...waterSales.filter(s=>s.date===today&&!s.voided).map(s=>({
                         icon:'💧', type:'Water', name:s.customerName||'Customer',
                         amount:s.amountPaid||0, method:s.paymentMethod||'cash',
-                        sub:`${s.gallons||0} gal @ ₱${s.pricePerGallon||0}`,
+                        sub:`${s.containerType==='small'?(s.gallons||0)+' × '+(s.bottleSize||'bottle')+' @ ₱'+s.pricePerGallon:(s.gallons||0)+' gal @ ₱'+(s.pricePerGallon||0)}${s.packageDeal?' 🎁 Package':''}`,
                         by: s.recordedBy||'',
                         byRole: s.recordedByRole||'',
                         id:s.id, src:'water', parentId: s.customerId,
@@ -25676,7 +26164,7 @@ async function editTask(id) {
                         const voidedStyle = s.voided ? 'opacity:0.45;text-decoration:line-through;' : '';
                         return `<div class="list-item" data-name="${(s.customerName||'').toLowerCase()}" data-date="${s.date||''}" style="${voidedStyle}cursor:${isAdmin?'pointer':'default'};" ${isAdmin?`onclick="editWaterSaleRecord(${s.id}, ${s.customerId||0})"`:''}> 
                             <div class="list-item-content" style="flex:1;">
-                                <div class="list-item-title">${s.customerName||'Unknown'} — ${s.gallons||0} gal @ ₱${s.pricePerGallon||0}</div>
+                                <div class="list-item-title">${s.customerName||'Unknown'} — ${s.containerType==='small'?(s.gallons||0)+' × '+(s.bottleSize||''):(s.gallons||0)+' gal'} @ ₱${s.pricePerGallon||0}${s.packageDeal?' 🎁':''}</div>
                                 <div class="list-item-subtitle">${s.date||'—'} &nbsp;<span style="color:${statusColor};font-weight:600;">${statusLabel}</span>${s.voided?'&nbsp;<span style="color:#ef4444;font-size:0.7rem;">VOIDED</span>':''}</div>
                             </div>
                             <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
