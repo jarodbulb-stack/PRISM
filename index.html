@@ -5865,8 +5865,44 @@
                     </div>
                     <div class="form-group">
                         <label>Amount (₱)</label>
-                        <input type="text" id="payment-amount" required placeholder="0">
+                        <input type="text" id="payment-amount" required placeholder="0" oninput="calcPaymentModalNet()">
                     </div>
+
+                    <!-- Discount (shown for rent and credit only) -->
+                    <div id="pm-discount-group" style="display:none;">
+                        <div class="form-group">
+                            <label style="display:flex;align-items:center;gap:8px;">
+                                Discount
+                                <span style="display:flex;border:1px solid #334155;border-radius:6px;overflow:hidden;">
+                                    <button type="button" id="pm-disc-fixed" onclick="setPmDiscType('fixed')" style="padding:2px 10px;background:rgba(99,102,241,0.2);color:#818cf8;border:none;cursor:pointer;font-size:0.75rem;font-weight:700;">₱</button>
+                                    <button type="button" id="pm-disc-pct" onclick="setPmDiscType('pct')" style="padding:2px 10px;background:transparent;color:#64748b;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;">%</button>
+                                </span>
+                            </label>
+                            <input type="number" id="pm-discount" value="0" min="0" placeholder="0" oninput="calcPaymentModalNet()" style="margin-bottom:6px;">
+                            <input type="text" id="pm-discount-reason" placeholder="Reason for discount (optional)" style="font-size:0.82rem;">
+                        </div>
+                        <!-- Net display -->
+                        <div id="pm-net-display" style="display:none;background:var(--bg-secondary);border-radius:8px;padding:10px 12px;margin-bottom:12px;">
+                            <div id="pm-net-breakdown" style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:4px;"></div>
+                            <div style="display:flex;justify-content:space-between;font-weight:700;">
+                                <span>Net Payable:</span>
+                                <span style="color:#10b981;" id="pm-net-amount"></span>
+                            </div>
+                        </div>
+                        <!-- Balance Override (Admin/Owner only) -->
+                        <div id="pm-override-group" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:10px 12px;margin-bottom:12px;">
+                            <label style="color:#f59e0b;font-size:0.82rem;font-weight:700;">🔧 Balance Override (Admin Only)</label>
+                            <div style="display:flex;align-items:center;gap:8px;margin:6px 0;">
+                                <input type="checkbox" id="pm-override-check" onchange="togglePmOverride()" style="width:16px;height:16px;cursor:pointer;">
+                                <label for="pm-override-check" style="font-size:0.82rem;color:var(--text-secondary);cursor:pointer;">Manually set remaining balance</label>
+                            </div>
+                            <div id="pm-override-fields" style="display:none;margin-top:8px;">
+                                <input type="number" id="pm-manual-balance" min="0" placeholder="Enter manual balance amount" style="margin-bottom:6px;width:100%;">
+                                <input type="text" id="pm-override-reason" placeholder="Reason for override (required)" style="font-size:0.82rem;width:100%;">
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="form-group">
                         <label>Payment Method</label>
                         <select id="payment-method" required>
@@ -11927,6 +11963,17 @@ async function recordTenantPayment(tenantId) {
             document.getElementById('credit-payment-fields').classList.toggle('hidden', type !== 'credit');
             const wf = document.getElementById('water-payment-fields');
             if (wf) wf.classList.toggle('hidden', type !== 'water');
+            // Show discount group for rent and credit only
+            const dg = document.getElementById('pm-discount-group');
+            if (dg) dg.style.display = (type === 'rent' || type === 'credit') ? 'block' : 'none';
+            // Show balance override only for admin/owner
+            const og = document.getElementById('pm-override-group');
+            if (og) og.style.display = (currentAppUser && ['owner','admin'].includes(currentAppUser.role)) ? 'block' : 'none';
+            // Reset discount fields on type change
+            const discEl = document.getElementById('pm-discount');
+            if (discEl) discEl.value = '0';
+            const ndEl = document.getElementById('pm-net-display');
+            if (ndEl) ndEl.style.display = 'none';
             // Auto-calculate water amount when gallons/price change
             if (type === 'water') {
                 // Populate water customers dropdown
@@ -11949,6 +11996,51 @@ async function recordTenantPayment(tenantId) {
             }
         }
 
+        // ── Payment Modal Discount Helpers ──
+        window._pmDiscType = 'fixed';
+
+        function setPmDiscType(type) {
+            window._pmDiscType = type;
+            const fb = document.getElementById('pm-disc-fixed');
+            const pb = document.getElementById('pm-disc-pct');
+            if (!fb) return;
+            if (type === 'fixed') {
+                fb.style.background='rgba(99,102,241,0.2)'; fb.style.color='#818cf8';
+                pb.style.background='transparent'; pb.style.color='#64748b';
+            } else {
+                pb.style.background='rgba(99,102,241,0.2)'; pb.style.color='#818cf8';
+                fb.style.background='transparent'; fb.style.color='#64748b';
+            }
+            calcPaymentModalNet();
+        }
+
+        function calcPaymentModalNet() {
+            const amt  = parseFloat((document.getElementById('payment-amount')||{}).value) || 0;
+            const disc = parseFloat((document.getElementById('pm-discount')||{}).value) || 0;
+            const type = window._pmDiscType || 'fixed';
+            const discAmt = type === 'pct' ? Math.round(amt * disc / 100) : disc;
+            const net  = Math.max(0, amt - discAmt);
+            const nd   = document.getElementById('pm-net-display');
+            const brk  = document.getElementById('pm-net-breakdown');
+            const namt = document.getElementById('pm-net-amount');
+            if (disc > 0 && amt > 0) {
+                if (nd)   nd.style.display = 'block';
+                if (brk)  brk.textContent = '₱' + amt.toLocaleString() + ' − ₱' + discAmt.toLocaleString() + ' discount' + (type==='pct'?' ('+disc+'%)':'');
+                if (namt) namt.textContent = '₱' + net.toLocaleString();
+            } else {
+                if (nd) nd.style.display = 'none';
+            }
+        }
+
+        function togglePmOverride() {
+            const chk  = document.getElementById('pm-override-check');
+            const flds = document.getElementById('pm-override-fields');
+            if (flds) flds.style.display = (chk && chk.checked) ? 'block' : 'none';
+        }
+        window.setPmDiscType        = setPmDiscType;
+        window.calcPaymentModalNet  = calcPaymentModalNet;
+        window.togglePmOverride     = togglePmOverride;
+
         async function savePayment(event) {
             event.preventDefault();
 
@@ -11966,16 +12058,28 @@ async function recordTenantPayment(tenantId) {
                 const date = document.getElementById('payment-date').value;
                 const notes = document.getElementById('payment-notes').value.trim();
 
-                // Validation
-                if (!type || amount <= 0 || !date) {
-                    showToast('⚠️ Please enter a valid amount.', 'warning');
-                    return;
-                }
+                // Discount fields
+                const _pmDiscRaw = parseFloat((document.getElementById('pm-discount')||{}).value) || 0;
+                const _pmDiscType = window._pmDiscType || 'fixed';
+                const _pmDiscReason = (document.getElementById('pm-discount-reason')||{}).value?.trim() || '';
+                const _pmDiscAmt = _pmDiscType === 'pct' ? Math.round(amount * _pmDiscRaw / 100) : _pmDiscRaw;
+                const netAmount = Math.max(0, amount - _pmDiscAmt);
 
-                // Additional validation: amount sanity check
-                if (amount > 10000000) { // 10 million limit
-                    showToast('⚠️ Please enter a valid amount.', 'warning');
-                    return;
+                // Balance override fields
+                const _pmOverride = document.getElementById('pm-override-check');
+                const _pmOverrideActive = _pmOverride && _pmOverride.checked;
+                const _pmManualBalance = _pmOverrideActive ? (parseFloat((document.getElementById('pm-manual-balance')||{}).value) || 0) : null;
+                const _pmOverrideReason = _pmOverrideActive ? ((document.getElementById('pm-override-reason')||{}).value?.trim() || '') : '';
+
+                // Validation
+                if (!type) { showToast('⚠️ Please select a Payment Type.', 'warning'); return; }
+                if (amount <= 0) { showToast('⚠️ Amount must be greater than 0.', 'warning'); return; }
+                if (!date) { showToast('⚠️ Date is required.', 'warning'); return; }
+                if (_pmOverrideActive && !_pmOverrideReason) {
+                    showToast('⚠️ Please enter a reason for the balance override.', 'warning'); return;
+                }
+                if (amount > 10000000) {
+                    showToast('⚠️ Please enter a valid amount.', 'warning'); return;
                 }
 
                 if (type === 'rent') {
@@ -11997,8 +12101,16 @@ async function recordTenantPayment(tenantId) {
                     const payment = {
                         type: 'rent',
                         tenantId,
+                        tenantName: tenant.name,
                         monthCovered,
-                        amount,
+                        amount: netAmount,
+                        originalAmount: amount,
+                        discount: _pmDiscAmt,
+                        discountType: _pmDiscType,
+                        discountReason: _pmDiscReason,
+                        balanceOverride: _pmOverrideActive || false,
+                        manualBalance: _pmManualBalance,
+                        overrideReason: _pmOverrideReason,
                         paymentMethod,
                         date,
                         notes,
@@ -12025,7 +12137,15 @@ async function recordTenantPayment(tenantId) {
 
                     const creditPayment = {
                         creditId,
-                        amount,
+                        debtorName: credit.debtor,
+                        amount: netAmount,
+                        originalAmount: amount,
+                        discount: _pmDiscAmt,
+                        discountType: _pmDiscType,
+                        discountReason: _pmDiscReason,
+                        balanceOverride: _pmOverrideActive || false,
+                        manualBalance: _pmManualBalance,
+                        overrideReason: _pmOverrideReason,
                         paymentMethod,
                         date,
                         notes,
