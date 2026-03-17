@@ -10943,7 +10943,13 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                                         <td class="text-success">₱${p.amount.toLocaleString()}</td>
                                         <td>
                                             <button class="btn btn-sm btn-secondary" onclick="showReceipt(${p.id}, 'rent')" title="View Receipt">📄</button>
-                                            ${currentAppUser && currentAppUser.role === 'cashier' ? `<button class="btn btn-sm btn-warning" onclick="prismRequestVoid('rent-payment',${p.id},'Rent ₱${p.amount||0} ${p.date||''}')" title="Request void">🚫 Void</button>` : currentAppUser ? `<button class="btn btn-sm btn-danger" onclick="deletePayment(${p.id}, 'rent', ${id})" title="Delete">🗑</button>` : ''}
+                                            ${currentAppUser && currentAppUser.role === 'cashier'
+                                                ? `<button class="btn btn-sm btn-warning" onclick="prismRequestVoid('rent-payment',${p.id},'Rent ₱${p.amount||0} ${p.date||''}')" title="Request void">🚫 Void</button>`
+                                                : currentAppUser && ['owner','admin'].includes(currentAppUser.role)
+                                                    ? `<button class="btn btn-sm btn-info" onclick="editRentPayment(${p.id},${id})" title="Edit" style="padding:2px 7px;">✏️</button>
+                                                       <button class="btn btn-sm btn-warning" onclick="voidRentPayment(${p.id},${id})" title="Void" style="padding:2px 7px;">🚫</button>
+                                                       <button class="btn btn-sm btn-danger" onclick="deletePayment(${p.id},'rent',${id})" title="Delete" style="padding:2px 7px;">🗑</button>`
+                                                    : currentAppUser ? `<button class="btn btn-sm btn-danger" onclick="deletePayment(${p.id},'rent',${id})" title="Delete">🗑</button>` : ''}
                                         </td>
                                     </tr>
                                 `}).join('')}
@@ -11284,6 +11290,158 @@ async function recordTenantPayment(tenantId) {
             }
             loadDashboard();
             debouncedSync();
+        }
+
+        // ── PAYMENT EDIT / VOID FUNCTIONS (Owner/Admin only) ──
+
+        async function editRentPayment(paymentId, tenantId) {
+            if (!currentAppUser || !['owner','admin'].includes(currentAppUser.role)) return;
+            const p = await dbGet('payments', paymentId);
+            if (!p) return;
+            const newAmount = await showInputModal('Edit Rent Payment', 'Edit amount for payment on ' + p.date, 'Amount', String(p.amount));
+            if (newAmount === null) return;
+            const amt = parseFloat(newAmount.replace(/,/g,''));
+            if (isNaN(amt) || amt <= 0) { showToast('⚠️ Invalid amount.','warning'); return; }
+            const newDate = await showInputModal('Edit Date', 'Edit date (YYYY-MM-DD)', 'Date', p.date);
+            if (newDate === null) return;
+            p.amount = amt;
+            p.date = newDate || p.date;
+            p.editedBy = currentAppUser.fullname || currentAppUser.username;
+            p.editedAt = new Date().toISOString();
+            await dbUpdate('payments', p);
+            debouncedSync(); loadDashboard();
+            showToast('✅ Payment updated.', 'success');
+            await viewTenantDetails(tenantId);
+        }
+
+        async function voidRentPayment(paymentId, tenantId) {
+            if (!currentAppUser || !['owner','admin'].includes(currentAppUser.role)) return;
+            const reason = await showInputModal('Void Payment', 'Enter reason for voiding this payment:', 'Reason');
+            if (reason === null) return;
+            const p = await dbGet('payments', paymentId);
+            if (!p) return;
+            p.voided = true;
+            p.voidReason = reason || 'Voided by admin';
+            p.voidedBy = currentAppUser.fullname || currentAppUser.username;
+            p.voidedAt = new Date().toISOString();
+            p.amount = 0;
+            await dbUpdate('payments', p);
+            debouncedSync(); loadDashboard();
+            showToast('🚫 Payment voided.', 'success');
+            await viewTenantDetails(tenantId);
+        }
+
+        async function editCreditPayment(paymentId, creditId) {
+            if (!currentAppUser || !['owner','admin'].includes(currentAppUser.role)) return;
+            const p = await dbGet('creditPayments', paymentId);
+            if (!p) return;
+            const newAmount = await showInputModal('Edit Credit Payment', 'Edit amount for payment on ' + p.date, 'Amount', String(p.amount));
+            if (newAmount === null) return;
+            const amt = parseFloat(newAmount.replace(/,/g,''));
+            if (isNaN(amt) || amt <= 0) { showToast('⚠️ Invalid amount.','warning'); return; }
+            const newDate = await showInputModal('Edit Date', 'Edit date (YYYY-MM-DD)', 'Date', p.date);
+            if (newDate === null) return;
+            p.amount = amt;
+            p.date = newDate || p.date;
+            p.editedBy = currentAppUser.fullname || currentAppUser.username;
+            p.editedAt = new Date().toISOString();
+            await dbUpdate('creditPayments', p);
+            debouncedSync(); loadDashboard();
+            showToast('✅ Credit payment updated.', 'success');
+            await viewCreditDetails(creditId);
+        }
+
+        async function voidCreditPayment(paymentId, creditId) {
+            if (!currentAppUser || !['owner','admin'].includes(currentAppUser.role)) return;
+            const reason = await showInputModal('Void Credit Payment', 'Enter reason for voiding this payment:', 'Reason');
+            if (reason === null) return;
+            const p = await dbGet('creditPayments', paymentId);
+            if (!p) return;
+            p.voided = true;
+            p.voidReason = reason || 'Voided by admin';
+            p.voidedBy = currentAppUser.fullname || currentAppUser.username;
+            p.voidedAt = new Date().toISOString();
+            p.amount = 0;
+            await dbUpdate('creditPayments', p);
+            debouncedSync(); loadDashboard();
+            showToast('🚫 Credit payment voided.', 'success');
+            await viewCreditDetails(creditId);
+        }
+
+        async function editWaterSaleRecord(saleId, customerId) {
+            if (!currentAppUser || !['owner','admin'].includes(currentAppUser.role)) return;
+            const s = await dbGet('waterSales', saleId);
+            if (!s) return;
+            const newGallons = await showInputModal('Edit Water Sale', 'Edit gallons sold (was ' + s.gallons + ')', 'Gallons', String(s.gallons));
+            if (newGallons === null) return;
+            const gallons = parseFloat(newGallons);
+            if (isNaN(gallons) || gallons <= 0) { showToast('⚠️ Invalid gallons.','warning'); return; }
+            const newDate = await showInputModal('Edit Date', 'Edit date (YYYY-MM-DD)', 'Date', s.date);
+            if (newDate === null) return;
+            s.gallons = gallons;
+            s.total = gallons * (s.pricePerGallon || 0);
+            s.date = newDate || s.date;
+            s.editedBy = currentAppUser.fullname || currentAppUser.username;
+            s.editedAt = new Date().toISOString();
+            await dbUpdate('waterSales', s);
+            debouncedSync(); loadWaterCustomers();
+            showToast('✅ Water sale updated.', 'success');
+            await viewWaterCustomerDetails(customerId);
+        }
+
+        async function voidWaterSale(saleId, customerId) {
+            if (!currentAppUser || !['owner','admin'].includes(currentAppUser.role)) return;
+            const reason = await showInputModal('Void Water Sale', 'Enter reason for voiding:', 'Reason');
+            if (reason === null) return;
+            const s = await dbGet('waterSales', saleId);
+            if (!s) return;
+            s.voided = true;
+            s.status = 'voided';
+            s.voidReason = reason || 'Voided by admin';
+            s.voidedBy = currentAppUser.fullname || currentAppUser.username;
+            s.voidedAt = new Date().toISOString();
+            await dbUpdate('waterSales', s);
+            debouncedSync(); loadWaterCustomers();
+            showToast('🚫 Water sale voided.', 'success');
+            await viewWaterCustomerDetails(customerId);
+        }
+
+        async function editSalaryRecord(salaryId, employeeId) {
+            if (!currentAppUser || !['owner','admin'].includes(currentAppUser.role)) return;
+            const s = await dbGet('salaryPayments', salaryId);
+            if (!s) return;
+            const newAmount = await showInputModal('Edit Salary Record', 'Edit net pay (was ₱' + (s.netPay||0).toLocaleString() + ')', 'Net Pay', String(s.netPay||0));
+            if (newAmount === null) return;
+            const amt = parseFloat(newAmount.replace(/,/g,''));
+            if (isNaN(amt) || amt < 0) { showToast('⚠️ Invalid amount.','warning'); return; }
+            const newDate = await showInputModal('Edit Date', 'Edit date (YYYY-MM-DD)', 'Date', s.date);
+            if (newDate === null) return;
+            s.netPay = amt;
+            s.date = newDate || s.date;
+            s.editedBy = currentAppUser.fullname || currentAppUser.username;
+            s.editedAt = new Date().toISOString();
+            await dbUpdate('salaryPayments', s);
+            debouncedSync();
+            showToast('✅ Salary record updated.', 'success');
+            await viewEmployeeDetails(employeeId);
+        }
+
+        async function deleteSalaryRecord(salaryId, employeeId) {
+            if (!currentAppUser || !['owner','admin'].includes(currentAppUser.role)) return;
+            if (!await showConfirm('Delete this salary payment record? This cannot be undone.', 'danger', '🗑️ Delete Salary Record', 'Yes, Delete')) return;
+            await dbDelete('salaryPayments', salaryId);
+            debouncedSync();
+            showToast('Salary record deleted.', 'success');
+            await viewEmployeeDetails(employeeId);
+        }
+
+        async function deleteTimeRecord(recordId, employeeId) {
+            if (!currentAppUser || !['owner','admin'].includes(currentAppUser.role)) return;
+            if (!await showConfirm('Delete this attendance record? This cannot be undone.', 'danger', '🗑️ Delete Attendance', 'Yes, Delete')) return;
+            await dbDelete('timeRecords', recordId);
+            debouncedSync();
+            showToast('Attendance record deleted.', 'success');
+            await viewEmployeeDetails(employeeId);
         }
 
         async function deleteTenant(id) {
@@ -12635,7 +12793,7 @@ async function loadWaterCustomers() {
                                        s.status === 'partial' ? '<span class="badge badge-warning">Partial</span>' : 
                                        '<span class="badge badge-danger">Credit</span>';
                     content += `
-                        <div class="list-item">
+                        <div class="list-item" style="cursor:pointer;" onclick="editWaterSaleRecord(${s.id},${id})">
                             <div class="list-item-content" style="flex:1;">
                                 <div class="list-item-title">${s.gallons} gallons @ ₱${s.pricePerGallon}</div>
                                 <div class="list-item-subtitle">${s.date} ${statusBadge}</div>
@@ -12643,7 +12801,13 @@ async function loadWaterCustomers() {
                             <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
                                 <div style="font-weight:600;">₱${s.total.toLocaleString()}</div>
                                 ${s.balance > 0 ? `<small class="text-warning">Bal: ₱${s.balance.toLocaleString()}</small>` : ''}
-                                ${(window.currentAppUser && window.currentAppUser.role !== 'cashier') ? `<button class="btn btn-sm btn-danger" onclick="deleteWaterSale(${s.id}); viewWaterCustomerDetails(${id});" style="padding:2px 8px;font-size:0.7rem;">🗑️</button>` : ''}
+                                ${window.currentAppUser && ['owner','admin'].includes(window.currentAppUser.role) ? `
+                                    <div style="display:flex;gap:4px;margin-top:2px;" onclick="event.stopPropagation()">
+                                        <button class="btn btn-sm btn-info" onclick="editWaterSaleRecord(${s.id},${id})" style="padding:2px 7px;font-size:0.7rem;">✏️</button>
+                                        <button class="btn btn-sm btn-warning" onclick="voidWaterSale(${s.id},${id})" style="padding:2px 7px;font-size:0.7rem;">🚫</button>
+                                        <button class="btn btn-sm btn-danger" onclick="deleteWaterSale(${s.id}); viewWaterCustomerDetails(${id});" style="padding:2px 7px;font-size:0.7rem;">🗑️</button>
+                                    </div>` :
+                                window.currentAppUser && window.currentAppUser.role !== 'cashier' ? `<button class="btn btn-sm btn-danger" onclick="deleteWaterSale(${s.id}); viewWaterCustomerDetails(${id});" style="padding:2px 8px;font-size:0.7rem;">🗑️</button>` : ''}
                             </div>
                         </div>
                     `;
@@ -13056,12 +13220,16 @@ async function loadWaterCustomers() {
                     const statusText = r.status === 'present' ? 'Present' : r.status === 'absent' ? 'Absent' : r.status === 'halfday' ? 'Half Day' : r.status === 'restday' ? 'Rest Day' : 'Leave';
                     const paidBadge = r.paid ? '<span class="badge badge-success" style="font-size: 0.7rem;">Paid</span>' : '<span class="badge badge-warning" style="font-size: 0.7rem;">Unpaid</span>';
                     content += `
-                        <div class="list-item" style="padding: 8px;" onclick="editTimeRecord(${r.id})">
+                        <div class="list-item" style="padding: 8px;cursor:pointer;" onclick="editTimeRecord(${r.id})">
                             <div class="list-item-content">
                                 <div class="list-item-title" style="font-size: 0.9rem;">${statusIcon} ${r.date}</div>
                                 <div class="list-item-subtitle" style="font-size: 0.8rem;">${statusText} ${r.otHours ? '• OT: '+r.otHours+'hrs' : ''} ${r.lateDeduction ? '• Late: -₱'+r.lateDeduction : ''}</div>
                             </div>
-                            <div>${paidBadge}</div>
+                            <div style="display:flex;align-items:center;gap:6px;" onclick="event.stopPropagation()">
+                                ${paidBadge}
+                                <button class="btn btn-sm btn-info" onclick="editTimeRecord(${r.id})" style="padding:2px 7px;font-size:0.7rem;">✏️</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteTimeRecord(${r.id},${id})" style="padding:2px 7px;font-size:0.7rem;">🗑️</button>
+                            </div>
                         </div>
                     `;
                 });
@@ -13077,12 +13245,18 @@ async function loadWaterCustomers() {
             } else {
                 empSalaries.slice(0, 5).forEach(s => {
                     content += `
-                        <div class="list-item" style="padding: 8px;">
+                        <div class="list-item" style="padding: 8px;cursor:pointer;" onclick="editSalaryRecord(${s.id},${id})">
                             <div class="list-item-content">
                                 <div class="list-item-title" style="font-size: 0.9rem;">💰 ${s.date}</div>
                                 <div class="list-item-subtitle" style="font-size: 0.8rem;">${s.daysWorked || 0} days &bull; ${s.period || "Custom"}</div>
                             </div>
-                            <div class="text-success" style="font-weight: bold;">₱${(s.netPay || 0).toLocaleString()}</div>
+                            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+                                <span class="text-success" style="font-weight:bold;">₱${(s.netPay || 0).toLocaleString()}</span>
+                                <div style="display:flex;gap:4px;" onclick="event.stopPropagation()">
+                                    <button class="btn btn-sm btn-info" onclick="editSalaryRecord(${s.id},${id})" style="padding:2px 7px;font-size:0.7rem;">✏️</button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteSalaryRecord(${s.id},${id})" style="padding:2px 7px;font-size:0.7rem;">🗑️</button>
+                                </div>
+                            </div>
                         </div>
                     `;
                 });
@@ -14617,7 +14791,13 @@ async function showPayrollSummary() {
                                         <td class="text-success">₱${p.amount.toLocaleString()}</td>
                                         <td>
                                             <button class="btn btn-sm btn-secondary" onclick="showReceipt(${p.id}, 'credit')" title="View Receipt">📄</button>
-                                            ${currentAppUser && currentAppUser.role === 'cashier' ? `<button class="btn btn-sm btn-warning" onclick="prismRequestVoid('credit-payment',${p.id},'Credit ₱${p.amount||0} ${p.date||''}')" title="Request void">🚫 Void</button>` : currentAppUser ? `<button class="btn btn-sm btn-danger" onclick="deletePayment(${p.id}, 'credit', ${id})" title="Delete">🗑</button>` : ''}
+                                            ${currentAppUser && currentAppUser.role === 'cashier'
+                                                ? `<button class="btn btn-sm btn-warning" onclick="prismRequestVoid('credit-payment',${p.id},'Credit ₱${p.amount||0} ${p.date||''}')" title="Request void">🚫 Void</button>`
+                                                : currentAppUser && ['owner','admin'].includes(currentAppUser.role)
+                                                    ? `<button class="btn btn-sm btn-info" onclick="editCreditPayment(${p.id},${id})" title="Edit" style="padding:2px 7px;">✏️</button>
+                                                       <button class="btn btn-sm btn-warning" onclick="voidCreditPayment(${p.id},${id})" title="Void" style="padding:2px 7px;">🚫</button>
+                                                       <button class="btn btn-sm btn-danger" onclick="deletePayment(${p.id},'credit',${id})" title="Delete" style="padding:2px 7px;">🗑</button>`
+                                                    : currentAppUser ? `<button class="btn btn-sm btn-danger" onclick="deletePayment(${p.id},'credit',${id})" title="Delete">🗑</button>` : ''}
                                         </td>
                                     </tr>
                                 `}).join('')}
@@ -25084,6 +25264,15 @@ async function editTask(id) {
         window.deleteTask = deleteTask;
         window.addTaskToCalendar = addTaskToCalendar;
         window.toggleTaskStatus = toggleTaskStatus;
+        window.editRentPayment = editRentPayment;
+        window.voidRentPayment = voidRentPayment;
+        window.editCreditPayment = editCreditPayment;
+        window.voidCreditPayment = voidCreditPayment;
+        window.editWaterSaleRecord = editWaterSaleRecord;
+        window.voidWaterSale = voidWaterSale;
+        window.editSalaryRecord = editSalaryRecord;
+        window.deleteSalaryRecord = deleteSalaryRecord;
+        window.deleteTimeRecord = deleteTimeRecord;
         
         // Income functions
         window.loadIncome = loadIncome;
