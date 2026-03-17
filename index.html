@@ -4057,6 +4057,17 @@
                 </div>
             </div>
 
+            <!-- Today's Sales Feed (Admin/Owner) -->
+            <div class="card" id="admin-today-sales-card">
+                <div class="card-header">
+                    <div class="card-title">📋 Today's Transactions</div>
+                    <button class="btn btn-sm btn-primary" onclick="showCashierTodayTransactions()">View All</button>
+                </div>
+                <div id="admin-today-feed" style="max-height:280px;overflow-y:auto;">
+                    <div style="text-align:center;color:var(--text-secondary);padding:20px;font-size:0.85rem;">Loading...</div>
+                </div>
+            </div>
+
             <!-- Monthly Income vs Expenses Line Chart + Jarod Analysis -->
             <div class="card" style="grid-column:1/-1;">
               <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
@@ -4621,9 +4632,17 @@
 
                 <input type="text" id="water-search" placeholder="🔍 Search customer..." style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 15px; background: var(--card-bg); color: var(--text-primary);" oninput="filterWaterCustomers()">
 
+                <!-- View toggle: Customers / All Sales -->
+                <div style="display:flex;gap:8px;margin-bottom:12px;">
+                    <button id="water-view-customers-btn" class="btn btn-sm btn-primary" onclick="setWaterView('customers')">👥 Customers</button>
+                    <button id="water-view-sales-btn" class="btn btn-sm btn-secondary" onclick="setWaterView('sales')">🧾 All Sales</button>
+                </div>
+
                 <div id="water-customers-list">
                     <div class="empty-state"><p>No water customers yet. Add your first customer!</p></div>
                 </div>
+
+                <div id="water-all-sales-list" style="display:none;"></div>
             </div>
         
             <!-- nav-bottom-water -->
@@ -4635,6 +4654,28 @@
 
         <!-- Other Income Sources Section -->
         <div id="income" class="section">
+
+            <!-- Today's Transaction Summary -->
+            <div class="card" id="income-today-card">
+                <div class="card-header">
+                    <div class="card-title">📋 Today's Transactions</div>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <select id="income-today-filter" onchange="loadIncomeTodayFeed()" style="background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-primary);border-radius:6px;padding:4px 8px;font-size:0.78rem;">
+                            <option value="all">All Types</option>
+                            <option value="rent">🏠 Rent</option>
+                            <option value="credit">💳 Credit</option>
+                            <option value="water">💧 Water</option>
+                            <option value="income">💰 Other Income</option>
+                        </select>
+                        <button class="btn btn-sm btn-secondary" onclick="loadIncomeTodayFeed()">↺</button>
+                    </div>
+                </div>
+                <div id="income-today-summary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;"></div>
+                <div id="income-today-feed" style="max-height:340px;overflow-y:auto;">
+                    <div style="text-align:center;color:var(--text-secondary);padding:24px;font-size:0.85rem;">Loading today's transactions...</div>
+                </div>
+            </div>
+
             <div class="card">
                 <div class="card-header">
                     <div class="card-title">💰 Other Income Sources</div>
@@ -5762,8 +5803,9 @@
                         <label>Payment Type</label>
                         <select id="payment-type" required onchange="togglePaymentFields()">
                             <option value="">Select type</option>
-                            <option value="rent">Rent Payment</option>
-                            <option value="credit">Credit Repayment</option>
+                            <option value="rent">🏠 Rent Payment</option>
+                            <option value="credit">💳 Credit Repayment</option>
+                            <option value="water">💧 Water Sale</option>
                         </select>
                     </div>
                     <div id="rent-payment-fields" class="hidden">
@@ -5800,6 +5842,22 @@
                                     Balance: ₱<span id="debtor-balance-display"></span>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                    <div id="water-payment-fields" class="hidden">
+                        <div class="form-group">
+                            <label>💧 Water Customer</label>
+                            <select id="payment-water-customer">
+                                <option value="">Select customer</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Gallons</label>
+                            <input type="number" id="payment-water-gallons" placeholder="e.g. 10" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Price per Gallon (₱)</label>
+                            <input type="number" id="payment-water-price" placeholder="e.g. 25" min="0">
                         </div>
                     </div>
                     <div class="form-group">
@@ -9246,7 +9304,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             if (sectionId === 'tenants')    _safeLoad('tenants',    loadTenants);
             if (sectionId === 'credits')    _safeLoad('credits',    loadCredits);
             if (sectionId === 'water')      _safeLoad('water',      loadWaterCustomers);
-            if (sectionId === 'income')     _safeLoad('income',     loadIncome);
+            if (sectionId === 'income')     { _safeLoad('income', loadIncome); if(typeof loadIncomeTodayFeed==='function') loadIncomeTodayFeed(); }
             if (sectionId === 'employees')  _safeLoad('employees',  loadEmployees);
             if (sectionId === 'expenses')   _safeLoad('expenses',   loadExpenses);
             if (sectionId === 'tasks')      _safeLoad('tasks',      loadTasks);
@@ -11481,6 +11539,28 @@ async function recordTenantPayment(tenantId) {
             const type = document.getElementById('payment-type').value;
             document.getElementById('rent-payment-fields').classList.toggle('hidden', type !== 'rent');
             document.getElementById('credit-payment-fields').classList.toggle('hidden', type !== 'credit');
+            const wf = document.getElementById('water-payment-fields');
+            if (wf) wf.classList.toggle('hidden', type !== 'water');
+            // Auto-calculate water amount when gallons/price change
+            if (type === 'water') {
+                // Populate water customers dropdown
+                dbGetAll('waterCustomers').then(customers => {
+                    const sel = document.getElementById('payment-water-customer');
+                    if (!sel) return;
+                    const cur = sel.value;
+                    sel.innerHTML = '<option value="">Select customer</option>' +
+                        customers.map(c => `<option value="${c.id}"${c.id==cur?' selected':''}>${c.name}</option>`).join('');
+                });
+                ['payment-water-gallons','payment-water-price'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.oninput = () => {
+                        const g = parseFloat(document.getElementById('payment-water-gallons').value)||0;
+                        const p = parseFloat(document.getElementById('payment-water-price').value)||0;
+                        const amtEl = document.getElementById('payment-amount');
+                        if (amtEl && g > 0 && p > 0) amtEl.value = (g*p).toString();
+                    };
+                });
+            }
         }
 
         async function savePayment(event) {
@@ -11568,12 +11648,44 @@ async function recordTenantPayment(tenantId) {
 
                     await PrismGuardian.safeAdd('creditPayments', creditPayment);
                     PrismGuardian.log('SUCCESS', `Credit payment recorded: ₱${amount} from ${credit.debtor}`);
+
+                } else if (type === 'water') {
+                    const customerId = parseInt(document.getElementById('payment-water-customer').value);
+                    const gallons = parseFloat(document.getElementById('payment-water-gallons').value) || 0;
+                    const pricePerGallon = parseFloat(document.getElementById('payment-water-price').value) || 0;
+
+                    if (!customerId || isNaN(customerId)) {
+                        showToast('⚠️ Please select a water customer.', 'warning'); return;
+                    }
+                    if (gallons <= 0) {
+                        showToast('⚠️ Please enter gallons sold.', 'warning'); return;
+                    }
+                    const customer = await dbGet('waterCustomers', customerId);
+                    const total = gallons * pricePerGallon;
+                    const waterSale = {
+                        customerId,
+                        customerName: customer ? customer.name : 'Unknown',
+                        gallons,
+                        pricePerGallon,
+                        total,
+                        amountPaid: amount,
+                        balance: Math.max(0, total - amount),
+                        status: amount >= total ? 'paid' : amount > 0 ? 'partial' : 'credit',
+                        paymentMethod,
+                        date,
+                        notes,
+                        createdAt: new Date().toISOString()
+                    };
+                    await dbAdd('waterSales', waterSale);
+                    showToast(`✅ Water sale recorded — ${gallons} gallons for ${customer ? customer.name : 'customer'}`, 'success');
+                    loadWaterCustomers();
                 }
 
                 hideModal('payment-modal');
                 loadDashboard();
                 loadTenants();
                 loadCredits();
+                if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
                 // Sync to Firebase
                 debouncedSync();
 
@@ -16751,6 +16863,116 @@ async function showPayrollSummary() {
         // =====================================================
         function openAddIncomeModal() { showAddIncome(); }
 
+        // ── Income Page: Today's Transaction Feed ──
+        async function loadIncomeTodayFeed() {
+            const feedEl  = document.getElementById('income-today-feed');
+            const summEl  = document.getElementById('income-today-summary');
+            if (!feedEl) return;
+
+            const filter = (document.getElementById('income-today-filter') || {}).value || 'all';
+            const today  = new Date().toISOString().split('T')[0];
+            const isAdmin = currentAppUser && ['owner','admin'].includes(currentAppUser.role);
+
+            feedEl.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:20px;font-size:0.85rem;">Loading...</div>';
+
+            try {
+                const [payments, creditPayments, waterSales, income] = await Promise.all([
+                    dbGetAll('payments'), dbGetAll('creditPayments'),
+                    dbGetAll('waterSales'), dbGetAll('additionalIncome')
+                ]);
+
+                let txns = [];
+                if (filter === 'all' || filter === 'rent')
+                    txns.push(...payments.filter(p=>p.date===today&&!p.voided).map(p=>({
+                        icon:'🏠', type:'Rent', name:p.tenantName||'Tenant',
+                        amount:p.amount||0, method:p.paymentMethod||'cash',
+                        sub: p.monthCovered ? 'Month: '+p.monthCovered : '',
+                        id:p.id, src:'rent', parentId: p.tenantId,
+                        time: p.createdAt||today
+                    })));
+                if (filter === 'all' || filter === 'credit')
+                    txns.push(...creditPayments.filter(p=>p.date===today&&!p.voided).map(p=>({
+                        icon:'💳', type:'Credit', name:p.debtorName||'Debtor',
+                        amount:p.amount||0, method:p.paymentMethod||'cash',
+                        sub:'', id:p.id, src:'credit', parentId: p.creditId,
+                        time: p.createdAt||today
+                    })));
+                if (filter === 'all' || filter === 'water')
+                    txns.push(...waterSales.filter(s=>s.date===today&&!s.voided).map(s=>({
+                        icon:'💧', type:'Water', name:s.customerName||'Customer',
+                        amount:s.amountPaid||0, method:s.paymentMethod||'cash',
+                        sub:`${s.gallons||0} gal @ ₱${s.pricePerGallon||0}`,
+                        id:s.id, src:'water', parentId: s.customerId,
+                        time: s.createdAt||today
+                    })));
+                if (filter === 'all' || filter === 'income')
+                    txns.push(...income.filter(i=>i.date===today).map(i=>({
+                        icon:'💰', type:'Income', name:i.source||i.description||'Other',
+                        amount:i.amount||0, method:'—',
+                        sub: i.description||'', id:i.id, src:'income', parentId:null,
+                        time: i.createdAt||today
+                    })));
+
+                // Sort newest first
+                txns.sort((a,b) => (b.time||'') > (a.time||'') ? 1 : -1);
+
+                // Summary pills
+                const totalRent   = payments.filter(p=>p.date===today&&!p.voided).reduce((s,p)=>s+(p.amount||0),0);
+                const totalCredit = creditPayments.filter(p=>p.date===today&&!p.voided).reduce((s,p)=>s+(p.amount||0),0);
+                const totalWater  = waterSales.filter(s=>s.date===today&&!s.voided).reduce((s,x)=>s+(x.amountPaid||0),0);
+                const totalOther  = income.filter(i=>i.date===today).reduce((s,i)=>s+(i.amount||0),0);
+                const grandTotal  = totalRent+totalCredit+totalWater+totalOther;
+
+                if (summEl) summEl.innerHTML = `
+                    <div style="background:rgba(16,185,129,0.1);border-radius:8px;padding:8px;text-align:center;">
+                        <div style="font-weight:800;color:#10b981;font-size:0.9rem;">₱${grandTotal.toLocaleString()}</div>
+                        <div style="font-size:0.68rem;color:var(--text-secondary);">Grand Total</div>
+                    </div>
+                    <div style="background:rgba(99,102,241,0.1);border-radius:8px;padding:8px;text-align:center;cursor:pointer;" onclick="document.getElementById('income-today-filter').value='rent';loadIncomeTodayFeed()">
+                        <div style="font-weight:700;color:#818cf8;font-size:0.85rem;">₱${totalRent.toLocaleString()}</div>
+                        <div style="font-size:0.68rem;color:var(--text-secondary);">🏠 Rent</div>
+                    </div>
+                    <div style="background:rgba(245,158,11,0.1);border-radius:8px;padding:8px;text-align:center;cursor:pointer;" onclick="document.getElementById('income-today-filter').value='credit';loadIncomeTodayFeed()">
+                        <div style="font-weight:700;color:#f59e0b;font-size:0.85rem;">₱${totalCredit.toLocaleString()}</div>
+                        <div style="font-size:0.68rem;color:var(--text-secondary);">💳 Credit</div>
+                    </div>
+                    <div style="background:rgba(14,165,233,0.1);border-radius:8px;padding:8px;text-align:center;cursor:pointer;" onclick="document.getElementById('income-today-filter').value='water';loadIncomeTodayFeed()">
+                        <div style="font-weight:700;color:#38bdf8;font-size:0.85rem;">₱${totalWater.toLocaleString()}</div>
+                        <div style="font-size:0.68rem;color:var(--text-secondary);">💧 Water</div>
+                    </div>`;
+
+                if (txns.length === 0) {
+                    feedEl.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:28px;font-size:0.85rem;">No transactions recorded today yet.<br><span style="font-size:0.78rem;opacity:0.6;">Use the + button or Record Payment to add entries.</span></div>';
+                    return;
+                }
+
+                const methodLabel = {cash:'Cash',gcash:'GCash',maya:'Maya',bank:'Bank',other:'Other'};
+
+                feedEl.innerHTML = txns.map(t => `
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--bg-primary);border-radius:9px;margin-bottom:6px;border-left:3px solid #10b981;${isAdmin?'cursor:pointer;':''}"
+                        ${isAdmin && t.src==='water' ? `onclick="viewWaterCustomerDetails(${t.parentId})"` :
+                          isAdmin && t.src==='rent'  ? `onclick="viewTenantDetails(${t.parentId})"` :
+                          isAdmin && t.src==='credit' ? `onclick="viewCreditDetails(${t.parentId})"` : ''}>
+                        <div style="flex:1;">
+                            <div style="display:flex;align-items:center;gap:6px;">
+                                <span style="font-size:1rem;">${t.icon}</span>
+                                <span style="font-weight:600;font-size:0.85rem;color:var(--text-primary);">${t.name}</span>
+                                <span style="font-size:0.7rem;background:rgba(255,255,255,0.07);padding:1px 6px;border-radius:6px;color:var(--text-secondary);">${t.type}</span>
+                            </div>
+                            ${t.sub ? `<div style="font-size:0.72rem;color:var(--text-secondary);margin-top:2px;padding-left:22px;">${t.sub}</div>` : ''}
+                        </div>
+                        <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
+                            <span style="font-weight:700;color:#10b981;font-size:0.9rem;">+₱${t.amount.toLocaleString()}</span>
+                            <span style="font-size:0.7rem;color:var(--text-secondary);">${methodLabel[t.method]||t.method}</span>
+                        </div>
+                    </div>`).join('');
+
+            } catch(e) {
+                feedEl.innerHTML = '<div style="color:#ef4444;padding:12px;font-size:0.82rem;">Could not load transactions.</div>';
+            }
+        }
+        window.loadIncomeTodayFeed = loadIncomeTodayFeed;
+
         async function loadIncome() {
             try {
                 const additionalIncome = await dbGetAll('additionalIncome');
@@ -17042,6 +17264,9 @@ async function showPayrollSummary() {
     const waterSales    = await dbGetAll('waterSales') || [];
     const employees      = await dbGetAll('employees') || [];
     const salaryPayments = await dbGetAll('salaryPayments') || [];
+
+            // Refresh admin today's feed if visible
+            if (typeof loadAdminTodayFeed === 'function') loadAdminTodayFeed();
 
             const now = new Date();
             const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -25264,6 +25489,140 @@ async function editTask(id) {
         window.deleteTask = deleteTask;
         window.addTaskToCalendar = addTaskToCalendar;
         window.toggleTaskStatus = toggleTaskStatus;
+        // ── Admin Today's Sales Feed ──
+        async function loadAdminTodayFeed() {
+            const el = document.getElementById('admin-today-feed');
+            if (!el) return;
+            const today = new Date().toISOString().split('T')[0];
+            try {
+                const [payments, creditPayments, waterSales, expenses, income] = await Promise.all([
+                    dbGetAll('payments'), dbGetAll('creditPayments'), dbGetAll('waterSales'),
+                    dbGetAll('expenses'), dbGetAll('additionalIncome')
+                ]);
+                const txns = [
+                    ...payments.filter(p=>p.date===today&&!p.voided).map(p=>({type:'🏠 Rent', name:p.tenantName||'Tenant', amount:p.amount||0, in:true, method:p.paymentMethod||'cash', id:p.id, src:'rent'})),
+                    ...creditPayments.filter(p=>p.date===today&&!p.voided).map(p=>({type:'💳 Credit', name:p.debtorName||'Debtor', amount:p.amount||0, in:true, method:p.paymentMethod||'cash', id:p.id, src:'credit'})),
+                    ...waterSales.filter(s=>s.date===today&&!s.voided).map(s=>({type:'💧 Water', name:s.customerName||'Customer', amount:s.amountPaid||0, in:true, gallons:s.gallons, id:s.id, src:'water'})),
+                    ...expenses.filter(e=>e.date===today).map(e=>({type:'💸 Expense', name:e.category||'Expense', amount:e.amount||0, in:false, id:e.id, src:'expense'})),
+                    ...income.filter(i=>i.date===today).map(i=>({type:'💰 Income', name:i.source||'Other', amount:i.amount||0, in:true, id:i.id, src:'income'})),
+                ].sort((a,b) => (b.createdAt||'') > (a.createdAt||'') ? 1 : -1);
+
+                if (txns.length === 0) {
+                    el.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:24px;font-size:0.85rem;">No transactions recorded today yet.</div>';
+                    return;
+                }
+
+                const totalIn  = txns.filter(t=>t.in).reduce((s,t)=>s+t.amount,0);
+                const totalOut = txns.filter(t=>!t.in).reduce((s,t)=>s+t.amount,0);
+
+                el.innerHTML = `
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
+                        <div style="background:rgba(16,185,129,0.1);border-radius:8px;padding:8px;text-align:center;">
+                            <div style="font-weight:800;color:#10b981;font-size:0.95rem;">₱${totalIn.toLocaleString()}</div>
+                            <div style="font-size:0.7rem;color:var(--text-secondary);">Total In</div>
+                        </div>
+                        <div style="background:rgba(239,68,68,0.1);border-radius:8px;padding:8px;text-align:center;">
+                            <div style="font-weight:800;color:#ef4444;font-size:0.95rem;">₱${totalOut.toLocaleString()}</div>
+                            <div style="font-size:0.7rem;color:var(--text-secondary);">Total Out</div>
+                        </div>
+                        <div style="background:rgba(99,102,241,0.1);border-radius:8px;padding:8px;text-align:center;">
+                            <div style="font-weight:800;color:#818cf8;font-size:0.95rem;">${txns.length}</div>
+                            <div style="font-size:0.7rem;color:var(--text-secondary);">Entries</div>
+                        </div>
+                    </div>
+                    ${txns.map(t=>`
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 10px;background:var(--bg-primary);border-radius:8px;margin-bottom:6px;border-left:3px solid ${t.in?'#10b981':'#ef4444'};">
+                            <div>
+                                <div style="font-weight:600;font-size:0.83rem;color:var(--text-primary);">${t.type} — ${t.name}</div>
+                                ${t.gallons ? `<div style="font-size:0.72rem;color:var(--text-secondary);">${t.gallons} gallons</div>` : ''}
+                            </div>
+                            <div style="font-weight:700;color:${t.in?'#10b981':'#ef4444'};">${t.in?'+':'-'}₱${t.amount.toLocaleString()}</div>
+                        </div>`).join('')}`;
+            } catch(e) {
+                el.innerHTML = '<div style="color:#ef4444;padding:12px;font-size:0.82rem;">Could not load today's transactions.</div>';
+            }
+        }
+        window.loadAdminTodayFeed = loadAdminTodayFeed;
+
+        // ── Water Section: All Sales View ──
+        let _waterView = 'customers';
+        function setWaterView(view) {
+            _waterView = view;
+            const custList = document.getElementById('water-customers-list');
+            const salesList = document.getElementById('water-all-sales-list');
+            const custBtn = document.getElementById('water-view-customers-btn');
+            const salesBtn = document.getElementById('water-view-sales-btn');
+            if (!custList || !salesList) return;
+            if (view === 'customers') {
+                custList.style.display = '';
+                salesList.style.display = 'none';
+                if (custBtn) { custBtn.className = 'btn btn-sm btn-primary'; }
+                if (salesBtn) { salesBtn.className = 'btn btn-sm btn-secondary'; }
+            } else {
+                custList.style.display = 'none';
+                salesList.style.display = '';
+                if (custBtn) { custBtn.className = 'btn btn-sm btn-secondary'; }
+                if (salesBtn) { salesBtn.className = 'btn btn-sm btn-primary'; }
+                renderWaterAllSales();
+            }
+        }
+        window.setWaterView = setWaterView;
+
+        async function renderWaterAllSales() {
+            const el = document.getElementById('water-all-sales-list');
+            if (!el) return;
+            el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-secondary);">Loading...</div>';
+            try {
+                const sales = (await dbGetAll('waterSales')).sort((a,b)=>new Date(b.date)-new Date(a.date));
+                if (sales.length === 0) {
+                    el.innerHTML = '<div class="empty-state"><p>No water sales recorded yet.</p></div>';
+                    return;
+                }
+                const isAdmin = currentAppUser && ['owner','admin'].includes(currentAppUser.role);
+                el.innerHTML = `
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 2px 10px;">
+                        <span style="font-size:0.8rem;color:var(--text-secondary);">${sales.length} total records</span>
+                        <input type="text" placeholder="🔍 Search..." oninput="filterWaterSalesList(this.value)"
+                            style="padding:5px 10px;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-card);color:var(--text-primary);font-size:0.8rem;width:160px;">
+                    </div>
+                    <div id="water-sales-rows">
+                    ${sales.map(s=>{
+                        const statusColor = s.status==='paid'?'#10b981':s.status==='partial'?'#f59e0b':'#ef4444';
+                        const statusLabel = s.status==='paid'?'Paid':s.status==='partial'?'Partial':'Credit';
+                        const voidedStyle = s.voided ? 'opacity:0.45;text-decoration:line-through;' : '';
+                        return `<div class="list-item" data-name="${(s.customerName||'').toLowerCase()}" data-date="${s.date||''}" style="${voidedStyle}cursor:${isAdmin?'pointer':'default'};" ${isAdmin?`onclick="editWaterSaleRecord(${s.id}, ${s.customerId||0})"`:''}> 
+                            <div class="list-item-content" style="flex:1;">
+                                <div class="list-item-title">${s.customerName||'Unknown'} — ${s.gallons||0} gal @ ₱${s.pricePerGallon||0}</div>
+                                <div class="list-item-subtitle">${s.date||'—'} &nbsp;<span style="color:${statusColor};font-weight:600;">${statusLabel}</span>${s.voided?'&nbsp;<span style="color:#ef4444;font-size:0.7rem;">VOIDED</span>':''}</div>
+                            </div>
+                            <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+                                <div style="font-weight:600;">₱${(s.total||0).toLocaleString()}</div>
+                                ${s.balance>0?`<small style="color:#f59e0b;">Bal: ₱${s.balance.toLocaleString()}</small>`:''}
+                                ${isAdmin&&!s.voided?`<div style="display:flex;gap:4px;" onclick="event.stopPropagation()">
+                                    <button class="btn btn-sm btn-info" onclick="editWaterSaleRecord(${s.id},${s.customerId||0})" style="padding:2px 7px;font-size:0.7rem;">✏️</button>
+                                    <button class="btn btn-sm btn-warning" onclick="voidWaterSale(${s.id},${s.customerId||0})" style="padding:2px 7px;font-size:0.7rem;">🚫</button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteWaterSale(${s.id});renderWaterAllSales();" style="padding:2px 7px;font-size:0.7rem;">🗑️</button>
+                                </div>`:''}
+                            </div>
+                        </div>`;
+                    }).join('')}
+                    </div>`;
+            } catch(e) {
+                el.innerHTML = '<div style="color:#ef4444;padding:12px;">Could not load sales.</div>';
+            }
+        }
+        window.renderWaterAllSales = renderWaterAllSales;
+
+        function filterWaterSalesList(query) {
+            const q = query.toLowerCase();
+            document.querySelectorAll('#water-sales-rows .list-item').forEach(row => {
+                const name = row.dataset.name || '';
+                const date = row.dataset.date || '';
+                row.style.display = (name.includes(q) || date.includes(q)) ? '' : 'none';
+            });
+        }
+        window.filterWaterSalesList = filterWaterSalesList;
+
         window.editRentPayment = editRentPayment;
         window.voidRentPayment = voidRentPayment;
         window.editCreditPayment = editCreditPayment;
