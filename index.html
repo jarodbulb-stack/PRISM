@@ -9171,17 +9171,23 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             // ── Role gate: block forbidden sections for cashier/viewer ──
             const _role = currentAppUser && currentAppUser.role;
             const _perms = currentAppUser && currentAppUser.permissions;
-            const _blockedSections = {
-                'properties': _perms && !_perms['access-properties'],
-                'expenses':   _perms && !_perms['view-expenses'],
-                'income':     _perms && !_perms['view-income'],
-                'employees':  _perms && !_perms['access-hr'],
-                'reports':    _perms && !_perms['view-reports'],
-                'settings':   _perms && !_perms['access-settings'],
-            };
-            if (_blockedSections[sectionId]) {
-                showToast('⛔ Access restricted. Contact your admin.', 'warning');
-                return;
+
+            // Owner and Admin always have full access — never block them
+            const _fullAccess = !_role || ['owner','admin'].includes(_role);
+
+            if (!_fullAccess) {
+                const _blockedSections = {
+                    'properties': _perms && !_perms['access-properties'],
+                    'expenses':   _perms && !_perms['view-expenses'],
+                    'income':     _perms && !_perms['view-income'],
+                    'employees':  _perms && !_perms['access-hr'],
+                    'reports':    _perms && !_perms['view-reports'],
+                    'settings':   _perms && !_perms['access-settings'],
+                };
+                if (_blockedSections[sectionId]) {
+                    showToast('⛔ Access restricted. Contact your admin.', 'warning');
+                    return;
+                }
             }
 
             // Scroll to top
@@ -21361,7 +21367,17 @@ Lender/Manager
         function applyRoleNav() {
             const role = currentAppUser && currentAppUser.role;
             const perms = currentAppUser && currentAppUser.permissions;
-            if (!role || !perms) return;
+            if (!role) return;
+
+            // Owner and Admin always see everything — show all nav items
+            if (['owner','admin'].includes(role)) {
+                document.querySelectorAll('.nav-btn[data-section], .bottom-nav-item[data-section]').forEach(btn => {
+                    btn.style.display = '';
+                });
+                return;
+            }
+
+            if (!perms) return;
 
             const restrictedSections = {
                 'properties': !perms['access-properties'],
@@ -21550,7 +21566,9 @@ Lender/Manager
                         'add-property':true,'edit-property':true,'delete-property':true,
                         'add-tenant':true,'edit-tenant':true,'delete-tenant':true,
                         'record-payment':true,'water-sales':true,'void-sale':true,
-                        'manage-staff':true,'manage-users':true,'view-reports':true,'backup-restore':true
+                        'manage-staff':true,'manage-users':true,'view-reports':true,'backup-restore':true,
+                        'view-expenses':true,'view-income':true,'view-profiles':true,
+                        'access-properties':true,'access-hr':true,'access-settings':true
                     }
                 }];
                 localStorage.setItem('prism_app_users', JSON.stringify(users));
@@ -25132,7 +25150,8 @@ function _mtShowAppActual() {
                     'add-tenant':true,'edit-tenant':true,'delete-tenant':true,
                     'record-payment':true,'water-sales':true,'void-sale':true,
                     'manage-staff':true,'manage-users':true,'view-reports':true,
-                    'backup-restore':true,'view-expenses':true,'view-income':true,'view-profiles':true }
+                    'backup-restore':true,'view-expenses':true,'view-income':true,'view-profiles':true,
+                    'access-properties':true,'access-hr':true,'access-settings':true }
             };
             localStorage.setItem('carent_current_user', JSON.stringify(currentAppUser));
         }
@@ -25914,7 +25933,7 @@ function _doLocalAdminLogin() {
     MT.currentOrgRole = 'owner';
 
     const adminUser = { id: 1, username: 'admin', fullname: 'Administrator', role: 'admin', email: 'local@prism.app',
-        permissions: { 'add-property':true,'edit-property':true,'delete-property':true,'add-tenant':true,'edit-tenant':true,'delete-tenant':true,'record-payment':true,'water-sales':true,'void-sale':true,'manage-staff':true,'manage-users':true,'view-reports':true,'backup-restore':true }
+        permissions: { 'add-property':true,'edit-property':true,'delete-property':true,'add-tenant':true,'edit-tenant':true,'delete-tenant':true,'record-payment':true,'water-sales':true,'void-sale':true,'manage-staff':true,'manage-users':true,'view-reports':true,'backup-restore':true,'view-expenses':true,'view-income':true,'view-profiles':true,'access-properties':true,'access-hr':true,'access-settings':true }
     };
     currentAppUser = adminUser;
     localStorage.setItem('carent_current_user', JSON.stringify(adminUser));
@@ -25954,7 +25973,7 @@ function mtDemoLogin() {
         permissions: { 'add-property':true,'edit-property':true,'delete-property':true,
             'add-tenant':true,'edit-tenant':true,'delete-tenant':true,
             'record-payment':true,'water-sales':true,'void-sale':true,
-            'manage-staff':true,'manage-users':true,'view-reports':true,'backup-restore':true }
+            'manage-staff':true,'manage-users':true,'view-reports':true,'backup-restore':true,'view-expenses':true,'view-income':true,'view-profiles':true,'access-properties':true,'access-hr':true,'access-settings':true }
     };
     // Set BOTH the global var and localStorage so permissions work immediately
     currentAppUser = demoAppUser;
@@ -26145,7 +26164,7 @@ async function mtLaunchOrg() {
         permissions: { 'add-property':true,'edit-property':true,'delete-property':true,
             'add-tenant':true,'edit-tenant':true,'delete-tenant':true,
             'record-payment':true,'water-sales':true,'void-sale':true,
-            'manage-staff':true,'manage-users':true,'view-reports':true,'backup-restore':true }
+            'manage-staff':true,'manage-users':true,'view-reports':true,'backup-restore':true,'view-expenses':true,'view-income':true,'view-profiles':true,'access-properties':true,'access-hr':true,'access-settings':true }
     };
     
     // Write owner to the shared users list (same key used by Settings > Manage Users and Local Login)
@@ -26405,7 +26424,7 @@ async function mtSAGoToApp() {
                 'record-payment':true,'water-sales':true,'void-sale':true,
                 'manage-staff':true,'manage-users':true,'view-reports':true,
                 'backup-restore':true,'view-expenses':true,'view-income':true,
-                'view-profiles':true
+                'view-profiles':true,'access-properties':true,'access-hr':true,'access-settings':true
             }
         };
         currentAppUser = u;
