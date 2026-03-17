@@ -10308,8 +10308,20 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     property.id = parseInt(editId);
                     const oldProperty = await dbGet('properties', property.id);
                     
-                    // If status changed to vacant, unbind tenant
+                    // If status changed to vacant, confirm before unbinding tenant
                     if (oldProperty && oldProperty.status === 'occupied' && status === 'vacant') {
+                        const _bound = (await dbGetAll('tenants')).filter(t => t.propertyId === property.id && t.status === 'active');
+                        if (_bound.length > 0) {
+                            const _confirmUnbind = await showConfirm(
+                                _bound.map(t=>t.name).join(', ') + ' is currently assigned to this property.\n\nMarking it Vacant will set them as inactive (moved out).\n\nAre you sure?',
+                                'warning', '⚠️ Tenant Will Be Unbound', 'Yes, Mark Vacant', 'Cancel'
+                            );
+                            if (!_confirmUnbind) {
+                                // Revert status back to occupied
+                                document.getElementById('property-status').value = 'occupied';
+                                return;
+                            }
+                        }
                         await unbindTenantFromProperty(property.id);
                     }
                     
@@ -10653,6 +10665,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 // If using existing tenant, update their record
                 if (existingTenantId && !editId) {
                     const existingTenant = await dbGet('tenants', parseInt(existingTenantId));
+                    const _prevPropId = existingTenant.propertyId;
                     existingTenant.propertyId = propertyId;
                     existingTenant.rent = rent;
                     existingTenant.moveIn = moveIn;
@@ -10662,7 +10675,18 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     existingTenant.lateFee = lateFee;
                     existingTenant.status = 'active';
                     existingTenant.updatedAt = new Date().toISOString();
-                    
+
+                    // Free old property if changed
+                    if (_prevPropId && _prevPropId !== propertyId) {
+                        const _prevProp = await dbGet('properties', _prevPropId);
+                        if (_prevProp) {
+                            const _others = (await dbGetAll('tenants')).filter(t =>
+                                t.propertyId === _prevPropId && (t.status === 'active' || !t.status) && t.id !== existingTenant.id
+                            );
+                            if (_others.length === 0) { _prevProp.status = 'vacant'; await dbUpdate('properties', _prevProp); }
+                        }
+                    }
+
                     showToast('⏳ Saving tenant...', 'info');
                     await dbUpdate('tenants', existingTenant);
                 } else if (editId) {
@@ -10701,13 +10725,34 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     await dbAdd('tenants', tenant);
                 }
                 
-                // Auto-update property status to occupied
+                // Auto-update new property status to occupied
                 const property = await dbGet('properties', propertyId);
                 if (property) {
                     property.status = 'occupied';
                     await dbUpdate('properties', property);
                 }
-                
+
+                // If editing and property changed, free the OLD property
+                if (editId) {
+                    const _editedTenant = await dbGet('tenants', parseInt(editId));
+                    const _oldPropId = _editedTenant ? _editedTenant.propertyId : null;
+                    if (_oldPropId && _oldPropId !== propertyId) {
+                        const _oldProp = await dbGet('properties', _oldPropId);
+                        if (_oldProp) {
+                            // Only mark vacant if no other active tenant is assigned
+                            const _otherTenants = (await dbGetAll('tenants')).filter(t =>
+                                t.propertyId === _oldPropId &&
+                                (t.status === 'active' || !t.status) &&
+                                t.id !== parseInt(editId)
+                            );
+                            if (_otherTenants.length === 0) {
+                                _oldProp.status = 'vacant';
+                                await dbUpdate('properties', _oldProp);
+                            }
+                        }
+                    }
+                }
+
                 hideModal('tenant-modal');
                 resetTenantForm();
                 loadTenants();
@@ -10921,25 +10966,32 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             const now = new Date();
             const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-            container.innerHTML = tenants.map(tenant => {
+            const activeTenants   = tenants.filter(t => t.status === 'active' || !t.status);
+            const inactiveTenants = tenants.filter(t => t.status === 'inactive');
+
+            const renderRow = (tenant, isInactive) => {
                 const property = properties.find(p => p.id === tenant.propertyId);
                 const tenantPayments = payments.filter(p => p.tenantId === tenant.id && p.type === 'rent');
-
-                // Calculate months since move-in
-                const moveInDate = new Date(tenant.moveIn);
-                const monthsDiff = (now.getFullYear() - moveInDate.getFullYear()) * 12 + (now.getMonth() - moveInDate.getMonth()) + 1;
-                const expectedTotal = monthsDiff * tenant.rent;
-                const paidTotal = tenantPayments.reduce((sum, p) => sum + p.amount, 0);
-                const progressPercent = expectedTotal > 0 ? Math.min(100, (paidTotal / expectedTotal) * 100) : 0;
-
-                // Current month payment status
                 const currentMonthPayment = tenantPayments.find(p => p.monthCovered === currentMonth);
                 const currentMonthPaid = currentMonthPayment ? currentMonthPayment.amount : 0;
-                const currentMonthProgress = Math.min(100, (currentMonthPaid / tenant.rent) * 100);
+                const currentMonthProgress = tenant.rent > 0 ? Math.min(100, (currentMonthPaid / tenant.rent) * 100) : 0;
+                let progressClass = currentMonthProgress >= 100 ? 'success' : currentMonthProgress >= 50 ? 'warning' : 'danger';
 
-                let progressClass = 'success';
-                if (currentMonthProgress < 50) progressClass = 'danger';
-                else if (currentMonthProgress < 100) progressClass = 'warning';
+                if (isInactive) {
+                    return `
+                        <div class="list-item" style="opacity:0.6;border-left:3px solid #64748b;">
+                            <div class="item-info" style="flex:1;">
+                                <h4 style="color:#94a3b8;">${tenant.name} <span style="font-size:0.7rem;background:#334155;color:#94a3b8;padding:1px 7px;border-radius:8px;margin-left:4px;">Inactive</span></h4>
+                                <p style="color:#64748b;">${property ? property.name : 'No property assigned'} • ₱${tenant.rent.toLocaleString()}/mo</p>
+                            </div>
+                            <div class="item-amount" style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+                                <button onclick="event.stopPropagation();reactivateTenant(${tenant.id})"
+                                    style="padding:4px 10px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);color:#10b981;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:600;">
+                                    ↩ Reactivate
+                                </button>
+                            </div>
+                        </div>`;
+                }
 
                 return `
                     <div class="list-item" onclick="viewTenantDetails(${tenant.id})">
@@ -10957,10 +11009,86 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                                 ${currentMonthProgress >= 100 ? 'Paid' : Math.round(currentMonthProgress) + '%'}
                             </span>
                         </div>
-                    </div>
-                `;
-            }).join('');
+                    </div>`;
+            };
+
+            let html = activeTenants.map(t => renderRow(t, false)).join('');
+
+            // Show inactive tenants at the bottom with a divider
+            if (inactiveTenants.length > 0) {
+                html += `<div style="padding:8px 12px;font-size:0.75rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-top:10px;">
+                    Inactive / Moved Out (${inactiveTenants.length})
+                </div>`;
+                html += inactiveTenants.map(t => renderRow(t, true)).join('');
+            }
+
+            container.innerHTML = html || '<div class="empty-state"><p>No tenants found.</p></div>';
         }
+
+        // Reactivate an inactive tenant
+        async function reactivateTenant(tenantId) {
+            const tenant = await dbGet('tenants', tenantId);
+            if (!tenant) return;
+
+            // Get available properties to reassign
+            const allProperties = await dbGetAll('properties');
+            const vacantProps = allProperties.filter(p => p.status === 'vacant' || !p.status);
+
+            let propOptions = '<option value="">— Keep unassigned for now —</option>';
+            vacantProps.forEach(p => {
+                propOptions += `<option value="${p.id}">${p.name} (₱${p.rent}/mo)</option>`;
+            });
+
+            // Show modal to pick property
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay show';
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
+            modal.innerHTML = `
+                <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:22px;width:100%;max-width:400px;">
+                    <h3 style="margin:0 0 12px;color:#f1f5f9;font-size:1rem;">↩ Reactivate ${tenant.name}</h3>
+                    <p style="font-size:0.83rem;color:#94a3b8;margin-bottom:14px;">Assign to a property (optional):</p>
+                    <select id="reactivate-prop-sel" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:0.9rem;margin-bottom:14px;">
+                        ${propOptions}
+                    </select>
+                    <div style="display:flex;gap:8px;">
+                        <button onclick="confirmReactivate(${tenantId})" style="flex:1;padding:10px;background:#10b981;border:none;border-radius:8px;color:white;font-weight:600;cursor:pointer;">Reactivate</button>
+                        <button onclick="this.closest('.modal-overlay').remove()" style="flex:1;padding:10px;background:rgba(255,255,255,0.06);border:1px solid #334155;border-radius:8px;color:#94a3b8;cursor:pointer;">Cancel</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
+        }
+        window.reactivateTenant = reactivateTenant;
+
+        async function confirmReactivate(tenantId) {
+            const tenant = await dbGet('tenants', tenantId);
+            if (!tenant) return;
+            const sel = document.getElementById('reactivate-prop-sel');
+            const propId = sel ? parseInt(sel.value) || null : null;
+
+            tenant.status = 'active';
+            tenant.propertyId = propId || tenant.propertyId;
+            tenant.reactivatedAt = new Date().toISOString();
+            await dbUpdate('tenants', tenant);
+
+            // If assigned to a property, mark it occupied
+            if (propId) {
+                const prop = await dbGet('properties', propId);
+                if (prop) {
+                    prop.status = 'occupied';
+                    await dbUpdate('properties', prop);
+                }
+            }
+
+            // Close modal
+            const modal = document.querySelector('.modal-overlay[style*="99999"]');
+            if (modal) modal.remove();
+
+            debouncedSync();
+            loadTenants();
+            loadDashboard();
+            showToast(`✅ ${tenant.name} reactivated successfully!`, 'success');
+        }
+        window.confirmReactivate = confirmReactivate;
 
         async function viewTenantDetails(id) {
             // Validate ID
@@ -11103,7 +11231,12 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     <button class="btn btn-info" onclick="printTenantReport(${id})">🖨️ Print</button>
                     ${currentAppUser && currentAppUser.role !== 'cashier' ? `
                         <button class="btn btn-warning" onclick="addChargeToClient('tenant', ${id})">💵 Add Charge</button>
+                        ${currentAppUser && ['owner','admin'].includes(currentAppUser.role) ? `
+                        <button class="btn btn-secondary" onclick="endTenancy(${id})" style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);color:#f59e0b;" title="End this tenancy and mark property as vacant">🚪 End Tenancy</button>
+                        <button class="btn btn-danger" onclick="deleteTenant(${id})">🗑 Delete</button>
+                        ` : `
                         <button class="btn btn-danger" onclick="deleteTenant(${id})">Delete</button>
+                        `}
                     ` : `
                         <button class="btn btn-primary" onclick="quickEndorse('sales', '🏠 Rent payment recorded for tenant. Admin please review.')">📋 Endorse to Admin</button>
                     `}
@@ -11642,6 +11775,48 @@ async function recordTenantPayment(tenantId) {
             showToast('Attendance record deleted.', 'success');
             await viewEmployeeDetails(employeeId);
         }
+
+        // ── End Tenancy: marks tenant inactive + sets property to vacant ──
+        async function endTenancy(tenantId) {
+            const tenant = await dbGet('tenants', tenantId);
+            if (!tenant) return;
+
+            const confirmed = await showConfirm(
+                `End tenancy for ${tenant.name}?\n\n` +
+                `• Tenant will be marked as inactive (moved out)\n` +
+                `• Their property will be set to Vacant\n` +
+                `• All payment history is kept\n\n` +
+                `This can be undone using the Reactivate button.`,
+                'warning', '🚪 End Tenancy', 'Yes, End Tenancy', 'Cancel'
+            );
+            if (!confirmed) return;
+
+            // Set tenant inactive and record move-out date
+            tenant.status = 'inactive';
+            tenant.moveOutDate = new Date().toISOString().split('T')[0];
+            await dbUpdate('tenants', tenant);
+
+            // Set property back to vacant
+            if (tenant.propertyId) {
+                const property = await dbGet('properties', tenant.propertyId);
+                if (property) {
+                    property.status = 'vacant';
+                    await dbUpdate('properties', property);
+                    showToast(`✅ ${tenant.name} moved out. ${property.name} is now Vacant.`, 'success');
+                } else {
+                    showToast(`✅ ${tenant.name} has been moved out.`, 'success');
+                }
+            } else {
+                showToast(`✅ ${tenant.name} has been moved out.`, 'success');
+            }
+
+            hideModal('tenant-detail-modal');
+            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
+            loadTenants();
+            loadProperties();
+            loadDashboard();
+        }
+        window.endTenancy = endTenancy;
 
         async function deleteTenant(id) {
             if (currentAppUser && currentAppUser.role === 'cashier') {
@@ -17809,18 +17984,25 @@ async function showPayrollSummary() {
             const statVacant = document.getElementById('stat-vacant');
             
             if (statProperties) statProperties.textContent = properties.length;
-            if (statTenants) statTenants.textContent = tenants.filter(function(t){return t.status==="active"||!t.status;}).length;
-            // Count only credits with remaining balance
-        const _activeDebtors = credits.filter(function(c) {
-            const _paid = creditPayments.filter(function(p){ return p.creditId===c.id; }).reduce(function(s,p){return s+(p.amount||0);},0);
-            return _paid < (c.principal||0) && c.status !== "closed";
-        });
-        if (statDebtors) statDebtors.textContent = _activeDebtors.length;
 
-            // Calculate vacant properties - only count properties with NO active tenant
-            const occupiedPropertyIds = new Set(tenants.filter(t => t.status === 'active' || !t.status).map(t => t.propertyId));
-            const vacantCount = properties.filter(p => !occupiedPropertyIds.has(p.id)).length;
+            // Active tenants = those with status 'active' or no status set
+            const _activeTenants = tenants.filter(t => t.status === 'active' || !t.status);
+            if (statTenants) statTenants.textContent = _activeTenants.length;
+
+            // Count only credits with remaining balance
+            const _activeDebtors = credits.filter(function(c) {
+                const _paid = creditPayments.filter(function(p){ return p.creditId===c.id; }).reduce(function(s,p){return s+(p.amount||0);},0);
+                return _paid < (c.principal||0) && c.status !== 'closed';
+            });
+            if (statDebtors) statDebtors.textContent = _activeDebtors.length;
+
+            // Vacant = properties whose own status is 'vacant' (source of truth)
+            // Occupied = properties whose status is 'occupied'
+            const vacantCount   = properties.filter(p => p.status === 'vacant' || !p.status).length;
+            const occupiedCount = properties.filter(p => p.status === 'occupied').length;
             if (statVacant) statVacant.textContent = vacantCount;
+            // Also keep occupiedPropertyIds for overdue checks
+            const occupiedPropertyIds = new Set(_activeTenants.map(t => t.propertyId));
 
             // Reset notification data
             notificationData = { due: [], overdue: [] };
@@ -17830,15 +18012,17 @@ async function showPayrollSummary() {
             let dueSoonCount = 0;
             const dayOfMonth = now.getDate();
             
-            // Check tenants
+            // Check tenants — use each tenant's own dueDay, not hardcoded 5th
             tenants.forEach(tenant => {
-                const tenantPayments = payments.filter(p => p.tenantId === tenant.id && p.type === 'rent');
+                if (tenant.status === 'inactive') return; // skip inactive tenants
+                const tenantPayments = payments.filter(p => p.tenantId === tenant.id && (p.type === 'rent' || p.type === 'advance'));
                 const paidThisMonth = tenantPayments.some(p => p.monthCovered === currentMonth);
                 const property = properties.find(p => p.id === tenant.propertyId);
-                
+                const dueDay = parseInt(tenant.dueDay) || 5; // use tenant's own due day, default 5
+
                 if (!paidThisMonth) {
-                    if (dayOfMonth > 5) {
-                        // Overdue - past due date (5th)
+                    if (dayOfMonth > dueDay) {
+                        // Overdue - past their specific due date
                         overdueCount++;
                         notificationData.overdue.push({
                             type: 'tenant',
@@ -17846,11 +18030,11 @@ async function showPayrollSummary() {
                             name: tenant.name,
                             amount: tenant.rent,
                             property: property ? property.name : 'Unknown',
-                            daysOverdue: dayOfMonth - 5,
-                            dueDate: '5th of ' + now.toLocaleString('default', { month: 'short' })
+                            daysOverdue: dayOfMonth - dueDay,
+                            dueDate: dueDay + getOrdinalSuffix(dueDay) + ' of ' + now.toLocaleString('default', { month: 'short' })
                         });
-                    } else if (dayOfMonth >= 1 && dayOfMonth <= 5) {
-                        // Due soon - within due period
+                    } else if (dayOfMonth >= dueDay - 3 && dayOfMonth <= dueDay) {
+                        // Due soon - within 3 days of their due date
                         dueSoonCount++;
                         notificationData.due.push({
                             type: 'tenant',
@@ -17858,8 +18042,8 @@ async function showPayrollSummary() {
                             name: tenant.name,
                             amount: tenant.rent,
                             property: property ? property.name : 'Unknown',
-                            daysUntilDue: 5 - dayOfMonth,
-                            dueDate: '5th of ' + now.toLocaleString('default', { month: 'short' })
+                            daysUntilDue: dueDay - dayOfMonth,
+                            dueDate: dueDay + getOrdinalSuffix(dueDay) + ' of ' + now.toLocaleString('default', { month: 'short' })
                         });
                     }
                 }
@@ -17920,9 +18104,10 @@ async function showPayrollSummary() {
             renderNotificationsBanner();
 
             // Monthly rent collection
-            const monthlyPayments = payments.filter(p => (p.type === 'rent' || (p.tenantId && !p.type)) && p.date && p.date.startsWith(currentMonth));
+            const monthlyPayments = payments.filter(p => (p.type === 'rent' || (p.tenantId && !p.type)) && p.date && p.date.startsWith(currentMonth) && !p.voided);
             const collected = monthlyPayments.reduce((sum, p) => sum + p.amount, 0);
-            const expectedRent = tenants.reduce((sum, t) => sum + t.rent, 0);
+            // Expected rent = only active tenants (not inactive/moved-out)
+            const expectedRent = tenants.filter(t => t.status === 'active' || !t.status).reduce((sum, t) => sum + (t.rent || 0), 0);
 
             document.getElementById('stat-collected').textContent = '₱' + collected.toLocaleString();
             document.getElementById('stat-expected').textContent = '₱' + expectedRent.toLocaleString();
@@ -18018,10 +18203,24 @@ async function showPayrollSummary() {
             // Pending Charges
             document.getElementById('stat-pending-charges').textContent = '₱' + pendingChargesTotal.toLocaleString();
 
-            // Total Receivables = Outstanding Rent + Outstanding Credit + Pending Charges
-            const outstandingRent = overallRentExpected - overallRentCollected;
-            const outstandingCredit = overallCreditDue - overallCreditCollected;
-            const totalReceivables = Math.max(0, outstandingRent) + Math.max(0, outstandingCredit) + pendingChargesTotal;
+            // Outstanding Credit = sum of remaining balances per active credit
+            const _outstandingCredit = credits.reduce((sum, c) => {
+                if (c.status === 'closed' || c.status === 'paid') return sum;
+                const _cpaid = creditPayments.filter(p => p.creditId === c.id).reduce((s,p) => s+(p.amount||0), 0);
+                let _cdue = c.principal || 0;
+                if (c.interestType === 'simple' && c.interestRate > 0) {
+                    const _months = Math.max(1, Math.ceil((now - new Date(c.dateLent)) / (1000*60*60*24*30)));
+                    _cdue += (c.principal * c.interestRate/100) * _months;
+                } else if (c.interestType === 'flat') {
+                    _cdue += c.interestRate || 0;
+                }
+                return sum + Math.max(0, _cdue - _cpaid);
+            }, 0);
+            safeSetText('stat-outstanding', '₱' + _outstandingCredit.toLocaleString());
+
+            // Total Receivables = Outstanding Rent (this month) + Outstanding Credit + Pending Charges
+            const outstandingRent = Math.max(0, expectedRent - collected);
+            const totalReceivables = outstandingRent + _outstandingCredit + pendingChargesTotal;
             document.getElementById('stat-total-receivables').textContent = '₱' + totalReceivables.toLocaleString();
 
             // Monthly credit collection progress
