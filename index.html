@@ -5517,6 +5517,7 @@
                     <button class="btn btn-primary" onclick="createManualBackup()">💾 Create Backup</button>
                     <button class="btn btn-success" onclick="downloadJSONBackup()" title="Download all your data as a JSON file for safekeeping">⬇️ Download JSON Backup</button>
                     <button class="btn btn-warning" onclick="forceSyncNow()" title="Force immediate sync to Firebase now">☁️ Force Sync Now</button>
+                    <button class="btn btn-secondary" onclick="cleanDuplicateTenants()" title="Remove duplicate tenant records with same name">🧹 Clean Duplicates</button>
                 </div>
             </div>
 
@@ -10288,8 +10289,18 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             const rent = parseFloat(rentStr.replace(/,/g, '')) || 0;
             const status = document.getElementById('property-status').value || 'vacant';
 
-            if (!name || !type || rent <= 0) {
-                showToast('ℹ️ Action completed.', 'info');
+            if (!name) {
+                showToast('⚠️ Property Name is required.', 'warning');
+                document.getElementById('property-name')?.focus();
+                return;
+            }
+            if (!type) {
+                showToast('⚠️ Property Type is required.', 'warning');
+                return;
+            }
+            if (rent <= 0) {
+                showToast('⚠️ Monthly Rent must be greater than 0.', 'warning');
+                document.getElementById('property-rent')?.focus();
                 return;
             }
 
@@ -10384,7 +10395,11 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
         async function editProperty(id) {
             const property = await dbGet('properties', id);
             if (!property) return;
-            
+
+            // Close any open modal first
+            document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('show', 'active'));
+
+            // Populate BEFORE showing to prevent form reset
             document.getElementById('property-modal-title').textContent = 'Edit Property';
             document.getElementById('property-edit-id').value = property.id;
             document.getElementById('property-name').value = property.name;
@@ -10394,8 +10409,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             document.getElementById('property-status').value = property.status || 'vacant';
             document.getElementById('property-status-group').style.display = 'block';
             document.getElementById('property-status-warning').style.display = 'none';
-            
-            hideModal('property-modal');
+
             showModal('property-modal');
         }
 
@@ -11043,6 +11057,8 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
 
         // Reactivate an inactive tenant
         async function reactivateTenant(tenantId) {
+            // Close any open modals first
+            document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('show','active'));
             const tenant = await dbGet('tenants', tenantId);
             if (!tenant) return;
 
@@ -11357,6 +11373,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             if (!tenant) return;
 
             const properties = await dbGetAll('properties');
+            const allTenants = await dbGetAll('tenants');
 
             hideModal('tenant-detail-modal');
 
@@ -11373,7 +11390,19 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     <div class="form-group">
                         <label>Property</label>
                         <select id="edit-tenant-property" required>
-                            ${properties.map(p => `<option value="${p.id}" ${p.id === tenant.propertyId ? 'selected' : ''}>${p.name}</option>`).join('')}
+                            <option value="">Select property</option>
+                            ${properties.map(p => {
+                                const isCurrentProp = p.id === tenant.propertyId;
+                                const isOccupiedByOther = allTenants.some(t =>
+                                    t.propertyId === p.id &&
+                                    (t.status === 'active' || !t.status) &&
+                                    t.id !== tenant.id
+                                );
+                                const label = p.name + ' — ₱' + p.rent.toLocaleString() + '/mo' +
+                                    (isCurrentProp ? ' ✓ Current' : '') +
+                                    (isOccupiedByOther ? ' (Occupied)' : '');
+                                return `<option value="${p.id}" ${isCurrentProp ? 'selected' : ''} ${isOccupiedByOther ? 'disabled style="color:#64748b;"' : ''}>${label}</option>`;
+                            }).join('')}
                         </select>
                     </div>
                     <div class="form-group">
@@ -11431,7 +11460,31 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 return;
             }
 
+            // Block if property already occupied by a different active tenant
+            const _allT = await dbGetAll('tenants');
+            const _propTaken = _allT.find(t =>
+                t.propertyId === propertyId &&
+                (t.status === 'active' || !t.status) &&
+                t.id !== id
+            );
+            if (_propTaken) {
+                showToast('⚠️ This property is already occupied by ' + _propTaken.name + '.', 'warning');
+                return;
+            }
+
             const tenant = await dbGet('tenants', id);
+            // If property changed, free old property
+            if (tenant.propertyId && tenant.propertyId !== propertyId) {
+                const _oldProp = await dbGet('properties', tenant.propertyId);
+                if (_oldProp) {
+                    const _others = _allT.filter(t => t.propertyId === tenant.propertyId && (t.status==='active'||!t.status) && t.id !== id);
+                    if (_others.length === 0) { _oldProp.status = 'vacant'; await dbUpdate('properties', _oldProp); }
+                }
+            }
+            // Mark new property occupied
+            const _newProp = await dbGet('properties', propertyId);
+            if (_newProp) { _newProp.status = 'occupied'; await dbUpdate('properties', _newProp); }
+
             tenant.name = name;
             tenant.phone = phone;
             tenant.propertyId = propertyId;
@@ -20821,6 +20874,54 @@ async function clearAllData() {
         }
         window.downloadJSONBackup = downloadJSONBackup;
 
+        // ── Clean up duplicate tenants (same name, keep the one with propertyId) ──
+        async function cleanDuplicateTenants() {
+            const tenants = await dbGetAll('tenants');
+            const seen = {};
+            const toDelete = [];
+
+            tenants.forEach(t => {
+                const key = t.name.toLowerCase().trim();
+                if (seen[key]) {
+                    // Keep the one with a propertyId, delete the other
+                    const prev = seen[key];
+                    if (!t.propertyId && prev.propertyId) {
+                        toDelete.push(t.id);
+                    } else if (t.propertyId && !prev.propertyId) {
+                        toDelete.push(prev.id);
+                        seen[key] = t;
+                    } else {
+                        // Both have or both lack property — keep older (lower id)
+                        if (t.id > prev.id) toDelete.push(t.id);
+                        else { toDelete.push(prev.id); seen[key] = t; }
+                    }
+                } else {
+                    seen[key] = t;
+                }
+            });
+
+            if (toDelete.length === 0) {
+                showToast('✅ No duplicate tenants found.', 'success');
+                return;
+            }
+
+            const confirmed = await showConfirm(
+                toDelete.length + ' duplicate tenant record(s) will be removed:\n' +
+                toDelete.map(id => { const t = tenants.find(x=>x.id===id); return t ? t.name + ' (id:'+id+')' : id; }).join('\n'),
+                'warning', '🧹 Remove Duplicates', 'Yes, Remove', 'Cancel'
+            );
+            if (!confirmed) return;
+
+            for (const id of toDelete) {
+                await dbDelete('tenants', id);
+            }
+            debouncedSync();
+            loadTenants();
+            loadDashboard();
+            showToast('✅ Removed ' + toDelete.length + ' duplicate(s).', 'success');
+        }
+        window.cleanDuplicateTenants = cleanDuplicateTenants;
+
         // ── Force Sync Now ──
         async function forceSyncNow() {
             try {
@@ -28080,7 +28181,13 @@ function toggleEndorsePanel() {
     if (panel.classList.contains('open')) renderSentEndorsements();
 }
 
-function showAddPropertyModal() { showModal('property-modal'); }
+function showAddPropertyModal() {
+    document.getElementById('property-modal-title').textContent = 'Add Property';
+    document.getElementById('property-edit-id').value = '';
+    document.getElementById('property-form').reset();
+    document.getElementById('property-status-group').style.display = 'none';
+    showModal('property-modal');
+}
 function checkFirebaseStatus() {
     if (firebaseReady) {
         showToast('✅ Firebase connected — real-time sync active', 'success');
