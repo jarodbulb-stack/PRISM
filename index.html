@@ -6547,7 +6547,7 @@
                 <form id="expense-form" onsubmit="saveExpense(event)">
                     <div class="form-group">
                         <label>Category</label>
-                        <select id="expense-category" required onchange="toggleExpenseSubcategory()">
+                        <select id="expense-category" required onchange="toggleExpenseSubcategory(); expHistOnCategoryChange();">
                             <option value="">Select category</option>
                             <optgroup label="🏠 Property Expenses">
                                 <option value="electric">⚡ Electric Bill</option>
@@ -6639,6 +6639,30 @@
                         <textarea id="expense-notes" rows="2" placeholder="Additional details"></textarea>
                     </div>
                     <button type="submit" class="btn btn-primary btn-block">Save Expense</button>
+
+                    <!-- Category History -->
+                    <div style="margin-top:12px;border:1px solid rgba(255,255,255,0.08);border-radius:10px;overflow:hidden;">
+                        <button type="button" id="exp-hist-toggle" onclick="toggleExpenseHistory()" style="width:100%;padding:10px 14px;background:rgba(255,255,255,0.04);border:none;display:flex;justify-content:space-between;align-items:center;cursor:pointer;color:#94a3b8;">
+                            <span id="exp-hist-label" style="font-size:0.82rem;font-weight:600;letter-spacing:0.03em;">&#128203; CATEGORY HISTORY</span>
+                            <span id="exp-hist-arrow" style="font-size:0.75rem;transition:transform 0.2s;">&#9660;</span>
+                        </button>
+                        <div id="exp-hist-panel" style="display:none;">
+                            <div style="padding:8px 14px 4px;background:rgba(255,255,255,0.02);border-top:1px solid rgba(255,255,255,0.06);display:grid;grid-template-columns:72px 1fr 76px 22px;gap:6px;">
+                                <span style="font-size:0.7rem;color:#64748b;font-weight:600;">DATE</span>
+                                <span style="font-size:0.7rem;color:#64748b;font-weight:600;">DESCRIPTION</span>
+                                <span style="font-size:0.7rem;color:#64748b;font-weight:600;text-align:right;">AMOUNT</span>
+                                <span></span>
+                            </div>
+                            <div id="exp-hist-rows" style="max-height:260px;overflow-y:auto;">
+                                <div style="padding:16px;text-align:center;color:#64748b;font-size:0.82rem;">Select a category to see history.</div>
+                            </div>
+                            <div style="padding:7px 14px;background:rgba(255,255,255,0.03);border-top:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;">
+                                <span id="exp-hist-count" style="font-size:0.75rem;color:#64748b;">—</span>
+                                <span id="exp-hist-total" style="font-size:0.82rem;font-weight:600;color:#94a3b8;">—</span>
+                            </div>
+                        </div>
+                    </div>
+
                 </form>
             </div>
         </div>
@@ -16009,6 +16033,11 @@ async function showPayrollSummary() {
                 clearExpensePhoto();
                 
                 hideModal('expense-modal');
+                // Reset history panel for next open
+                const _hp = document.getElementById('exp-hist-panel');
+                if (_hp) { _hp.style.display='none'; }
+                const _ha = document.getElementById('exp-hist-arrow');
+                if (_ha) { _ha.style.transform='rotate(0deg)'; }
                 loadExpenses();
                 loadDashboard();
                 // Sync to Firebase
@@ -16029,6 +16058,112 @@ async function showPayrollSummary() {
                 showToast('❌ Error saving expense: ' + error.message, 'error');
             }
         }
+
+        // ── Expense Category History ──
+        function expHistOnCategoryChange() {
+            const panel = document.getElementById('exp-hist-panel');
+            if (panel && panel.style.display !== 'none') {
+                loadExpenseHistory();
+            } else {
+                // Update label even when collapsed
+                const cat = document.getElementById('expense-category');
+                const label = document.getElementById('exp-hist-label');
+                if (cat && label) {
+                    const txt = cat.options[cat.selectedIndex] ? cat.options[cat.selectedIndex].text.replace(/^[^\w]+/, '').trim() : 'Category';
+                    label.textContent = '\uD83D\uDCCB ' + txt.toUpperCase() + ' HISTORY';
+                }
+            }
+        }
+
+        function toggleExpenseHistory() {
+            const panel = document.getElementById('exp-hist-panel');
+            const arrow = document.getElementById('exp-hist-arrow');
+            if (!panel) return;
+            const opening = panel.style.display === 'none';
+            panel.style.display = opening ? 'block' : 'none';
+            if (arrow) arrow.style.transform = opening ? 'rotate(180deg)' : 'rotate(0deg)';
+            if (opening) loadExpenseHistory();
+        }
+
+        async function loadExpenseHistory() {
+            const catEl = document.getElementById('expense-category');
+            const rowsEl = document.getElementById('exp-hist-rows');
+            const countEl = document.getElementById('exp-hist-count');
+            const totalEl = document.getElementById('exp-hist-total');
+            const labelEl = document.getElementById('exp-hist-label');
+            if (!catEl || !rowsEl) return;
+
+            const catVal = catEl.value;
+            const catText = catEl.options[catEl.selectedIndex] ? catEl.options[catEl.selectedIndex].text.replace(/^[^\w]+/, '').trim() : 'Category';
+            if (labelEl) labelEl.textContent = '\uD83D\uDCCB ' + catText.toUpperCase() + ' HISTORY';
+
+            if (!catVal) {
+                rowsEl.innerHTML = '<div style="padding:16px;text-align:center;color:#64748b;font-size:0.82rem;">Select a category first.</div>';
+                if (countEl) countEl.textContent = '—';
+                if (totalEl) totalEl.textContent = '—';
+                return;
+            }
+
+            rowsEl.innerHTML = '<div style="padding:16px;text-align:center;color:#64748b;font-size:0.82rem;">Loading...</div>';
+
+            try {
+                const all = await dbGetAll('expenses');
+                const filtered = all
+                    .filter(e => (e.category || '').toLowerCase() === catVal.toLowerCase())
+                    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+                    .slice(0, 20);
+
+                if (filtered.length === 0) {
+                    rowsEl.innerHTML = '<div style="padding:16px;text-align:center;color:#64748b;font-size:0.82rem;">No records yet for this category.</div>';
+                    if (countEl) countEl.textContent = '0 records';
+                    if (totalEl) totalEl.textContent = 'Total: ₱0';
+                    return;
+                }
+
+                const total = filtered.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+                const allCount = all.filter(e => (e.category || '').toLowerCase() === catVal.toLowerCase()).length;
+                const canDelete = currentAppUser && ['owner','admin'].includes(currentAppUser.role);
+
+                rowsEl.innerHTML = filtered.map(e => {
+                    const d = e.date ? new Date(e.date + 'T00:00:00') : null;
+                    const dateStr = d ? d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: '2-digit' }) : '—';
+                    const area = e.property || e.area || '';
+                    const areaLabel = area ? '<span style="font-size:0.7rem;color:#64748b;display:block;">' + area + '</span>' : '';
+                    const delBtn = canDelete
+                        ? '<span onclick="expHistDelete(' + (e.id) + ', \'' + catVal + '\')" style="font-size:0.8rem;color:#64748b;cursor:pointer;padding:2px 4px;border-radius:4px;" title="Delete">&#x2715;</span>'
+                        : '<span></span>';
+                    return '<div style="padding:8px 14px;display:grid;grid-template-columns:72px 1fr 76px 22px;gap:6px;align-items:center;border-top:1px solid rgba(255,255,255,0.05);">'
+                        + '<span style="font-size:0.75rem;color:#94a3b8;">' + dateStr + '</span>'
+                        + '<div><span style="font-size:0.82rem;color:#e2e8f0;">' + (e.description || '—') + '</span>' + areaLabel + '</div>'
+                        + '<span style="font-size:0.82rem;font-weight:600;color:#ef4444;text-align:right;">₱' + (parseFloat(e.amount) || 0).toLocaleString() + '</span>'
+                        + delBtn
+                        + '</div>';
+                }).join('');
+
+                if (countEl) countEl.textContent = allCount + ' record' + (allCount !== 1 ? 's' : '') + (allCount > 20 ? ' (last 20)' : '');
+                if (totalEl) totalEl.textContent = 'Total: ₱' + total.toLocaleString();
+
+            } catch (err) {
+                rowsEl.innerHTML = '<div style="padding:16px;text-align:center;color:#ef4444;font-size:0.82rem;">Could not load history.</div>';
+            }
+        }
+
+        async function expHistDelete(id, catVal) {
+            if (!currentAppUser || !['owner','admin'].includes(currentAppUser.role)) return;
+            if (!await showConfirm('Delete this expense record? This cannot be undone.', 'danger', '🗑️ Delete Expense', 'Yes, Delete')) return;
+            try {
+                await dbDelete('expenses', id);
+                debouncedSync();
+                loadExpenses();
+                loadExpenseHistory();
+                showToast('Expense deleted.', 'success');
+            } catch (e) {
+                showToast('Error deleting expense.', 'error');
+            }
+        }
+        window.toggleExpenseHistory = toggleExpenseHistory;
+        window.expHistOnCategoryChange = expHistOnCategoryChange;
+        window.expHistDelete = expHistDelete;
 
         async function loadExpenses() {
             const expenses = await dbGetAll('expenses');
