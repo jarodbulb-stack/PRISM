@@ -25539,7 +25539,7 @@ async function editTask(id) {
                             <div style="font-weight:700;color:${t.in?'#10b981':'#ef4444'};">${t.in?'+':'-'}₱${t.amount.toLocaleString()}</div>
                         </div>`).join('')}`;
             } catch(e) {
-                el.innerHTML = '<div style="color:#ef4444;padding:12px;font-size:0.82rem;">Could not load today's transactions.</div>';
+                el.innerHTML = '<div style="color:#ef4444;padding:12px;font-size:0.82rem;">Could not load today&#39;s transactions.</div>';
             }
         }
         window.loadAdminTodayFeed = loadAdminTodayFeed;
