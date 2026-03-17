@@ -7996,14 +7996,22 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     const data = doc.data();
                     console.log('[Sync] Data found in Firebase, syncing to local...');
 
-                    // Always authoritative on load — Firebase is the truth source.
-                    // This ensures deleted records never linger in IndexedDB.
+                    // Sync from Firebase — authoritative ONLY if Firebase has data for that store.
+                    // SAFETY: Never wipe a local store if Firebase returns empty/missing for it.
+                    // This prevents data loss when orgId resolves incorrectly or doc is partial.
                     const stores = ['properties','tenants','payments','credits','creditPayments',
                         'expenses','customNotes','additionalIncome','clientCharges',
                         'waterCustomers','waterSales','employees','cashAdvances',
                         'salaryPayments','timeRecords','tasks'];
                     for (const s of stores) {
-                        await syncCollectionToLocal(s, Array.isArray(data[s]) ? data[s] : [], true);
+                        const cloudArr = Array.isArray(data[s]) ? data[s] : [];
+                        // Only do authoritative (clear+replace) if Firebase actually has records
+                        // If Firebase returns empty, do a non-destructive merge instead
+                        const authoritative = cloudArr.length > 0;
+                        if (!authoritative) {
+                            console.log('[Sync] Firebase empty for', s, '— skipping wipe, keeping local data');
+                        }
+                        await syncCollectionToLocal(s, cloudArr, authoritative);
                     }
 
                     // Restore app users (admin/cashier accounts) to localStorage
