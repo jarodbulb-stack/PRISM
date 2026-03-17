@@ -11370,7 +11370,7 @@ async function recordTenantPayment(tenantId) {
                     </div>
 
                     <!-- Balance Override (Owner/Admin only) -->
-                    ${currentAppUser && ['owner','admin'].includes(currentAppUser.role) ? \`
+                    ${currentAppUser && ['owner','admin'].includes(currentAppUser.role) ? `
                     <div class="form-group" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:10px 12px;">
                         <label style="color:#f59e0b;font-size:0.82rem;font-weight:700;">🔧 Balance Override (Admin Only)</label>
                         <div style="display:flex;align-items:center;gap:8px;margin:6px 0;">
@@ -11381,7 +11381,7 @@ async function recordTenantPayment(tenantId) {
                             <input type="number" id="tenant-manual-balance" min="0" placeholder="Enter manual balance amount" style="margin-bottom:6px;">
                             <input type="text" id="tenant-override-reason" placeholder="Reason for override (required)" style="font-size:0.82rem;">
                         </div>
-                    </div>\` : ''}
+                    </div>` : ''}
 
                     <div class="form-group">
                         <label>Notes (Optional)</label>
