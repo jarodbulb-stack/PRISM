@@ -28146,7 +28146,14 @@ async function mtSAGoToApp() {
         _setOwnerUser(MT.currentOrg);
         mtShowApp();
         mtUpdateOrgBadge();
-        setTimeout(() => { if (typeof loadDashboard === 'function') loadDashboard(); }, 400);
+        setTimeout(async () => {
+            if (window._dbReadyPromise) await window._dbReadyPromise;
+            // Pull from Firebase to get latest data (critical on fresh device)
+            if (typeof syncFromFirebase === 'function') {
+                try { await syncFromFirebase(); } catch(e) {}
+            }
+            if (typeof loadDashboard === 'function') loadDashboard();
+        }, 400);
         return;
     }
 
@@ -28160,7 +28167,10 @@ async function mtSAGoToApp() {
         _setOwnerUser(localOrgs[0]);
         mtShowApp();
         mtUpdateOrgBadge();
-        setTimeout(() => { if (typeof loadDashboard === 'function') loadDashboard(); }, 400);
+        setTimeout(async () => {
+            if (window._dbReadyPromise) await window._dbReadyPromise;
+            if (typeof loadDashboard === 'function') loadDashboard();
+        }, 400);
         return;
     }
 
@@ -28198,7 +28208,16 @@ async function mtSAGoToApp() {
                     _setOwnerUser(org);
                     mtShowApp();
                     mtUpdateOrgBadge();
-                    setTimeout(() => { if (typeof loadDashboard === 'function') loadDashboard(); }, 400);
+                    setTimeout(async () => {
+                        if (window._dbReadyPromise) await window._dbReadyPromise;
+                        // Pull all data from Firebase — essential on fresh device
+                        if (typeof syncFromFirebase === 'function') {
+                            try {
+                                await syncFromFirebase();
+                            } catch(e) { console.warn('[SA] Sync failed:', e); }
+                        }
+                        if (typeof loadDashboard === 'function') loadDashboard();
+                    }, 400);
                     return;
                 }
             }
@@ -29177,17 +29196,27 @@ async function mtInit() {
                         // Wait for DB ready before any Firebase sync
                         const _runSyncAfterDB = async () => {
                             if (window._dbReadyPromise) await window._dbReadyPromise;
-                            // Push current data first (ensures cloud has latest appUsers)
-                            if (typeof syncToFirebase === 'function') {
-                                syncToFirebase().catch(e => {});
-                            }
-                            // Pull from cloud after push (catches up mobile/fresh device)
-                            if (typeof syncFromFirebase === 'function') {
-                                setTimeout(() => {
-                                    syncFromFirebase().then(() => {
-                                        if (typeof loadDashboard === 'function') loadDashboard();
-                                    }).catch(e => console.warn('[MT] Sync on load failed:', e));
-                                }, 1500); // wait 1.5s after push before pulling
+                            // On fresh device (empty IndexedDB), pull first then push
+                            const _localProps = await dbGetAll('properties').catch(()=>[]);
+                            const _isFreshDevice = !_localProps || _localProps.length === 0;
+                            if (_isFreshDevice) {
+                                // Fresh device — pull from Firebase first to populate IndexedDB
+                                if (typeof syncFromFirebase === 'function') {
+                                    try { await syncFromFirebase(); } catch(e) {}
+                                    if (typeof loadDashboard === 'function') loadDashboard();
+                                }
+                            } else {
+                                // Existing device — push first, then pull
+                                if (typeof syncToFirebase === 'function') {
+                                    syncToFirebase().catch(e => {});
+                                }
+                                if (typeof syncFromFirebase === 'function') {
+                                    setTimeout(() => {
+                                        syncFromFirebase().then(() => {
+                                            if (typeof loadDashboard === 'function') loadDashboard();
+                                        }).catch(e => console.warn('[MT] Sync on load failed:', e));
+                                    }, 1500);
+                                }
                             }
                             // Start real-time listener for live cross-device sync
                             mtStartRealtimeSync();
