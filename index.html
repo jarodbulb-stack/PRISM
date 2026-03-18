@@ -7755,11 +7755,11 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 if (error.code === 'auth/popup-closed-by-user') {
                     try { showToast('ℹ️ Sign-in cancelled.', 'info'); } catch(e) {}
                 } else if (error.code === 'auth/popup-blocked') {
-                    showToast('ℹ️ Action completed.', 'info');
+                    showToast('⚠️ Popup blocked. Please allow popups for this site.', 'warning');
                 } else if (error.code === 'auth/unauthorized-domain') {
                     showToast('🚫 Domain not authorized. Add this domain to Firebase Authorized Domains in your Firebase Console.', 'error', 8000);
                 } else if (error.code === 'auth/operation-not-supported-in-this-environment') {
-                    showToast('ℹ️ Action completed.', 'info');
+                    showToast('⚠️ Google sign-in not supported here. Use email/password instead.', 'warning');
                 } else {
                     try { showToast('❌ Sign-in failed: ' + (error.message || error.code), 'error'); } catch(e) {}
                 }
@@ -7833,7 +7833,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 let errorMessage = '';
                 switch (error.code) {
                     case 'auth/operation-not-supported-in-this-environment':
-                        showToast('ℹ️ Action completed.', 'info');
+                        showToast('⚠️ Google sign-in not supported in this environment.', 'warning');
                         return;
                     case 'auth/invalid-credential':
                         errorMessage = 'Invalid email or password. Please check your credentials and try again.';
@@ -7905,7 +7905,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 let errorMessage = '';
                 switch (error.code) {
                     case 'auth/operation-not-supported-in-this-environment':
-                        showToast('ℹ️ Action completed.', 'info');
+                        showToast('⚠️ Google sign-in not supported in this environment.', 'warning');
                         return;
                     case 'auth/invalid-credential':
                         errorMessage = 'Invalid credentials. Please check your information and try again.';
@@ -8927,7 +8927,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 const backup = backups[backupIndex];
                 
                 if (!backup) {
-                    showToast('d', 'info');
+                    showToast('⚠️ Backup not found.', 'warning');
                     return;
                 }
 
@@ -8977,10 +8977,10 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     if (healthCheck.passed) {
                         this.exitReadOnlyMode();
                         this.closeRecoveryModal();
-                        showToast('ℹ️ Action completed.', 'info');
+                        showToast('✅ Health check passed! Reloading...', 'success');
                         window.location.reload();
                     } else {
-                        showToast('ℹ️ Action completed.', 'info');
+                        showToast('⚠️ Health check failed. Please restore from backup.', 'warning');
                     }
                 } catch (error) {
                     showToast('❌ Recovery failed: ' + error.message, 'error');
@@ -9867,7 +9867,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 : await dbGet('credits', id);
             
             if (!record) {
-                showToast('d', 'info');
+                showToast('⚠️ Record not found.', 'warning');
                 return;
             }
 
@@ -9939,7 +9939,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     : await dbGet('credits', id);
                 
                 if (!record) {
-                    showToast('d', 'info');
+                    showToast('⚠️ Record not found.', 'warning');
                     return;
                 }
 
@@ -10049,7 +10049,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     : await dbGet('credits', id);
                 
                 if (!record) {
-                    showToast('d', 'info');
+                    showToast('⚠️ Record not found.', 'warning');
                     return;
                 }
 
@@ -10137,7 +10137,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     : await dbGet('credits', id);
                 
                 if (!record) {
-                    showToast('d', 'info');
+                    showToast('⚠️ Record not found.', 'warning');
                     return;
                 }
 
@@ -10506,7 +10506,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
 
             const property = await dbGet('properties', id);
             if (!property) {
-                showToast('d', 'info');
+                showToast('⚠️ Property not found.', 'warning');
                 return;
             }
 
@@ -10580,7 +10580,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             const rent = parseFloat(rentStr.replace(/,/g, '')) || 0;
 
             if (!name || !type || rent <= 0) {
-                showToast('ℹ️ Action completed.', 'info');
+                showToast('⚠️ ' + (!name?'Property name':!type?'Property type':'Monthly rent') + ' is required.', 'warning');
                 return;
             }
 
@@ -11169,13 +11169,13 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             // Validate ID
             if (!id || isNaN(id)) {
                 console.error('Invalid tenant ID:', id);
-                showToast('D', 'info');
+                showToast('⚠️ Invalid tenant ID.', 'warning');
                 return;
             }
 
             const tenant = await dbGet('tenants', id);
             if (!tenant) {
-                showToast('d', 'info');
+                showToast('⚠️ Tenant not found.', 'warning');
                 return;
             }
 
@@ -11740,23 +11740,7 @@ async function recordTenantPayment(tenantId) {
         // ── PAYMENT EDIT / VOID FUNCTIONS (Owner/Admin only) ──
 
         async function editRentPayment(paymentId, tenantId) {
-            if (!currentAppUser || !['owner','admin'].includes(currentAppUser.role)) return;
-            const p = await dbGet('payments', paymentId);
-            if (!p) return;
-            const newAmount = await showInputModal('Edit Rent Payment', 'Edit amount for payment on ' + p.date, 'Amount', String(p.amount));
-            if (newAmount === null) return;
-            const amt = parseFloat(newAmount.replace(/,/g,''));
-            if (isNaN(amt) || amt <= 0) { showToast('⚠️ Invalid amount.','warning'); return; }
-            const newDate = await showInputModal('Edit Date', 'Edit date (YYYY-MM-DD)', 'Date', p.date);
-            if (newDate === null) return;
-            p.amount = amt;
-            p.date = newDate || p.date;
-            p.editedBy = currentAppUser.fullname || currentAppUser.username;
-            p.editedAt = new Date().toISOString();
-            await dbUpdate('payments', p);
-            debouncedSync(); loadDashboard();
-            showToast('✅ Payment updated.', 'success');
-            await viewTenantDetails(tenantId);
+            incomeFeedEdit('rent', paymentId, tenantId);
         }
 
         async function voidRentPayment(paymentId, tenantId) {
@@ -11777,23 +11761,7 @@ async function recordTenantPayment(tenantId) {
         }
 
         async function editCreditPayment(paymentId, creditId) {
-            if (!currentAppUser || !['owner','admin'].includes(currentAppUser.role)) return;
-            const p = await dbGet('creditPayments', paymentId);
-            if (!p) return;
-            const newAmount = await showInputModal('Edit Credit Payment', 'Edit amount for payment on ' + p.date, 'Amount', String(p.amount));
-            if (newAmount === null) return;
-            const amt = parseFloat(newAmount.replace(/,/g,''));
-            if (isNaN(amt) || amt <= 0) { showToast('⚠️ Invalid amount.','warning'); return; }
-            const newDate = await showInputModal('Edit Date', 'Edit date (YYYY-MM-DD)', 'Date', p.date);
-            if (newDate === null) return;
-            p.amount = amt;
-            p.date = newDate || p.date;
-            p.editedBy = currentAppUser.fullname || currentAppUser.username;
-            p.editedAt = new Date().toISOString();
-            await dbUpdate('creditPayments', p);
-            debouncedSync(); loadDashboard();
-            showToast('✅ Credit payment updated.', 'success');
-            await viewCreditDetails(creditId);
+            incomeFeedEdit('credit', paymentId, creditId);
         }
 
         async function voidCreditPayment(paymentId, creditId) {
@@ -11814,24 +11782,7 @@ async function recordTenantPayment(tenantId) {
         }
 
         async function editWaterSaleRecord(saleId, customerId) {
-            if (!currentAppUser || !['owner','admin'].includes(currentAppUser.role)) return;
-            const s = await dbGet('waterSales', saleId);
-            if (!s) return;
-            const newGallons = await showInputModal('Edit Water Sale', 'Edit gallons sold (was ' + s.gallons + ')', 'Gallons', String(s.gallons));
-            if (newGallons === null) return;
-            const gallons = parseFloat(newGallons);
-            if (isNaN(gallons) || gallons <= 0) { showToast('⚠️ Invalid gallons.','warning'); return; }
-            const newDate = await showInputModal('Edit Date', 'Edit date (YYYY-MM-DD)', 'Date', s.date);
-            if (newDate === null) return;
-            s.gallons = gallons;
-            s.total = gallons * (s.pricePerGallon || 0);
-            s.date = newDate || s.date;
-            s.editedBy = currentAppUser.fullname || currentAppUser.username;
-            s.editedAt = new Date().toISOString();
-            await dbUpdate('waterSales', s);
-            debouncedSync(); loadWaterCustomers();
-            showToast('✅ Water sale updated.', 'success');
-            await viewWaterCustomerDetails(customerId);
+            incomeFeedEdit('water', saleId, customerId);
         }
 
         async function voidWaterSale(saleId, customerId) {
@@ -13234,7 +13185,7 @@ async function loadWaterCustomers() {
             const notes = document.getElementById('water-customer-notes').value.trim();
             
             if (!name) {
-                showToast('ℹ️ Action completed.', 'info');
+                showToast('⚠️ Customer name is required.', 'warning');
                 return;
             }
             
@@ -13607,7 +13558,7 @@ async function loadWaterCustomers() {
             const notes = document.getElementById('water-sale-notes').value.trim();
             
             if (gallons <= 0) {
-                showToast('ℹ️ Action completed.', 'info');
+                showToast('⚠️ Please enter number of bottles/gallons.', 'warning');
                 return;
             }
             
@@ -14711,7 +14662,7 @@ async function showPayrollSummary() {
         async function showPayrollProcess(employeeId) {
             const employee = await dbGet('employees', employeeId);
             if (!employee) {
-                showToast('ℹ️ Action completed.', 'info');
+                showToast('⚠️ Employee record not found.', 'warning');
                 return;
             }
             
@@ -15615,13 +15566,13 @@ async function showPayrollSummary() {
             // Validate ID
             if (!id || isNaN(id)) {
                 console.error('Invalid credit ID:', id);
-                showToast('D', 'info');
+                showToast('⚠️ Invalid credit ID.', 'warning');
                 return;
             }
 
             const credit = await dbGet('credits', id);
             if (!credit) {
-                showToast('d', 'info');
+                showToast('⚠️ Credit record not found.', 'warning');
                 return;
             }
 
@@ -16696,7 +16647,7 @@ async function showPayrollSummary() {
 
                 const note = await dbGet('customNotes', id);
                 if (!note) {
-                    showToast('d', 'info');
+                    showToast('⚠️ Note not found.', 'warning');
                     return;
                 }
 
@@ -16994,7 +16945,7 @@ async function showPayrollSummary() {
 
             // Sync to Firebase
             debouncedSync();
-            showToast('ℹ️ Action completed.', 'info');
+            showToast('✅ Expense saved successfully!', 'success');
         }
 
         function getChargeTypeLabel(type) {
@@ -17837,26 +17788,34 @@ async function showPayrollSummary() {
                 const roleColor = {owner:'#a78bfa',admin:'#60a5fa',manager:'#34d399',cashier:'#fbbf24',viewer:'#94a3b8'};
 
                 feedEl.innerHTML = txns.map(t => {
-                    const byLabel = t.by ? t.by.split('@')[0] : '';
-                    const roleBadge = byLabel ? `<span style="font-size:0.65rem;color:${roleColor[t.byRole]||'#94a3b8'};background:rgba(255,255,255,0.06);padding:1px 6px;border-radius:4px;margin-left:2px;">by ${byLabel}</span>` : '';
+                    const byLabel  = t.by ? t.by.split('@')[0] : '';
+                    const roleBadge = byLabel ? `<span style="font-size:0.65rem;color:${roleColor[t.byRole]||'#94a3b8'};background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:4px;margin-left:2px;">by ${byLabel}</span>` : '';
+                    const borderColor = t.src==='rent'?'#818cf8':t.src==='credit'?'#f59e0b':t.src==='water'?'#38bdf8':'#10b981';
+                    const crudBtns = isAdmin ? `
+                        <div style="display:flex;gap:4px;margin-top:6px;">
+                            <button onclick="incomeFeedEdit('${t.src}',${t.id},${t.parentId||0})"
+                                style="padding:3px 8px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:5px;cursor:pointer;font-size:0.7rem;font-weight:600;">✏️ Edit</button>
+                            <button onclick="incomeFeedDelete('${t.src}',${t.id})"
+                                style="padding:3px 8px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#ef4444;border-radius:5px;cursor:pointer;font-size:0.7rem;font-weight:600;">🗑 Delete</button>
+                        </div>` : '';
                     return `
-                    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--bg-primary);border-radius:9px;margin-bottom:6px;border-left:3px solid #10b981;${isAdmin?'cursor:pointer;':''}"
-                        ${isAdmin && t.src==='water' ? `onclick="viewWaterCustomerDetails(${t.parentId})"` :
-                          isAdmin && t.src==='rent'  ? `onclick="viewTenantDetails(${t.parentId})"` :
-                          isAdmin && t.src==='credit' ? `onclick="viewCreditDetails(${t.parentId})"` : ''}>
-                        <div style="flex:1;">
-                            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                                <span style="font-size:1rem;">${t.icon}</span>
-                                <span style="font-weight:600;font-size:0.85rem;color:var(--text-primary);">${t.name}</span>
-                                <span style="font-size:0.7rem;background:rgba(255,255,255,0.07);padding:1px 6px;border-radius:6px;color:var(--text-secondary);">${t.type}</span>
-                                ${roleBadge}
+                    <div style="padding:10px 12px;background:var(--bg-primary);border-radius:9px;margin-bottom:6px;border-left:3px solid ${borderColor};">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                            <div style="flex:1;">
+                                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                    <span>${t.icon}</span>
+                                    <span style="font-weight:600;font-size:0.85rem;color:var(--text-primary);">${t.name}</span>
+                                    <span style="font-size:0.68rem;background:rgba(255,255,255,0.07);padding:1px 6px;border-radius:6px;color:var(--text-secondary);">${t.type}</span>
+                                    ${roleBadge}
+                                </div>
+                                ${t.sub ? `<div style="font-size:0.72rem;color:var(--text-secondary);margin-top:2px;padding-left:22px;">${t.sub}</div>` : ''}
                             </div>
-                            ${t.sub ? `<div style="font-size:0.72rem;color:var(--text-secondary);margin-top:2px;padding-left:22px;">${t.sub}</div>` : ''}
+                            <div style="text-align:right;flex-shrink:0;margin-left:8px;">
+                                <div style="font-weight:700;color:#10b981;font-size:0.9rem;">+&#8369;${t.amount.toLocaleString()}</div>
+                                <div style="font-size:0.68rem;color:var(--text-secondary);">${methodLabel[t.method]||t.method}</div>
+                            </div>
                         </div>
-                        <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
-                            <span style="font-weight:700;color:#10b981;font-size:0.9rem;">+&#8369;${t.amount.toLocaleString()}</span>
-                            <span style="font-size:0.7rem;color:var(--text-secondary);">${methodLabel[t.method]||t.method}</span>
-                        </div>
+                        ${crudBtns}
                     </div>`; }).join('');
 
             } catch(e) {
@@ -17864,6 +17823,249 @@ async function showPayrollSummary() {
             }
         }
         window.loadIncomeTodayFeed = loadIncomeTodayFeed;
+
+        // ── Income Feed CRUD — unified edit/delete for all transaction types ──
+        async function incomeFeedEdit(src, id, parentId) {
+            if (!currentAppUser || !['owner','admin'].includes(currentAppUser.role)) return;
+
+            let record, title, fields;
+
+            if (src === 'rent') {
+                record = await dbGet('payments', id);
+                if (!record) { showToast('⚠️ Payment not found.', 'warning'); return; }
+                title  = '✏️ Edit Rent Payment';
+                fields = `
+                    <div class="form-group">
+                        <label style="font-size:0.82rem;color:#94a3b8;">Amount (₱)</label>
+                        <input type="number" id="ife-amount" value="${record.amount||0}" min="0"
+                            style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:1rem;box-sizing:border-box;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size:0.82rem;color:#94a3b8;">Discount (₱)</label>
+                        <input type="number" id="ife-discount" value="${record.discount||0}" min="0"
+                            style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;box-sizing:border-box;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size:0.82rem;color:#94a3b8;">Month Covered</label>
+                        <input type="month" id="ife-month" value="${record.monthCovered||''}"
+                            style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;box-sizing:border-box;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size:0.82rem;color:#94a3b8;">Payment Method</label>
+                        <select id="ife-method" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;box-sizing:border-box;">
+                            ${['cash','gcash','maya','bank','other'].map(m=>`<option value="${m}" ${record.paymentMethod===m?'selected':''}>${m.charAt(0).toUpperCase()+m.slice(1)}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size:0.82rem;color:#94a3b8;">Date</label>
+                        <input type="date" id="ife-date" value="${record.date||''}"
+                            style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;box-sizing:border-box;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size:0.82rem;color:#94a3b8;">Notes</label>
+                        <textarea id="ife-notes" rows="2" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:0.88rem;box-sizing:border-box;resize:none;">${record.notes||''}</textarea>
+                    </div>`;
+
+            } else if (src === 'credit') {
+                record = await dbGet('creditPayments', id);
+                if (!record) { showToast('⚠️ Payment not found.', 'warning'); return; }
+                title  = '✏️ Edit Credit Payment';
+                fields = `
+                    <div class="form-group">
+                        <label style="font-size:0.82rem;color:#94a3b8;">Amount Paid (₱)</label>
+                        <input type="number" id="ife-amount" value="${record.amount||0}" min="0"
+                            style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:1rem;box-sizing:border-box;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size:0.82rem;color:#94a3b8;">Discount / Waiver (₱)</label>
+                        <input type="number" id="ife-discount" value="${record.discount||0}" min="0"
+                            style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;box-sizing:border-box;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size:0.82rem;color:#94a3b8;">Payment Method</label>
+                        <select id="ife-method" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;box-sizing:border-box;">
+                            ${['cash','gcash','maya','bank','other'].map(m=>`<option value="${m}" ${record.paymentMethod===m?'selected':''}>${m.charAt(0).toUpperCase()+m.slice(1)}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size:0.82rem;color:#94a3b8;">Date</label>
+                        <input type="date" id="ife-date" value="${record.date||''}"
+                            style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;box-sizing:border-box;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size:0.82rem;color:#94a3b8;">Notes</label>
+                        <textarea id="ife-notes" rows="2" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:0.88rem;box-sizing:border-box;resize:none;">${record.notes||''}</textarea>
+                    </div>`;
+
+            } else if (src === 'water') {
+                record = await dbGet('waterSales', id);
+                if (!record) { showToast('⚠️ Sale not found.', 'warning'); return; }
+                title  = '✏️ Edit Water Sale';
+                fields = `
+                    <div class="form-group">
+                        <label style="font-size:0.82rem;color:#94a3b8;">Gallons / Qty</label>
+                        <input type="number" id="ife-gallons" value="${record.gallons||0}" min="1"
+                            style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:1rem;box-sizing:border-box;" oninput="ifeWaterCalc()">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size:0.82rem;color:#94a3b8;">Price per Unit (₱)</label>
+                        <input type="number" id="ife-price" value="${record.pricePerGallon||0}" min="0"
+                            style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;box-sizing:border-box;" oninput="ifeWaterCalc()">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size:0.82rem;color:#94a3b8;">Amount Paid (₱)</label>
+                        <input type="number" id="ife-amount" value="${record.amountPaid||record.total||0}" min="0"
+                            style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;box-sizing:border-box;" oninput="ifeWaterCalc()">
+                    </div>
+                    <div id="ife-water-summary" style="background:#0f172a;border-radius:8px;padding:8px 10px;font-size:0.78rem;color:#94a3b8;margin-bottom:8px;"></div>
+                    <div class="form-group">
+                        <label style="font-size:0.82rem;color:#94a3b8;">Status</label>
+                        <select id="ife-status" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;box-sizing:border-box;">
+                            <option value="paid" ${record.status==='paid'?'selected':''}>💵 Paid</option>
+                            <option value="credit" ${record.status==='credit'?'selected':''}>📝 Credit</option>
+                            <option value="partial" ${record.status==='partial'?'selected':''}>💰 Partial</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size:0.82rem;color:#94a3b8;">Date</label>
+                        <input type="date" id="ife-date" value="${record.date||''}"
+                            style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;box-sizing:border-box;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size:0.82rem;color:#94a3b8;">Notes</label>
+                        <textarea id="ife-notes" rows="2" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:0.88rem;box-sizing:border-box;resize:none;">${record.notes||''}</textarea>
+                    </div>`;
+            } else { return; }
+
+            // Build modal
+            const modal = document.createElement('div');
+            modal.id = 'ife-modal';
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
+            modal.innerHTML = `
+                <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;width:100%;max-width:420px;max-height:92vh;overflow-y:auto;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                        <h3 style="margin:0;color:#f1f5f9;font-size:1rem;">${title}</h3>
+                        <button onclick="document.getElementById('ife-modal').remove()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.2rem;">✕</button>
+                    </div>
+                    ${fields}
+                    <div style="display:flex;gap:8px;margin-top:4px;">
+                        <button onclick="incomeFeedSave('${src}',${id},${parentId||0})"
+                            style="flex:1;padding:12px;background:#10b981;border:none;border-radius:8px;color:white;font-weight:700;cursor:pointer;font-size:0.92rem;">
+                            💾 Save Changes
+                        </button>
+                        <button onclick="document.getElementById('ife-modal').remove()"
+                            style="flex:1;padding:12px;background:rgba(255,255,255,0.06);border:1px solid #334155;border-radius:8px;color:#94a3b8;cursor:pointer;">
+                            Cancel
+                        </button>
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
+            if (src === 'water') ifeWaterCalc();
+        }
+        window.incomeFeedEdit = incomeFeedEdit;
+
+        function ifeWaterCalc() {
+            const qty   = parseFloat(document.getElementById('ife-gallons')?.value) || 0;
+            const price = parseFloat(document.getElementById('ife-price')?.value)   || 0;
+            const paid  = parseFloat(document.getElementById('ife-amount')?.value)  || 0;
+            const total = qty * price;
+            const bal   = Math.max(0, total - paid);
+            const el    = document.getElementById('ife-water-summary');
+            if (el) el.innerHTML = `${qty} × ₱${price} = <strong style="color:#f1f5f9;">₱${total.toLocaleString()}</strong> &nbsp;·&nbsp; Paid: ₱${paid.toLocaleString()} &nbsp;·&nbsp; Balance: <span style="color:${bal>0?'#f59e0b':'#10b981'};">₱${bal.toLocaleString()}</span>`;
+        }
+        window.ifeWaterCalc = ifeWaterCalc;
+
+        async function incomeFeedSave(src, id, parentId) {
+            const amount  = parseFloat(document.getElementById('ife-amount')?.value)   || 0;
+            const discount= parseFloat(document.getElementById('ife-discount')?.value) || 0;
+            const method  = document.getElementById('ife-method')?.value || 'cash';
+            const date    = document.getElementById('ife-date')?.value   || '';
+            const notes   = document.getElementById('ife-notes')?.value?.trim() || '';
+
+            if (!date) { showToast('⚠️ Date is required.', 'warning'); return; }
+
+            if (src === 'rent') {
+                if (amount <= 0) { showToast('⚠️ Amount must be greater than 0.', 'warning'); return; }
+                const month = document.getElementById('ife-month')?.value || '';
+                const p = await dbGet('payments', id);
+                if (!p) { showToast('⚠️ Record not found.', 'warning'); return; }
+                p.amount        = amount;
+                p.discount      = discount;
+                p.monthCovered  = month || p.monthCovered;
+                p.paymentMethod = method;
+                p.date          = date;
+                p.notes         = notes;
+                p.editedBy      = currentAppUser?.username || 'admin';
+                p.editedAt      = new Date().toISOString();
+                await dbUpdate('payments', p);
+
+            } else if (src === 'credit') {
+                if (amount <= 0) { showToast('⚠️ Amount must be greater than 0.', 'warning'); return; }
+                const p = await dbGet('creditPayments', id);
+                if (!p) { showToast('⚠️ Record not found.', 'warning'); return; }
+                p.amount        = amount;
+                p.discount      = discount;
+                p.paymentMethod = method;
+                p.date          = date;
+                p.notes         = notes;
+                p.editedBy      = currentAppUser?.username || 'admin';
+                p.editedAt      = new Date().toISOString();
+                await dbUpdate('creditPayments', p);
+
+            } else if (src === 'water') {
+                const gallons = parseFloat(document.getElementById('ife-gallons')?.value) || 0;
+                const price   = parseFloat(document.getElementById('ife-price')?.value)   || 0;
+                const status  = document.getElementById('ife-status')?.value || 'paid';
+                if (gallons <= 0) { showToast('⚠️ Gallons must be greater than 0.', 'warning'); return; }
+                const s = await dbGet('waterSales', id);
+                if (!s) { showToast('⚠️ Record not found.', 'warning'); return; }
+                const total   = gallons * price;
+                const balance = Math.max(0, total - amount);
+                s.gallons       = gallons;
+                s.pricePerGallon= price;
+                s.total         = total;
+                s.grossTotal    = total;
+                s.amountPaid    = amount;
+                s.balance       = balance;
+                s.status        = status;
+                s.date          = date;
+                s.notes         = notes;
+                s.editedBy      = currentAppUser?.username || 'admin';
+                s.editedAt      = new Date().toISOString();
+                await dbUpdate('waterSales', s);
+            }
+
+            document.getElementById('ife-modal')?.remove();
+            debouncedSync();
+            loadDashboard();
+            loadIncomeTodayFeed();
+            if (src === 'water') loadWaterCustomers();
+            if (src === 'rent')  loadTenants();
+            if (src === 'credit') loadCredits();
+            showToast('✅ Record updated successfully!', 'success');
+        }
+        window.incomeFeedSave = incomeFeedSave;
+
+        async function incomeFeedDelete(src, id) {
+            if (!currentAppUser || !['owner','admin'].includes(currentAppUser.role)) return;
+            const store = src==='rent'?'payments':src==='credit'?'creditPayments':src==='water'?'waterSales':'additionalIncome';
+            const record = await dbGet(store, id);
+            if (!record) { showToast('⚠️ Record not found.', 'warning'); return; }
+            const confirmed = await showConfirm(
+                'Permanently delete this ' + src + ' record?\n\nThis cannot be undone.',
+                'danger', '🗑 Delete Record', 'Yes, Delete', 'Cancel'
+            );
+            if (!confirmed) return;
+            await dbDelete(store, id);
+            debouncedSync();
+            loadDashboard();
+            loadIncomeTodayFeed();
+            if (src === 'water') loadWaterCustomers();
+            if (src === 'rent')  loadTenants();
+            if (src === 'credit') loadCredits();
+            showToast('🗑 Record deleted.', 'success');
+        }
+        window.incomeFeedDelete = incomeFeedDelete;
 
         async function loadIncome() {
             try {
@@ -19737,7 +19939,7 @@ async function showPayrollSummary() {
                 // Sync to Firebase after restore
                 debouncedSync();
 
-                showToast('ℹ️ Action completed.', 'info');
+                showToast('✅ Data restored successfully!', 'success');
                 loadDashboard();
                 loadProperties();
                 loadTenants();
@@ -21289,7 +21491,7 @@ async function clearAllData() {
             const payments = await dbGetAll('payments');
 
             if (tenants.length === 0) {
-                showToast('ℹ️ Action completed.', 'info');
+                showToast('ℹ️ No tenants found. Add tenants first to generate this report.', 'info');
                 return;
             }
 
@@ -21318,7 +21520,7 @@ async function clearAllData() {
             const creditPayments = await dbGetAll('creditPayments');
 
             if (credits.length === 0) {
-                showToast('ℹ️ Action completed.', 'info');
+                showToast('ℹ️ No credits or loans recorded yet.', 'info');
                 return;
             }
 
@@ -21352,7 +21554,7 @@ async function clearAllData() {
             const creditPayments = await dbGetAll('creditPayments');
 
             if (rentPayments.length === 0 && creditPayments.length === 0) {
-                showToast('ℹ️ Action completed.', 'info');
+                showToast('ℹ️ No payment records found for this period.', 'info');
                 return;
             }
 
@@ -21379,7 +21581,7 @@ async function clearAllData() {
             const properties = await dbGetAll('properties');
 
             if (expenses.length === 0) {
-                showToast('ℹ️ Action completed.', 'info');
+                showToast('ℹ️ No expenses recorded yet.', 'info');
                 return;
             }
 
@@ -22695,27 +22897,63 @@ Lender/Manager
                     const todaySales = waterSales.filter(s => s.date === today && !s.voided);
                     const todayTotal = todaySales.reduce((sum, s) => sum + (s.amountPaid || s.total || 0), 0);
                     const todayGallons = todaySales.reduce((sum, s) => sum + (s.gallons || 0), 0);
-                    
+                    const _isAdminOwner = currentAppUser && ['owner','admin'].includes(currentAppUser.role);
+
                     html = `
-                        <div style="background: var(--success); color: white; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 15px;">
-                            <div style="font-size: 2rem; font-weight: bold;">₱${todayTotal.toLocaleString()}</div>
-                            <div>${todaySales.length} Sales • ${todayGallons} Gallons</div>
+                        <div style="background:linear-gradient(135deg,#059669,#10b981);color:white;padding:15px;border-radius:10px;text-align:center;margin-bottom:15px;">
+                            <div style="font-size:2rem;font-weight:bold;">₱${todayTotal.toLocaleString()}</div>
+                            <div style="font-size:0.85rem;opacity:0.9;">${todaySales.length} Sale${todaySales.length!==1?'s':''} · ${todayGallons} Gallons Today</div>
                         </div>
-                        <h4 style="margin: 15px 0 10px 0;">Today's Transactions</h4>
-                        ${todaySales.length === 0 ? '<p style="color: var(--text-secondary); text-align: center;">No sales today yet</p>' : 
-                            todaySales.map(s => {
-                                const customer = waterCustomers.find(c => c.id === s.customerId);
+
+                        ${_isAdminOwner ? `
+                        <button onclick="hideModal('flashcard-detail-modal');showWaterSaleModal();"
+                            style="width:100%;padding:10px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);color:#10b981;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.88rem;margin-bottom:12px;">
+                            + Add New Sale
+                        </button>` : ''}
+
+                        <h4 style="margin:0 0 10px;font-size:0.85rem;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;">
+                            Today's Transactions
+                        </h4>
+
+                        ${todaySales.length === 0
+                            ? '<p style="color:var(--text-secondary);text-align:center;padding:20px 0;">No sales today yet</p>'
+                            : todaySales.map(s => {
+                                const cust = waterCustomers.find(c => c.id === s.customerId);
+                                const custName = cust ? cust.name : (s.customerName || 'Walk-in');
+                                const statusColor = s.status==='paid'?'#10b981':s.status==='partial'?'#f59e0b':'#ef4444';
+                                const statusLabel = s.status==='paid'?'Paid':s.status==='partial'?'Partial':'Credit';
+                                const typeLabel = s.containerType==='small'
+                                    ? (s.gallons||0)+' × '+(s.bottleSize||'bottle')
+                                    : (s.gallons||0)+' gal';
                                 return `
-                                    <div class="list-item">
-                                        <div class="item-info">
-                                            <strong>${customer ? customer.name : s.customerName || 'Walk-in'}</strong>
-                                            <div style="font-size: 0.85rem; color: var(--text-secondary);">
-                                                ${s.gallons} gal • ${s.paymentType || 'Cash'}
-                                            </div>
+                                <div style="border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;background:var(--bg-card);">
+                                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+                                        <div>
+                                            <div style="font-weight:700;font-size:0.95rem;">${custName}</div>
+                                            <div style="font-size:0.78rem;color:var(--text-secondary);">${typeLabel} · ₱${s.pricePerGallon||0}/unit${s.packageDeal?' 🎁':''}</div>
                                         </div>
-                                        <span class="badge badge-success">₱${(s.amountPaid || s.total || 0).toLocaleString()}</span>
+                                        <div style="text-align:right;">
+                                            <div style="font-weight:700;color:#10b981;">₱${(s.amountPaid||s.total||0).toLocaleString()}</div>
+                                            <span style="font-size:0.7rem;background:${statusColor}22;color:${statusColor};padding:1px 7px;border-radius:8px;">${statusLabel}</span>
+                                        </div>
                                     </div>
-                                `;
+                                    ${s.balance > 0 ? `<div style="font-size:0.75rem;color:#f59e0b;margin-bottom:6px;">Balance: ₱${s.balance.toLocaleString()}</div>` : ''}
+                                    ${_isAdminOwner ? `
+                                    <div style="display:flex;gap:6px;margin-top:6px;">
+                                        <button onclick="waterSaleQuickEdit(${s.id})"
+                                            style="flex:1;padding:5px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:600;">
+                                            ✏️ Edit
+                                        </button>
+                                        <button onclick="waterSaleQuickVoid(${s.id})"
+                                            style="flex:1;padding:5px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:#f59e0b;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:600;">
+                                            🚫 Void
+                                        </button>
+                                        <button onclick="waterSaleQuickDelete(${s.id})"
+                                            style="flex:1;padding:5px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#ef4444;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:600;">
+                                            🗑 Delete
+                                        </button>
+                                    </div>` : ''}
+                                </div>`;
                             }).join('')}
                     `;
                     break;
@@ -23228,7 +23466,7 @@ Lender/Manager
             const closeBtn = document.getElementById('login-close-btn');
             if (closeBtn) closeBtn.style.display = 'block';
             
-            showToast('ℹ️ Action completed.', 'info');
+            showToast('ℹ️ Session expired. Please sign in again.', 'info');
         }
 
         // Check permission
@@ -26824,6 +27062,173 @@ async function editTask(id) {
         window.showVoidRequests = showVoidRequests;
         window.showWaterFlashcardDetail = showWaterFlashcardDetail;
         window.showWaterSaleModal = showWaterSaleModal;
+
+        // ── Water Sale Quick CRUD (from Today's Sales panel) ──
+
+        async function waterSaleQuickEdit(saleId) {
+            const sale = await dbGet('waterSales', saleId);
+            if (!sale) { showToast('⚠️ Sale record not found.', 'warning'); return; }
+
+            const cust = (await dbGetAll('waterCustomers')).find(c => c.id === sale.customerId);
+            const custName = cust ? cust.name : (sale.customerName || 'Walk-in');
+
+            // Build edit modal
+            const modal = document.createElement('div');
+            modal.id = 'ws-quick-edit-modal';
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
+            modal.innerHTML = `
+                <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                        <h3 style="margin:0;color:#f1f5f9;font-size:1rem;">✏️ Edit Water Sale</h3>
+                        <button onclick="document.getElementById('ws-quick-edit-modal').remove()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.2rem;">✕</button>
+                    </div>
+                    <div style="font-size:0.82rem;color:#94a3b8;margin-bottom:14px;">Customer: <strong style="color:#f1f5f9;">${custName}</strong></div>
+
+                    <div class="form-group">
+                        <label style="font-size:0.82rem;color:#94a3b8;">Gallons / Qty</label>
+                        <input type="number" id="wse-gallons" value="${sale.gallons||0}" min="1"
+                            style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:1rem;box-sizing:border-box;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size:0.82rem;color:#94a3b8;">Price per Unit (₱)</label>
+                        <input type="number" id="wse-price" value="${sale.pricePerGallon||0}" min="0"
+                            style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:1rem;box-sizing:border-box;"
+                            oninput="wseCalc()">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size:0.82rem;color:#94a3b8;">Amount Paid (₱)</label>
+                        <input type="number" id="wse-paid" value="${sale.amountPaid||sale.total||0}" min="0"
+                            style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:1rem;box-sizing:border-box;"
+                            oninput="wseCalc()">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size:0.82rem;color:#94a3b8;">Payment Type</label>
+                        <select id="wse-status" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;box-sizing:border-box;">
+                            <option value="paid" ${sale.status==='paid'?'selected':''}>💵 Cash (Paid)</option>
+                            <option value="credit" ${sale.status==='credit'?'selected':''}>📝 Credit (Pay Later)</option>
+                            <option value="partial" ${sale.status==='partial'?'selected':''}>💰 Partial Payment</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size:0.82rem;color:#94a3b8;">Date</label>
+                        <input type="date" id="wse-date" value="${sale.date||''}"
+                            style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;box-sizing:border-box;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size:0.82rem;color:#94a3b8;">Notes</label>
+                        <textarea id="wse-notes" rows="2"
+                            style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:0.88rem;box-sizing:border-box;resize:none;">${sale.notes||''}</textarea>
+                    </div>
+
+                    <!-- Net summary -->
+                    <div id="wse-summary" style="background:#0f172a;border-radius:8px;padding:10px;margin-bottom:14px;font-size:0.82rem;color:#94a3b8;"></div>
+
+                    <div style="display:flex;gap:8px;">
+                        <button onclick="waterSaleQuickSave(${saleId})"
+                            style="flex:1;padding:11px;background:#10b981;border:none;border-radius:8px;color:white;font-weight:700;cursor:pointer;font-size:0.9rem;">
+                            💾 Save Changes
+                        </button>
+                        <button onclick="document.getElementById('ws-quick-edit-modal').remove()"
+                            style="flex:1;padding:11px;background:rgba(255,255,255,0.06);border:1px solid #334155;border-radius:8px;color:#94a3b8;cursor:pointer;">
+                            Cancel
+                        </button>
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
+            wseCalc();
+        }
+        window.waterSaleQuickEdit = waterSaleQuickEdit;
+
+        function wseCalc() {
+            const qty   = parseFloat(document.getElementById('wse-gallons')?.value) || 0;
+            const price = parseFloat(document.getElementById('wse-price')?.value) || 0;
+            const paid  = parseFloat(document.getElementById('wse-paid')?.value) || 0;
+            const total = qty * price;
+            const bal   = Math.max(0, total - paid);
+            const el    = document.getElementById('wse-summary');
+            if (el) el.innerHTML = `${qty} × ₱${price} = <strong style="color:#f1f5f9;">₱${total.toLocaleString()}</strong> &nbsp;|&nbsp; Paid: ₱${paid.toLocaleString()} &nbsp;|&nbsp; Balance: <span style="color:${bal>0?'#f59e0b':'#10b981'};">₱${bal.toLocaleString()}</span>`;
+        }
+        window.wseCalc = wseCalc;
+
+        async function waterSaleQuickSave(saleId) {
+            const sale = await dbGet('waterSales', saleId);
+            if (!sale) { showToast('⚠️ Sale not found.', 'warning'); return; }
+
+            const gallons  = parseFloat(document.getElementById('wse-gallons')?.value) || 0;
+            const price    = parseFloat(document.getElementById('wse-price')?.value) || 0;
+            const paid     = parseFloat(document.getElementById('wse-paid')?.value) || 0;
+            const status   = document.getElementById('wse-status')?.value || 'paid';
+            const date     = document.getElementById('wse-date')?.value || sale.date;
+            const notes    = document.getElementById('wse-notes')?.value?.trim() || '';
+            const total    = gallons * price;
+            const balance  = Math.max(0, total - paid);
+
+            if (gallons <= 0) { showToast('⚠️ Gallons/qty must be greater than 0.', 'warning'); return; }
+            if (!date)        { showToast('⚠️ Date is required.', 'warning'); return; }
+
+            sale.gallons       = gallons;
+            sale.pricePerGallon = price;
+            sale.total         = total;
+            sale.grossTotal    = total;
+            sale.amountPaid    = paid;
+            sale.balance       = balance;
+            sale.status        = status;
+            sale.date          = date;
+            sale.notes         = notes;
+            sale.editedBy      = currentAppUser?.username || 'admin';
+            sale.editedAt      = new Date().toISOString();
+
+            await dbUpdate('waterSales', sale);
+            document.getElementById('ws-quick-edit-modal')?.remove();
+            debouncedSync();
+            loadWaterCustomers();
+            showToast('✅ Sale updated successfully!', 'success');
+            // Refresh the flashcard if open
+            if (document.getElementById('flashcard-detail-modal')?.classList.contains('show')) {
+                showWaterFlashcardDetail('today-sales');
+            }
+        }
+        window.waterSaleQuickSave = waterSaleQuickSave;
+
+        async function waterSaleQuickVoid(saleId) {
+            const sale = await dbGet('waterSales', saleId);
+            if (!sale) { showToast('⚠️ Sale not found.', 'warning'); return; }
+            const cust = (await dbGetAll('waterCustomers')).find(c => c.id === sale.customerId);
+            const confirmed = await showConfirm(
+                'Void this sale for ' + (cust?.name || sale.customerName || 'Walk-in') + '?\n₱' + (sale.total||0).toLocaleString() + ' · ' + (sale.gallons||0) + ' gal · ' + sale.date + '\n\nThe record is kept but marked as voided.',
+                'warning', '🚫 Void Sale', 'Yes, Void', 'Cancel'
+            );
+            if (!confirmed) return;
+            const reason = await showInputModal('Void reason (optional):', '');
+            sale.voided       = true;
+            sale.voidedAt     = new Date().toISOString();
+            sale.voidedBy     = currentAppUser?.username || 'admin';
+            sale.voidReason   = reason || 'Voided by admin';
+            sale.amountPaid   = 0;
+            await dbUpdate('waterSales', sale);
+            debouncedSync();
+            loadWaterCustomers();
+            showToast('🚫 Sale voided.', 'info');
+            showWaterFlashcardDetail('today-sales');
+        }
+        window.waterSaleQuickVoid = waterSaleQuickVoid;
+
+        async function waterSaleQuickDelete(saleId) {
+            const sale = await dbGet('waterSales', saleId);
+            if (!sale) { showToast('⚠️ Sale not found.', 'warning'); return; }
+            const cust = (await dbGetAll('waterCustomers')).find(c => c.id === sale.customerId);
+            const confirmed = await showConfirm(
+                'Permanently delete this sale for ' + (cust?.name || sale.customerName || 'Walk-in') + '?\n₱' + (sale.total||0).toLocaleString() + ' · ' + sale.date + '\n\nThis cannot be undone.',
+                'danger', '🗑 Delete Sale', 'Yes, Delete', 'Cancel'
+            );
+            if (!confirmed) return;
+            await dbDelete('waterSales', saleId);
+            debouncedSync();
+            loadWaterCustomers();
+            showToast('🗑 Sale deleted.', 'success');
+            showWaterFlashcardDetail('today-sales');
+        }
+        window.waterSaleQuickDelete = waterSaleQuickDelete;
         
         // Expense functions
         window.setExpenseFilter = setExpenseFilter;
