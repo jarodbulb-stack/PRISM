@@ -4610,7 +4610,7 @@
                 </div>
                 <div class="stat-card" style="cursor: pointer;" onclick="showWaterFlashcardDetail('gallons')">
                     <div class="stat-value" id="stat-water-gallons">0</div>
-                    <div class="stat-label">Gallons Sold</div>
+                    <div class="stat-label">Bottles Sold</div>
                 </div>
             </div>
 
@@ -6160,7 +6160,7 @@
                         <div style="display:flex;gap:8px;margin-top:4px;">
                             <button type="button" id="ws-type-big" onclick="wsSetType('big')"
                                 style="flex:1;padding:10px;border-radius:8px;border:2px solid #3b82f6;background:rgba(59,130,246,0.15);color:#60a5fa;font-weight:700;cursor:pointer;font-size:0.85rem;">
-                                🔵 Big Round (5-gal)
+                                🔵 Big Round (18L)
                             </button>
                             <button type="button" id="ws-type-small" onclick="wsSetType('small')"
                                 style="flex:1;padding:10px;border-radius:8px;border:2px solid #334155;background:transparent;color:#64748b;font-weight:600;cursor:pointer;font-size:0.85rem;">
@@ -6172,7 +6172,7 @@
                     <!-- BIG BOTTLE SECTION -->
                     <div id="ws-big-section">
                         <div class="form-group">
-                            <label>Price per Bottle</label>
+                            <label>Price per Bottle <span style="font-size:0.75rem;color:#64748b;">(18L round blue bottle)</span></label>
                             <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;" id="ws-big-price-btns">
                                 <button type="button" onclick="wsSetBigPrice(20)" class="ws-price-btn" data-price="20" style="padding:8px 14px;border-radius:7px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-weight:600;font-size:0.85rem;">₱20</button>
                                 <button type="button" onclick="wsSetBigPrice(25)" class="ws-price-btn" data-price="25" style="padding:8px 14px;border-radius:7px;border:2px solid #3b82f6;background:rgba(59,130,246,0.15);color:#60a5fa;cursor:pointer;font-weight:700;font-size:0.85rem;">₱25</button>
@@ -6193,15 +6193,24 @@
                     <!-- SMALL BOTTLE SECTION -->
                     <div id="ws-small-section" style="display:none;">
                         <div class="form-group">
-                            <label>Bottle Size</label>
+                            <label>Bottle Type <span style="font-size:0.75rem;color:#64748b;">(price per bottle)</span></label>
                             <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;" id="ws-small-size-btns">
-                                <button type="button" onclick="wsSetSmallSize('1L',5)" class="ws-size-btn" data-size="1L" style="flex:1;padding:9px;border-radius:7px;border:2px solid #3b82f6;background:rgba(59,130,246,0.15);color:#60a5fa;cursor:pointer;font-weight:700;font-size:0.82rem;">1L<br><span style="font-size:0.7rem;">₱5</span></button>
-                                <button type="button" onclick="wsSetSmallSize('10L',15)" class="ws-size-btn" data-size="10L" style="flex:1;padding:9px;border-radius:7px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-weight:600;font-size:0.82rem;">4–10L<br><span style="font-size:0.7rem;">₱15</span></button>
-                                <button type="button" onclick="wsSetSmallSize('15L',20)" class="ws-size-btn" data-size="15L" style="flex:1;padding:9px;border-radius:7px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-weight:600;font-size:0.82rem;">15L<br><span style="font-size:0.7rem;">₱20</span></button>
+                                <button type="button" onclick="wsSetSmallSize('500cc',5)" class="ws-size-btn" data-size="500cc"
+                                    style="flex:1;padding:10px 6px;border-radius:7px;border:2px solid #3b82f6;background:rgba(59,130,246,0.15);color:#60a5fa;cursor:pointer;font-weight:700;font-size:0.78rem;line-height:1.4;">
+                                    🫙 Small<br><span style="font-size:0.68rem;opacity:0.85;">500cc–1L</span><br><strong>₱5/bot</strong>
+                                </button>
+                                <button type="button" onclick="wsSetSmallSize('4-10L',15)" class="ws-size-btn" data-size="4-10L"
+                                    style="flex:1;padding:10px 6px;border-radius:7px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-weight:600;font-size:0.78rem;line-height:1.4;">
+                                    🫙 Medium<br><span style="font-size:0.68rem;opacity:0.85;">4L–10L</span><br><strong>₱15/bot</strong>
+                                </button>
+                                <button type="button" onclick="wsSetSmallSize('15L',20)" class="ws-size-btn" data-size="15L"
+                                    style="flex:1;padding:10px 6px;border-radius:7px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-weight:600;font-size:0.78rem;line-height:1.4;">
+                                    🫙 Large<br><span style="font-size:0.68rem;opacity:0.85;">15L</span><br><strong>₱20/bot</strong>
+                                </button>
                             </div>
                         </div>
                         <div class="form-group">
-                            <label>Quantity *</label>
+                            <label>Number of Bottles *</label>
                             <input type="number" id="ws-small-qty" min="1" placeholder="e.g. 2" oninput="wsCalcSmall()" style="font-size:1.1rem;font-weight:600;">
                         </div>
                     </div>
@@ -12122,7 +12131,7 @@ async function recordTenantPayment(tenantId) {
                         showToast('⚠️ Please select a water customer.', 'warning'); return;
                     }
                     if (gallons <= 0) {
-                        showToast('⚠️ Please enter gallons sold.', 'warning'); return;
+                        showToast('⚠️ Please enter number of bottles.', 'warning'); return;
                     }
                     const customer = await dbGet('waterCustomers', customerId);
                     const total = gallons * pricePerGallon;
@@ -12141,7 +12150,7 @@ async function recordTenantPayment(tenantId) {
                         createdAt: new Date().toISOString()
                     };
                     await dbAdd('waterSales', waterSale);
-                    showToast(`✅ Water sale recorded — ${gallons} gallons for ${customer ? customer.name : 'customer'}`, 'success');
+                    showToast(`✅ Water sale recorded — ${gallons} bottle${gallons!==1?'s':''} for ${customer ? customer.name : 'customer'}`, 'success');
                     loadWaterCustomers();
                 }
 
@@ -13110,7 +13119,7 @@ async function loadWaterCustomers() {
             });
             
             sales.forEach(s => {
-                totalGallons += s.gallons || 0;
+                totalGallons += s.bottles || s.gallons || 0;
                 if (s.date === today) {
                     todaySales += s.amountPaid || 0;
                 }
@@ -13287,7 +13296,7 @@ async function loadWaterCustomers() {
                 smallSec.style.display = 'block';
                 window._wsCurrentPrice = 5;
                 window._wsBottleSize   = '1L';
-                wsSetSmallSize('1L', 5);
+                wsSetSmallSize('500cc', 5);
             }
             wsCalcBig();
         }
@@ -13362,9 +13371,9 @@ async function loadWaterCustomers() {
 
             var total = Math.max(0, gross - discount);
 
-            // Update hidden fields
+            // Update hidden fields — store bottle count directly
             var gEl = document.getElementById('water-sale-gallons');
-            if (gEl) gEl.value = qty * 5; // each bottle = 5 gallons
+            if (gEl) gEl.value = qty; // store bottle count
             var tEl = document.getElementById('water-sale-total');
             if (tEl) tEl.value = total;
 
@@ -13382,7 +13391,8 @@ async function loadWaterCustomers() {
         function wsCalcSmall() {
             var qty   = parseInt((document.getElementById('ws-small-qty')||{}).value) || 0;
             var price = window._wsCurrentPrice || 5;
-            var size  = window._wsBottleSize || '1L';
+            var size  = window._wsBottleSize || '500cc';
+            var sizeLabel = size === '500cc' ? 'Small (500cc–1L)' : size === '4-10L' ? 'Medium (4L–10L)' : 'Large (15L)';
             var gross = qty * price;
             var total = gross;
 
@@ -13390,14 +13400,14 @@ async function loadWaterCustomers() {
             window._wsPackageDeal     = false;
 
             var gEl = document.getElementById('water-sale-gallons');
-            if (gEl) gEl.value = qty; // store qty as gallons for small bottles
+            if (gEl) gEl.value = qty; // store bottle count
             var pEl = document.getElementById('water-sale-price');
             if (pEl) pEl.value = price;
             var tEl = document.getElementById('water-sale-total');
             if (tEl) tEl.value = total;
 
             wsShowSummary(qty, price, gross, 0, total,
-                qty + ' × ' + size + ' bottle' + (qty!==1?'s':'') + ' @ ₱' + price);
+                qty + ' × ' + sizeLabel + ' bottle' + (qty!==1?'s':'') + ' @ ₱' + price);
         }
 
         function wsShowSummary(qty, price, gross, discount, total, calcLine) {
@@ -13543,22 +13553,22 @@ async function loadWaterCustomers() {
             
             let customerId = document.getElementById('water-sale-customer').value;
             const newCustomer = document.getElementById('water-sale-new-customer').value.trim();
-            // Read from new pricing UI
-            const gallons = parseInt(document.getElementById('water-sale-gallons').value) || 0;
+            // Read from new pricing UI — all units are BOTTLES
+            const bottles = parseInt(document.getElementById('water-sale-gallons').value) || 0; // hidden field holds bottle count
             const price = parseFloat(document.getElementById('water-sale-price').value) || 25;
             const _wsDiscount = window._wsCurrentDiscount || 0;
             const _wsContainerType = window._wsContainerType || 'big';
             const _wsBottleSize = window._wsBottleSize || null;
             const _wsPackageDeal = window._wsPackageDeal || false;
             const _wsPackageLabel = window._wsPackageLabel || '';
-            const total = Math.max(0, (gallons * price) - _wsDiscount);
+            const total = Math.max(0, (bottles * price) - _wsDiscount);
             const paymentType = document.getElementById('water-sale-payment-type').value;
             const paidNow = paymentType === 'partial' ? (parseFloat(document.getElementById('water-sale-paid').value.replace(/,/g, '')) || 0) : (paymentType === 'cash' ? total : 0);
             const date = document.getElementById('water-sale-date').value;
             const notes = document.getElementById('water-sale-notes').value.trim();
             
-            if (gallons <= 0) {
-                showToast('⚠️ Please enter number of bottles/gallons.', 'warning');
+            if (bottles <= 0) {
+                showToast('⚠️ Please enter number of bottles.', 'warning');
                 return;
             }
             
@@ -13578,14 +13588,16 @@ async function loadWaterCustomers() {
             
             const sale = {
                 customerId: parseInt(customerId),
-                gallons,
-                pricePerGallon: price,
+                bottles,
+                gallons: bottles, // kept for backward compat display
+                pricePerBottle: price,
+                pricePerGallon: price, // kept for backward compat
                 containerType: _wsContainerType,
                 bottleSize: _wsBottleSize,
                 packageDeal: _wsPackageDeal,
                 packageLabel: _wsPackageLabel,
                 discount: _wsDiscount,
-                grossTotal: gallons * price,
+                grossTotal: bottles * price,
                 total,
                 amountPaid: paidNow,
                 balance: total - paidNow,
@@ -13612,7 +13624,7 @@ async function loadWaterCustomers() {
                 // Cashier: offer quick endorsement for credit/partial sales
                 if (currentAppUser && currentAppUser.role === 'cashier' && (sale.status === 'credit' || sale.status === 'partial')) {
                     if (await showConfirm(`Balance: ₱${sale.balance.toLocaleString()}. Endorse this credit water sale to admin?`, 'info', '💧 Water Sale Recorded', 'Yes, Endorse', 'No Thanks')) {
-                        quickEndorse('water', `💧 Water Sale — ${sale.status.toUpperCase()}:\n• Gallons: ${gallons}\n• Total: ₱${total.toLocaleString()}\n• Paid: ₱${paidNow.toLocaleString()}\n• Balance: ₱${sale.balance.toLocaleString()}\n• Date: ${date}\nRecorded by: ${currentAppUser?.fullname || 'Cashier'}`);
+                        quickEndorse('water', `💧 Water Sale — ${sale.status.toUpperCase()}:\n• Bottles: ${bottles}\n• Price/bottle: ₱${price}\n• Total: ₱${total.toLocaleString()}\n• Paid: ₱${paidNow.toLocaleString()}\n• Balance: ₱${sale.balance.toLocaleString()}\n• Date: ${date}\nRecorded by: ${currentAppUser?.fullname || 'Cashier'}`);
                     }
                 }
             } catch (error) {
@@ -13628,7 +13640,7 @@ async function loadWaterCustomers() {
             const sales = await dbGetAll('waterSales');
             const customerSales = sales.filter(s => s.customerId === id).sort((a, b) => new Date(b.date) - new Date(a.date));
             
-            const totalGallons = customerSales.reduce((sum, s) => sum + s.gallons, 0);
+            const totalGallons = customerSales.reduce((sum, s) => sum + (s.bottles || s.gallons || 0), 0);
             const totalPurchases = customerSales.reduce((sum, s) => sum + s.total, 0);
             const totalPaid = customerSales.reduce((sum, s) => sum + s.amountPaid, 0);
             const balance = totalPurchases - totalPaid;
@@ -15513,7 +15525,7 @@ async function showPayrollSummary() {
             if (!sales.length) { showToast('No sales history yet.', 'info'); return; }
 
             sales.sort((a,b) => new Date(b.date) - new Date(a.date));
-            const totalGal = sales.reduce((s,x) => s + (x.gallons||0), 0);
+            const totalGal = sales.reduce((s,x) => s + (x.bottles||x.gallons||0), 0);
             const totalAmt = sales.reduce((s,x) => s + (x.totalPrice||0), 0);
             const totalPaid = sales.reduce((s,x) => s + (x.amountPaid||0), 0);
 
@@ -17734,7 +17746,7 @@ async function showPayrollSummary() {
                     txns.push(...waterSales.filter(s=>s.date===today&&!s.voided).map(s=>({
                         icon:'💧', type:'Water', name:s.customerName||'Customer',
                         amount:s.amountPaid||0, method:s.paymentMethod||'cash',
-                        sub:`${s.containerType==='small'?(s.gallons||0)+' × '+(s.bottleSize||'bottle')+' @ ₱'+s.pricePerGallon:(s.gallons||0)+' gal @ ₱'+(s.pricePerGallon||0)}${s.packageDeal?' 🎁 Package':''}`,
+                        sub:`${s.containerType==='small'?(s.bottles||s.gallons||0)+' × '+(s.bottleSize||'bottle')+' @ ₱'+(s.pricePerBottle||s.pricePerGallon||0):(s.bottles||s.gallons||0)+' bot @ ₱'+(s.pricePerBottle||s.pricePerGallon||0)}${s.packageDeal?' 🎁 Package':''}`,
                         by: s.recordedBy||'',
                         byRole: s.recordedByRole||'',
                         id:s.id, src:'water', parentId: s.customerId,
@@ -17903,7 +17915,7 @@ async function showPayrollSummary() {
                 title  = '✏️ Edit Water Sale';
                 fields = `
                     <div class="form-group">
-                        <label style="font-size:0.82rem;color:#94a3b8;">Gallons / Qty</label>
+                        <label style="font-size:0.82rem;color:#94a3b8;">Bottles / Qty</label>
                         <input type="number" id="ife-gallons" value="${record.gallons||0}" min="1"
                             style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:1rem;box-sizing:border-box;" oninput="ifeWaterCalc()">
                     </div>
@@ -18016,7 +18028,7 @@ async function showPayrollSummary() {
                 const gallons = parseFloat(document.getElementById('ife-gallons')?.value) || 0;
                 const price   = parseFloat(document.getElementById('ife-price')?.value)   || 0;
                 const status  = document.getElementById('ife-status')?.value || 'paid';
-                if (gallons <= 0) { showToast('⚠️ Gallons must be greater than 0.', 'warning'); return; }
+                if (gallons <= 0) { showToast('⚠️ Bottles must be greater than 0.', 'warning'); return; }
                 const s = await dbGet('waterSales', id);
                 if (!s) { showToast('⚠️ Record not found.', 'warning'); return; }
                 const total   = gallons * price;
@@ -22896,13 +22908,13 @@ Lender/Manager
                     titleText = '💰 Today\'s Sales';
                     const todaySales = waterSales.filter(s => s.date === today && !s.voided);
                     const todayTotal = todaySales.reduce((sum, s) => sum + (s.amountPaid || s.total || 0), 0);
-                    const todayGallons = todaySales.reduce((sum, s) => sum + (s.gallons || 0), 0);
+                    const todayGallons = todaySales.reduce((sum, s) => sum + (s.bottles || s.gallons || 0), 0);
                     const _isAdminOwner = currentAppUser && ['owner','admin'].includes(currentAppUser.role);
 
                     html = `
                         <div style="background:linear-gradient(135deg,#059669,#10b981);color:white;padding:15px;border-radius:10px;text-align:center;margin-bottom:15px;">
                             <div style="font-size:2rem;font-weight:bold;">₱${todayTotal.toLocaleString()}</div>
-                            <div style="font-size:0.85rem;opacity:0.9;">${todaySales.length} Sale${todaySales.length!==1?'s':''} · ${todayGallons} Gallons Today</div>
+                            <div style="font-size:0.85rem;opacity:0.9;">${todaySales.length} Sale${todaySales.length!==1?'s':''} · ${todayGallons} Bottle${todayGallons!==1?'s':''} Today</div>
                         </div>
 
                         ${_isAdminOwner ? `
@@ -22959,19 +22971,19 @@ Lender/Manager
                     break;
                     
                 case 'gallons':
-                    titleText = '🚰 Gallons Sold';
+                    titleText = '🍶 Bottles Sold';
                     const now = new Date();
                     const thisMonthSales = waterSales.filter(s => {
                         const sDate = new Date(s.date);
                         return sDate.getMonth() === now.getMonth() && sDate.getFullYear() === now.getFullYear() && !s.voided;
                     });
-                    const monthGallons = thisMonthSales.reduce((sum, s) => sum + (s.gallons || 0), 0);
+                    const monthGallons = thisMonthSales.reduce((sum, s) => sum + (s.bottles || s.gallons || 0), 0);
                     const monthTotal = thisMonthSales.reduce((sum, s) => sum + (s.total || 0), 0);
                     
                     html = `
                         <div style="background: var(--primary); color: white; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 15px;">
                             <div style="font-size: 2rem; font-weight: bold;">${monthGallons.toLocaleString()}</div>
-                            <div>Gallons Sold This Month</div>
+                            <div>Bottles Sold This Month</div>
                             <div style="font-size: 0.9rem; margin-top: 5px;">₱${monthTotal.toLocaleString()} Total Revenue</div>
                         </div>
                         <h4 style="margin: 15px 0 10px 0;">Recent Sales</h4>
@@ -27085,7 +27097,7 @@ async function editTask(id) {
                     <div style="font-size:0.82rem;color:#94a3b8;margin-bottom:14px;">Customer: <strong style="color:#f1f5f9;">${custName}</strong></div>
 
                     <div class="form-group">
-                        <label style="font-size:0.82rem;color:#94a3b8;">Gallons / Qty</label>
+                        <label style="font-size:0.82rem;color:#94a3b8;">Bottles / Qty</label>
                         <input type="number" id="wse-gallons" value="${sale.gallons||0}" min="1"
                             style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:1rem;box-sizing:border-box;">
                     </div>
@@ -27146,7 +27158,7 @@ async function editTask(id) {
             const total = qty * price;
             const bal   = Math.max(0, total - paid);
             const el    = document.getElementById('wse-summary');
-            if (el) el.innerHTML = `${qty} × ₱${price} = <strong style="color:#f1f5f9;">₱${total.toLocaleString()}</strong> &nbsp;|&nbsp; Paid: ₱${paid.toLocaleString()} &nbsp;|&nbsp; Balance: <span style="color:${bal>0?'#f59e0b':'#10b981'};">₱${bal.toLocaleString()}</span>`;
+            if (el) el.innerHTML = `${qty} bottle${qty!==1?'s':''} × ₱${price} = <strong style="color:#f1f5f9;">₱${total.toLocaleString()}</strong> &nbsp;|&nbsp; Paid: ₱${paid.toLocaleString()} &nbsp;|&nbsp; Balance: <span style="color:${bal>0?'#f59e0b':'#10b981'};">₱${bal.toLocaleString()}</span>`;
         }
         window.wseCalc = wseCalc;
 
@@ -27163,11 +27175,13 @@ async function editTask(id) {
             const total    = gallons * price;
             const balance  = Math.max(0, total - paid);
 
-            if (gallons <= 0) { showToast('⚠️ Gallons/qty must be greater than 0.', 'warning'); return; }
+            if (gallons <= 0) { showToast('⚠️ Bottles must be greater than 0.', 'warning'); return; }
             if (!date)        { showToast('⚠️ Date is required.', 'warning'); return; }
 
             sale.gallons       = gallons;
+            sale.bottles       = gallons; // bottles = gallons in new system
             sale.pricePerGallon = price;
+            sale.pricePerBottle = price;
             sale.total         = total;
             sale.grossTotal    = total;
             sale.amountPaid    = paid;
