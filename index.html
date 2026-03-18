@@ -5516,7 +5516,8 @@
                     <button class="btn btn-secondary" onclick="runManualHealthCheck()">🏥 Run Health Check</button>
                     <button class="btn btn-primary" onclick="createManualBackup()">💾 Create Backup</button>
                     <button class="btn btn-success" onclick="downloadJSONBackup()" title="Download all your data as a JSON file for safekeeping">⬇️ Download JSON Backup</button>
-                    <button class="btn btn-warning" onclick="forceSyncNow()" title="Force immediate sync to Firebase now">☁️ Force Sync Now</button>
+                    <button class="btn btn-warning" onclick="forceSyncNow()" title="Smart sync — pulls if empty, pushes if has data">☁️ Force Sync Now</button>
+                    <button class="btn btn-primary" onclick="pullFromCloud()" title="Force pull all data from Firebase to this device">⬇️ Pull from Cloud</button>
                     <button class="btn btn-secondary" onclick="cleanDuplicateTenants()" title="Remove duplicate tenant records with same name">🧹 Clean Duplicates</button>
                 </div>
             </div>
@@ -21045,14 +21046,52 @@ async function clearAllData() {
         // ── Force Sync Now ──
         async function forceSyncNow() {
             try {
-                showToast('☁️ Syncing to Firebase...', 'info');
-                await syncToFirebase();
-                showToast('✅ Sync complete! Your data is safe in Firebase.', 'success');
+                showToast('☁️ Checking local data...', 'info');
+                const _localProps = await dbGetAll('properties').catch(()=>[]);
+                const _isEmpty = !_localProps || _localProps.length === 0;
+                if (_isEmpty) {
+                    // Fresh device — pull from Firebase
+                    showToast('⬇️ Pulling data from Firebase...', 'info');
+                    await syncFromFirebase();
+                    if (typeof loadDashboard === 'function') loadDashboard();
+                    if (typeof loadProperties === 'function') loadProperties();
+                    if (typeof loadTenants === 'function') loadTenants();
+                    showToast('✅ Data pulled from Firebase successfully!', 'success');
+                } else {
+                    // Has data — push to Firebase
+                    showToast('⬆️ Pushing data to Firebase...', 'info');
+                    await syncToFirebase();
+                    showToast('✅ Data pushed to Firebase successfully!', 'success');
+                }
             } catch(e) {
                 showToast('❌ Sync failed: ' + e.message, 'error');
             }
         }
         window.forceSyncNow = forceSyncNow;
+
+        async function pullFromCloud() {
+            try {
+                showToast('⬇️ Pulling all data from Firebase...', 'info');
+                // Force the correct orgId first
+                if (MT && MT.LOCKED_ORG_ID) {
+                    localStorage.setItem('mt_current_org_id', MT.LOCKED_ORG_ID);
+                    if (MT.currentOrg) MT.currentOrg.id = MT.LOCKED_ORG_ID;
+                }
+                await syncFromFirebase();
+                if (typeof loadDashboard === 'function') loadDashboard();
+                if (typeof loadProperties === 'function') loadProperties();
+                if (typeof loadTenants === 'function') loadTenants();
+                if (typeof loadCredits === 'function') loadCredits();
+                if (typeof loadWaterCustomers === 'function') loadWaterCustomers();
+                if (typeof loadExpenses === 'function') loadExpenses();
+                if (typeof loadIncome === 'function') loadIncome();
+                if (typeof loadEmployees === 'function') loadEmployees();
+                showToast('✅ All data pulled from Firebase!', 'success');
+            } catch(e) {
+                showToast('❌ Pull failed: ' + e.message, 'error');
+            }
+        }
+        window.pullFromCloud = pullFromCloud;
 
         async function createManualBackup() {
             try {
