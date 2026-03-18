@@ -21082,7 +21082,7 @@ async function clearAllData() {
                 dbgEl = document.createElement('div');
                 dbgEl.id = 'prism-sync-debug';
                 dbgEl.style.cssText = 'position:fixed;bottom:0;left:0;right:0;max-height:50vh;overflow-y:auto;background:#0f172a;border-top:2px solid #6366f1;z-index:999999;padding:12px;font-family:monospace;font-size:0.75rem;color:#94a3b8;';
-                dbgEl.innerHTML = '<div style="display:flex;justify-content:space-between;margin-bottom:8px;"><strong style="color:#6366f1;">PRISM Sync Debug</strong><button onclick="document.getElementById('prism-sync-debug').remove()" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:1rem;">✕</button></div><div id="prism-sync-log"></div>';
+                dbgEl.innerHTML = '<div style="display:flex;justify-content:space-between;margin-bottom:8px;"><strong style="color:#6366f1;">PRISM Sync Debug</strong><button onclick="document.getElementById(&quot;prism-sync-debug&quot;).remove()" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:1rem;">\u2715</button></div><div id="prism-sync-log"></div>';
                 document.body.appendChild(dbgEl);
             }
             const log = (msg, color) => {
