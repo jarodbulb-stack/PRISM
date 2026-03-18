@@ -8087,6 +8087,12 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                         }
                     }
                 } catch(e) { console.warn('[Sync] Could not resolve primary orgId:', e); }
+                // SUPER ADMIN: always use LOCKED_ORG_ID if available
+                const _isSA2 = MT && MT.SUPER_ADMINS && cu.email &&
+                    MT.SUPER_ADMINS.map(e=>e.toLowerCase()).includes(cu.email.toLowerCase());
+                if (_isSA2 && MT.LOCKED_ORG_ID) {
+                    orgId = MT.LOCKED_ORG_ID;
+                }
                 if (!orgId || orgId === 'local_org') orgId = cu.uid;
                 if (orgId && orgId !== 'local_org') {
                     localStorage.setItem('mt_current_org_id', orgId);
@@ -21070,15 +21076,117 @@ async function clearAllData() {
         window.forceSyncNow = forceSyncNow;
 
         async function pullFromCloud() {
-            try {
-                showToast('⬇️ Pulling all data from Firebase...', 'info');
-                // Force the correct orgId first
-                if (MT && MT.LOCKED_ORG_ID) {
-                    localStorage.setItem('mt_current_org_id', MT.LOCKED_ORG_ID);
-                    if (MT.currentOrg) MT.currentOrg.id = MT.LOCKED_ORG_ID;
+            // Show debug panel
+            let dbgEl = document.getElementById('prism-sync-debug');
+            if (!dbgEl) {
+                dbgEl = document.createElement('div');
+                dbgEl.id = 'prism-sync-debug';
+                dbgEl.style.cssText = 'position:fixed;bottom:0;left:0;right:0;max-height:50vh;overflow-y:auto;background:#0f172a;border-top:2px solid #6366f1;z-index:999999;padding:12px;font-family:monospace;font-size:0.75rem;color:#94a3b8;';
+                dbgEl.innerHTML = '<div style="display:flex;justify-content:space-between;margin-bottom:8px;"><strong style="color:#6366f1;">PRISM Sync Debug</strong><button onclick="document.getElementById('prism-sync-debug').remove()" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:1rem;">✕</button></div><div id="prism-sync-log"></div>';
+                document.body.appendChild(dbgEl);
+            }
+            const log = (msg, color) => {
+                const logEl = document.getElementById('prism-sync-log');
+                if (logEl) {
+                    logEl.innerHTML += `<div style="color:${color||'#94a3b8'};padding:2px 0;border-bottom:1px solid #1e293b;">[${new Date().toLocaleTimeString()}] ${msg}</div>`;
+                    logEl.scrollTop = logEl.scrollHeight;
                 }
-                await syncFromFirebase();
-                if (typeof loadDashboard === 'function') loadDashboard();
+            };
+
+            try {
+                log('Starting pull from Firebase...', '#818cf8');
+
+                // Check Firebase readiness
+                log('Firebase ready: ' + !!window.db, window.db ? '#10b981' : '#ef4444');
+                log('Auth user: ' + (MT?.currentUser?.email || 'NONE'), MT?.currentUser ? '#10b981' : '#ef4444');
+
+                // Always use LOCKED_ORG_ID for Super Admin — never depend on localStorage
+                const orgId = (MT && MT.LOCKED_ORG_ID)
+                    || localStorage.getItem('mt_current_org_id')
+                    || (MT && MT.currentOrg && MT.currentOrg.id)
+                    || null;
+                log('OrgId: ' + orgId, orgId ? '#10b981' : '#ef4444');
+                log('LOCKED_ORG_ID: ' + (MT && MT.LOCKED_ORG_ID), '#818cf8');
+                log('localStorage orgId: ' + localStorage.getItem('mt_current_org_id'), '#818cf8');
+                log('MT.currentOrg: ' + (MT && MT.currentOrg && MT.currentOrg.id), '#818cf8');
+
+                if (!orgId) {
+                    log('ERROR: No orgId found! Setting from LOCKED_ORG_ID...', '#f59e0b');
+                    // Last resort — hardcode the known orgId
+                    const _hardcoded = 'org_1771565060031_l3df7n';
+                    localStorage.setItem('mt_current_org_id', _hardcoded);
+                    log('Using hardcoded orgId: ' + _hardcoded, '#f59e0b');
+                }
+                const finalOrgId = orgId || 'org_1771565060031_l3df7n';
+
+                if (!window.db) {
+                    log('ERROR: Firebase not connected!', '#ef4444');
+                    showToast('❌ Firebase not connected. Check internet connection.', 'error');
+                    return;
+                }
+
+                localStorage.setItem('mt_current_org_id', finalOrgId);
+                if (MT && MT.currentOrg) MT.currentOrg.id = finalOrgId;
+                else if (MT) MT.currentOrg = { id: finalOrgId };
+
+                // Try direct Firestore read
+                log('Reading prism_data/' + finalOrgId + '...', '#818cf8');
+                const docRef = window.db.collection('prism_data').doc(finalOrgId);
+                const doc = await docRef.get();
+
+                log('Document exists: ' + doc.exists, doc.exists ? '#10b981' : '#ef4444');
+
+                if (!doc.exists) {
+                    log('ERROR: No data document found for orgId: ' + orgId, '#ef4444');
+                    showToast('❌ No data found in Firebase for this organization.', 'error');
+                    return;
+                }
+
+                const data = doc.data();
+                log('Properties in Firebase: ' + (data.properties||[]).length, '#10b981');
+                log('Tenants in Firebase: ' + (data.tenants||[]).length, '#10b981');
+                log('Payments in Firebase: ' + (data.payments||[]).length, '#10b981');
+                log('Water sales in Firebase: ' + (data.waterSales||[]).length, '#10b981');
+                log('Expenses in Firebase: ' + (data.expenses||[]).length, '#10b981');
+                log('Employees in Firebase: ' + (data.employees||[]).length, '#10b981');
+
+                // Write to IndexedDB
+                const STORES = ['properties','tenants','payments','credits','creditPayments',
+                    'expenses','customNotes','additionalIncome','clientCharges',
+                    'waterCustomers','waterSales','employees','cashAdvances',
+                    'salaryPayments','timeRecords','tasks'];
+
+                let totalWritten = 0;
+                for (const s of STORES) {
+                    const arr = Array.isArray(data[s]) ? data[s] : [];
+                    if (arr.length === 0) { log('Skip ' + s + ': empty', '#64748b'); continue; }
+                    try {
+                        await new Promise((res, rej) => {
+                            if (!db || !db.objectStoreNames.contains(s)) { res(); return; }
+                            const tx = db.transaction([s], 'readwrite');
+                            const store = tx.objectStore(s);
+                            store.clear().onsuccess = () => {
+                                let p = arr.length;
+                                arr.forEach(item => {
+                                    const r = store.put(item);
+                                    r.onsuccess = () => { p--; if(!p) res(); };
+                                    r.onerror   = () => { p--; if(!p) res(); };
+                                });
+                                if (!p) res();
+                            };
+                            tx.onerror = rej;
+                        });
+                        log('Wrote ' + s + ': ' + arr.length + ' records', '#10b981');
+                        totalWritten += arr.length;
+                    } catch(e) {
+                        log('Error writing ' + s + ': ' + e.message, '#ef4444');
+                    }
+                }
+
+                log('Total written: ' + totalWritten + ' records', '#10b981');
+
+                // Reload all UI
+                if (typeof loadDashboard === 'function') { loadDashboard(); log('Dashboard reloaded', '#818cf8'); }
                 if (typeof loadProperties === 'function') loadProperties();
                 if (typeof loadTenants === 'function') loadTenants();
                 if (typeof loadCredits === 'function') loadCredits();
@@ -21086,8 +21194,12 @@ async function clearAllData() {
                 if (typeof loadExpenses === 'function') loadExpenses();
                 if (typeof loadIncome === 'function') loadIncome();
                 if (typeof loadEmployees === 'function') loadEmployees();
-                showToast('✅ All data pulled from Firebase!', 'success');
+
+                log('✅ Pull complete! ' + totalWritten + ' records loaded.', '#10b981');
+                showToast('✅ ' + totalWritten + ' records pulled from Firebase!', 'success');
+
             } catch(e) {
+                log('FATAL ERROR: ' + e.message, '#ef4444');
                 showToast('❌ Pull failed: ' + e.message, 'error');
             }
         }
