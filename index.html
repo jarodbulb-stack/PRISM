@@ -22158,6 +22158,243 @@ async function clearAllData() {
         window.filterTasksByStatus = filterTasksByStatus;
         window.showTaskDetailModal = showTaskDetailModal;
         window.manageTasksFromDetail = manageTasksFromDetail;
+        // ═══════════════════════════════════════════════
+        // TASKS MODULE
+        // ═══════════════════════════════════════════════
+        let _allTasksData = [];
+        let _taskStatusFilter = 'all';
+
+        async function loadTasks() {
+            try {
+                await ensureTasksStore();
+                _allTasksData = await dbGetAll('tasks');
+                renderTasksList(_allTasksData);
+            } catch(e) {
+                console.error('[loadTasks]', e);
+            }
+        }
+        window.loadTasks = loadTasks;
+
+        function ensureTasksStore() {
+            return Promise.resolve(); // IDB handles this via DB_VERSION
+        }
+
+        function renderTasksList(tasks) {
+            const listEl = document.getElementById('tasks-list');
+            if (!listEl) return;
+
+            const catFilter  = (document.getElementById('task-category-filter')||{}).value || 'all';
+            const priFilter  = (document.getElementById('task-priority-filter')||{}).value || 'all';
+            const statFilter = _taskStatusFilter || 'all';
+
+            let filtered = tasks.filter(t => {
+                const catOk  = catFilter  === 'all' || t.category === catFilter;
+                const priOk  = priFilter  === 'all' || t.priority === priFilter;
+                const statOk = statFilter === 'all' || t.status   === statFilter;
+                return catOk && priOk && statOk;
+            }).sort((a,b) => {
+                const priOrder = {high:0, medium:1, low:2};
+                if (a.status==='completed' && b.status!=='completed') return 1;
+                if (a.status!=='completed' && b.status==='completed') return -1;
+                return (priOrder[a.priority]||2) - (priOrder[b.priority]||2);
+            });
+
+            if (filtered.length === 0) {
+                listEl.innerHTML = '<div class="empty-state"><p>No tasks found. Add your first task!</p></div>';
+                return;
+            }
+
+            const priColor  = {high:'#ef4444', medium:'#f59e0b', low:'#10b981'};
+            const statColor = {pending:'#64748b','in-progress':'#3b82f6', completed:'#10b981'};
+            const statLabel = {pending:'⏳ Pending','in-progress':'🔄 In Progress', completed:'✅ Done'};
+            const today     = new Date().toISOString().split('T')[0];
+
+            listEl.innerHTML = filtered.map(t => {
+                const overdue  = t.dueDate && t.dueDate < today && t.status !== 'completed';
+                const dueSoon  = t.dueDate && t.dueDate === today && t.status !== 'completed';
+                const isAdmin  = currentAppUser && ['owner','admin','manager'].includes(currentAppUser.role);
+                return '<div class="list-item" style="border-left:3px solid '+(priColor[t.priority]||'#64748b')+';cursor:pointer;" onclick="showTaskDetailModal('+t.id+')">' +
+                    '<div class="item-info">' +
+                        '<h4 style="display:flex;gap:6px;align-items:center;">' +
+                            (t.title||'Untitled') +
+                            '<span style="font-size:0.7rem;background:rgba(255,255,255,0.1);padding:1px 6px;border-radius:4px;color:'+(statColor[t.status]||'#64748b')+';">'+(statLabel[t.status]||t.status)+'</span>' +
+                            (overdue ? '<span style="font-size:0.7rem;color:#ef4444;font-weight:700;">OVERDUE</span>' : '') +
+                            (dueSoon ? '<span style="font-size:0.7rem;color:#f59e0b;font-weight:700;">TODAY</span>' : '') +
+                        '</h4>' +
+                        '<p style="color:var(--text-secondary);font-size:0.82rem;">' +
+                            (t.category||'') + (t.dueDate?' · Due: '+t.dueDate:'') + (t.assignedTo?' · '+t.assignedTo:'') +
+                        '</p>' +
+                    '</div>' +
+                    '<div style="display:flex;gap:6px;align-items:center;">' +
+                        (t.status !== 'completed' ?
+                            '<button onclick="event.stopPropagation();toggleTaskStatus('+t.id+')" style="padding:4px 8px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);color:#10b981;border-radius:6px;cursor:pointer;font-size:0.72rem;">✓</button>' : '') +
+                        (isAdmin ?
+                            '<button onclick="event.stopPropagation();editTask('+t.id+')" style="padding:4px 8px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:6px;cursor:pointer;font-size:0.72rem;">✏️</button>' +
+                            '<button onclick="event.stopPropagation();deleteTask('+t.id+')" style="padding:4px 8px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#ef4444;border-radius:6px;cursor:pointer;font-size:0.72rem;">🗑</button>' : '') +
+                    '</div>' +
+                '</div>';
+            }).join('');
+        }
+
+        async function saveTask(event) {
+            event.preventDefault();
+            const editId    = document.getElementById('task-edit-id').value;
+            const title     = document.getElementById('task-title').value.trim();
+            const desc      = document.getElementById('task-description').value.trim();
+            const category  = document.getElementById('task-category').value;
+            const priority  = document.getElementById('task-priority').value;
+            const dueDate   = document.getElementById('task-due-date').value;
+            const repeat    = (document.getElementById('task-repeat')||{}).value || 'none';
+            const reminder  = (document.getElementById('task-reminder-time')||{}).value || '';
+            const status    = document.getElementById('task-status').value;
+            const assignedTo= document.getElementById('task-assigned-to').value.trim();
+
+            if (!title || !category || !priority) {
+                showToast('⚠️ Please fill in Title, Category and Priority.', 'warning'); return;
+            }
+
+            const task = { title, description:desc, category, priority, dueDate, repeat, reminderTime:reminder, status, assignedTo,
+                updatedAt: new Date().toISOString() };
+
+            try {
+                if (editId) {
+                    const existing = await dbGet('tasks', parseInt(editId));
+                    task.id = parseInt(editId);
+                    task.createdAt = existing ? existing.createdAt : new Date().toISOString();
+                    await dbUpdate('tasks', task);
+                    showToast('✅ Task updated.', 'success');
+                } else {
+                    task.createdAt = new Date().toISOString();
+                    await dbAdd('tasks', task);
+                    showToast('✅ Task added.', 'success');
+                }
+                hideModal('task-modal');
+                document.getElementById('task-form').reset();
+                document.getElementById('task-edit-id').value = '';
+                await loadTasks();
+                debouncedSync();
+            } catch(e) { showToast('❌ Error: ' + e.message, 'error'); }
+        }
+        window.saveTask = saveTask;
+
+        async function editTask(id) {
+            const task = await dbGet('tasks', id);
+            if (!task) { showToast('⚠️ Task not found.', 'warning'); return; }
+            document.getElementById('task-edit-id').value     = task.id;
+            document.getElementById('task-title').value       = task.title || '';
+            document.getElementById('task-description').value = task.description || '';
+            document.getElementById('task-category').value    = task.category || '';
+            document.getElementById('task-priority').value    = task.priority || '';
+            document.getElementById('task-due-date').value    = task.dueDate || '';
+            document.getElementById('task-status').value      = task.status || 'pending';
+            document.getElementById('task-assigned-to').value = task.assignedTo || '';
+            const repEl = document.getElementById('task-repeat');
+            if (repEl) repEl.value = task.repeat || 'none';
+            const remEl = document.getElementById('task-reminder-time');
+            if (remEl) remEl.value = task.reminderTime || '08:00';
+            document.getElementById('task-modal-title').textContent = 'Edit Task';
+            showModal('task-modal');
+        }
+        window.editTask = editTask;
+
+        async function deleteTask(id) {
+            if (!await showConfirm('This task will be permanently deleted.', 'danger', '🗑 Delete Task', 'Yes, Delete', 'Cancel')) return;
+            await dbDelete('tasks', id);
+            await loadTasks();
+            debouncedSync();
+            showToast('🗑 Task deleted.', 'success');
+        }
+        window.deleteTask = deleteTask;
+
+        async function toggleTaskStatus(id) {
+            const task = await dbGet('tasks', id);
+            if (!task) return;
+            const nextStatus = task.status === 'completed' ? 'pending'
+                : task.status === 'pending' ? 'in-progress' : 'completed';
+            task.status = nextStatus;
+            task.updatedAt = new Date().toISOString();
+            if (nextStatus === 'completed') task.completedAt = new Date().toISOString();
+            await dbUpdate('tasks', task);
+            await loadTasks();
+            debouncedSync();
+            showToast('✅ Task marked ' + nextStatus + '.', 'success');
+        }
+        window.toggleTaskStatus = toggleTaskStatus;
+
+        function filterTasks() {
+            renderTasksList(_allTasksData);
+        }
+        window.filterTasks = filterTasks;
+
+        function setTaskStatusFilter(status) {
+            _taskStatusFilter = status;
+            // Update tab buttons
+            document.querySelectorAll('.task-status-tab').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.status === status);
+            });
+            renderTasksList(_allTasksData);
+        }
+        window.setTaskStatusFilter = setTaskStatusFilter;
+
+        function filterTasksByStatus(status) {
+            setTaskStatusFilter(status);
+        }
+        window.filterTasksByStatus = filterTasksByStatus;
+
+        function showAddTaskModal() {
+            document.getElementById('task-form').reset();
+            document.getElementById('task-edit-id').value = '';
+            document.getElementById('task-modal-title').textContent = 'Add New Task';
+            const dateEl = document.getElementById('task-due-date');
+            if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+            showModal('task-modal');
+        }
+        window.showAddTaskModal = showAddTaskModal;
+
+        async function showTaskDetailModal(id) {
+            const task = await dbGet('tasks', id);
+            if (!task) return;
+            const priColor  = {high:'#ef4444', medium:'#f59e0b', low:'#10b981'};
+            const statColor = {'pending':'#64748b','in-progress':'#3b82f6','completed':'#10b981'};
+            const titleEl   = document.getElementById('task-detail-title');
+            if (titleEl) titleEl.textContent = task.title || 'Task Detail';
+            const bodyEl = document.getElementById('task-detail-content') || document.querySelector('#task-detail-modal .modal-body');
+            if (!bodyEl) { showModal('task-detail-modal'); return; }
+            const isAdmin = currentAppUser && ['owner','admin','manager'].includes(currentAppUser.role);
+            bodyEl.innerHTML =
+                '<div style="padding:4px 0 16px;">' +
+                    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">' +
+                        '<span style="padding:3px 10px;border-radius:6px;background:rgba(255,255,255,0.08);color:'+(priColor[task.priority]||'#64748b')+';font-weight:700;font-size:0.8rem;">'+(task.priority||'').toUpperCase()+' PRIORITY</span>' +
+                        '<span style="padding:3px 10px;border-radius:6px;background:rgba(255,255,255,0.08);color:'+(statColor[task.status]||'#64748b')+';font-size:0.8rem;">'+(task.status||'pending')+'</span>' +
+                        (task.category ? '<span style="padding:3px 10px;border-radius:6px;background:rgba(255,255,255,0.08);color:#94a3b8;font-size:0.8rem;">'+task.category+'</span>' : '') +
+                    '</div>' +
+                    (task.description ? '<p style="color:var(--text-secondary);font-size:0.88rem;line-height:1.55;margin-bottom:12px;">'+task.description+'</p>' : '') +
+                    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">' +
+                        (task.dueDate   ? '<div style="background:var(--bg-secondary);border-radius:8px;padding:8px;"><div style="font-size:0.7rem;color:#64748b;">Due Date</div><div style="font-weight:600;">'+task.dueDate+'</div></div>' : '') +
+                        (task.assignedTo? '<div style="background:var(--bg-secondary);border-radius:8px;padding:8px;"><div style="font-size:0.7rem;color:#64748b;">Assigned To</div><div style="font-weight:600;">'+task.assignedTo+'</div></div>' : '') +
+                        (task.repeat && task.repeat!=='none' ? '<div style="background:var(--bg-secondary);border-radius:8px;padding:8px;"><div style="font-size:0.7rem;color:#64748b;">Repeat</div><div style="font-weight:600;">'+task.repeat+'</div></div>' : '') +
+                        (task.reminderTime ? '<div style="background:var(--bg-secondary);border-radius:8px;padding:8px;"><div style="font-size:0.7rem;color:#64748b;">Reminder</div><div style="font-weight:600;">'+task.reminderTime+'</div></div>' : '') +
+                    '</div>' +
+                    (isAdmin ? '<div style="display:flex;gap:8px;">' +
+                        '<button onclick="hideModal('task-detail-modal');editTask('+task.id+')" style="flex:1;padding:10px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:8px;cursor:pointer;font-weight:600;">✏️ Edit</button>' +
+                        '<button onclick="hideModal('task-detail-modal');deleteTask('+task.id+')" style="flex:1;padding:10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#ef4444;border-radius:8px;cursor:pointer;font-weight:600;">🗑 Delete</button>' +
+                    '</div>' : '') +
+                '</div>';
+            showModal('task-detail-modal');
+        }
+        window.showTaskDetailModal = showTaskDetailModal;
+
+        function manageTasksFromDetail() {
+            hideModal('task-detail-modal');
+            if (typeof showSection === 'function') showSection('tasks');
+        }
+        window.manageTasksFromDetail = manageTasksFromDetail;
+
+        function addTaskToCalendar(id) {
+            showToast('ℹ️ Calendar export coming soon.', 'info');
+        }
+        window.addTaskToCalendar = addTaskToCalendar;
+
         window.loadTasks = loadTasks;
         window.saveTask = saveTask;
         window.editTask = editTask;
