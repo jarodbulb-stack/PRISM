@@ -7659,32 +7659,38 @@
         // THEME TOGGLE
         // =====================
         function toggleTheme() {
-            const body = document.body;
-            const currentTheme = body.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            
-            body.setAttribute('data-theme', newTheme);
-            localStorage.setItem('prism-theme', newTheme);
-            
-            // Update toggle button icon
-            const toggleBtn = document.getElementById('theme-toggle');
-            toggleBtn.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+            const current = document.documentElement.getAttribute('data-theme') ||
+                            document.body.getAttribute('data-theme') || 'dark';
+            const next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            document.body.setAttribute('data-theme', next);
+            localStorage.setItem('prism-theme', next);
+            const btn = document.getElementById('theme-toggle');
+            if (btn) btn.textContent = next === 'dark' ? '☀️' : '🌙';
         }
+        window.toggleTheme = toggleTheme;
 
         function loadTheme() {
-            // Migrate old CARENT theme to PRISM theme
-            if (localStorage.getItem('carent-theme') && !localStorage.getItem('prism-theme')) {
-                localStorage.setItem('prism-theme', localStorage.getItem('carent-theme'));
-                localStorage.removeItem('carent-theme');
+            // Migrate old keys
+            const oldKey = localStorage.getItem('carent-theme') || localStorage.getItem('prism_theme');
+            if (oldKey && !localStorage.getItem('prism-theme')) {
+                localStorage.setItem('prism-theme', oldKey);
             }
-            
-            const savedTheme = localStorage.getItem('prism-theme') || 'light';
-            document.body.setAttribute('data-theme', savedTheme);
-            const toggleBtn = document.getElementById('theme-toggle');
-            if (toggleBtn) {
-                toggleBtn.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
-            }
+            // Default to DARK mode (PRISM is dark by default)
+            const saved = localStorage.getItem('prism-theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+            document.body.setAttribute('data-theme', saved);
+            const btn = document.getElementById('theme-toggle');
+            if (btn) btn.textContent = saved === 'dark' ? '☀️' : '🌙';
         }
+        // Apply theme IMMEDIATELY on script load (before anything else)
+        (function() {
+            const oldKey = localStorage.getItem('carent-theme') || localStorage.getItem('prism_theme');
+            if (oldKey && !localStorage.getItem('prism-theme')) localStorage.setItem('prism-theme', oldKey);
+            const t = localStorage.getItem('prism-theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', t);
+            document.body.setAttribute('data-theme', t);
+        })();
 
         // =====================================================
         // FIREBASE CONFIGURATION & AUTHENTICATION
@@ -21447,17 +21453,7 @@ async function clearAllData() {
         // RESTORED FUNCTIONS - rebuilt after accidental deletion
         // ============================================================
 
-        // ── Toggle Theme ──
-        function toggleTheme() {
-            const html = document.documentElement;
-            const current = html.getAttribute('data-theme');
-            const next = current === 'light' ? 'dark' : 'light';
-            html.setAttribute('data-theme', next);
-            localStorage.setItem('prism_theme', next);
-            const btn = document.getElementById('theme-toggle');
-            if (btn) btn.textContent = next === 'dark' ? '☀️' : '🌙';
-        }
-        window.toggleTheme = toggleTheme;
+        // ── Toggle Theme — handled by loadTheme/toggleTheme above ──
 
         // ── Login / Auth UI ──
         function closeLoginModal() {
@@ -22142,7 +22138,29 @@ async function clearAllData() {
         window.appLogout = appLogout;
 
 
-        window.refreshStats = refreshStats;
+        // ── Update user display in header ──
+        function updateUserDisplay() {
+            const el = document.getElementById('current-user-display');
+            if (!el) return;
+            const user = currentAppUser || (MT && MT.currentUser ? {
+                fullname: MT.currentUser.displayName || MT.currentUser.email || '',
+                role: 'owner',
+                email: MT.currentUser.email || ''
+            } : null);
+            if (!user) { el.innerHTML = ''; return; }
+            const name    = user.fullname || user.email || '';
+            const display = name.includes('@') ? name.split('@')[0] : name;
+            const roleColors = {owner:'#a78bfa',admin:'#60a5fa',manager:'#34d399',cashier:'#fbbf24',viewer:'#94a3b8'};
+            const roleColor  = roleColors[user.role] || '#94a3b8';
+            el.innerHTML =
+                '<div style="display:flex;align-items:center;gap:6px;">' +
+                    '<span style="font-size:0.82rem;font-weight:700;color:var(--text-primary);">' + display + '</span>' +
+                    '<span style="font-size:0.65rem;padding:1px 6px;border-radius:4px;background:rgba(255,255,255,0.08);color:' + roleColor + ';font-weight:600;text-transform:uppercase;">' + (user.role||'') + '</span>' +
+                '</div>';
+        }
+        window.updateUserDisplay = updateUserDisplay;
+
+                window.refreshStats = refreshStats;
         window.manualSync = manualSync;
         window.clearSpecificData = clearSpecificData;
         window.loadSampleDataQuick = loadSampleDataQuick;
@@ -23605,6 +23623,10 @@ function _mtShowAppActual() {
     const app = document.querySelector('.prism-app-wrapper');
     if (app) app.classList.add('mt-active');
     mtUpdateOrgBadge();
+    // Wire nav buttons
+    if (typeof setupNavigation === 'function') setupNavigation();
+    if (typeof updateUserDisplay === 'function') updateUserDisplay();
+    if (typeof loadTheme === 'function') loadTheme();
 
     // ── Safety net: ensure currentAppUser is always set when app shows ──
     if (!currentAppUser && MT.currentUser) {
@@ -24423,7 +24445,7 @@ function _doLocalAdminLogin() {
         mtToast('Welcome! Please set up your organization first.', 'info', 5000);
     } else {
         mtToast('✅ Logged in as Administrator', 'success');
-        setTimeout(() => { mtShowApp(); mtUpdateOrgBadge(); if (typeof updateUserDisplay === 'function') updateUserDisplay(); if (typeof loadDashboard === 'function') loadDashboard(); }, 300);
+        setTimeout(() => { mtShowApp(); mtUpdateOrgBadge(); if (typeof updateUserDisplay === 'function') updateUserDisplay(); if (typeof loadTheme === 'function') loadTheme(); if (typeof loadDashboard === 'function') loadDashboard(); }, 300);
     }
 }
 
@@ -26159,6 +26181,15 @@ window.mtSAToggleOrgStatus=mtSAToggleOrgStatus;
                 });
             }
         });
+        // Wire navigation on DOM ready
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof setupNavigation === 'function') setupNavigation();
+            if (typeof loadTheme === 'function') loadTheme();
+        });
+        // Also try immediately in case DOM is already ready
+        if (document.readyState !== 'loading') {
+            setTimeout(function() { if (typeof setupNavigation === 'function') setupNavigation(); }, 100);
+        }
 
 
         
