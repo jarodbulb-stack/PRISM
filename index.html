@@ -4617,9 +4617,10 @@
             <div class="card">
                 <div class="card-header">
                     <div class="card-title">💧 Water Refilling Station</div>
-                    <div style="display: flex; gap: 8px;">
+                    <div style="display: flex; gap: 6px; flex-wrap:wrap;">
                         <button class="btn btn-sm btn-primary" onclick="showModal('water-customer-modal')">+ Customer</button>
                         <button class="btn btn-sm btn-success" onclick="showWaterSaleModal()">+ Sale</button>
+                        <button class="btn btn-sm btn-secondary" onclick="setWaterView('store');showWaterStoreItemModal()" style="background:rgba(139,92,246,0.15);border-color:rgba(139,92,246,0.4);color:#a78bfa;">🛒 Sell Item</button>
                     </div>
                 </div>
 
@@ -4632,10 +4633,11 @@
 
                 <input type="text" id="water-search" placeholder="🔍 Search customer..." style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 15px; background: var(--card-bg); color: var(--text-primary);" oninput="filterWaterCustomers()">
 
-                <!-- View toggle: Customers / All Sales -->
-                <div style="display:flex;gap:8px;margin-bottom:12px;">
+                <!-- View toggle: Customers / All Sales / Store -->
+                <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
                     <button id="water-view-customers-btn" class="btn btn-sm btn-primary" onclick="setWaterView('customers')">👥 Customers</button>
                     <button id="water-view-sales-btn" class="btn btn-sm btn-secondary" onclick="setWaterView('sales')">🧾 All Sales</button>
+                    <button id="water-view-store-btn" class="btn btn-sm btn-secondary" onclick="setWaterView('store')">🛒 Store</button>
                 </div>
 
                 <div id="water-customers-list">
@@ -4643,6 +4645,7 @@
                 </div>
 
                 <div id="water-all-sales-list" style="display:none;"></div>
+                <div id="water-store-panel" style="display:none;"></div>
             </div>
         
             <!-- nav-bottom-water -->
@@ -9186,7 +9189,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             return 'PrismDB_' + orgId;
         }
         let DB_NAME = getMTDbName();
-        const DB_VERSION = 9;  // v9: Added Task Management System
+        const DB_VERSION = 10; // v10: Added Water Store (products + sales)
         let db = null;
         let dbReady = false;
         // Global promise that resolves when IndexedDB is ready — sync functions wait on this
@@ -9369,6 +9372,15 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                         errStore.createIndex('source', 'source', { unique: false });
                         errStore.createIndex('date', 'date', { unique: false });
                         errStore.createIndex('isCritical', 'isCritical', { unique: false });
+                    }
+                    // Water Store — product sales and product catalog
+                    if (!database.objectStoreNames.contains('waterStoreSales')) {
+                        const wsStore = database.createObjectStore('waterStoreSales', { keyPath: 'id', autoIncrement: true });
+                        wsStore.createIndex('date', 'date', { unique: false });
+                        wsStore.createIndex('customerId', 'customerId', { unique: false });
+                    }
+                    if (!database.objectStoreNames.contains('waterStoreProducts')) {
+                        database.createObjectStore('waterStoreProducts', { keyPath: 'id' });
                     }
                 };
 
@@ -21641,8 +21653,8 @@ async function clearAllData() {
                 showToast('⏳ Preparing backup...', 'info');
                 const STORES = ['properties','tenants','payments','credits','creditPayments',
                     'expenses','customNotes','additionalIncome','clientCharges',
-                    'waterCustomers','waterSales','employees','cashAdvances',
-                    'salaryPayments','timeRecords','tasks'];
+                    'waterCustomers','waterSales','waterStoreSales','waterStoreProducts',
+                    'employees','cashAdvances','salaryPayments','timeRecords','tasks'];
                 const backup = {
                     version: '1.0',
                     exportedAt: new Date().toISOString(),
@@ -27421,25 +27433,597 @@ async function editTask(id) {
         let _waterView = 'customers';
         function setWaterView(view) {
             _waterView = view;
-            const custList = document.getElementById('water-customers-list');
+            const custList  = document.getElementById('water-customers-list');
             const salesList = document.getElementById('water-all-sales-list');
-            const custBtn = document.getElementById('water-view-customers-btn');
-            const salesBtn = document.getElementById('water-view-sales-btn');
-            if (!custList || !salesList) return;
+            const storePanel= document.getElementById('water-store-panel');
+            const custBtn   = document.getElementById('water-view-customers-btn');
+            const salesBtn  = document.getElementById('water-view-sales-btn');
+            const storeBtn  = document.getElementById('water-view-store-btn');
+            if (!custList) return;
+
+            // Hide all
+            [custList, salesList, storePanel].forEach(el => { if (el) el.style.display = 'none'; });
+            [custBtn, salesBtn, storeBtn].forEach(btn => { if (btn) btn.className = 'btn btn-sm btn-secondary'; });
+
             if (view === 'customers') {
-                custList.style.display = '';
-                salesList.style.display = 'none';
-                if (custBtn) { custBtn.className = 'btn btn-sm btn-primary'; }
-                if (salesBtn) { salesBtn.className = 'btn btn-sm btn-secondary'; }
-            } else {
-                custList.style.display = 'none';
-                salesList.style.display = '';
-                if (custBtn) { custBtn.className = 'btn btn-sm btn-secondary'; }
-                if (salesBtn) { salesBtn.className = 'btn btn-sm btn-primary'; }
+                if (custList)  custList.style.display = '';
+                if (custBtn)   custBtn.className = 'btn btn-sm btn-primary';
+            } else if (view === 'sales') {
+                if (salesList) salesList.style.display = '';
+                if (salesBtn)  salesBtn.className = 'btn btn-sm btn-primary';
                 renderWaterAllSales();
+            } else if (view === 'store') {
+                if (storePanel) storePanel.style.display = '';
+                if (storeBtn)   storeBtn.className = 'btn btn-sm btn-primary';
+                renderWaterStore();
             }
         }
         window.setWaterView = setWaterView;
+
+        // ═══════════════════════════════════════════════════
+        // WATER STORE — sell bottles, seals, stickers, custom items
+        // ═══════════════════════════════════════════════════
+
+        // Default product catalog (editable by owner/admin)
+        const _DEFAULT_STORE_PRODUCTS = [
+            { id:'p1', name:'Empty Bottle (Small)',  category:'bottles',   price:15,  unit:'pc',  icon:'🫙' },
+            { id:'p2', name:'Empty Bottle (Medium)', category:'bottles',   price:35,  unit:'pc',  icon:'🫙' },
+            { id:'p3', name:'Empty Bottle (Big 18L)',category:'bottles',   price:80,  unit:'pc',  icon:'🔵' },
+            { id:'p4', name:'Umbrella Seal',         category:'supplies',  price:2,   unit:'pc',  icon:'☂️' },
+            { id:'p5', name:'Hygiene Sticker',       category:'supplies',  price:1,   unit:'pc',  icon:'🏷️' },
+            { id:'p6', name:'Cap / Cover',           category:'supplies',  price:3,   unit:'pc',  icon:'🔘' },
+            { id:'p7', name:'Delivery Fee',          category:'service',   price:20,  unit:'trip',icon:'🚚' },
+        ];
+
+        async function getStoreProducts() {
+            try {
+                const saved = await dbGetAll('waterStoreProducts').catch(()=>[]);
+                return saved && saved.length > 0 ? saved : _DEFAULT_STORE_PRODUCTS;
+            } catch(e) { return _DEFAULT_STORE_PRODUCTS; }
+        }
+
+        async function renderWaterStore() {
+            const el = document.getElementById('water-store-panel');
+            if (!el) return;
+            el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-secondary);">Loading...</div>';
+
+            const isAdmin = currentAppUser && ['owner','admin'].includes(currentAppUser.role);
+            const products = await getStoreProducts();
+            const storeSales = await dbGetAll('waterStoreSales').catch(()=>[]);
+            const today = new Date().toISOString().split('T')[0];
+            const todaySales = storeSales.filter(s => s.date === today && !s.voided);
+            const todayTotal = todaySales.reduce((s,x) => s + (x.total||0), 0);
+
+            // Group store sales by date for history
+            const recentSales = storeSales.filter(s => !s.voided)
+                .sort((a,b) => (b.date||'') > (a.date||'') ? 1 : -1)
+                .slice(0, 30);
+
+            el.innerHTML = `
+                <!-- Header summary -->
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">
+                    <div style="background:rgba(139,92,246,0.1);border-radius:10px;padding:10px;text-align:center;">
+                        <div style="font-weight:800;color:#a78bfa;font-size:0.95rem;">₱${todayTotal.toLocaleString()}</div>
+                        <div style="font-size:0.67rem;color:var(--text-secondary);">Today's Sales</div>
+                    </div>
+                    <div style="background:rgba(16,185,129,0.1);border-radius:10px;padding:10px;text-align:center;">
+                        <div style="font-weight:800;color:#10b981;font-size:0.95rem;">${todaySales.length}</div>
+                        <div style="font-size:0.67rem;color:var(--text-secondary);">Transactions</div>
+                    </div>
+                    <div style="background:rgba(99,102,241,0.1);border-radius:10px;padding:10px;text-align:center;">
+                        <div style="font-weight:800;color:#818cf8;font-size:0.95rem;">${products.length}</div>
+                        <div style="font-size:0.67rem;color:var(--text-secondary);">Products</div>
+                    </div>
+                </div>
+
+                <!-- Product quick-sell buttons -->
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <strong style="font-size:0.88rem;">🏪 Products</strong>
+                    ${isAdmin ? `<div style="display:flex;gap:6px;">
+                        <button onclick="showWaterStoreItemModal()" style="padding:5px 12px;background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.3);color:#a78bfa;border-radius:7px;cursor:pointer;font-size:0.78rem;font-weight:600;">+ Sell Item</button>
+                        <button onclick="showManageStoreProducts()" style="padding:5px 12px;background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-secondary);border-radius:7px;cursor:pointer;font-size:0.78rem;">⚙️ Manage</button>
+                    </div>` : ''}
+                </div>
+
+                <!-- Sell Anything custom button -->
+                <div onclick="${isAdmin ? 'showWaterStoreItemModal()' : ''}"
+                    style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:linear-gradient(135deg,rgba(139,92,246,0.15),rgba(99,102,241,0.1));border:1.5px dashed rgba(139,92,246,0.5);border-radius:10px;cursor:${isAdmin?'pointer':'default'};margin-bottom:12px;">
+                    <span style="font-size:1.5rem;">🛒</span>
+                    <div>
+                        <div style="font-weight:700;color:#a78bfa;font-size:0.88rem;">Sell Anything / Custom Item</div>
+                        <div style="font-size:0.72rem;color:#64748b;">Charge any price for any item instantly</div>
+                    </div>
+                    <span style="margin-left:auto;color:#a78bfa;font-size:1.2rem;">+</span>
+                </div>
+
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:16px;">
+                    ${products.map(p => `
+                        <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:10px;padding:10px 8px;text-align:center;position:relative;">
+                            <div style="font-size:1.5rem;margin-bottom:3px;">${p.icon}</div>
+                            <div style="font-weight:600;font-size:0.75rem;color:var(--text-primary);margin-bottom:4px;line-height:1.2;">${p.name}</div>
+                            ${isAdmin ? `
+                            <div style="display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:4px;">
+                                <span style="color:#a78bfa;font-weight:800;font-size:0.88rem;">₱</span>
+                                <input type="number" value="${p.price}" min="0" step="0.5"
+                                    id="price-input-${p.id}"
+                                    onclick="event.stopPropagation()"
+                                    onchange="updateStoreProductPrice('${p.id}',this.value)"
+                                    style="width:56px;padding:2px 4px;background:#0f172a;border:1px solid #4f46e5;border-radius:5px;color:#a78bfa;font-weight:800;font-size:0.88rem;text-align:center;">
+                                <span style="font-size:0.62rem;color:#64748b;">/${p.unit}</span>
+                            </div>
+                            <button onclick="quickSellStoreItem('${p.id}','${p.name.replace(/'/g,"\'")}',${p.price},'${p.unit}','${p.icon}')"
+                                style="width:100%;padding:5px;background:rgba(139,92,246,0.2);border:1px solid rgba(139,92,246,0.4);color:#a78bfa;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:700;">
+                                + Sell
+                            </button>` : `
+                            <div style="font-weight:800;color:#a78bfa;font-size:0.88rem;">₱${p.price.toLocaleString()}</div>
+                            <div style="font-size:0.62rem;color:#64748b;">per ${p.unit}</div>`}
+                        </div>`).join('')}
+                </div>
+
+                <!-- Recent store sales -->
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                    <strong style="font-size:0.88rem;">📋 Recent Sales</strong>
+                    <span style="font-size:0.72rem;color:#64748b;">${recentSales.length} records</span>
+                </div>
+                ${recentSales.length === 0
+                    ? '<div style="text-align:center;color:var(--text-secondary);padding:16px;font-size:0.82rem;">No store sales yet. Tap a product above to sell.</div>'
+                    : recentSales.map(s => {
+                        const sc = s.status==='paid'?'#10b981':s.status==='credit'?'#ef4444':'#f59e0b';
+                        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:var(--bg-primary);border-radius:8px;margin-bottom:5px;border-left:3px solid #a78bfa;">
+                            <div>
+                                <div style="font-weight:600;font-size:0.85rem;">${s.itemIcon||'🛒'} ${s.itemName||'Item'}</div>
+                                <div style="font-size:0.72rem;color:var(--text-secondary);">${s.qty||1} × ₱${s.unitPrice||0} · ${s.customerName||'Walk-in'} · ${s.date||''}</div>
+                            </div>
+                            <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:3px;">
+                                <div style="font-weight:700;color:#a78bfa;">₱${(s.total||0).toLocaleString()}</div>
+                                <span style="font-size:0.67rem;background:${sc}22;color:${sc};padding:1px 6px;border-radius:5px;">${s.status||'paid'}</span>
+                                ${isAdmin ? `<div style="display:flex;gap:3px;">
+                                    <button onclick="editStoreSale(${s.id})" style="padding:1px 6px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25);color:#818cf8;border-radius:4px;cursor:pointer;font-size:0.65rem;">✏️</button>
+                                    <button onclick="deleteStoreSale(${s.id})" style="padding:1px 6px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#ef4444;border-radius:4px;cursor:pointer;font-size:0.65rem;">🗑</button>
+                                </div>` : ''}
+                            </div>
+                        </div>`;
+                    }).join('')}
+            `;
+        }
+        window.renderWaterStore = renderWaterStore;
+
+        // Quick sell — opens modal pre-filled with product
+        async function quickSellStoreItem(productId, productName, unitPrice, unit, icon) {
+            const products = await getStoreProducts();
+            const product = products.find(p => p.id === productId) || { id: productId, name: productName, price: unitPrice, unit, icon };
+            showWaterStoreItemModal(product);
+        }
+        window.quickSellStoreItem = quickSellStoreItem;
+
+        async function showWaterStoreItemModal(product) {
+            const customers = await dbGetAll('waterCustomers');
+            const products  = await getStoreProducts();
+
+            const existingModal = document.getElementById('water-store-sell-modal');
+            if (existingModal) existingModal.remove();
+
+            const modal = document.createElement('div');
+            modal.id = 'water-store-sell-modal';
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
+
+            const productOpts = products.map(p =>
+                `<option value="${p.id}" data-price="${p.price}" data-unit="${p.unit}" data-icon="${p.icon}" ${product&&p.id===product.id?'selected':''}>${p.icon} ${p.name} — ₱${p.price}/${p.unit}</option>`
+            ).join('');
+
+            const custOpts = '<option value="">Walk-in Customer</option>' +
+                customers.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+            modal.innerHTML = `
+                <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;width:100%;max-width:400px;max-height:92vh;overflow-y:auto;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                        <h3 style="margin:0;color:#f1f5f9;font-size:1rem;">🛒 Sell Store Item</h3>
+                        <button onclick="document.getElementById('water-store-sell-modal').remove()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.2rem;">✕</button>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="font-size:0.82rem;color:#94a3b8;">Product *</label>
+                        <select id="ss-product" onchange="ssUpdatePrice()" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;box-sizing:border-box;">
+                            <option value="">— Select product —</option>
+                            ${productOpts}
+                            <option value="custom">✏️ Custom / New Item</option>
+                        </select>
+                    </div>
+
+                    <div id="ss-custom-fields" style="display:${product?'none':'none'};">
+                        <div class="form-group">
+                            <label style="font-size:0.82rem;color:#94a3b8;">Custom Item Name *</label>
+                            <input type="text" id="ss-custom-name" placeholder="e.g. Mineral drops, Pipe fitting..." style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;box-sizing:border-box;">
+                        </div>
+                        <div class="form-group">
+                            <label style="font-size:0.82rem;color:#94a3b8;">Icon (emoji)</label>
+                            <input type="text" id="ss-custom-icon" placeholder="🛒" maxlength="4" style="width:80px;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:1.2rem;">
+                        </div>
+                    </div>
+
+                    <div style="display:flex;gap:8px;">
+                        <div class="form-group" style="flex:1;">
+                            <label style="font-size:0.82rem;color:#94a3b8;">Qty *</label>
+                            <input type="number" id="ss-qty" value="1" min="1" oninput="ssCalcTotal()" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:1rem;box-sizing:border-box;">
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <label id="ss-price-label" style="font-size:0.82rem;color:#94a3b8;">Unit Price (₱) — editable</label>
+                            <input type="number" id="ss-price" value="${product?product.price:''}" min="0" placeholder="Enter price" oninput="ssCalcTotal()" style="width:100%;padding:10px;background:#0f172a;border:1px solid #4f46e5;border-radius:8px;color:#f1f5f9;font-size:1rem;font-weight:700;box-sizing:border-box;">
+                        </div>
+                    </div>
+
+                    <!-- Total display -->
+                    <div id="ss-total-display" style="background:#0f172a;border-radius:8px;padding:9px 12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+                        <span style="font-size:0.82rem;color:#94a3b8;">Total:</span>
+                        <span id="ss-total-val" style="font-weight:800;color:#a78bfa;font-size:1.1rem;">₱0</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="font-size:0.82rem;color:#94a3b8;">Customer</label>
+                        <select id="ss-customer" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;box-sizing:border-box;">
+                            ${custOpts}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="font-size:0.82rem;color:#94a3b8;">Payment</label>
+                        <select id="ss-payment" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;box-sizing:border-box;">
+                            <option value="cash">💵 Cash (Paid)</option>
+                            <option value="gcash">📱 GCash</option>
+                            <option value="credit">📝 Credit (Pay Later)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="font-size:0.82rem;color:#94a3b8;">Date</label>
+                        <input type="date" id="ss-date" value="${new Date().toISOString().split('T')[0]}" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;box-sizing:border-box;">
+                    </div>
+
+                    <div class="form-group">
+                        <label style="font-size:0.82rem;color:#94a3b8;">Notes (Optional)</label>
+                        <textarea id="ss-notes" rows="2" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:0.88rem;box-sizing:border-box;resize:none;"></textarea>
+                    </div>
+
+                    <div style="display:flex;gap:8px;margin-top:4px;">
+                        <button onclick="saveStoreSale()" style="flex:1;padding:12px;background:#a78bfa;border:none;border-radius:8px;color:white;font-weight:700;cursor:pointer;font-size:0.92rem;">💾 Record Sale</button>
+                        <button onclick="document.getElementById('water-store-sell-modal').remove()" style="flex:1;padding:12px;background:rgba(255,255,255,0.06);border:1px solid #334155;border-radius:8px;color:#94a3b8;cursor:pointer;">Cancel</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
+            ssCalcTotal();
+        }
+        window.showWaterStoreItemModal = showWaterStoreItemModal;
+
+        function ssUpdatePrice() {
+            const sel = document.getElementById('ss-product');
+            const opt = sel ? sel.options[sel.selectedIndex] : null;
+            const customFields = document.getElementById('ss-custom-fields');
+            const priceEl = document.getElementById('ss-price');
+            const priceLabel = document.getElementById('ss-price-label');
+
+            if (sel && sel.value === 'custom') {
+                if (customFields) customFields.style.display = 'block';
+                if (priceEl) { priceEl.value = ''; priceEl.placeholder = 'Enter your price'; }
+                if (priceLabel) priceLabel.textContent = 'Your Price (₱) *';
+                ssCalcTotal();
+                return;
+            }
+            if (customFields) customFields.style.display = 'none';
+            if (opt && opt.dataset.price) {
+                if (priceEl) priceEl.value = opt.dataset.price;
+                if (priceLabel) priceLabel.textContent = 'Unit Price (₱) — editable';
+            }
+            ssCalcTotal();
+        }
+        window.ssUpdatePrice = ssUpdatePrice;
+
+        function ssCalcTotal() {
+            const qty   = parseFloat(document.getElementById('ss-qty')?.value)   || 0;
+            const price = parseFloat(document.getElementById('ss-price')?.value) || 0;
+            const total = qty * price;
+            const el    = document.getElementById('ss-total-val');
+            if (el) el.textContent = '₱' + total.toLocaleString();
+        }
+        window.ssCalcTotal = ssCalcTotal;
+
+        async function saveStoreSale() {
+            const productSel = document.getElementById('ss-product');
+            const productId  = productSel ? productSel.value : '';
+            const qty        = parseFloat(document.getElementById('ss-qty')?.value)   || 0;
+            const unitPrice  = parseFloat(document.getElementById('ss-price')?.value) || 0;
+            const customerId = document.getElementById('ss-customer')?.value || '';
+            const payment    = document.getElementById('ss-payment')?.value || 'cash';
+            const date       = document.getElementById('ss-date')?.value || new Date().toISOString().split('T')[0];
+            const notes      = document.getElementById('ss-notes')?.value?.trim() || '';
+
+            let itemName, itemIcon;
+
+            if (productId === 'custom') {
+                itemName = document.getElementById('ss-custom-name')?.value?.trim() || '';
+                itemIcon = document.getElementById('ss-custom-icon')?.value?.trim() || '🛒';
+                if (!itemName) { showToast('⚠️ Please enter a custom item name.', 'warning'); return; }
+            } else if (productId) {
+                const opt = productSel.options[productSel.selectedIndex];
+                itemName = productSel.options[productSel.selectedIndex].text.replace(/^[^\s]+\s/, '').split(' — ')[0];
+                itemIcon = opt.dataset.icon || '🛒';
+            } else {
+                showToast('⚠️ Please select a product.', 'warning'); return;
+            }
+
+            if (qty <= 0)      { showToast('⚠️ Quantity must be greater than 0.', 'warning'); return; }
+            if (unitPrice <= 0){ showToast('⚠️ Price must be greater than 0.', 'warning'); return; }
+            if (!date)         { showToast('⚠️ Date is required.', 'warning'); return; }
+
+            const total = qty * unitPrice;
+            let customerName = 'Walk-in';
+            if (customerId) {
+                const cust = await dbGet('waterCustomers', parseInt(customerId));
+                if (cust) customerName = cust.name;
+            }
+
+            const sale = {
+                productId,
+                itemName,
+                itemIcon,
+                qty,
+                unitPrice,
+                total,
+                customerName,
+                customerId: customerId ? parseInt(customerId) : null,
+                status: payment === 'cash' || payment === 'gcash' ? 'paid' : 'credit',
+                paymentMethod: payment,
+                date,
+                notes,
+                recordedBy:     currentAppUser?.username || 'unknown',
+                recordedByRole: currentAppUser?.role     || 'unknown',
+                createdAt: new Date().toISOString()
+            };
+
+            try {
+                // Store in dedicated waterStoreSales store, also add to additionalIncome for reports
+                await dbAdd('waterStoreSales', sale);
+
+                // Also record in additionalIncome so it shows in Income page and reports
+                await dbAdd('additionalIncome', {
+                    source:      'Water Store',
+                    description: itemIcon + ' ' + itemName + ' × ' + qty + ' @ ₱' + unitPrice,
+                    amount:      total,
+                    date,
+                    notes,
+                    storeRef:    true,
+                    recordedBy:  currentAppUser?.username || 'unknown',
+                    createdAt:   new Date().toISOString()
+                });
+
+                document.getElementById('water-store-sell-modal')?.remove();
+                debouncedSync();
+                renderWaterStore();
+                if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
+                if (typeof loadDashboard === 'function') loadDashboard();
+                showToast('✅ ' + itemName + ' × ' + qty + ' sold for ₱' + total.toLocaleString() + '!', 'success');
+            } catch(e) {
+                showToast('❌ Error: ' + e.message, 'error');
+            }
+        }
+        window.saveStoreSale = saveStoreSale;
+
+        async function deleteStoreSale(id) {
+            if (!await showConfirm('Delete this store sale? This cannot be undone.', 'danger', '🗑 Delete', 'Yes, Delete', 'Cancel')) return;
+            await dbDelete('waterStoreSales', id);
+            debouncedSync();
+            renderWaterStore();
+            showToast('🗑 Sale deleted.', 'success');
+        }
+        window.deleteStoreSale = deleteStoreSale;
+
+        async function editStoreSale(id) {
+            const sale = await dbGet('waterStoreSales', id);
+            if (!sale) { showToast('⚠️ Sale not found.', 'warning'); return; }
+            // Reuse sell modal pre-filled
+            const product = { id: sale.productId, name: sale.itemName, price: sale.unitPrice, unit:'pc', icon: sale.itemIcon||'🛒' };
+            showWaterStoreItemModal(product);
+            // Pre-fill after modal renders
+            setTimeout(() => {
+                const qEl = document.getElementById('ss-qty');    if (qEl) qEl.value = sale.qty;
+                const pEl = document.getElementById('ss-price');  if (pEl) pEl.value = sale.unitPrice;
+                const dEl = document.getElementById('ss-date');   if (dEl) dEl.value = sale.date;
+                const nEl = document.getElementById('ss-notes');  if (nEl) nEl.value = sale.notes||'';
+                const pmEl= document.getElementById('ss-payment'); if (pmEl) pmEl.value = sale.paymentMethod||'cash';
+                ssCalcTotal();
+            }, 80);
+        }
+        window.editStoreSale = editStoreSale;
+
+        // Manage products modal
+        async function showManageStoreProducts() {
+            const products = await getStoreProducts();
+            const existing = document.getElementById('ws-manage-products-modal');
+            if (existing) existing.remove();
+
+            const modal = document.createElement('div');
+            modal.id = 'ws-manage-products-modal';
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
+
+            const rows = products.map((p,i) => `
+                <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg-primary);border-radius:8px;margin-bottom:6px;">
+                    <span style="font-size:1.2rem;">${p.icon}</span>
+                    <div style="flex:1;">
+                        <div style="font-weight:600;font-size:0.85rem;">${p.name}</div>
+                        <div style="font-size:0.72rem;color:#64748b;">₱${p.price} / ${p.unit}</div>
+                    </div>
+                    <button onclick="editStoreProduct('${p.id}')" style="padding:3px 8px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25);color:#818cf8;border-radius:5px;cursor:pointer;font-size:0.72rem;">✏️</button>
+                    <button onclick="deleteStoreProduct('${p.id}')" style="padding:3px 8px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#ef4444;border-radius:5px;cursor:pointer;font-size:0.72rem;">🗑</button>
+                </div>`).join('');
+
+            modal.innerHTML = `
+                <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;width:100%;max-width:400px;max-height:90vh;overflow-y:auto;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                        <h3 style="margin:0;color:#f1f5f9;font-size:1rem;">⚙️ Manage Products</h3>
+                        <button onclick="document.getElementById('ws-manage-products-modal').remove()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.2rem;">✕</button>
+                    </div>
+                    <div id="ws-product-list">${rows}</div>
+                    <div style="background:#0f172a;border-radius:10px;padding:14px;margin-top:12px;">
+                        <div style="font-weight:700;font-size:0.85rem;color:#f1f5f9;margin-bottom:10px;">+ Add New Product</div>
+                        <div style="display:flex;gap:6px;margin-bottom:6px;">
+                            <input type="text" id="np-icon" placeholder="🛒" maxlength="4" style="width:52px;padding:8px;background:#1e293b;border:1px solid #334155;border-radius:7px;color:#f1f5f9;font-size:1.1rem;text-align:center;">
+                            <input type="text" id="np-name" placeholder="Product name *" style="flex:1;padding:8px;background:#1e293b;border:1px solid #334155;border-radius:7px;color:#f1f5f9;font-size:0.85rem;">
+                        </div>
+                        <div style="display:flex;gap:6px;margin-bottom:10px;">
+                            <input type="number" id="np-price" placeholder="Price ₱ *" min="0" style="flex:1;padding:8px;background:#1e293b;border:1px solid #334155;border-radius:7px;color:#f1f5f9;font-size:0.85rem;">
+                            <input type="text" id="np-unit" placeholder="Unit (pc, trip...)" style="flex:1;padding:8px;background:#1e293b;border:1px solid #334155;border-radius:7px;color:#f1f5f9;font-size:0.85rem;" value="pc">
+                        </div>
+                        <button onclick="addStoreProduct()" style="width:100%;padding:10px;background:#a78bfa;border:none;border-radius:8px;color:white;font-weight:700;cursor:pointer;font-size:0.88rem;">+ Add Product</button>
+                    </div>
+                    <button onclick="document.getElementById('ws-manage-products-modal').remove()" style="width:100%;padding:10px;background:rgba(255,255,255,0.05);border:1px solid #334155;border-radius:8px;color:#94a3b8;cursor:pointer;margin-top:8px;">Close</button>
+                </div>`;
+            document.body.appendChild(modal);
+        }
+        window.showManageStoreProducts = showManageStoreProducts;
+
+        async function addStoreProduct() {
+            const icon  = document.getElementById('np-icon')?.value?.trim()  || '🛒';
+            const name  = document.getElementById('np-name')?.value?.trim()  || '';
+            const price = parseFloat(document.getElementById('np-price')?.value) || 0;
+            const unit  = document.getElementById('np-unit')?.value?.trim()  || 'pc';
+            if (!name)    { showToast('⚠️ Product name is required.', 'warning'); return; }
+            if (price <= 0){ showToast('⚠️ Price must be greater than 0.', 'warning'); return; }
+
+            const products = await getStoreProducts();
+            const newId = 'p' + Date.now();
+            products.push({ id: newId, name, price, unit, icon, category: 'custom' });
+
+            // Save to IndexedDB
+            for (const p of products) {
+                const existing = await dbGet('waterStoreProducts', p.id).catch(()=>null);
+                if (existing) await dbUpdate('waterStoreProducts', p);
+                else await dbAdd('waterStoreProducts', p);
+            }
+
+            debouncedSync();
+            document.getElementById('ws-manage-products-modal')?.remove();
+            showManageStoreProducts();
+            renderWaterStore();
+            showToast('✅ ' + icon + ' ' + name + ' added to store!', 'success');
+        }
+        window.addStoreProduct = addStoreProduct;
+
+        async function deleteStoreProduct(productId) {
+            if (!await showConfirm('Remove this product from the store?', 'warning', 'Remove Product', 'Yes, Remove', 'Cancel')) return;
+            let products = await getStoreProducts();
+            products = products.filter(p => p.id !== productId);
+            // Re-save all
+            try {
+                for (const p of products) {
+                    const existing = await dbGet('waterStoreProducts', p.id).catch(()=>null);
+                    if (existing) await dbUpdate('waterStoreProducts', p);
+                    else await dbAdd('waterStoreProducts', p);
+                }
+                await dbDelete('waterStoreProducts', productId).catch(()=>{});
+            } catch(e) {}
+            debouncedSync();
+            document.getElementById('ws-manage-products-modal')?.remove();
+            showManageStoreProducts();
+            renderWaterStore();
+            showToast('🗑 Product removed.', 'success');
+        }
+        window.deleteStoreProduct = deleteStoreProduct;
+
+        // Edit product — opens inline form in the manage modal
+        async function editStoreProduct(productId) {
+            const products = await getStoreProducts();
+            const p = products.find(x => x.id === productId);
+            if (!p) { showToast('⚠️ Product not found.', 'warning'); return; }
+
+            const existing = document.getElementById('ws-manage-products-modal');
+            if (existing) existing.remove();
+
+            const modal = document.createElement('div');
+            modal.id = 'ws-manage-products-modal';
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
+            modal.innerHTML = `
+                <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;width:100%;max-width:380px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                        <h3 style="margin:0;color:#f1f5f9;font-size:1rem;">✏️ Edit Product</h3>
+                        <button onclick="document.getElementById('ws-manage-products-modal').remove()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.2rem;">✕</button>
+                    </div>
+                    <div style="display:flex;gap:6px;margin-bottom:8px;">
+                        <input type="text" id="ep-icon" value="${p.icon||'🛒'}" maxlength="4"
+                            style="width:52px;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:1.2rem;text-align:center;">
+                        <input type="text" id="ep-name" value="${p.name}"
+                            style="flex:1;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:0.88rem;">
+                    </div>
+                    <div style="display:flex;gap:6px;margin-bottom:14px;">
+                        <div style="flex:1;">
+                            <label style="font-size:0.75rem;color:#94a3b8;display:block;margin-bottom:4px;">Price (₱)</label>
+                            <input type="number" id="ep-price" value="${p.price}" min="0" step="0.5"
+                                style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:1rem;box-sizing:border-box;">
+                        </div>
+                        <div style="flex:1;">
+                            <label style="font-size:0.75rem;color:#94a3b8;display:block;margin-bottom:4px;">Unit</label>
+                            <input type="text" id="ep-unit" value="${p.unit||'pc'}"
+                                style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:0.88rem;box-sizing:border-box;">
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button onclick="saveEditedProduct('${productId}')"
+                            style="flex:1;padding:11px;background:#a78bfa;border:none;border-radius:8px;color:white;font-weight:700;cursor:pointer;">
+                            💾 Save Changes
+                        </button>
+                        <button onclick="document.getElementById('ws-manage-products-modal').remove();showManageStoreProducts()"
+                            style="flex:1;padding:11px;background:rgba(255,255,255,0.06);border:1px solid #334155;border-radius:8px;color:#94a3b8;cursor:pointer;">
+                            Cancel
+                        </button>
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
+        }
+        window.editStoreProduct = editStoreProduct;
+
+        async function saveEditedProduct(productId) {
+            const icon  = document.getElementById('ep-icon')?.value?.trim()  || '🛒';
+            const name  = document.getElementById('ep-name')?.value?.trim()  || '';
+            const price = parseFloat(document.getElementById('ep-price')?.value) || 0;
+            const unit  = document.getElementById('ep-unit')?.value?.trim()  || 'pc';
+            if (!name)    { showToast('⚠️ Product name is required.', 'warning'); return; }
+            if (price < 0){ showToast('⚠️ Price cannot be negative.', 'warning'); return; }
+
+            let products = await getStoreProducts();
+            const idx = products.findIndex(p => p.id === productId);
+            if (idx >= 0) {
+                products[idx] = { ...products[idx], name, price, unit, icon };
+            }
+            // Save all products to IndexedDB
+            for (const p of products) {
+                try {
+                    const ex = await dbGet('waterStoreProducts', p.id).catch(()=>null);
+                    if (ex) await dbUpdate('waterStoreProducts', p);
+                    else    await dbAdd('waterStoreProducts', p);
+                } catch(e) {}
+            }
+            debouncedSync();
+            document.getElementById('ws-manage-products-modal')?.remove();
+            renderWaterStore();
+            showToast('✅ ' + icon + ' ' + name + ' updated — ₱' + price + '/' + unit, 'success');
+        }
+        window.saveEditedProduct = saveEditedProduct;
+
+        // Inline price update directly from product card
+        async function updateStoreProductPrice(productId, newPriceStr) {
+            const newPrice = parseFloat(newPriceStr);
+            if (isNaN(newPrice) || newPrice < 0) { showToast('⚠️ Invalid price.', 'warning'); return; }
+            let products = await getStoreProducts();
+            const idx = products.findIndex(p => p.id === productId);
+            if (idx < 0) return;
+            products[idx].price = newPrice;
+            try {
+                const ex = await dbGet('waterStoreProducts', productId).catch(()=>null);
+                if (ex) await dbUpdate('waterStoreProducts', products[idx]);
+                else    await dbAdd('waterStoreProducts', products[idx]);
+            } catch(e) {}
+            debouncedSync();
+            showToast('✅ Price updated to ₱' + newPrice + '/' + products[idx].unit, 'success');
+        }
+        window.updateStoreProductPrice = updateStoreProductPrice;
 
         async function renderWaterAllSales() {
             const el = document.getElementById('water-all-sales-list');
