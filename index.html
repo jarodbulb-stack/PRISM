@@ -5903,13 +5903,83 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Gallons</label>
-                            <input type="number" id="payment-water-gallons" placeholder="e.g. 10" min="1">
+                            <label>Or New Customer Name</label>
+                            <input type="text" id="payment-water-new-customer" placeholder="Enter name if new customer">
                         </div>
+
+                        <!-- Container Type -->
                         <div class="form-group">
-                            <label>Price per Gallon (₱)</label>
-                            <input type="number" id="payment-water-price" placeholder="e.g. 25" min="0">
+                            <label>Container Type</label>
+                            <div style="display:flex;gap:8px;margin-top:4px;">
+                                <button type="button" id="pm-type-big" onclick="pmWsSetType('big')"
+                                    style="flex:1;padding:9px;border-radius:8px;border:2px solid #3b82f6;background:rgba(59,130,246,0.15);color:#60a5fa;font-weight:700;cursor:pointer;font-size:0.82rem;">
+                                    🔵 Big Round (18L)
+                                </button>
+                                <button type="button" id="pm-type-small" onclick="pmWsSetType('small')"
+                                    style="flex:1;padding:9px;border-radius:8px;border:2px solid #334155;background:transparent;color:#64748b;font-weight:600;cursor:pointer;font-size:0.82rem;">
+                                    🫙 Small Bottle
+                                </button>
+                            </div>
                         </div>
+
+                        <!-- Big bottle section -->
+                        <div id="pm-ws-big-section">
+                            <div class="form-group">
+                                <label>Price per Bottle <span style="font-size:0.72rem;color:#64748b;">(18L)</span></label>
+                                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
+                                    <button type="button" onclick="pmWsSetBigPrice(20)" class="pm-ws-price-btn" data-price="20" style="padding:7px 12px;border-radius:7px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-weight:600;font-size:0.82rem;">₱20</button>
+                                    <button type="button" onclick="pmWsSetBigPrice(25)" class="pm-ws-price-btn" data-price="25" style="padding:7px 12px;border-radius:7px;border:2px solid #3b82f6;background:rgba(59,130,246,0.15);color:#60a5fa;cursor:pointer;font-weight:700;font-size:0.82rem;">₱25</button>
+                                    <button type="button" onclick="pmWsSetBigPrice(30)" class="pm-ws-price-btn" data-price="30" style="padding:7px 12px;border-radius:7px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-weight:600;font-size:0.82rem;">₱30</button>
+                                    <button type="button" onclick="pmWsSetBigPrice(35)" class="pm-ws-price-btn" data-price="35" style="padding:7px 12px;border-radius:7px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-weight:600;font-size:0.82rem;">₱35</button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Number of Bottles *</label>
+                                <input type="number" id="pm-ws-big-qty" min="1" placeholder="e.g. 8" oninput="pmWsCalcBig()" style="font-size:1.05rem;font-weight:600;">
+                            </div>
+                            <div id="pm-ws-package-notice" style="display:none;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:8px;padding:9px 12px;margin-bottom:8px;font-size:0.82rem;color:#10b981;">
+                                🎉 <strong>Package Deal!</strong> <span id="pm-ws-package-label"></span>
+                            </div>
+                        </div>
+
+                        <!-- Small bottle section -->
+                        <div id="pm-ws-small-section" style="display:none;">
+                            <div class="form-group">
+                                <label>Bottle Type <span style="font-size:0.72rem;color:#64748b;">(price per bottle)</span></label>
+                                <div style="display:flex;gap:6px;margin-top:4px;">
+                                    <button type="button" onclick="pmWsSetSmallSize('500cc',5)" class="pm-ws-size-btn" data-size="500cc"
+                                        style="flex:1;padding:8px 4px;border-radius:7px;border:2px solid #3b82f6;background:rgba(59,130,246,0.15);color:#60a5fa;cursor:pointer;font-weight:700;font-size:0.75rem;line-height:1.4;">
+                                        🫙 Small<br><span style="font-size:0.67rem;">500cc–1L</span><br><strong>₱5/bot</strong>
+                                    </button>
+                                    <button type="button" onclick="pmWsSetSmallSize('4-10L',15)" class="pm-ws-size-btn" data-size="4-10L"
+                                        style="flex:1;padding:8px 4px;border-radius:7px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-weight:600;font-size:0.75rem;line-height:1.4;">
+                                        🫙 Medium<br><span style="font-size:0.67rem;">4L–10L</span><br><strong>₱15/bot</strong>
+                                    </button>
+                                    <button type="button" onclick="pmWsSetSmallSize('15L',20)" class="pm-ws-size-btn" data-size="15L"
+                                        style="flex:1;padding:8px 4px;border-radius:7px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-weight:600;font-size:0.75rem;line-height:1.4;">
+                                        🫙 Large<br><span style="font-size:0.67rem;">15L</span><br><strong>₱20/bot</strong>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Number of Bottles *</label>
+                                <input type="number" id="pm-ws-small-qty" min="1" placeholder="e.g. 3" oninput="pmWsCalcSmall()" style="font-size:1.05rem;font-weight:600;">
+                            </div>
+                        </div>
+
+                        <!-- Calculation summary -->
+                        <div id="pm-ws-summary" style="display:none;background:var(--bg-secondary);border-radius:8px;padding:10px 12px;margin-bottom:10px;">
+                            <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:3px;" id="pm-ws-calc-line"></div>
+                            <div id="pm-ws-discount-line" style="display:none;font-size:0.78rem;color:#10b981;margin-bottom:3px;"></div>
+                            <div style="display:flex;justify-content:space-between;font-weight:700;">
+                                <span>Total:</span>
+                                <span style="color:#10b981;" id="pm-ws-total-display">₱0</span>
+                            </div>
+                        </div>
+
+                        <!-- Hidden compat fields for savePayment -->
+                        <input type="hidden" id="payment-water-gallons" value="0">
+                        <input type="hidden" id="payment-water-price" value="25">
                     </div>
                     <div class="form-group">
                         <label>Amount (₱)</label>
@@ -11994,6 +12064,21 @@ async function recordTenantPayment(tenantId) {
             if (discEl) discEl.value = '0';
             const ndEl = document.getElementById('pm-net-display');
             if (ndEl) ndEl.style.display = 'none';
+            // Init bottle pricing UI when Water is selected
+            if (type === 'water') {
+                window._pmWsType = 'big'; window._pmWsPrice = 25;
+                window._pmWsDiscount = 0; window._pmWsPackageDeal = false;
+                window._pmWsBottleSize = null;
+                setTimeout(function() {
+                    pmWsSetType('big');
+                    pmWsSetBigPrice(25);
+                    // Reset qty fields
+                    var bq = document.getElementById('pm-ws-big-qty');   if (bq) bq.value = '';
+                    var sq = document.getElementById('pm-ws-small-qty'); if (sq) sq.value = '';
+                    var sumEl = document.getElementById('pm-ws-summary'); if (sumEl) sumEl.style.display = 'none';
+                    document.getElementById('payment-amount').value = '0';
+                }, 30);
+            }
             // Auto-calculate water amount when gallons/price change
             if (type === 'water') {
                 // Populate water customers dropdown
@@ -12004,15 +12089,7 @@ async function recordTenantPayment(tenantId) {
                     sel.innerHTML = '<option value="">Select customer</option>' +
                         customers.map(c => `<option value="${c.id}"${c.id==cur?' selected':''}>${c.name}</option>`).join('');
                 });
-                ['payment-water-gallons','payment-water-price'].forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) el.oninput = () => {
-                        const g = parseFloat(document.getElementById('payment-water-gallons').value)||0;
-                        const p = parseFloat(document.getElementById('payment-water-price').value)||0;
-                        const amtEl = document.getElementById('payment-amount');
-                        if (amtEl && g > 0 && p > 0) amtEl.value = (g*p).toString();
-                    };
-                });
+                // Water amount auto-calculated by bottle pricing UI
             }
         }
 
@@ -12058,6 +12135,120 @@ async function recordTenantPayment(tenantId) {
             if (flds) flds.style.display = (chk && chk.checked) ? 'block' : 'none';
         }
         window.setPmDiscType        = setPmDiscType;
+
+        // ── Payment Modal Water Bottle Pricing ──
+        window._pmWsType     = 'big';
+        window._pmWsPrice    = 25;
+        window._pmWsBottleSize = null;
+        window._pmWsDiscount = 0;
+        window._pmWsPackageDeal = false;
+        window._pmWsPackageLabel = '';
+
+        function pmWsSetType(type) {
+            window._pmWsType = type;
+            var bigBtn   = document.getElementById('pm-type-big');
+            var smallBtn = document.getElementById('pm-type-small');
+            var bigSec   = document.getElementById('pm-ws-big-section');
+            var smallSec = document.getElementById('pm-ws-small-section');
+            if (!bigBtn) return;
+            if (type === 'big') {
+                bigBtn.style.borderColor   = '#3b82f6'; bigBtn.style.background = 'rgba(59,130,246,0.15)'; bigBtn.style.color = '#60a5fa';
+                smallBtn.style.borderColor = '#334155'; smallBtn.style.background = 'transparent'; smallBtn.style.color = '#64748b';
+                bigSec.style.display = 'block'; smallSec.style.display = 'none';
+                pmWsSetBigPrice(25);
+            } else {
+                smallBtn.style.borderColor = '#3b82f6'; smallBtn.style.background = 'rgba(59,130,246,0.15)'; smallBtn.style.color = '#60a5fa';
+                bigBtn.style.borderColor   = '#334155'; bigBtn.style.background = 'transparent'; bigBtn.style.color = '#64748b';
+                bigSec.style.display = 'none'; smallSec.style.display = 'block';
+                pmWsSetSmallSize('500cc', 5);
+            }
+        }
+        window.pmWsSetType = pmWsSetType;
+
+        function pmWsSetBigPrice(price) {
+            window._pmWsPrice = price;
+            document.querySelectorAll('.pm-ws-price-btn').forEach(function(btn) {
+                var p = parseInt(btn.dataset.price);
+                if (p === price) {
+                    btn.style.borderColor = '#3b82f6'; btn.style.borderWidth = '2px';
+                    btn.style.background  = 'rgba(59,130,246,0.15)'; btn.style.color = '#60a5fa'; btn.style.fontWeight = '700';
+                } else {
+                    btn.style.borderColor = '#334155'; btn.style.borderWidth = '1px';
+                    btn.style.background  = 'transparent'; btn.style.color = '#94a3b8'; btn.style.fontWeight = '600';
+                }
+            });
+            var pEl = document.getElementById('payment-water-price');
+            if (pEl) pEl.value = price;
+            pmWsCalcBig();
+        }
+        window.pmWsSetBigPrice = pmWsSetBigPrice;
+
+        function pmWsSetSmallSize(size, price) {
+            window._pmWsBottleSize = size; window._pmWsPrice = price;
+            document.querySelectorAll('.pm-ws-size-btn').forEach(function(btn) {
+                if (btn.dataset.size === size) {
+                    btn.style.borderColor = '#3b82f6'; btn.style.borderWidth = '2px';
+                    btn.style.background  = 'rgba(59,130,246,0.15)'; btn.style.color = '#60a5fa';
+                } else {
+                    btn.style.borderColor = '#334155'; btn.style.borderWidth = '1px';
+                    btn.style.background  = 'transparent'; btn.style.color = '#94a3b8';
+                }
+            });
+            var pEl = document.getElementById('payment-water-price');
+            if (pEl) pEl.value = price;
+            pmWsCalcSmall();
+        }
+        window.pmWsSetSmallSize = pmWsSetSmallSize;
+
+        function pmWsCalcBig() {
+            var qty    = parseInt((document.getElementById('pm-ws-big-qty')||{}).value) || 0;
+            var price  = window._pmWsPrice || 25;
+            var gross  = qty * price;
+            var discount = 0; var packageDeal = false; var packageLabel = '';
+            if (price === 35 && qty >= 3) {
+                var groups = Math.floor(qty / 3);
+                discount = groups * 5; packageDeal = true;
+                packageLabel = groups + ' package' + (groups>1?'s':'') + ' = −₱' + discount;
+            }
+            window._pmWsDiscount = discount; window._pmWsPackageDeal = packageDeal; window._pmWsPackageLabel = packageLabel;
+            var total = Math.max(0, gross - discount);
+            var gEl = document.getElementById('payment-water-gallons'); if (gEl) gEl.value = qty;
+            var tEl = document.getElementById('payment-amount');        if (tEl) tEl.value = total;
+            var notice = document.getElementById('pm-ws-package-notice');
+            if (notice) notice.style.display = packageDeal ? 'block' : 'none';
+            var pkgLbl = document.getElementById('pm-ws-package-label');
+            if (pkgLbl && packageDeal) pkgLbl.textContent = packageLabel;
+            pmWsShowSummary(qty, price, gross, discount, total, qty+' bottle'+(qty!==1?'s':'')+' (18L) × ₱'+price);
+        }
+        window.pmWsCalcBig = pmWsCalcBig;
+
+        function pmWsCalcSmall() {
+            var qty   = parseInt((document.getElementById('pm-ws-small-qty')||{}).value) || 0;
+            var price = window._pmWsPrice || 5;
+            var size  = window._pmWsBottleSize || '500cc';
+            var szLabel = size==='500cc'?'Small':size==='4-10L'?'Medium':'Large';
+            var gross = qty * price;
+            window._pmWsDiscount = 0; window._pmWsPackageDeal = false;
+            var gEl = document.getElementById('payment-water-gallons'); if (gEl) gEl.value = qty;
+            var pEl = document.getElementById('payment-water-price');   if (pEl) pEl.value = price;
+            var tEl = document.getElementById('payment-amount');        if (tEl) tEl.value = gross;
+            pmWsShowSummary(qty, price, gross, 0, gross, qty+' × '+szLabel+' bot @ ₱'+price);
+        }
+        window.pmWsCalcSmall = pmWsCalcSmall;
+
+        function pmWsShowSummary(qty, price, gross, discount, total, calcLine) {
+            var sumEl  = document.getElementById('pm-ws-summary');
+            var calcEl = document.getElementById('pm-ws-calc-line');
+            var discEl = document.getElementById('pm-ws-discount-line');
+            var totEl  = document.getElementById('pm-ws-total-display');
+            if (!sumEl) return;
+            if (qty <= 0) { sumEl.style.display = 'none'; return; }
+            sumEl.style.display = 'block';
+            if (calcEl) calcEl.textContent = calcLine + ' = ₱' + gross.toLocaleString();
+            if (discEl) { discEl.style.display = discount>0?'block':'none'; if(discount>0) discEl.textContent = 'Package discount: −₱'+discount; }
+            if (totEl)  totEl.textContent = '₱' + total.toLocaleString();
+        }
+        window.pmWsShowSummary = pmWsShowSummary;
         window.calcPaymentModalNet  = calcPaymentModalNet;
         window.togglePmOverride     = togglePmOverride;
 
@@ -12176,23 +12367,43 @@ async function recordTenantPayment(tenantId) {
                     PrismGuardian.log('SUCCESS', `Credit payment recorded: ₱${amount} from ${credit.debtor}`);
 
                 } else if (type === 'water') {
-                    const customerId = parseInt(document.getElementById('payment-water-customer').value);
-                    const gallons = parseFloat(document.getElementById('payment-water-gallons').value) || 0;
-                    const pricePerGallon = parseFloat(document.getElementById('payment-water-price').value) || 0;
+                    let customerId = parseInt(document.getElementById('payment-water-customer').value) || 0;
+                    const newCustName = (document.getElementById('payment-water-new-customer')||{}).value?.trim() || '';
+                    const bottles      = parseInt(document.getElementById('payment-water-gallons').value) || 0;
+                    const pricePerBottle = parseFloat(document.getElementById('payment-water-price').value) || 0;
+                    const _pmWsCType   = window._pmWsType || 'big';
+                    const _pmWsBSize   = window._pmWsBottleSize || null;
+                    const _pmWsDisc    = window._pmWsDiscount || 0;
+                    const _pmWsPkg     = window._pmWsPackageDeal || false;
+                    const _pmWsPkgLbl  = window._pmWsPackageLabel || '';
+
+                    // Create new customer if needed
+                    if (!customerId && newCustName) {
+                        customerId = await dbAdd('waterCustomers', { name: newCustName, createdAt: new Date().toISOString() });
+                    }
 
                     if (!customerId || isNaN(customerId)) {
-                        showToast('⚠️ Please select a water customer.', 'warning'); return;
+                        showToast('⚠️ Please select or enter a water customer.', 'warning'); return;
                     }
-                    if (gallons <= 0) {
+                    if (bottles <= 0) {
                         showToast('⚠️ Please enter number of bottles.', 'warning'); return;
                     }
                     const customer = await dbGet('waterCustomers', customerId);
-                    const total = gallons * pricePerGallon;
+                    const grossTotal = bottles * pricePerBottle;
+                    const total = Math.max(0, grossTotal - _pmWsDisc);
                     const waterSale = {
                         customerId,
-                        customerName: customer ? customer.name : 'Unknown',
-                        gallons,
-                        pricePerGallon,
+                        customerName: customer ? customer.name : (newCustName || 'Walk-in'),
+                        bottles,
+                        gallons: bottles,
+                        pricePerBottle,
+                        pricePerGallon: pricePerBottle,
+                        containerType: _pmWsCType,
+                        bottleSize: _pmWsBSize,
+                        packageDeal: _pmWsPkg,
+                        packageLabel: _pmWsPkgLbl,
+                        discount: _pmWsDisc,
+                        grossTotal,
                         total,
                         amountPaid: amount,
                         balance: Math.max(0, total - amount),
