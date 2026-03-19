@@ -3795,6 +3795,7 @@
             <div style="text-align:center;color:var(--text-secondary);font-size:0.85rem;padding:20px;">No endorsements received</div>
         </div>
         <button onclick="markAllInboxRead()" style="width:100%;padding:8px;background:none;border:1px solid var(--border-color);border-radius:8px;color:var(--text-secondary);cursor:pointer;font-size:0.82rem;margin-top:8px;">✓ Mark All as Read</button>
+    <button onclick="clearAllSystemErrors()" style="width:100%;padding:8px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;color:#f87171;cursor:pointer;font-size:0.82rem;margin-top:4px;">🗑 Clear System Errors</button>
     </div>
 </div>
 
@@ -7455,6 +7456,15 @@
         // TOAST NOTIFICATION (must be first)
         // =====================
         // Enhanced Toast Notification System
+        // ── Early stubs: ensure critical functions available before full JS loads ──
+        window.showFlashcardDetail      = window.showFlashcardDetail      || function(t){ console.log('showFlashcardDetail stub:', t); };
+        window.showWaterFlashcardDetail = window.showWaterFlashcardDetail || function(t){ console.log('showWaterFlashcardDetail stub:', t); };
+        window.toggleTheme              = window.toggleTheme              || function(){ };
+        window.showSection              = window.showSection              || function(s){ console.log('showSection stub:', s); };
+        window.showModal                = window.showModal                || function(id){ var el=document.getElementById(id); if(el) el.style.display='flex'; };
+        window.hideModal                = window.hideModal                || function(id){ var el=document.getElementById(id); if(el) el.style.display='none'; };
+        // ── End early stubs ──
+
         let toastContainer = null;
         let toastCounter = 0;
 
@@ -20908,6 +20918,12 @@ async function showPayrollSummary() {
         }
         window.prismRecordError = prismRecordError;
 
+        // ── Suppress harmless SVG image load warnings ──
+        window.addEventListener('unhandledrejection', function(e) {
+            if (e.reason && e.reason.message && e.reason.message.includes('Unable to load image')) {
+                e.preventDefault(); // suppress the console error
+            }
+        });
         // ── LAYER 1: GLOBAL ERROR BOUNDARY ──
         // Catches unhandled JS errors and promise rejections
         (function installErrorBoundary() {
@@ -21798,12 +21814,27 @@ async function clearAllData() {
             safeSet('report-net-profit',     (netProfit>=0?'₱':'-₱')+Math.abs(netProfit).toLocaleString('en-PH',{minimumFractionDigits:0,maximumFractionDigits:2}));
             safeSet('report-profit-margin',  profitMargin+'%');
 
-            // Income breakdown
-            safeSet('report-rent-income',    '₱'+rentIncome.toLocaleString());
-            safeSet('report-credit-income',  '₱'+creditIncome.toLocaleString());
-            safeSet('report-water-income',   '₱'+waterIncome.toLocaleString());
-            safeSet('report-store-income',   '₱'+storeIncome.toLocaleString());
-            safeSet('report-other-income',   '₱'+otherIncome.toLocaleString());
+            // Income breakdown — populate the actual HTML card
+            const incBreakEl = document.getElementById('income-breakdown-content');
+            if (incBreakEl) {
+                const incRows = [
+                    {label:'🏠 Rent', amount:rentIncome},
+                    {label:'💳 Credit Repayments', amount:creditIncome},
+                    {label:'💧 Water Sales', amount:waterIncome},
+                    {label:'🛒 Store Sales', amount:storeIncome},
+                    {label:'💰 Other Income', amount:otherIncome},
+                ].filter(r => r.amount > 0);
+                if (incRows.length === 0) {
+                    incBreakEl.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:20px;">No income data for this period</div>';
+                } else {
+                    incBreakEl.innerHTML = incRows.map(r =>
+                        '<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border-color);">' +
+                        '<span>' + r.label + '</span><span style="font-weight:700;color:#10b981;">₱' + r.amount.toLocaleString() + '</span></div>'
+                    ).join('') +
+                    '<div style="display:flex;justify-content:space-between;padding-top:10px;font-weight:800;">' +
+                    '<span>Total</span><span style="color:#10b981;">₱' + totalIncome.toLocaleString() + '</span></div>';
+                }
+            }
 
             // Net profit color
             const netCard = document.getElementById('report-net-profit')?.closest('.stat-card');
@@ -21813,7 +21844,7 @@ async function clearAllData() {
 
             // GAINING/LOSING banner
             const isGain = netProfit >= 0;
-            const gainEl = document.getElementById('report-gain-status');
+            const gainEl = document.getElementById('report-gain-status') || document.getElementById('report-verdict-banner');
             if (gainEl) {
                 gainEl.innerHTML = '<div style="font-size:2.5rem;">' + (isGain?'📈':'📉') + '</div>' +
                     '<h2 style="margin:8px 0;font-size:1.8rem;font-weight:900;color:' + (isGain?'#10b981':'#ef4444') + ';">' + (isGain?'GAINING':'LOSING') + '</h2>' +
@@ -21830,7 +21861,7 @@ async function clearAllData() {
             // Expense breakdown
             const expByCategory = {};
             rangeExpenses.forEach(e => { expByCategory[e.category||'Other'] = (expByCategory[e.category||'Other']||0) + (e.amount||0); });
-            const expBreakEl = document.getElementById('report-expense-breakdown');
+            const expBreakEl = document.getElementById('expense-breakdown-content') || document.getElementById('report-expense-breakdown');
             if (expBreakEl) {
                 expBreakEl.innerHTML = Object.entries(expByCategory).sort((a,b)=>b[1]-a[1]).map(([cat,amt])=>
                     '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-color);">' +
@@ -21840,7 +21871,7 @@ async function clearAllData() {
             }
 
             // AI Analysis banner
-            const aiEl = document.getElementById('report-ai-summary');
+            const aiEl = document.getElementById('report-ai-summary') || document.getElementById('ai-overall-text');
             if (aiEl) {
                 const concerns = [];
                 if (netProfit < 0) concerns.push('Operating at a loss of ₱'+Math.abs(netProfit).toLocaleString()+'.');
@@ -22159,6 +22190,177 @@ async function clearAllData() {
                 '</div>';
         }
         window.updateUserDisplay = updateUserDisplay;
+
+                // ═══════════════════════════════════════════════
+        // MISSING CRUD FUNCTIONS — all modules
+        // ═══════════════════════════════════════════════
+
+        // ── printReceipt ──
+        function printReceipt() {
+            window.print();
+        }
+        window.printReceipt = printReceipt;
+
+        // ── Tenant Payment CRUD ──
+        async function editTenantPayment(paymentId) {
+            const payment = await dbGet('payments', paymentId);
+            if (!payment) { showToast('⚠️ Payment not found.','warning'); return; }
+            if (typeof incomeFeedEdit === 'function') {
+                incomeFeedEdit('rent', paymentId, payment.tenantId);
+            } else {
+                showToast('ℹ️ Use the Transactions feed to edit payments.','info');
+            }
+        }
+        window.editTenantPayment = editTenantPayment;
+
+        async function deleteTenantPayment(paymentId) {
+            if (!await showConfirm('Delete this rent payment? This cannot be undone.','danger','🗑 Delete Payment','Yes, Delete','Cancel')) return;
+            await dbDelete('payments', paymentId);
+            debouncedSync();
+            if (typeof loadDashboard === 'function') loadDashboard();
+            if (typeof loadTenants === 'function') loadTenants();
+            if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
+            showToast('🗑 Payment deleted.','success');
+        }
+        window.deleteTenantPayment = deleteTenantPayment;
+
+        // ── Credit Payment CRUD ──
+        async function deleteCreditPayment(paymentId) {
+            if (!await showConfirm('Delete this credit payment? This cannot be undone.','danger','🗑 Delete Payment','Yes, Delete','Cancel')) return;
+            await dbDelete('creditPayments', paymentId);
+            debouncedSync();
+            if (typeof loadDashboard === 'function') loadDashboard();
+            if (typeof loadCredits === 'function') loadCredits();
+            if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
+            showToast('🗑 Credit payment deleted.','success');
+        }
+        window.deleteCreditPayment = deleteCreditPayment;
+
+        // ── Additional Income CRUD ──
+        async function saveAdditionalIncome(event) {
+            if (event) event.preventDefault();
+            const source  = (document.getElementById('income-source')||{}).value?.trim() || '';
+            const amount  = parseFloat((document.getElementById('income-amount')||{}).value) || 0;
+            const date    = (document.getElementById('income-date')||{}).value || new Date().toISOString().split('T')[0];
+            const desc    = (document.getElementById('income-description')||{}).value?.trim() || '';
+            const editId  = (document.getElementById('income-edit-id')||{}).value || '';
+            if (!source) { showToast('⚠️ Please enter a source.','warning'); return; }
+            if (amount <= 0) { showToast('⚠️ Please enter a valid amount.','warning'); return; }
+            const record = { source, amount, date, description:desc,
+                recordedBy: currentAppUser?.username||'unknown', createdAt: new Date().toISOString() };
+            if (editId) {
+                record.id = parseInt(editId);
+                await dbUpdate('additionalIncome', record);
+                showToast('✅ Income updated.','success');
+            } else {
+                await dbAdd('additionalIncome', record);
+                showToast('✅ Income recorded.','success');
+            }
+            hideModal('income-modal');
+            debouncedSync();
+            if (typeof loadIncome === 'function') loadIncome();
+            if (typeof loadDashboard === 'function') loadDashboard();
+            if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
+        }
+        window.saveAdditionalIncome = saveAdditionalIncome;
+
+        async function editAdditionalIncome(id) {
+            const rec = await dbGet('additionalIncome', id);
+            if (!rec) { showToast('⚠️ Record not found.','warning'); return; }
+            const editIdEl = document.getElementById('income-edit-id');
+            const srcEl    = document.getElementById('income-source');
+            const amtEl    = document.getElementById('income-amount');
+            const dateEl   = document.getElementById('income-date');
+            const descEl   = document.getElementById('income-description');
+            if (editIdEl) editIdEl.value = rec.id;
+            if (srcEl)    srcEl.value    = rec.source||'';
+            if (amtEl)    amtEl.value    = rec.amount||0;
+            if (dateEl)   dateEl.value   = rec.date||'';
+            if (descEl)   descEl.value   = rec.description||'';
+            showModal('income-modal');
+        }
+        window.editAdditionalIncome = editAdditionalIncome;
+
+        async function deleteAdditionalIncome(id) {
+            if (!await showConfirm('Delete this income record?','danger','🗑 Delete','Yes, Delete','Cancel')) return;
+            await dbDelete('additionalIncome', id);
+            debouncedSync();
+            if (typeof loadIncome === 'function') loadIncome();
+            if (typeof loadDashboard === 'function') loadDashboard();
+            showToast('🗑 Income record deleted.','success');
+        }
+        window.deleteAdditionalIncome = deleteAdditionalIncome;
+
+        // ── Salary Payment CRUD ──
+        async function saveSalaryPayment(event) {
+            if (event) event.preventDefault();
+            const empId  = (document.getElementById('salary-employee-id')||{}).value || '';
+            const amount = parseFloat((document.getElementById('salary-amount')||{}).value) || 0;
+            const date   = (document.getElementById('salary-date')||{}).value || new Date().toISOString().split('T')[0];
+            const period = (document.getElementById('salary-period')||{}).value || '';
+            const notes  = (document.getElementById('salary-notes')||{}).value?.trim() || '';
+            if (!empId)    { showToast('⚠️ Please select an employee.','warning'); return; }
+            if (amount<=0) { showToast('⚠️ Please enter a valid amount.','warning'); return; }
+            const emp = await dbGet('employees', parseInt(empId)).catch(()=>null);
+            const record = {
+                employeeId: parseInt(empId),
+                employeeName: emp ? emp.name : 'Employee',
+                amount, date, period, notes,
+                recordedBy: currentAppUser?.username||'unknown',
+                createdAt: new Date().toISOString()
+            };
+            await dbAdd('salaryPayments', record);
+            // Record as expense
+            await dbAdd('expenses', { category:'Payroll', amount, date,
+                description:'Salary: '+(emp?emp.name:'Employee')+(period?' ('+period+')':''),
+                recordedBy: currentAppUser?.username||'unknown', createdAt: new Date().toISOString() });
+            hideModal('give-salary-modal');
+            debouncedSync();
+            if (typeof loadEmployees === 'function') loadEmployees();
+            if (typeof loadPayrollSummary === 'function') loadPayrollSummary();
+            showToast('✅ Salary payment recorded.','success');
+        }
+        window.saveSalaryPayment = saveSalaryPayment;
+
+        async function editSalaryPayment(id) {
+            const rec = await dbGet('salaryPayments', id);
+            if (!rec) { showToast('⚠️ Record not found.','warning'); return; }
+            showToast('ℹ️ To edit a salary payment, delete it and re-record.','info');
+        }
+        window.editSalaryPayment = editSalaryPayment;
+
+        async function deleteSalaryPayment(id) {
+            if (!await showConfirm('Delete this salary payment?','danger','🗑 Delete','Yes, Delete','Cancel')) return;
+            await dbDelete('salaryPayments', id);
+            debouncedSync();
+            if (typeof loadEmployees === 'function') loadEmployees();
+            if (typeof loadPayrollSummary === 'function') loadPayrollSummary();
+            showToast('🗑 Salary payment deleted.','success');
+        }
+        window.deleteSalaryPayment = deleteSalaryPayment;
+
+        // ── Cash Advance CRUD ──
+        async function editCashAdvance(id) {
+            const rec = await dbGet('cashAdvances', id);
+            if (!rec) { showToast('⚠️ Record not found.','warning'); return; }
+            showToast('ℹ️ To edit a cash advance, delete it and re-record.','info');
+        }
+        window.editCashAdvance = editCashAdvance;
+
+        async function deleteCashAdvance(id) {
+            if (!await showConfirm('Delete this cash advance record?','danger','🗑 Delete','Yes, Delete','Cancel')) return;
+            await dbDelete('cashAdvances', id);
+            debouncedSync();
+            if (typeof loadEmployees === 'function') loadEmployees();
+            showToast('🗑 Cash advance deleted.','success');
+        }
+        window.deleteCashAdvance = deleteCashAdvance;
+
+        // ── Store Product save (alias) ──
+        async function saveStoreProduct() {
+            if (typeof addStoreProduct === 'function') await addStoreProduct();
+        }
+        window.saveStoreProduct = saveStoreProduct;
 
                 window.refreshStats = refreshStats;
         window.manualSync = manualSync;
@@ -23628,6 +23830,8 @@ function _mtShowAppActual() {
     if (typeof updateUserDisplay === 'function') updateUserDisplay();
     if (typeof loadTheme === 'function') loadTheme();
 
+    // Auto-clear old system errors from inbox
+    setTimeout(function() { if (typeof clearOldSystemErrors === 'function') clearOldSystemErrors(); }, 2000);
     // ── Safety net: ensure currentAppUser is always set when app shows ──
     if (!currentAppUser && MT.currentUser) {
         const _savedUser = localStorage.getItem('carent_current_user');
@@ -25082,6 +25286,36 @@ let inboxFilter = 'all';
 function getEndorsements() {
     try { return JSON.parse(localStorage.getItem(ENDORSE_KEY) || '[]'); } catch(e) { return []; }
 }
+
+// Auto-clear old system error endorsements (older than 24h) to prevent inbox clutter
+function clearOldSystemErrors() {
+    try {
+        const list = getEndorsements();
+        const cutoff = Date.now() - (24 * 60 * 60 * 1000); // 24 hours ago
+        const cleaned = list.filter(function(e) {
+            if (!e.isSystemError) return true; // keep non-system entries
+            const ts = e.timestamp ? new Date(e.timestamp).getTime() : 0;
+            return ts > cutoff; // keep recent system errors only
+        });
+        if (cleaned.length !== list.length) {
+            saveEndorsements(cleaned);
+            console.log('[PRISM] Cleared ' + (list.length - cleaned.length) + ' old system error(s) from inbox');
+        }
+    } catch(e) {}
+}
+window.clearOldSystemErrors = clearOldSystemErrors;
+
+function clearAllSystemErrors() {
+    try {
+        const list = getEndorsements();
+        const cleaned = list.filter(function(e) { return !e.isSystemError; });
+        saveEndorsements(cleaned);
+        if (typeof renderAdminInbox === 'function') renderAdminInbox();
+        if (typeof renderEndorsementBadge === 'function') renderEndorsementBadge();
+        showToast('🗑 System errors cleared from inbox.', 'success');
+    } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+window.clearAllSystemErrors = clearAllSystemErrors;
 function saveEndorsements(list) {
     localStorage.setItem(ENDORSE_KEY, JSON.stringify(list));
 }
