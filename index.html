@@ -19270,7 +19270,8 @@ async function showPayrollSummary() {
 
             // Render monthly trend chart with error handling
             try {
-                renderTrendChart(payments, creditPayments, expenses, credits, additionalIncome, waterSales);
+                const _wss = await dbGetAll('waterStoreSales').catch(()=>[]);
+                renderTrendChart(payments, creditPayments, expenses, credits, additionalIncome, waterSales, _wss);
             } catch (error) {
                 console.error('Error rendering trend chart:', error);
             }
@@ -19279,7 +19280,8 @@ async function showPayrollSummary() {
         // Render Monthly Trend Chart (simple canvas-based)
     let _dashTrendChart = null;
 
-    function renderTrendChart(payments, creditPayments, expenses, credits, additionalIncome, waterSales) {
+    function renderTrendChart(payments, creditPayments, expenses, credits, additionalIncome, waterSales, waterStoreSalesAll) {
+        waterStoreSalesAll = waterStoreSalesAll || [];
         const canvas = document.getElementById('trend-chart');
         if (!canvas) return;
 
@@ -19296,10 +19298,6 @@ async function showPayrollSummary() {
                 label: d.toLocaleString('default', { month: 'short', year: '2-digit' })
             });
         }
-
-        // Load store sales for trend chart
-        var waterStoreSalesAll = [];
-        try { waterStoreSalesAll = await dbGetAll('waterStoreSales'); } catch(e) {}
 
         const incomeData = [], expenseData = [], netData = [];
         months.forEach(function(m) {
