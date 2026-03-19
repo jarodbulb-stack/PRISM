@@ -11734,9 +11734,14 @@ async function recordTenantPayment(tenantId) {
                 return;
             }
 
+            // Fetch tenant name for display in feed
+            const _payTenant = await dbGet('tenants', tenantId);
+            const _tenantName = _payTenant ? _payTenant.name : ('Tenant #' + tenantId);
+
             const payment = {
                 type: paymentType,
                 tenantId,
+                tenantName: _tenantName,
                 monthCovered: paymentType === 'advance' ? 'Advance' : monthCovered,
                 amount: netAmount,
                 originalAmount: amount,
@@ -15972,8 +15977,13 @@ async function showPayrollSummary() {
                 return;
             }
 
+            // Fetch credit/debtor name for display
+            const _payCred = await dbGet('credits', creditId);
+            const _debtorName = _payCred ? _payCred.debtor : ('Credit #' + creditId);
+
             const creditPayment = {
                 creditId,
+                debtorName: _debtorName,
                 amount,
                 discount: cdDiscountAmt,
                 discountType: _cdDiscType,
@@ -15988,7 +15998,7 @@ async function showPayrollSummary() {
             };
 
             showToast('⏳ Recording payment...', 'info');
-                await dbAdd('creditPayments', creditPayment);
+            await dbAdd('creditPayments', creditPayment);
             
             // ✅ AUTO-UPDATE CREDIT STATUS IF FULLY PAID
             const credit = await dbGet('credits', creditId);
@@ -17345,6 +17355,10 @@ async function showPayrollSummary() {
         }
         window.toggleExpenseHistory = toggleExpenseHistory;
         window.expHistOnCategoryChange = expHistOnCategoryChange;
+        // Stub: expense subcategory toggle (reserved for future subcategory field)
+        function toggleExpenseSubcategory() { /* reserved */ }
+        window.toggleExpenseSubcategory = toggleExpenseSubcategory;
+
         window.expHistDelete = expHistDelete;
 
         async function loadExpenses() {
@@ -17968,10 +17982,22 @@ async function showPayrollSummary() {
 
                 const inRange = (d) => d >= dateFrom && d <= dateTo;
 
+                // Pre-build lookup maps for names (fixes old records without names saved)
+                const [_allTenants, _allCredits, _allWaterCusts] = await Promise.all([
+                    dbGetAll('tenants'), dbGetAll('credits'), dbGetAll('waterCustomers')
+                ]);
+                const _tenantMap  = {};
+                _allTenants.forEach(t => _tenantMap[t.id] = t.name);
+                const _creditMap  = {};
+                _allCredits.forEach(c => _creditMap[c.id] = c.debtor);
+                const _wcustMap   = {};
+                _allWaterCusts.forEach(c => _wcustMap[c.id] = c.name);
+
                 let txns = [];
                 if (filter==='all'||filter==='rent')
                     txns.push(...payments.filter(p=>inRange(p.date||'')&&!p.voided).map(p=>({
-                        icon:'🏠', type:'Rent', name:p.tenantName||'Tenant',
+                        icon:'🏠', type:'Rent',
+                        name: p.tenantName || _tenantMap[p.tenantId] || ('Tenant #'+p.tenantId),
                         amount:p.amount||0, method:p.paymentMethod||'cash', date:p.date||'',
                         sub:(p.monthCovered?'Month: '+p.monthCovered:'')+(p.discount>0?' · Disc: ₱'+p.discount:''),
                         by:p.recordedBy||'', byRole:p.recordedByRole||'',
@@ -17979,7 +18005,8 @@ async function showPayrollSummary() {
                     })));
                 if (filter==='all'||filter==='credit')
                     txns.push(...creditPayments.filter(p=>inRange(p.date||'')&&!p.voided).map(p=>({
-                        icon:'💳', type:'Credit', name:p.debtorName||'Debtor',
+                        icon:'💳', type:'Credit',
+                        name: p.debtorName || _creditMap[p.creditId] || ('Credit #'+p.creditId),
                         amount:p.amount||0, method:p.paymentMethod||'cash', date:p.date||'',
                         sub:p.discount>0?'Waiver: ₱'+p.discount:'',
                         by:p.recordedBy||'', byRole:p.recordedByRole||'',
@@ -17987,7 +18014,8 @@ async function showPayrollSummary() {
                     })));
                 if (filter==='all'||filter==='water')
                     txns.push(...waterSales.filter(s=>inRange(s.date||'')&&!s.voided).map(s=>({
-                        icon:'💧', type:'Water', name:s.customerName||'Customer',
+                        icon:'💧', type:'Water',
+                        name: s.customerName || _wcustMap[s.customerId] || 'Walk-in',
                         amount:s.amountPaid||0, method:s.paymentMethod||'cash', date:s.date||'',
                         sub:(s.containerType==='small'
                             ?(s.bottles||s.gallons||0)+' × '+(s.bottleSize==='500cc'?'Small':s.bottleSize==='4-10L'?'Medium':'Large')+' bot @ ₱'+(s.pricePerBottle||s.pricePerGallon||0)
@@ -18829,8 +18857,8 @@ async function showPayrollSummary() {
             .filter(function(s){ return s.date && s.date.startsWith(currentMonth) && !s.voided; })
             .reduce(function(sum, s){ return sum + (s.amountPaid || 0); }, 0);
 
-        const totalIncomeThisMonth = collected + creditRepaid + otherIncomeThisMonth + waterIncomeThisMonth;
-            document.getElementById('stat-total-income').textContent = '₱' + totalIncomeThisMonth.toLocaleString();
+        const totalIncomeThisMonth = Math.round((collected + creditRepaid + otherIncomeThisMonth + waterIncomeThisMonth) * 100) / 100;
+            document.getElementById('stat-total-income').textContent = '\u20b1' + totalIncomeThisMonth.toLocaleString();
 
             // Pending Charges
             document.getElementById('stat-pending-charges').textContent = '₱' + pendingChargesTotal.toLocaleString();
@@ -19013,15 +19041,15 @@ async function showPayrollSummary() {
             const creditIn  = creditPayments.filter(function(p){ return p.date && p.date.startsWith(m.key); }).reduce(function(s,p){ return s + prismSafeNumber(p.amount); }, 0);
             const addIn     = additionalIncome.filter(function(p){ return p.date && p.date.startsWith(m.key); }).reduce(function(s,p){ return s + prismSafeNumber(p.amount); }, 0);
             const waterIn   = waterSales.filter(function(p){ return p.date && p.date.startsWith(m.key) && !p.voided; }).reduce(function(s,p){ return s + prismSafeNumber(p.amountPaid || p.total); }, 0);
-            const totalInc  = rentIn + creditIn + addIn + waterIn;
+            const totalInc  = Math.round((rentIn + creditIn + addIn + waterIn) * 100) / 100;
 
             const expOut    = expenses.filter(function(e){ return e.date && e.date.startsWith(m.key); }).reduce(function(s,e){ return s + prismSafeNumber(e.amount); }, 0);
             const creditOut = credits.filter(function(c){ return c.dateLent && c.dateLent.startsWith(m.key); }).reduce(function(s,c){ return s + prismSafeNumber(c.principal); }, 0);
-            const totalExp  = expOut + creditOut;
+            const totalExp  = Math.round((expOut + creditOut) * 100) / 100;
 
             incomeData.push(totalInc);
             expenseData.push(totalExp);
-            netData.push(totalInc - totalExp);
+            netData.push(Math.round((totalInc - totalExp) * 100) / 100);
         });
 
         // Store for Jarod's Analysis
@@ -24542,19 +24570,19 @@ function initReportsPage() {
             const rangeAdditionalIncome = filterByRange(additionalIncome);
 
             // Calculate totals
-            const rentIncome = rangePayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-            const creditIncome = rangeCreditPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-            const waterIncome = rangeWaterSales.reduce((sum, s) => sum + (s.amountPaid || 0), 0);
-            const otherIncome = rangeAdditionalIncome.reduce((sum, i) => sum + (i.amount || 0), 0);
-            const totalIncome = rentIncome + creditIncome + waterIncome + otherIncome;
-            const totalExpenses = rangeExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-            const netProfit = totalIncome - totalExpenses;
-            const profitMargin = totalIncome > 0 ? Math.round((netProfit / totalIncome) * 100) : 0;
+            const rentIncome    = Math.round(rangePayments.reduce((sum, p) => sum + (p.amount || 0), 0) * 100) / 100;
+            const creditIncome  = Math.round(rangeCreditPayments.reduce((sum, p) => sum + (p.amount || 0), 0) * 100) / 100;
+            const waterIncome   = Math.round(rangeWaterSales.reduce((sum, s) => sum + (s.amountPaid || 0), 0) * 100) / 100;
+            const otherIncome   = Math.round(rangeAdditionalIncome.reduce((sum, i) => sum + (i.amount || 0), 0) * 100) / 100;
+            const totalIncome   = Math.round((rentIncome + creditIncome + waterIncome + otherIncome) * 100) / 100;
+            const totalExpenses = Math.round(rangeExpenses.reduce((sum, e) => sum + (e.amount || 0), 0) * 100) / 100;
+            const netProfit     = Math.round((totalIncome - totalExpenses) * 100) / 100;
+            const profitMargin  = totalIncome > 0 ? Math.round((netProfit / totalIncome) * 100) : 0;
 
             // Update summary cards
             document.getElementById('report-total-income').textContent = '₱' + totalIncome.toLocaleString();
             document.getElementById('report-total-expenses').textContent = '₱' + totalExpenses.toLocaleString();
-            document.getElementById('report-net-profit').textContent = (netProfit >= 0 ? '₱' : '-₱') + Math.abs(netProfit).toLocaleString();
+            document.getElementById('report-net-profit').textContent = (netProfit >= 0 ? '₱' : '-₱') + Math.abs(netProfit).toLocaleString('en-PH', {minimumFractionDigits:0, maximumFractionDigits:2});
             document.getElementById('report-profit-margin').textContent = profitMargin + '%';
 
             // Update net profit card color based on gain/loss
