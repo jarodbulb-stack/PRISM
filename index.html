@@ -17885,23 +17885,15 @@ async function showPayrollSummary() {
             const filter = document.getElementById('income-today-filter')?.value || 'all';
             const methodLabel = {cash:'Cash',gcash:'GCash',maya:'Maya',bank:'Bank Transfer',other:'Other'};
 
-            let txt = '========================================
-';
-            txt += '         PRISM — TRANSACTION REPORT
-';
-            txt += '========================================
-';
-            txt += `Date Range : ${from} to ${to}
-`;
-            txt += `Filter     : ${filter==='all'?'All Types':filter.toUpperCase()}
-`;
-            txt += `Exported   : ${new Date().toLocaleString()}
-`;
-            txt += `Total Txns : ${_itxAllTxns.length}
-`;
-            txt += '----------------------------------------
-
-';
+            let txt = '========================================';
+            txt += '\n';
+            txt += '         PRISM TRANSACTION REPORT\n';
+            txt += '========================================\n';
+            txt += 'Date Range : ' + from + ' to ' + to + '\n';
+            txt += 'Filter     : ' + (filter==="all"?'All Types':filter.toUpperCase()) + '\n';
+            txt += 'Exported   : ' + new Date().toLocaleString() + '\n';
+            txt += 'Total Txns : ' + _itxAllTxns.length + '\n';
+            txt += '----------------------------------------\n\n';
 
             // Group by date
             const grouped = {};
@@ -27428,6 +27420,8 @@ async function editTask(id) {
         window.showStaffFlashcardDetail = showStaffFlashcardDetail;
         window.showVoidRequests = showVoidRequests;
         window.showWaterFlashcardDetail = showWaterFlashcardDetail;
+        window.showFlashcardDetail      = showFlashcardDetail;
+        window.toggleTheme              = toggleTheme;
         window.showWaterSaleModal = showWaterSaleModal;
 
         // ── Water Sale Quick CRUD (from Today's Sales panel) ──
