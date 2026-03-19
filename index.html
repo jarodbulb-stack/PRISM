@@ -4658,21 +4658,26 @@
             <!-- Today's Transaction Summary -->
             <div class="card" id="income-today-card">
                 <div class="card-header">
-                    <div class="card-title">📋 Today's Transactions</div>
-                    <div style="display:flex;gap:8px;align-items:center;">
-                        <select id="income-today-filter" onchange="loadIncomeTodayFeed()" style="background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-primary);border-radius:6px;padding:4px 8px;font-size:0.78rem;">
-                            <option value="all">All Types</option>
-                            <option value="rent">🏠 Rent</option>
-                            <option value="credit">💳 Credit</option>
-                            <option value="water">💧 Water</option>
-                            <option value="income">💰 Other Income</option>
-                        </select>
-                        <button class="btn btn-sm btn-secondary" onclick="loadIncomeTodayFeed()">↺</button>
-                    </div>
+                    <div class="card-title">📋 Transactions</div>
+                    <button class="btn btn-sm btn-secondary" onclick="loadIncomeTodayFeed()" title="Refresh">↺</button>
+                </div>
+                <!-- Filter bar -->
+                <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
+                    <input type="date" id="income-date-filter"
+                        style="flex:1;min-width:120px;padding:6px 8px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:7px;color:var(--text-primary);font-size:0.8rem;"
+                        onchange="loadIncomeTodayFeed()">
+                    <select id="income-today-filter" onchange="loadIncomeTodayFeed()"
+                        style="flex:1;min-width:100px;background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-primary);border-radius:7px;padding:6px 8px;font-size:0.78rem;">
+                        <option value="all">All Types</option>
+                        <option value="rent">🏠 Rent</option>
+                        <option value="credit">💳 Credit</option>
+                        <option value="water">💧 Water</option>
+                        <option value="income">💰 Other</option>
+                    </select>
                 </div>
                 <div id="income-today-summary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;"></div>
-                <div id="income-today-feed" style="max-height:340px;overflow-y:auto;">
-                    <div style="text-align:center;color:var(--text-secondary);padding:24px;font-size:0.85rem;">Loading today's transactions...</div>
+                <div id="income-today-feed" style="max-height:420px;overflow-y:auto;">
+                    <div style="text-align:center;color:var(--text-secondary);padding:24px;font-size:0.85rem;">Loading transactions...</div>
                 </div>
             </div>
 
@@ -11709,12 +11714,13 @@ async function recordTenantPayment(tenantId) {
             payment.recordedByRole = currentAppUser?.role || 'unknown';
             payment.recordedByEmail = currentAppUser?.email || 'unknown';
             showToast('⏳ Recording payment...', 'info');
-                await dbAdd('payments', payment);
+            await dbAdd('payments', payment);
             await viewTenantDetails(tenantId);
             loadTenants();
             loadDashboard();
+            if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
             debouncedSync();
-            showToast('Payment recorded successfully!', 'success');
+            showToast('✅ Payment recorded successfully!', 'success');
             if (currentAppUser && currentAppUser.role === 'cashier' && typeof loadCashierDashboard === 'function') {
                 setTimeout(loadCashierDashboard, 400);
             }
@@ -13615,8 +13621,9 @@ async function loadWaterCustomers() {
                 hideModal('water-sale-modal');
                 document.getElementById('water-sale-form').reset();
                 loadWaterCustomers();
+                if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
                 debouncedSync();
-                showToast('Sale recorded successfully!', 'success');
+                showToast('✅ Sale recorded successfully!', 'success');
 
                 if (currentAppUser && currentAppUser.role === 'cashier' && typeof loadCashierDashboard === 'function') {
                     setTimeout(loadCashierDashboard, 400);
@@ -15972,6 +15979,7 @@ async function showPayrollSummary() {
             await viewCreditDetails(creditId);
             loadCredits();
             loadDashboard();
+            if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
             // Sync to Firebase
             debouncedSync();
 
@@ -17709,9 +17717,15 @@ async function showPayrollSummary() {
             const summEl  = document.getElementById('income-today-summary');
             if (!feedEl) return;
 
-            const filter = (document.getElementById('income-today-filter') || {}).value || 'all';
-            const today  = new Date().toISOString().split('T')[0];
-            const isAdmin = currentAppUser && ['owner','admin'].includes(currentAppUser.role);
+            // Read filters
+            const today    = new Date().toISOString().split('T')[0];
+            const datePick = (document.getElementById('income-date-filter')||{}).value || today;
+            const filter   = (document.getElementById('income-today-filter')||{}).value || 'all';
+            const isAdmin  = currentAppUser && ['owner','admin'].includes(currentAppUser.role);
+
+            // Set date picker to today if empty
+            const dpEl = document.getElementById('income-date-filter');
+            if (dpEl && !dpEl.value) dpEl.value = today;
 
             feedEl.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:20px;font-size:0.85rem;">Loading...</div>';
 
@@ -17723,104 +17737,105 @@ async function showPayrollSummary() {
 
                 let txns = [];
                 if (filter === 'all' || filter === 'rent')
-                    txns.push(...payments.filter(p=>p.date===today&&!p.voided).map(p=>({
+                    txns.push(...payments.filter(p=>p.date===datePick&&!p.voided).map(p=>({
                         icon:'🏠', type:'Rent', name:p.tenantName||'Tenant',
                         amount:p.amount||0, method:p.paymentMethod||'cash',
-                        sub: p.monthCovered ? 'Month: '+p.monthCovered : '',
-                        by: p.recordedBy||p.recordedByEmail||'',
-                        byRole: p.recordedByRole||'',
-                        id:p.id, src:'rent', parentId: p.tenantId,
-                        time: p.createdAt||today
+                        sub: (p.monthCovered?'Month: '+p.monthCovered:'') + (p.discount>0?' · Disc: ₱'+p.discount:''),
+                        by:p.recordedBy||'', byRole:p.recordedByRole||'',
+                        id:p.id, src:'rent', parentId:p.tenantId, time:p.createdAt||datePick
                     })));
                 if (filter === 'all' || filter === 'credit')
-                    txns.push(...creditPayments.filter(p=>p.date===today&&!p.voided).map(p=>({
+                    txns.push(...creditPayments.filter(p=>p.date===datePick&&!p.voided).map(p=>({
                         icon:'💳', type:'Credit', name:p.debtorName||'Debtor',
                         amount:p.amount||0, method:p.paymentMethod||'cash',
-                        sub:'',
-                        by: p.recordedBy||p.recordedByEmail||'',
-                        byRole: p.recordedByRole||'',
-                        id:p.id, src:'credit', parentId: p.creditId,
-                        time: p.createdAt||today
+                        sub: p.discount>0?'Waiver: ₱'+p.discount:'',
+                        by:p.recordedBy||'', byRole:p.recordedByRole||'',
+                        id:p.id, src:'credit', parentId:p.creditId, time:p.createdAt||datePick
                     })));
                 if (filter === 'all' || filter === 'water')
-                    txns.push(...waterSales.filter(s=>s.date===today&&!s.voided).map(s=>({
+                    txns.push(...waterSales.filter(s=>s.date===datePick&&!s.voided).map(s=>({
                         icon:'💧', type:'Water', name:s.customerName||'Customer',
                         amount:s.amountPaid||0, method:s.paymentMethod||'cash',
-                        sub:`${s.containerType==='small'?(s.bottles||s.gallons||0)+' × '+(s.bottleSize||'bottle')+' @ ₱'+(s.pricePerBottle||s.pricePerGallon||0):(s.bottles||s.gallons||0)+' bot @ ₱'+(s.pricePerBottle||s.pricePerGallon||0)}${s.packageDeal?' 🎁 Package':''}`,
-                        by: s.recordedBy||'',
-                        byRole: s.recordedByRole||'',
-                        id:s.id, src:'water', parentId: s.customerId,
-                        time: s.createdAt||today
+                        sub:(s.containerType==='small'
+                            ?(s.bottles||s.gallons||0)+' × '+(s.bottleSize==='500cc'?'Small':s.bottleSize==='4-10L'?'Medium':s.bottleSize==='15L'?'Large':(s.bottleSize||'bottle'))+' bot @ ₱'+(s.pricePerBottle||s.pricePerGallon||0)
+                            :(s.bottles||s.gallons||0)+' bottle'+(s.bottles!==1?'s':'')+' (18L) @ ₱'+(s.pricePerBottle||s.pricePerGallon||0))
+                            +(s.packageDeal?' 🎁':'')+(s.balance>0?' · Bal:₱'+s.balance.toLocaleString():''),
+                        by:s.recordedBy||'', byRole:s.recordedByRole||'',
+                        id:s.id, src:'water', parentId:s.customerId, time:s.createdAt||datePick
                     })));
                 if (filter === 'all' || filter === 'income')
-                    txns.push(...income.filter(i=>i.date===today).map(i=>({
+                    txns.push(...income.filter(i=>i.date===datePick).map(i=>({
                         icon:'💰', type:'Income', name:i.source||i.description||'Other',
                         amount:i.amount||0, method:'—',
-                        sub: i.description||'',
-                        by: i.recordedBy||'',
-                        byRole: i.recordedByRole||'',
-                        id:i.id, src:'income', parentId:null,
-                        time: i.createdAt||today
+                        sub:i.description||'',
+                        by:i.recordedBy||'', byRole:i.recordedByRole||'',
+                        id:i.id, src:'income', parentId:null, time:i.createdAt||datePick
                     })));
 
-                // Sort newest first
-                txns.sort((a,b) => (b.time||'') > (a.time||'') ? 1 : -1);
+                txns.sort((a,b)=>(b.time||'')>(a.time||'')?1:-1);
 
                 // Summary pills
-                const totalRent   = payments.filter(p=>p.date===today&&!p.voided).reduce((s,p)=>s+(p.amount||0),0);
-                const totalCredit = creditPayments.filter(p=>p.date===today&&!p.voided).reduce((s,p)=>s+(p.amount||0),0);
-                const totalWater  = waterSales.filter(s=>s.date===today&&!s.voided).reduce((s,x)=>s+(x.amountPaid||0),0);
-                const totalOther  = income.filter(i=>i.date===today).reduce((s,i)=>s+(i.amount||0),0);
+                const totalRent   = payments.filter(p=>p.date===datePick&&!p.voided).reduce((s,p)=>s+(p.amount||0),0);
+                const totalCredit = creditPayments.filter(p=>p.date===datePick&&!p.voided).reduce((s,p)=>s+(p.amount||0),0);
+                const totalWater  = waterSales.filter(s=>s.date===datePick&&!s.voided).reduce((s,x)=>s+(x.amountPaid||0),0);
+                const totalOther  = income.filter(i=>i.date===datePick).reduce((s,i)=>s+(i.amount||0),0);
                 const grandTotal  = totalRent+totalCredit+totalWater+totalOther;
+                const isToday     = datePick === today;
 
                 if (summEl) summEl.innerHTML = `
-                    <div style="background:rgba(16,185,129,0.1);border-radius:8px;padding:8px;text-align:center;">
-                        <div style="font-weight:800;color:#10b981;font-size:0.9rem;">₱${grandTotal.toLocaleString()}</div>
-                        <div style="font-size:0.68rem;color:var(--text-secondary);">Grand Total</div>
+                    <div style="background:rgba(16,185,129,0.1);border-radius:8px;padding:8px;text-align:center;cursor:pointer;" onclick="document.getElementById('income-today-filter').value='all';loadIncomeTodayFeed()">
+                        <div style="font-weight:800;color:#10b981;font-size:0.88rem;">₱${grandTotal.toLocaleString()}</div>
+                        <div style="font-size:0.65rem;color:var(--text-secondary);">Total</div>
                     </div>
                     <div style="background:rgba(99,102,241,0.1);border-radius:8px;padding:8px;text-align:center;cursor:pointer;" onclick="document.getElementById('income-today-filter').value='rent';loadIncomeTodayFeed()">
                         <div style="font-weight:700;color:#818cf8;font-size:0.85rem;">₱${totalRent.toLocaleString()}</div>
-                        <div style="font-size:0.68rem;color:var(--text-secondary);">🏠 Rent</div>
+                        <div style="font-size:0.65rem;color:var(--text-secondary);">🏠 Rent</div>
                     </div>
                     <div style="background:rgba(245,158,11,0.1);border-radius:8px;padding:8px;text-align:center;cursor:pointer;" onclick="document.getElementById('income-today-filter').value='credit';loadIncomeTodayFeed()">
                         <div style="font-weight:700;color:#f59e0b;font-size:0.85rem;">₱${totalCredit.toLocaleString()}</div>
-                        <div style="font-size:0.68rem;color:var(--text-secondary);">💳 Credit</div>
+                        <div style="font-size:0.65rem;color:var(--text-secondary);">💳 Credit</div>
                     </div>
                     <div style="background:rgba(14,165,233,0.1);border-radius:8px;padding:8px;text-align:center;cursor:pointer;" onclick="document.getElementById('income-today-filter').value='water';loadIncomeTodayFeed()">
                         <div style="font-weight:700;color:#38bdf8;font-size:0.85rem;">₱${totalWater.toLocaleString()}</div>
-                        <div style="font-size:0.68rem;color:var(--text-secondary);">💧 Water</div>
+                        <div style="font-size:0.65rem;color:var(--text-secondary);">💧 Water</div>
                     </div>`;
 
                 if (txns.length === 0) {
-                    feedEl.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:28px;font-size:0.85rem;">No transactions recorded today yet.<br><span style="font-size:0.78rem;opacity:0.6;">Use the + button or Record Payment to add entries.</span></div>';
+                    feedEl.innerHTML = `<div style="text-align:center;color:var(--text-secondary);padding:28px;font-size:0.85rem;">
+                        No transactions on ${isToday?'today':datePick}.<br>
+                        <span style="font-size:0.75rem;opacity:0.6;">${isToday?'Use + button or Record Payment to add.':'Try a different date.'}</span>
+                    </div>`;
                     return;
                 }
 
                 const methodLabel = {cash:'Cash',gcash:'GCash',maya:'Maya',bank:'Bank',other:'Other'};
-                const roleColor = {owner:'#a78bfa',admin:'#60a5fa',manager:'#34d399',cashier:'#fbbf24',viewer:'#94a3b8'};
+                const roleColor   = {owner:'#a78bfa',admin:'#60a5fa',manager:'#34d399',cashier:'#fbbf24',viewer:'#94a3b8'};
+                const borderColor = {rent:'#818cf8',credit:'#f59e0b',water:'#38bdf8',income:'#10b981'};
 
                 feedEl.innerHTML = txns.map(t => {
-                    const byLabel  = t.by ? t.by.split('@')[0] : '';
-                    const roleBadge = byLabel ? `<span style="font-size:0.65rem;color:${roleColor[t.byRole]||'#94a3b8'};background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:4px;margin-left:2px;">by ${byLabel}</span>` : '';
-                    const borderColor = t.src==='rent'?'#818cf8':t.src==='credit'?'#f59e0b':t.src==='water'?'#38bdf8':'#10b981';
+                    const byLabel   = t.by ? t.by.split('@')[0] : '';
+                    const roleBadge = byLabel
+                        ? `<span style="font-size:0.63rem;color:${roleColor[t.byRole]||'#94a3b8'};background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:4px;">by ${byLabel}</span>`
+                        : '';
+                    const bc = borderColor[t.src] || '#10b981';
                     const crudBtns = isAdmin ? `
                         <div style="display:flex;gap:4px;margin-top:6px;">
                             <button onclick="incomeFeedEdit('${t.src}',${t.id},${t.parentId||0})"
-                                style="padding:3px 8px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:5px;cursor:pointer;font-size:0.7rem;font-weight:600;">✏️ Edit</button>
+                                style="padding:4px 10px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:6px;cursor:pointer;font-size:0.72rem;font-weight:600;">✏️ Edit</button>
                             <button onclick="incomeFeedDelete('${t.src}',${t.id})"
-                                style="padding:3px 8px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#ef4444;border-radius:5px;cursor:pointer;font-size:0.7rem;font-weight:600;">🗑 Delete</button>
+                                style="padding:4px 10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#ef4444;border-radius:6px;cursor:pointer;font-size:0.72rem;font-weight:600;">🗑 Delete</button>
                         </div>` : '';
                     return `
-                    <div style="padding:10px 12px;background:var(--bg-primary);border-radius:9px;margin-bottom:6px;border-left:3px solid ${borderColor};">
+                    <div style="padding:10px 12px;background:var(--bg-primary);border-radius:9px;margin-bottom:6px;border-left:3px solid ${bc};">
                         <div style="display:flex;justify-content:space-between;align-items:flex-start;">
                             <div style="flex:1;">
-                                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
                                     <span>${t.icon}</span>
-                                    <span style="font-weight:600;font-size:0.85rem;color:var(--text-primary);">${t.name}</span>
-                                    <span style="font-size:0.68rem;background:rgba(255,255,255,0.07);padding:1px 6px;border-radius:6px;color:var(--text-secondary);">${t.type}</span>
+                                    <span style="font-weight:600;font-size:0.88rem;">${t.name}</span>
+                                    <span style="font-size:0.67rem;background:rgba(255,255,255,0.07);padding:1px 6px;border-radius:5px;color:var(--text-secondary);">${t.type}</span>
                                     ${roleBadge}
                                 </div>
-                                ${t.sub ? `<div style="font-size:0.72rem;color:var(--text-secondary);margin-top:2px;padding-left:22px;">${t.sub}</div>` : ''}
+                                ${t.sub?`<div style="font-size:0.72rem;color:var(--text-secondary);margin-top:2px;padding-left:20px;">${t.sub}</div>`:''}
                             </div>
                             <div style="text-align:right;flex-shrink:0;margin-left:8px;">
                                 <div style="font-weight:700;color:#10b981;font-size:0.9rem;">+&#8369;${t.amount.toLocaleString()}</div>
@@ -17831,7 +17846,7 @@ async function showPayrollSummary() {
                     </div>`; }).join('');
 
             } catch(e) {
-                feedEl.innerHTML = '<div style="color:#ef4444;padding:12px;font-size:0.82rem;">Could not load transactions.</div>';
+                feedEl.innerHTML = '<div style="color:#ef4444;padding:12px;font-size:0.82rem;">Could not load transactions: '+e.message+'</div>';
             }
         }
         window.loadIncomeTodayFeed = loadIncomeTodayFeed;
@@ -18050,7 +18065,8 @@ async function showPayrollSummary() {
             document.getElementById('ife-modal')?.remove();
             debouncedSync();
             loadDashboard();
-            loadIncomeTodayFeed();
+            if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
+            if (typeof renderWaterAllSales === 'function' && src === 'water') renderWaterAllSales();
             if (src === 'water') loadWaterCustomers();
             if (src === 'rent')  loadTenants();
             if (src === 'credit') loadCredits();
@@ -18071,7 +18087,8 @@ async function showPayrollSummary() {
             await dbDelete(store, id);
             debouncedSync();
             loadDashboard();
-            loadIncomeTodayFeed();
+            if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
+            if (typeof renderWaterAllSales === 'function' && src === 'water') renderWaterAllSales();
             if (src === 'water') loadWaterCustomers();
             if (src === 'rent')  loadTenants();
             if (src === 'credit') loadCredits();
@@ -26986,45 +27003,153 @@ async function editTask(id) {
             if (!el) return;
             el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-secondary);">Loading...</div>';
             try {
-                const sales = (await dbGetAll('waterSales')).sort((a,b)=>new Date(b.date)-new Date(a.date));
+                const allSales = await dbGetAll('waterSales');
+                const sales = allSales.sort((a,b) => (b.date||'') > (a.date||'') ? 1 : -1);
                 if (sales.length === 0) {
                     el.innerHTML = '<div class="empty-state"><p>No water sales recorded yet.</p></div>';
                     return;
                 }
                 const isAdmin = currentAppUser && ['owner','admin'].includes(currentAppUser.role);
-                el.innerHTML = `
-                    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 2px 10px;">
-                        <span style="font-size:0.8rem;color:var(--text-secondary);">${sales.length} total records</span>
-                        <input type="text" placeholder="🔍 Search..." oninput="filterWaterSalesList(this.value)"
-                            style="padding:5px 10px;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-card);color:var(--text-primary);font-size:0.8rem;width:160px;">
+                const today   = new Date().toISOString().split('T')[0];
+                const uniqueDates = [...new Set(sales.map(s=>s.date||''))].sort((a,b)=>b>a?1:-1);
+
+                const _bottleLabel = (s) => {
+                    const qty   = s.bottles || s.gallons || 0;
+                    const price = s.pricePerBottle || s.pricePerGallon || 0;
+                    if (s.containerType === 'small') {
+                        const sz = s.bottleSize==='500cc'?'Small':s.bottleSize==='4-10L'?'Medium':s.bottleSize==='15L'?'Large':(s.bottleSize||'');
+                        return qty + ' × ' + sz + ' bot @ ₱' + price;
+                    }
+                    return qty + ' bottle' + (qty!==1?'s':'') + ' (18L) @ ₱' + price;
+                };
+
+                // Group by date
+                const grouped = {};
+                sales.forEach(s => {
+                    const d = s.date || 'Unknown';
+                    if (!grouped[d]) grouped[d] = [];
+                    grouped[d].push(s);
+                });
+
+                const nonVoided = sales.filter(s=>!s.voided);
+                const totalCollected = nonVoided.reduce((sum,s)=>sum+(s.amountPaid||s.total||0),0);
+                const totalOutstanding = nonVoided.filter(s=>s.balance>0).reduce((sum,s)=>sum+(s.balance||0),0);
+                const totalBottles = nonVoided.reduce((sum,s)=>sum+(s.bottles||s.gallons||0),0);
+
+                let html = `
+                <div style="display:flex;gap:6px;align-items:center;padding:0 0 10px;flex-wrap:wrap;">
+                    <input type="text" id="ws-search" placeholder="🔍 Search customer..." oninput="filterWaterSalesList(this.value)"
+                        style="flex:1;min-width:120px;padding:7px 10px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-card);color:var(--text-primary);font-size:0.82rem;">
+                    <select id="ws-date-filter" onchange="filterWaterSalesList(document.getElementById('ws-search').value)"
+                        style="padding:7px 8px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-card);color:var(--text-primary);font-size:0.8rem;">
+                        <option value="">All Dates</option>
+                        <option value="${today}">Today</option>
+                        ${uniqueDates.filter(d=>d!==today).map(d=>`<option value="${d}">${d}</option>`).join('')}
+                    </select>
+                    <select id="ws-status-filter" onchange="filterWaterSalesList(document.getElementById('ws-search').value)"
+                        style="padding:7px 8px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-card);color:var(--text-primary);font-size:0.8rem;">
+                        <option value="">All Status</option>
+                        <option value="paid">Paid</option>
+                        <option value="partial">Partial</option>
+                        <option value="credit">Credit</option>
+                        <option value="voided">Voided</option>
+                    </select>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px;">
+                    <div style="background:rgba(16,185,129,0.1);border-radius:8px;padding:8px;text-align:center;">
+                        <div style="font-weight:700;color:#10b981;font-size:0.9rem;">₱${totalCollected.toLocaleString()}</div>
+                        <div style="font-size:0.67rem;color:var(--text-secondary);">Collected</div>
                     </div>
-                    <div id="water-sales-rows">
-                    ${sales.map(s=>{
-                        const statusColor = s.status==='paid'?'#10b981':s.status==='partial'?'#f59e0b':'#ef4444';
-                        const statusLabel = s.status==='paid'?'Paid':s.status==='partial'?'Partial':'Credit';
-                        const voidedStyle = s.voided ? 'opacity:0.45;text-decoration:line-through;' : '';
-                        return `<div class="list-item" data-name="${(s.customerName||'').toLowerCase()}" data-date="${s.date||''}" style="${voidedStyle}cursor:${isAdmin?'pointer':'default'};" ${isAdmin?`onclick="editWaterSaleRecord(${s.id}, ${s.customerId||0})"`:''}> 
-                            <div class="list-item-content" style="flex:1;">
-                                <div class="list-item-title">${s.customerName||'Unknown'} — ${s.containerType==='small'?(s.gallons||0)+' × '+(s.bottleSize||''):(s.gallons||0)+' gal'} @ ₱${s.pricePerGallon||0}${s.packageDeal?' 🎁':''}</div>
-                                <div class="list-item-subtitle">${s.date||'—'} &nbsp;<span style="color:${statusColor};font-weight:600;">${statusLabel}</span>${s.voided?'&nbsp;<span style="color:#ef4444;font-size:0.7rem;">VOIDED</span>':''}</div>
+                    <div style="background:rgba(245,158,11,0.1);border-radius:8px;padding:8px;text-align:center;">
+                        <div style="font-weight:700;color:#f59e0b;font-size:0.9rem;">₱${totalOutstanding.toLocaleString()}</div>
+                        <div style="font-size:0.67rem;color:var(--text-secondary);">Outstanding</div>
+                    </div>
+                    <div style="background:rgba(99,102,241,0.1);border-radius:8px;padding:8px;text-align:center;">
+                        <div style="font-weight:700;color:#818cf8;font-size:0.9rem;">${totalBottles}</div>
+                        <div style="font-size:0.67rem;color:var(--text-secondary);">Bottles Sold</div>
+                    </div>
+                </div>
+                <div id="water-sales-rows">`;
+
+                Object.keys(grouped).sort((a,b)=>b>a?1:-1).forEach(date => {
+                    const group    = grouped[date];
+                    const dayTotal = group.filter(s=>!s.voided).reduce((sum,s)=>sum+(s.amountPaid||s.total||0),0);
+                    const dayBots  = group.filter(s=>!s.voided).reduce((sum,s)=>sum+(s.bottles||s.gallons||0),0);
+                    const isToday  = date === today;
+
+                    html += `<div class="ws-date-group" data-date="${date}">
+                        <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'':'none'"
+                            style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--bg-secondary);border-radius:7px;margin-bottom:4px;cursor:pointer;user-select:none;">
+                            <span style="font-weight:700;font-size:0.82rem;color:${isToday?'#10b981':'var(--text-primary)'};">
+                                📅 ${isToday?'Today — '+date:date}
+                            </span>
+                            <span style="font-size:0.75rem;color:var(--text-secondary);">
+                                ${group.length} sale${group.length!==1?'s':''} · ${dayBots} bot · <strong style="color:#10b981;">₱${dayTotal.toLocaleString()}</strong>
+                            </span>
+                        </div>
+                        <div>`;
+
+                    group.forEach(s => {
+                        const sc     = s.voided?'#64748b':s.status==='paid'?'#10b981':s.status==='partial'?'#f59e0b':'#ef4444';
+                        const sl     = s.voided?'Voided':s.status==='paid'?'Paid':s.status==='partial'?'Partial':'Credit';
+                        const vs     = s.voided ? 'opacity:0.4;' : '';
+                        const statusKey = s.voided?'voided':(s.status||'paid');
+
+                        html += `<div class="list-item ws-sale-row"
+                            data-name="${(s.customerName||'').toLowerCase()}"
+                            data-date="${s.date||''}"
+                            data-status="${statusKey}"
+                            style="${vs}margin-bottom:4px;border-radius:8px;">
+                            <div style="flex:1;">
+                                <div style="font-weight:600;font-size:0.88rem;">${s.customerName||'Unknown'}</div>
+                                <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:1px;">
+                                    ${_bottleLabel(s)}${s.packageDeal?' 🎁 Package':''}${s.discount>0?' <span style="color:#10b981;">−₱'+s.discount+'</span>':''}
+                                </div>
+                                ${s.notes?`<div style="font-size:0.7rem;color:#64748b;font-style:italic;">${s.notes}</div>`:''}
                             </div>
-                            <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
-                                <div style="font-weight:600;">₱${(s.total||0).toLocaleString()}</div>
-                                ${s.balance>0?`<small style="color:#f59e0b;">Bal: ₱${s.balance.toLocaleString()}</small>`:''}
-                                ${isAdmin&&!s.voided?`<div style="display:flex;gap:4px;" onclick="event.stopPropagation()">
-                                    <button class="btn btn-sm btn-info" onclick="editWaterSaleRecord(${s.id},${s.customerId||0})" style="padding:2px 7px;font-size:0.7rem;">✏️</button>
-                                    <button class="btn btn-sm btn-warning" onclick="voidWaterSale(${s.id},${s.customerId||0})" style="padding:2px 7px;font-size:0.7rem;">🚫</button>
-                                    <button class="btn btn-sm btn-danger" onclick="deleteWaterSale(${s.id});renderWaterAllSales();" style="padding:2px 7px;font-size:0.7rem;">🗑️</button>
+                            <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
+                                <div style="font-weight:700;color:#10b981;">₱${(s.amountPaid||s.total||0).toLocaleString()}</div>
+                                <span style="font-size:0.68rem;background:${sc}22;color:${sc};padding:1px 6px;border-radius:6px;">${sl}</span>
+                                ${s.balance>0&&!s.voided?`<small style="color:#f59e0b;">Bal:₱${s.balance.toLocaleString()}</small>`:''}
+                                ${isAdmin&&!s.voided?`<div style="display:flex;gap:3px;margin-top:3px;" onclick="event.stopPropagation()">
+                                    <button onclick="incomeFeedEdit('water',${s.id},${s.customerId||0});setTimeout(renderWaterAllSales,800)"
+                                        style="padding:2px 7px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:5px;cursor:pointer;font-size:0.68rem;">✏️</button>
+                                    <button onclick="waterSaleQuickVoid(${s.id})"
+                                        style="padding:2px 7px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);color:#f59e0b;border-radius:5px;cursor:pointer;font-size:0.68rem;">🚫</button>
+                                    <button onclick="waterSaleQuickDelete(${s.id})"
+                                        style="padding:2px 7px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#ef4444;border-radius:5px;cursor:pointer;font-size:0.68rem;">🗑</button>
                                 </div>`:''}
                             </div>
                         </div>`;
-                    }).join('')}
-                    </div>`;
+                    });
+                    html += `</div></div>`;
+                });
+
+                html += '</div>';
+                el.innerHTML = html;
+
             } catch(e) {
-                el.innerHTML = '<div style="color:#ef4444;padding:12px;">Could not load sales.</div>';
+                el.innerHTML = '<div style="color:#ef4444;padding:12px;">Could not load sales: ' + e.message + '</div>';
             }
         }
         window.renderWaterAllSales = renderWaterAllSales;
+
+        function filterWaterSalesList(query) {
+            const q      = (query||'').toLowerCase();
+            const dateFil= (document.getElementById('ws-date-filter')||{}).value   || '';
+            const statFil= (document.getElementById('ws-status-filter')||{}).value || '';
+            document.querySelectorAll('.ws-sale-row').forEach(row => {
+                const ok = (!q      || (row.dataset.name||'').includes(q))
+                        && (!dateFil || row.dataset.date   === dateFil)
+                        && (!statFil || row.dataset.status === statFil);
+                row.style.display = ok ? '' : 'none';
+            });
+            document.querySelectorAll('.ws-date-group').forEach(grp => {
+                const vis = [...grp.querySelectorAll('.ws-sale-row')].some(r=>r.style.display!=='none');
+                grp.style.display = vis ? '' : 'none';
+            });
+        }
+        window.filterWaterSalesList = filterWaterSalesList;
 
         function filterWaterSalesList(query) {
             const q = query.toLowerCase();
