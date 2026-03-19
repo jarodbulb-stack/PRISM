@@ -17877,76 +17877,58 @@ async function showPayrollSummary() {
         window.renderIncomePage = renderIncomePage;
 
         async function exportTransactionsTxt() {
-            if (_itxAllTxns.length === 0) { showToast('ℹ️ No transactions to export.','info'); return; }
+            if (_itxAllTxns.length === 0) { showToast('No transactions to export.','info'); return; }
             const fromEl = document.getElementById('income-date-from');
             const toEl   = document.getElementById('income-date-to');
-            const from   = fromEl?.value || '';
-            const to     = toEl?.value   || '';
-            const filter = document.getElementById('income-today-filter')?.value || 'all';
-            const methodLabel = {cash:'Cash',gcash:'GCash',maya:'Maya',bank:'Bank Transfer',other:'Other'};
-
-            let txt = '========================================';
-            txt += '\n';
-            txt += '         PRISM TRANSACTION REPORT\n';
-            txt += '========================================\n';
-            txt += 'Date Range : ' + from + ' to ' + to + '\n';
-            txt += 'Filter     : ' + (filter==="all"?'All Types':filter.toUpperCase()) + '\n';
-            txt += 'Exported   : ' + new Date().toLocaleString() + '\n';
-            txt += 'Total Txns : ' + _itxAllTxns.length + '\n';
-            txt += '----------------------------------------\n\n';
-
-            // Group by date
-            const grouped = {};
-            _itxAllTxns.forEach(t => {
+            const from   = fromEl ? fromEl.value : '';
+            const to     = toEl   ? toEl.value   : '';
+            const filter = document.getElementById('income-today-filter') ? document.getElementById('income-today-filter').value : 'all';
+            const ML = {cash:'Cash',gcash:'GCash',maya:'Maya',bank:'Bank Transfer',other:'Other'};
+            const S1 = '========================================';
+            const S2 = '  ' + '-'.repeat(48);
+            const NL = '\n';
+            var txt = '';
+            txt += S1 + NL;
+            txt += '      PRISM TRANSACTION REPORT' + NL;
+            txt += S1 + NL;
+            txt += 'Date Range : ' + from + ' to ' + to + NL;
+            txt += 'Filter     : ' + (filter === 'all' ? 'All Types' : filter.toUpperCase()) + NL;
+            txt += 'Exported   : ' + new Date().toLocaleString() + NL;
+            txt += 'Total Txns : ' + _itxAllTxns.length + NL;
+            txt += '----------------------------------------' + NL + NL;
+            var grouped = {};
+            _itxAllTxns.forEach(function(t) {
                 if (!grouped[t.date]) grouped[t.date] = [];
                 grouped[t.date].push(t);
             });
-
-            let grandTotal = 0;
-            Object.keys(grouped).sort((a,b)=>b>a?1:-1).forEach(date => {
-                const dayTxns = grouped[date];
-                const dayTotal = dayTxns.reduce((s,t)=>s+t.amount,0);
-                grandTotal += dayTotal;
-                txt += `DATE: ${date}  (${dayTxns.length} transaction${dayTxns.length!==1?'s':''})  Total: ₱${dayTotal.toLocaleString()}
-`;
-                txt += '  ' + '-'.repeat(50) + '
-';
-                dayTxns.forEach((t,i) => {
-                    txt += `  ${String(i+1).padStart(2,'0')}. [${t.type.toUpperCase()}] ${t.name}
-`;
-                    txt += `       Amount : ₱${t.amount.toLocaleString()}
-`;
-                    txt += `       Method : ${methodLabel[t.method]||t.method||'—'}
-`;
-                    if (t.sub) txt += `       Detail : ${t.sub.replace(/<[^>]+>/g,'')}
-`;
-                    if (t.by)  txt += `       By     : ${t.by}
-`;
-                    txt += '
-';
+            var grandTotal = 0;
+            Object.keys(grouped).sort(function(a,b){ return b > a ? 1 : -1; }).forEach(function(date) {
+                var dayTxns  = grouped[date];
+                var dayTotal = dayTxns.reduce(function(s,t){ return s + t.amount; }, 0);
+                grandTotal  += dayTotal;
+                txt += 'DATE: ' + date + '  (' + dayTxns.length + ' transaction' + (dayTxns.length !== 1 ? 's' : '') + ')  Total: P' + dayTotal.toLocaleString() + NL;
+                txt += S2 + NL;
+                dayTxns.forEach(function(t, idx) {
+                    txt += '  ' + String(idx+1).padStart(2,'0') + '. [' + t.type.toUpperCase() + '] ' + t.name + NL;
+                    txt += '       Amount : P' + t.amount.toLocaleString() + NL;
+                    txt += '       Method : ' + (ML[t.method] || t.method || '-') + NL;
+                    if (t.sub) txt += '       Detail : ' + t.sub.replace(/<[^>]+>/g,'') + NL;
+                    if (t.by)  txt += '       By     : ' + t.by + NL;
+                    txt += NL;
                 });
-                txt += `  SUBTOTAL: ₱${dayTotal.toLocaleString()}
-`;
-                txt += '
-';
+                txt += '  SUBTOTAL: P' + dayTotal.toLocaleString() + NL + NL;
             });
-
-            txt += '========================================
-';
-            txt += `GRAND TOTAL: ₱${grandTotal.toLocaleString()}
-`;
-            txt += '========================================
-';
-
-            // Download as .txt file
-            const blob = new Blob([txt], {type:'text/plain'});
-            const url  = URL.createObjectURL(blob);
-            const a    = document.createElement('a');
+            txt += S1 + NL;
+            txt += 'GRAND TOTAL: P' + grandTotal.toLocaleString() + NL;
+            txt += S1 + NL;
+            var blob = new Blob([txt], {type:'text/plain;charset=utf-8'});
+            var url  = URL.createObjectURL(blob);
+            var a    = document.createElement('a');
             a.href     = url;
-            a.download = `PRISM_Transactions_${from}_to_${to}.txt`;
+            a.download = 'PRISM_Transactions_' + from + '_to_' + to + '.txt';
             a.click();
             URL.revokeObjectURL(url);
-            showToast('✅ Exported! Open the .txt file in Notepad or Word.','success');
+            showToast('Exported! Open .txt in Notepad or Word.', 'success');
         }
         window.exportTransactionsTxt = exportTransactionsTxt;
 
