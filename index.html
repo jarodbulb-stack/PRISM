@@ -4685,7 +4685,8 @@
                         <option value="rent">🏠 Rent</option>
                         <option value="credit">💳 Credit</option>
                         <option value="water">💧 Water</option>
-                        <option value="income">💰 Other</option>
+                        <option value="income">💰 Other Income</option>
+                        <option value="store">🛒 Store Sales</option>
                     </select>
                 </div>
 
@@ -18247,14 +18248,27 @@ async function showPayrollSummary() {
                         by:s.recordedBy||'', byRole:s.recordedByRole||'',
                         id:s.id, src:'water', parentId:s.customerId, time:s.createdAt||s.date||''
                     })));
-                if (filter==='all'||filter==='income')
-                    txns.push(...income.filter(i=>inRange(i.date||'')).map(i=>({
+                if (filter==='all'||filter==='income') {
+                    // additionalIncome (excluding store refs — store sales shown below)
+                    txns.push(...income.filter(i=>inRange(i.date||'')&&!i.storeRef).map(i=>({
                         icon:'💰', type:'Income', name:i.source||i.description||'Other',
                         amount:i.amount||0, method:'—', date:i.date||'',
                         sub:i.description||'',
                         by:i.recordedBy||'', byRole:i.recordedByRole||'',
                         id:i.id, src:'income', parentId:null, time:i.createdAt||i.date||''
                     })));
+                    // Water Store sales
+                    try {
+                        const storeSales = await dbGetAll('waterStoreSales');
+                        txns.push(...storeSales.filter(s=>inRange(s.date||'')&&!s.voided).map(s=>({
+                            icon: s.itemIcon||'🛒', type:'Store', name:s.itemName||'Item',
+                            amount:s.total||0, method:s.paymentMethod||'cash', date:s.date||'',
+                            sub: s.qty+'× @ ₱'+s.unitPrice + (s.customerName&&s.customerName!=='Walk-in'?' · '+s.customerName:''),
+                            by:s.recordedBy||'', byRole:s.recordedByRole||'',
+                            id:s.id, src:'store', parentId:null, time:s.createdAt||s.date||''
+                        })));
+                    } catch(e) {}
+                }
 
                 // Sort newest first
                 txns.sort((a,b)=>(b.time||b.date||'')>(a.time||a.date||'')?1:-1);
@@ -18265,8 +18279,13 @@ async function showPayrollSummary() {
                 const totalRent   = payments.filter(p=>inRange(p.date||'')&&!p.voided).reduce((s,p)=>s+(p.amount||0),0);
                 const totalCredit = creditPayments.filter(p=>inRange(p.date||'')&&!p.voided).reduce((s,p)=>s+(p.amount||0),0);
                 const totalWater  = waterSales.filter(s=>inRange(s.date||'')&&!s.voided).reduce((s,x)=>s+(x.amountPaid||0),0);
-                const totalOther  = income.filter(i=>inRange(i.date||'')).reduce((s,i)=>s+(i.amount||0),0);
-                const grandTotal  = totalRent+totalCredit+totalWater+totalOther;
+                const totalOther  = income.filter(i=>inRange(i.date||'')&&!i.storeRef).reduce((s,i)=>s+(i.amount||0),0);
+                let totalStore = 0;
+                try {
+                    const _storeSales = await dbGetAll('waterStoreSales');
+                    totalStore = _storeSales.filter(s=>inRange(s.date||'')&&!s.voided).reduce((s,x)=>s+(x.total||0),0);
+                } catch(e) {}
+                const grandTotal = Math.round((totalRent+totalCredit+totalWater+totalOther+totalStore)*100)/100;
 
                 if (summEl) summEl.innerHTML = `
                     <div style="background:rgba(16,185,129,0.1);border-radius:8px;padding:8px;text-align:center;cursor:pointer;" onclick="document.getElementById('income-today-filter').value='all';loadIncomeTodayFeed()">
@@ -18285,6 +18304,14 @@ async function showPayrollSummary() {
                         <div style="font-weight:700;color:#38bdf8;font-size:0.85rem;">₱${totalWater.toLocaleString()}</div>
                         <div style="font-size:0.65rem;color:var(--text-secondary);">💧 Water</div>
                     </div>`;
+                // Append store pill if there are store sales
+                if (totalStore > 0 && summEl) {
+                    summEl.style.gridTemplateColumns = 'repeat(5,1fr)';
+                    summEl.innerHTML += `<div style="background:rgba(139,92,246,0.1);border-radius:8px;padding:8px;text-align:center;cursor:pointer;" onclick="document.getElementById('income-today-filter').value='store';loadIncomeTodayFeed()">
+                        <div style="font-weight:700;color:#a78bfa;font-size:0.85rem;">₱${totalStore.toLocaleString()}</div>
+                        <div style="font-size:0.65rem;color:var(--text-secondary);">🛒 Store</div>
+                    </div>`;
+                }
 
                 if (txns.length === 0) {
                     feedEl.innerHTML = `<div style="text-align:center;color:var(--text-secondary);padding:28px;font-size:0.85rem;">
@@ -19080,7 +19107,19 @@ async function showPayrollSummary() {
             .filter(function(s){ return s.date && s.date.startsWith(currentMonth) && !s.voided; })
             .reduce(function(sum, s){ return sum + (s.amountPaid || 0); }, 0);
 
-        const totalIncomeThisMonth = Math.round((collected + creditRepaid + otherIncomeThisMonth + waterIncomeThisMonth) * 100) / 100;
+        // Store sales this month (waterStoreSales)
+        let storeIncomeThisMonth = 0;
+        try {
+            const _storeSalesMonth = await dbGetAll('waterStoreSales');
+            storeIncomeThisMonth = _storeSalesMonth
+                .filter(function(s){ return s.date && s.date.startsWith(currentMonth) && !s.voided; })
+                .reduce(function(sum, s){ return sum + (s.total || 0); }, 0);
+        } catch(e) {}
+
+        // Other income excluding store refs (store sales already counted above)
+        const otherIncomeExStore = otherIncomeThisMonth; // additionalIncome already net since storeRef entries also appear in storeIncomeThisMonth via save
+
+        const totalIncomeThisMonth = Math.round((collected + creditRepaid + otherIncomeExStore + waterIncomeThisMonth + storeIncomeThisMonth) * 100) / 100;
             document.getElementById('stat-total-income').textContent = '\u20b1' + totalIncomeThisMonth.toLocaleString();
 
             // Pending Charges
@@ -19258,13 +19297,18 @@ async function showPayrollSummary() {
             });
         }
 
+        // Load store sales for trend chart
+        var waterStoreSalesAll = [];
+        try { waterStoreSalesAll = await dbGetAll('waterStoreSales'); } catch(e) {}
+
         const incomeData = [], expenseData = [], netData = [];
         months.forEach(function(m) {
             const rentIn    = payments.filter(function(p){ return p.date && p.date.startsWith(m.key) && !p.voided; }).reduce(function(s,p){ return s + prismSafeNumber(p.amount); }, 0);
             const creditIn  = creditPayments.filter(function(p){ return p.date && p.date.startsWith(m.key); }).reduce(function(s,p){ return s + prismSafeNumber(p.amount); }, 0);
-            const addIn     = additionalIncome.filter(function(p){ return p.date && p.date.startsWith(m.key); }).reduce(function(s,p){ return s + prismSafeNumber(p.amount); }, 0);
+            const addIn     = additionalIncome.filter(function(p){ return p.date && p.date.startsWith(m.key) && !p.storeRef; }).reduce(function(s,p){ return s + prismSafeNumber(p.amount); }, 0);
             const waterIn   = waterSales.filter(function(p){ return p.date && p.date.startsWith(m.key) && !p.voided; }).reduce(function(s,p){ return s + prismSafeNumber(p.amountPaid || p.total); }, 0);
-            const totalInc  = Math.round((rentIn + creditIn + addIn + waterIn) * 100) / 100;
+            const storeIn   = (waterStoreSalesAll||[]).filter(function(p){ return p.date && p.date.startsWith(m.key) && !p.voided; }).reduce(function(s,p){ return s + prismSafeNumber(p.total); }, 0);
+            const totalInc  = Math.round((rentIn + creditIn + addIn + waterIn + storeIn) * 100) / 100;
 
             const expOut    = expenses.filter(function(e){ return e.date && e.date.startsWith(m.key); }).reduce(function(s,e){ return s + prismSafeNumber(e.amount); }, 0);
             const creditOut = credits.filter(function(c){ return c.dateLent && c.dateLent.startsWith(m.key); }).reduce(function(s,c){ return s + prismSafeNumber(c.principal); }, 0);
@@ -24796,8 +24840,11 @@ function initReportsPage() {
             const rentIncome    = Math.round(rangePayments.reduce((sum, p) => sum + (p.amount || 0), 0) * 100) / 100;
             const creditIncome  = Math.round(rangeCreditPayments.reduce((sum, p) => sum + (p.amount || 0), 0) * 100) / 100;
             const waterIncome   = Math.round(rangeWaterSales.reduce((sum, s) => sum + (s.amountPaid || 0), 0) * 100) / 100;
-            const otherIncome   = Math.round(rangeAdditionalIncome.reduce((sum, i) => sum + (i.amount || 0), 0) * 100) / 100;
-            const totalIncome   = Math.round((rentIncome + creditIncome + waterIncome + otherIncome) * 100) / 100;
+            // Separate store sales from other income for accurate breakdown
+            const rangeStoreSales = await dbGetAll('waterStoreSales').catch(()=>[]);
+            const storeIncome   = Math.round(filterByRange(rangeStoreSales).filter(s=>!s.voided).reduce((sum,s)=>sum+(s.total||0),0)*100)/100;
+            const otherIncome   = Math.round(rangeAdditionalIncome.filter(i=>!i.storeRef).reduce((sum, i) => sum + (i.amount || 0), 0) * 100) / 100;
+            const totalIncome   = Math.round((rentIncome + creditIncome + waterIncome + storeIncome + otherIncome) * 100) / 100;
             const totalExpenses = Math.round(rangeExpenses.reduce((sum, e) => sum + (e.amount || 0), 0) * 100) / 100;
             const netProfit     = Math.round((totalIncome - totalExpenses) * 100) / 100;
             const profitMargin  = totalIncome > 0 ? Math.round((netProfit / totalIncome) * 100) : 0;
@@ -27809,8 +27856,24 @@ async function editTask(id) {
 
         async function deleteStoreSale(id) {
             if (!await showConfirm('Delete this store sale? This cannot be undone.', 'danger', '🗑 Delete', 'Yes, Delete', 'Cancel')) return;
+            const sale = await dbGet('waterStoreSales', id).catch(()=>null);
             await dbDelete('waterStoreSales', id);
+            // Also remove linked additionalIncome record to keep totals accurate
+            if (sale) {
+                try {
+                    const allIncome = await dbGetAll('additionalIncome');
+                    const linked = allIncome.find(i =>
+                        i.storeRef === true &&
+                        i.date === sale.date &&
+                        i.amount === sale.total &&
+                        i.description && i.description.includes(sale.itemName||'')
+                    );
+                    if (linked) await dbDelete('additionalIncome', linked.id);
+                } catch(e) {}
+            }
             debouncedSync();
+            if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
+            if (typeof loadDashboard === 'function') loadDashboard();
             renderWaterStore();
             showToast('🗑 Sale deleted.', 'success');
         }
