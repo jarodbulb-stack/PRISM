@@ -7307,13 +7307,13 @@
                         <label>Role *</label>
                         <select id="user-role" required onchange="updatePermissionsChecklist()">
                             <option value="">Select role</option>
-                            <option value="">Select role</option>
                             <option value="owner">👑 Owner (Full Access + Settings)</option>
                             <option value="admin">🛡️ Admin (Full Access)</option>
                             <option value="supervisor">👁️ Supervisor (View + Record + Request Void)</option>
                             <option value="manager">📋 Manager (View + Record + Edit)</option>
                             <option value="cashier">💵 Cashier (View + Record)</option>
                             <option value="viewer">👀 Viewer (View Only)</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label>Permissions</label>
@@ -9589,7 +9589,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             const _fullAccess = !_role || ['owner','admin'].includes(_role);
 
             if (!_fullAccess) {
-                const // Hard gate: supervisor cannot access HR/Staff section
+                // Hard gate: supervisor cannot access HR/Staff section
                 const _isSupervisor = _role === 'supervisor';
                 _blockedSections = {
                     'properties': _perms && !_perms['access-properties'],
