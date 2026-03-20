@@ -22192,7 +22192,7 @@ async function clearAllData() {
                     // View Full Ledger button
                     if (isAdmin) {
                         html += '<div style="margin-top:8px;">';
-                        html += '<button onclick="document.querySelector('div[style*=fixed]').remove();viewTenantDetails(' + t.id + ')" style="width:100%;padding:6px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:600;">📋 View Full Ledger →</button>';
+                        html += '<button onclick="viewTenantFullLedger(' + t.id + ')" style="width:100%;padding:6px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:600;">📋 View Full Ledger →</button>';
                         html += '</div>';
                     }
                     html += '</div></div></div>';
@@ -22996,6 +22996,18 @@ async function clearAllData() {
             });
         }
         window.filterTasksList = filterTasksList;
+
+                // ── View Full Ledger from dashboard rent card ──
+        function viewTenantFullLedger(tenantId) {
+            // Close any open overlay modal
+            const overlays = document.querySelectorAll('div[style*="position:fixed"]');
+            overlays.forEach(el => {
+                if (el.style.zIndex >= 99999) el.remove();
+            });
+            // Open tenant detail
+            if (typeof viewTenantDetails === 'function') viewTenantDetails(tenantId);
+        }
+        window.viewTenantFullLedger = viewTenantFullLedger;
 
                 window.refreshStats = refreshStats;
         window.manualSync = manualSync;
