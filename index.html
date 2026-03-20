@@ -2586,6 +2586,34 @@
 
 /* Hide main app until org is loaded */
 .prism-app-wrapper { display: none; }
+        /* ── App Loading Overlay ── */
+        #prism-app-loading {
+            position: fixed; inset: 0; z-index: 99998;
+            background: var(--bg-primary, #0f172a);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 16px;
+        }
+        #prism-app-loading.hidden { display: none; }
+        .prism-app-loading-logo {
+            font-size: 2.5rem; font-weight: 900; letter-spacing: 0.12em;
+            background: linear-gradient(135deg, #6366f1, #38bdf8, #10b981);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .prism-app-loading-bar {
+            width: 160px; height: 3px; background: #1e293b; border-radius: 99px; overflow: hidden;
+        }
+        .prism-app-loading-bar-inner {
+            height: 100%; width: 30%; background: linear-gradient(90deg, #6366f1, #38bdf8);
+            border-radius: 99px; animation: prism-bar-slide 1.2s ease-in-out infinite;
+        }
+        @keyframes prism-bar-slide {
+            0%   { transform: translateX(-100%); }
+            50%  { transform: translateX(200%); }
+            100% { transform: translateX(200%); }
+        }
+        .prism-app-loading-text {
+            font-size: 0.78rem; color: #475569; letter-spacing: 0.08em;
+        }
 .prism-app-wrapper.mt-active { display: block; }
 
 /* ---- LANDING PAGE ---- */
@@ -3819,7 +3847,14 @@
 
 
 <!-- ==================== ORIGINAL PRISM APP ==================== -->
-<div class="prism-app-wrapper">
+<!-- App Loading Overlay -->
+    <div id="prism-app-loading" class="hidden">
+        <div class="prism-app-loading-logo">PRISM</div>
+        <div class="prism-app-loading-bar"><div class="prism-app-loading-bar-inner"></div></div>
+        <div class="prism-app-loading-text">Loading your data...</div>
+    </div>
+
+    <div class="prism-app-wrapper">
     <!-- Header -->
     <div class="header">
         <div class="header-left">
@@ -25172,13 +25207,20 @@ function _mtShowAppActual() {
     if (!_prismAppInitialized) {
         _prismAppInitialized = true;
         if (typeof init === 'function') {
-            init().then(() => {
-                // Load dashboard after IDB is ready
-                setTimeout(() => {
-                    if (typeof loadDashboard === 'function') loadDashboard();
-                    if (typeof loadDashIncomeExpense === 'function') loadDashIncomeExpense();
-                }, 400);
-            }).catch(e => console.error('[PRISM] init() failed:', e));
+            // Show loading overlay
+            const _initLoad = document.getElementById('prism-app-loading');
+            if (_initLoad) _initLoad.classList.remove('hidden');
+            init().then(async () => {
+                if (typeof loadDashboard === 'function') await loadDashboard();
+                if (typeof loadDashIncomeExpense === 'function') loadDashIncomeExpense();
+                // Data ready — hide overlay
+                const _ld = document.getElementById('prism-app-loading');
+                if (_ld) _ld.classList.add('hidden');
+            }).catch(e => {
+                console.error('[PRISM] init() failed:', e);
+                const _ld = document.getElementById('prism-app-loading');
+                if (_ld) _ld.classList.add('hidden');
+            });
         }
     } else {
         // App already initialized — just refresh dashboard
@@ -25971,12 +26013,22 @@ function _doLocalAdminLogin() {
         if (typeof updateUserDisplay === 'function') updateUserDisplay();
         if (typeof loadTheme === 'function') loadTheme();
         // Wait for IDB to be ready before loading dashboard
+        // Show loading overlay while data loads (prevents zero-flash)
+        const _loadingEl = document.getElementById('prism-app-loading');
+        if (_loadingEl) _loadingEl.classList.remove('hidden');
         const _waitAndLoad = async () => {
             if (window._dbReadyPromise) await window._dbReadyPromise;
             if (typeof loadDashboard === 'function') await loadDashboard();
             if (typeof loadDashIncomeExpense === 'function') loadDashIncomeExpense();
+            // Hide loading overlay — data is ready
+            const _ld = document.getElementById('prism-app-loading');
+            if (_ld) _ld.classList.add('hidden');
         };
-        _waitAndLoad().catch(e => console.warn('[PRISM] Initial dashboard load:', e));
+        _waitAndLoad().catch(e => {
+            console.warn('[PRISM] Initial dashboard load:', e);
+            const _ld = document.getElementById('prism-app-loading');
+            if (_ld) _ld.classList.add('hidden');
+        });
     }, 300);
     }
 }
@@ -27334,11 +27386,17 @@ async function mtInit() {
                     MT.currentUser  = { uid: 'local_' + (u.id||1), email: u.email||'local@prism.app', displayName: u.fullname };
                     mtShowApp();
                     mtUpdateOrgBadge();
+                    // Show loading overlay immediately
+                    const _saLoad = document.getElementById('prism-app-loading');
+                    if (_saLoad) _saLoad.classList.remove('hidden');
                     setTimeout(async () => {
                         if (typeof updateUserDisplay === 'function') updateUserDisplay();
                         if (typeof applyRoleNav === 'function') applyRoleNav();
                         if (window._dbReadyPromise) await window._dbReadyPromise;
-                        if (typeof loadDashboard === 'function') loadDashboard();
+                        if (typeof loadDashboard === 'function') await loadDashboard();
+                        // Hide overlay when data ready
+                        const _ld = document.getElementById('prism-app-loading');
+                        if (_ld) _ld.classList.add('hidden');
                         setTimeout(() => {
                             if (typeof prismAddCashierButtons === 'function') prismAddCashierButtons();
                             if (typeof prismLoadAdminNotifications === 'function') prismLoadAdminNotifications();
