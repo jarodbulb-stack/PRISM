@@ -22871,9 +22871,9 @@ async function clearAllData() {
                 '<input type="date" id="wfd-to" value="' + defaultTo + '" style="flex:1;padding:6px 8px;background:#0f172a;border:1px solid #334155;border-radius:7px;color:#f1f5f9;font-size:0.78rem;" onchange="wfdReload()">' +
                 '</div>' +
                 '<div style="display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap;">' +
-                '<button onclick="wfdSetRange('today')" style="padding:3px 10px;border-radius:6px;border:1px solid #334155;background:' + (type==='today'?'rgba(99,102,241,0.2)':'transparent') + ';color:' + (type==='today'?'#818cf8':'#64748b') + ';font-size:0.72rem;cursor:pointer;">Today</button>' +
-                '<button onclick="wfdSetRange('week')" style="padding:3px 10px;border-radius:6px;border:1px solid #334155;background:transparent;color:#64748b;font-size:0.72rem;cursor:pointer;">This Week</button>' +
-                '<button onclick="wfdSetRange('month')" style="padding:3px 10px;border-radius:6px;border:1px solid #334155;background:' + (type!=='today'?'rgba(99,102,241,0.2)':'transparent') + ';color:' + (type!=='today'?'#818cf8':'#64748b') + ';font-size:0.72rem;cursor:pointer;">This Month</button>' +
+                '<button onclick="wfdSetRange(&quot;today&quot;)" style="padding:3px 10px;border-radius:6px;border:1px solid #334155;background:' + (type==='today'?'rgba(99,102,241,0.2)':'transparent') + ';color:' + (type==='today'?'#818cf8':'#64748b') + ';font-size:0.72rem;cursor:pointer;">Today</button>' +
+                '<button onclick="wfdSetRange(&quot;week&quot;)" style="padding:3px 10px;border-radius:6px;border:1px solid #334155;background:transparent;color:#64748b;font-size:0.72rem;cursor:pointer;">This Week</button>' +
+                '<button onclick="wfdSetRange(&quot;month&quot;)" style="padding:3px 10px;border-radius:6px;border:1px solid #334155;background:' + (type!=='today'?'rgba(99,102,241,0.2)':'transparent') + ';color:' + (type!=='today'?'#818cf8':'#64748b') + ';font-size:0.72rem;cursor:pointer;">This Month</button>' +
                 '</div>' +
                 '<div id="wfd-content" style="overflow-y:auto;flex:1;min-height:0;"></div>' +
                 '<div id="wfd-footer" style="display:flex;justify-content:space-between;padding-top:10px;margin-top:8px;border-top:1px solid #334155;font-weight:700;font-size:0.82rem;"></div>' +
