@@ -3711,6 +3711,7 @@
                     <select id="sa-add-role" style="width:100%;padding:9px 12px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:0.85rem;">
                         <option value="owner">Owner</option>
                         <option value="admin">Admin</option>
+                        <option value="supervisor">Supervisor</option>
                         <option value="manager">Manager</option>
                         <option value="cashier" selected>Cashier</option>
                         <option value="viewer">Viewer</option>
@@ -4059,7 +4060,53 @@
             </div>
 
             <!-- Today's Sales Feed (Admin/Owner) -->
-            <div class="card" id="admin-today-sales-card">
+            <!-- ══ Income vs Expense Summary Widget ══ -->
+            <div class="card" id="dash-income-expense-card" style="margin-bottom:16px;">
+                <div class="card-header" style="flex-wrap:wrap;gap:8px;">
+                    <div class="card-title">📊 Income vs Expenses</div>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                        <button onclick="dashSetRange('today')" class="dash-range-btn active" data-range="today" style="padding:3px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;">Today</button>
+                        <button onclick="dashSetRange('week')" class="dash-range-btn" data-range="week" style="padding:3px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;">This Week</button>
+                        <button onclick="dashSetRange('month')" class="dash-range-btn" data-range="month" style="padding:3px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;">This Month</button>
+                        <button onclick="dashSetRange('custom')" class="dash-range-btn" data-range="custom" style="padding:3px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;">Custom</button>
+                    </div>
+                </div>
+                <!-- Custom date range row -->
+                <div id="dash-custom-range" style="display:none;gap:8px;align-items:center;padding:8px 0;flex-wrap:wrap;">
+                    <label style="font-size:0.78rem;color:var(--text-secondary);">From:</label>
+                    <input type="date" id="dash-from" onchange="loadDashIncomeExpense()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.8rem;">
+                    <label style="font-size:0.78rem;color:var(--text-secondary);">To:</label>
+                    <input type="date" id="dash-to" onchange="loadDashIncomeExpense()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.8rem;">
+                </div>
+                <!-- Summary numbers -->
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:10px 0;">
+                    <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:10px;padding:12px;text-align:center;">
+                        <div style="font-size:1.2rem;font-weight:800;color:#10b981;" id="dash-ie-income">₱0</div>
+                        <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:3px;">💰 Income</div>
+                    </div>
+                    <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:12px;text-align:center;">
+                        <div style="font-size:1.2rem;font-weight:800;color:#ef4444;" id="dash-ie-expense">₱0</div>
+                        <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:3px;">💸 Expenses</div>
+                    </div>
+                    <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:10px;padding:12px;text-align:center;">
+                        <div style="font-size:1.2rem;font-weight:800;" id="dash-ie-net">₱0</div>
+                        <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:3px;" id="dash-ie-label">💹 Net</div>
+                    </div>
+                </div>
+                <!-- Progress bar -->
+                <div style="margin:4px 0 8px;">
+                    <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--text-secondary);margin-bottom:4px;">
+                        <span>Income</span><span id="dash-ie-pct">0% profit margin</span>
+                    </div>
+                    <div style="background:rgba(239,68,68,0.3);border-radius:6px;height:8px;overflow:hidden;">
+                        <div id="dash-ie-bar" style="height:100%;background:linear-gradient(90deg,#10b981,#34d399);border-radius:6px;width:0%;transition:width 0.5s;"></div>
+                    </div>
+                </div>
+                <!-- Transaction list -->
+                <div id="dash-ie-feed" style="max-height:280px;overflow-y:auto;margin-top:8px;"></div>
+            </div>
+
+                        <div class="card" id="admin-today-sales-card">
                 <div class="card-header">
                     <div class="card-title">📋 Today's Transactions</div>
                     <button class="btn btn-sm btn-primary" onclick="showCashierTodayTransactions()">View All</button>
@@ -5047,7 +5094,10 @@
             <div class="card">
                 <div class="card-header">
                     <div class="card-title">✅ Task Management</div>
-                    <button class="btn btn-sm btn-primary" onclick="showAddTaskModal()">+ New Task</button>
+                    <div style="display:flex;gap:6px;align-items:center;">
+                        <input type="text" id="tasks-search-input" placeholder="🔍 Search tasks..." oninput="filterTasksList()" style="padding:5px 8px;font-size:0.78rem;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-card);color:var(--text-primary);width:150px;">
+                        <button class="btn btn-sm btn-primary" onclick="showAddTaskModal()">+ New Task</button>
+                    </div>
                 </div>
                 <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 15px;">Organize and track daily operations</p>
                 
@@ -7257,11 +7307,13 @@
                         <label>Role *</label>
                         <select id="user-role" required onchange="updatePermissionsChecklist()">
                             <option value="">Select role</option>
-                            <option value="admin">👑 Admin (Full Access)</option>
-                            <option value="owner">🏠 Owner (View All, Add/Edit)</option>
-                            <option value="cashier">💵 Cashier (Payments & Sales)</option>
-                            <option value="encoder">📝 Encoder (Data Entry)</option>
-                        </select>
+                            <option value="">Select role</option>
+                            <option value="owner">👑 Owner (Full Access + Settings)</option>
+                            <option value="admin">🛡️ Admin (Full Access)</option>
+                            <option value="supervisor">👁️ Supervisor (View + Record + Request Void)</option>
+                            <option value="manager">📋 Manager (View + Record + Edit)</option>
+                            <option value="cashier">💵 Cashier (View + Record)</option>
+                            <option value="viewer">👀 Viewer (View Only)</option>
                     </div>
                     <div class="form-group">
                         <label>Permissions</label>
@@ -9537,11 +9589,13 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             const _fullAccess = !_role || ['owner','admin'].includes(_role);
 
             if (!_fullAccess) {
-                const _blockedSections = {
+                const // Hard gate: supervisor cannot access HR/Staff section
+                const _isSupervisor = _role === 'supervisor';
+                _blockedSections = {
                     'properties': _perms && !_perms['access-properties'],
                     'expenses':   _perms && !_perms['view-expenses'],
                     'income':     _perms && !_perms['view-income'],
-                    'employees':  _perms && !_perms['access-hr'],
+                    'employees':  _isSupervisor || (_perms && !_perms['access-hr']),
                     'reports':    _perms && !_perms['view-reports'],
                     'settings':   _perms && !_perms['access-settings'],
                 };
@@ -10655,76 +10709,135 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
         }
 
         async function viewPropertyDetails(id) {
-            if (!id || isNaN(id)) {
-                console.error('Invalid property ID:', id);
-                return;
+            if (!id || isNaN(id)) return;
+            const isAdmin = currentAppUser && ['owner','admin','manager'].includes(currentAppUser.role);
+
+            async function renderPropertyDetail() {
+                const property = await dbGet('properties', id);
+                if (!property) { showToast('⚠️ Property not found.','warning'); return; }
+
+                const allTenants  = await dbGetAll('tenants');
+                const allPayments = await dbGetAll('payments');
+                const allExpenses = await dbGetAll('expenses');
+                const propTenants = allTenants.filter(t => t.propertyId === id || t.propertyId === String(id));
+                const propExpenses= allExpenses.filter(e => e.propertyId === id || e.propertyId === String(id));
+                const totalExp    = propExpenses.reduce((s,e)=>s+(e.amount||0),0);
+
+                // Payments for all tenants of this property
+                const tenantIds   = propTenants.map(t=>t.id);
+                const propPayments= allPayments.filter(p => tenantIds.includes(p.tenantId) && !p.voided);
+                const totalCollected = propPayments.reduce((s,p)=>s+(p.amount||0),0);
+
+                const statusBadge = propTenants.length > 0
+                    ? '<span style="background:rgba(16,185,129,0.15);color:#10b981;padding:2px 10px;border-radius:6px;font-size:0.78rem;font-weight:700;">OCCUPIED</span>'
+                    : '<span style="background:rgba(245,158,11,0.15);color:#f59e0b;padding:2px 10px;border-radius:6px;font-size:0.78rem;font-weight:700;">VACANT</span>';
+
+                let html = '<div style="padding:4px 0;">';
+
+                // ── Property Info ──
+                html += '<div style="background:var(--bg-secondary);border-radius:12px;padding:14px;margin-bottom:12px;">';
+                html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">';
+                html += '<span style="font-weight:800;font-size:1rem;color:var(--text-primary);">🏠 ' + (property.name||'') + '</span>' + statusBadge;
+                html += '</div>';
+                html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:0.83rem;">';
+                html += '<div><span style="color:#64748b;">Type</span><br><b>' + (property.type||'N/A') + '</b></div>';
+                html += '<div><span style="color:#64748b;">Monthly Rent</span><br><b style="color:#10b981;">₱' + (property.rent||0).toLocaleString() + '</b></div>';
+                html += '<div><span style="color:#64748b;">Address</span><br><b>' + (property.address||'N/A') + '</b></div>';
+                html += '<div><span style="color:#64748b;">Total Collected</span><br><b style="color:#6366f1;">₱' + totalCollected.toLocaleString() + '</b></div>';
+                html += '</div>';
+                if (isAdmin) {
+                    html += '<div style="display:flex;gap:8px;margin-top:12px;">';
+                    html += '<button onclick="editProperty(' + id + ')" style="flex:1;padding:8px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:8px;cursor:pointer;font-size:0.82rem;font-weight:600;">✏️ Edit Property</button>';
+                    html += '<button onclick="deleteProperty(' + id + ')" style="flex:1;padding:8px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#ef4444;border-radius:8px;cursor:pointer;font-size:0.82rem;font-weight:600;">🗑 Delete</button>';
+                    html += '</div>';
+                }
+                html += '</div>';
+
+                // ── Current Tenants ──
+                html += '<div style="background:var(--bg-secondary);border-radius:12px;padding:14px;margin-bottom:12px;">';
+                html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">';
+                html += '<span style="font-weight:700;font-size:0.9rem;">👥 Tenants (' + propTenants.length + ')</span>';
+                if (isAdmin) html += '<button onclick="showModal('tenant-modal')" style="padding:4px 12px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:6px;cursor:pointer;font-size:0.78rem;">+ Add Tenant</button>';
+                html += '</div>';
+                if (propTenants.length === 0) {
+                    html += '<div style="color:#64748b;font-size:0.83rem;text-align:center;padding:8px;">No tenants assigned.</div>';
+                } else {
+                    propTenants.forEach(t => {
+                        const tPaid = allPayments.filter(p=>p.tenantId===t.id&&!p.voided).reduce((s,p)=>s+(p.amount||0),0);
+                        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color);">';
+                        html += '<div><div style="font-weight:600;font-size:0.85rem;">' + t.name + '</div>';
+                        html += '<div style="color:#64748b;font-size:0.75rem;">₱' + (t.rent||0).toLocaleString() + '/mo · since ' + (t.startDate||'') + '</div></div>';
+                        html += '<div style="display:flex;gap:6px;align-items:center;">';
+                        html += '<span style="color:#10b981;font-size:0.82rem;font-weight:700;">₱' + tPaid.toLocaleString() + ' paid</span>';
+                        if (isAdmin) {
+                            html += '<button onclick="hideModal('expense-detail-modal');viewTenantDetails(' + t.id + ')" style="padding:3px 8px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:5px;cursor:pointer;font-size:0.72rem;">Ledger</button>';
+                            html += '<button onclick="editTenant(' + t.id + ')" style="padding:3px 8px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);color:#34d399;border-radius:5px;cursor:pointer;font-size:0.72rem;">✏️</button>';
+                            html += '<button onclick="deleteTenant(' + t.id + ')" style="padding:3px 8px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#ef4444;border-radius:5px;cursor:pointer;font-size:0.72rem;">🗑</button>';
+                        }
+                        html += '</div></div>';
+                    });
+                }
+                html += '</div>';
+
+                // ── Payment History ──
+                html += '<div style="background:var(--bg-secondary);border-radius:12px;padding:14px;margin-bottom:12px;">';
+                html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">';
+                html += '<span style="font-weight:700;font-size:0.9rem;">💰 Payment History (' + propPayments.length + ')</span>';
+                html += '<span style="color:#10b981;font-weight:700;font-size:0.85rem;">₱' + totalCollected.toLocaleString() + ' total</span>';
+                html += '</div>';
+                if (propPayments.length === 0) {
+                    html += '<div style="color:#64748b;font-size:0.83rem;text-align:center;padding:8px;">No payments recorded.</div>';
+                } else {
+                    const recent = propPayments.sort((a,b)=>(b.date||'')>(a.date||'')?1:-1).slice(0,10);
+                    recent.forEach(p => {
+                        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border-color);">';
+                        html += '<div><div style="font-size:0.83rem;font-weight:600;">' + (p.tenantName||'Tenant') + '</div>';
+                        html += '<div style="font-size:0.72rem;color:#64748b;">' + (p.date||'') + ' · ' + (p.paymentMethod||'cash') + '</div></div>';
+                        html += '<div style="display:flex;gap:6px;align-items:center;">';
+                        html += '<span style="color:#10b981;font-weight:700;">₱' + (p.amount||0).toLocaleString() + '</span>';
+                        if (isAdmin) {
+                            html += '<button onclick="editTenantPayment(' + p.id + ')" style="padding:2px 6px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:4px;cursor:pointer;font-size:0.7rem;">✏️</button>';
+                            html += '<button onclick="deleteTenantPayment(' + p.id + ')" style="padding:2px 6px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#ef4444;border-radius:4px;cursor:pointer;font-size:0.7rem;">🗑</button>';
+                        }
+                        html += '</div></div>';
+                    });
+                    if (propPayments.length > 10) html += '<div style="text-align:center;color:#64748b;font-size:0.75rem;padding-top:6px;">Showing latest 10 of ' + propPayments.length + ' payments</div>';
+                }
+                html += '</div>';
+
+                // ── Expenses ──
+                html += '<div style="background:var(--bg-secondary);border-radius:12px;padding:14px;margin-bottom:12px;">';
+                html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">';
+                html += '<span style="font-weight:700;font-size:0.9rem;">💸 Expenses (' + propExpenses.length + ')</span>';
+                html += '<span style="color:#ef4444;font-weight:700;font-size:0.85rem;">₱' + totalExp.toLocaleString() + ' total</span>';
+                html += '</div>';
+                if (propExpenses.length === 0) {
+                    html += '<div style="color:#64748b;font-size:0.83rem;text-align:center;padding:8px;">No expenses recorded for this property.</div>';
+                } else {
+                    propExpenses.sort((a,b)=>(b.date||'')>(a.date||'')?1:-1).slice(0,8).forEach(e => {
+                        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border-color);">';
+                        html += '<div><div style="font-size:0.83rem;font-weight:600;">' + (e.category||'Expense') + '</div>';
+                        html += '<div style="font-size:0.72rem;color:#64748b;">' + (e.date||'') + (e.description?' · '+e.description:'') + '</div></div>';
+                        html += '<div style="display:flex;gap:6px;align-items:center;">';
+                        html += '<span style="color:#ef4444;font-weight:700;">₱' + (e.amount||0).toLocaleString() + '</span>';
+                        if (isAdmin) {
+                            html += '<button onclick="editExpense(' + e.id + ')" style="padding:2px 6px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:4px;cursor:pointer;font-size:0.7rem;">✏️</button>';
+                            html += '<button onclick="deleteExpense(' + e.id + ')" style="padding:2px 6px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#ef4444;border-radius:4px;cursor:pointer;font-size:0.7rem;">🗑</button>';
+                        }
+                        html += '</div></div>';
+                    });
+                }
+                html += '</div>';
+
+                html += '</div>';
+
+                document.getElementById('expense-detail-title').textContent = '🏠 ' + (property.name||'Property');
+                document.getElementById('expense-detail-content').innerHTML = html;
+                showModal('expense-detail-modal');
             }
-
-            const property = await dbGet('properties', id);
-            if (!property) {
-                showToast('⚠️ Property not found.', 'warning');
-                return;
-            }
-
-            const tenants = await dbGetAll('tenants');
-            const propTenants = tenants.filter(t => t.propertyId === id);
-            const expenses = await dbGetAll('expenses');
-            const propExpenses = expenses.filter(e => e.propertyId === id);
-            const totalExpenses = propExpenses.reduce((sum, e) => sum + e.amount, 0);
-
-            // Create property detail modal content
-            const modalContent = `
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title">Property Info</div>
-                        <button class="btn btn-sm btn-secondary" onclick="editProperty(${id})">Edit</button>
-                    </div>
-                    <p><strong>Name:</strong> ${property.name}</p>
-                    <p><strong>Type:</strong> ${property.type}</p>
-                    <p><strong>Address:</strong> ${property.address || 'N/A'}</p>
-                    <p><strong>Monthly Rent:</strong> ₱${property.rent.toLocaleString()}</p>
-                    <p><strong>Status:</strong> <span class="badge ${propTenants.length > 0 ? 'badge-success' : 'badge-warning'}">${propTenants.length > 0 ? 'Occupied' : 'Vacant'}</span></p>
-                </div>
-
-                ${propTenants.length > 0 ? `
-                <div class="card mt-4">
-                    <div class="card-header">
-                        <div class="card-title">Current Tenant(s)</div>
-                    </div>
-                    ${propTenants.map(t => `
-                        <div class="list-item" onclick="hideModal('property-modal'); viewTenantDetails(${t.id})">
-                            <div class="item-info">
-                                <h4>${t.name}</h4>
-                                <p>Since: ${t.moveIn}</p>
-                            </div>
-                            <div class="item-amount">
-                                <div class="amount">₱${t.rent.toLocaleString()}/mo</div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-                ` : ''}
-
-                <div class="card mt-4">
-                    <div class="card-header">
-                        <div class="card-title">Expenses Summary</div>
-                    </div>
-                    <p><strong>Total Expenses:</strong> <span class="text-danger">₱${totalExpenses.toLocaleString()}</span></p>
-                    <p><strong>Records:</strong> ${propExpenses.length} expense(s)</p>
-                </div>
-
-                <div class="action-buttons">
-                    <button class="btn btn-danger" onclick="deleteProperty(${id})">Delete Property</button>
-                </div>
-            `;
-
-            // Use existing expense-detail-modal temporarily or create property detail
-            document.getElementById('expense-detail-title').textContent = property.name;
-            document.getElementById('expense-detail-content').innerHTML = modalContent;
-            showModal('expense-detail-modal');
+            await renderPropertyDetail();
         }
 
-        // [REMOVED: duplicate editProperty - orphan using wrong modal]
 
         async function updateProperty(event, id) {
             event.preventDefault();
@@ -11322,6 +11435,14 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
         window.confirmReactivate = confirmReactivate;
 
         async function viewTenantDetails(id) {
+            // Role gate — personal ledger is Admin/Owner/Manager only
+            if (currentAppUser) {
+                const _role = currentAppUser.role;
+                if (['supervisor','cashier','viewer'].includes(_role)) {
+                    showToast('⛔ Access restricted. Personal ledger is for Admin/Owner/Manager only.', 'warning');
+                    return;
+                }
+            }
             // Validate ID
             if (!id || isNaN(id)) {
                 console.error('Invalid tenant ID:', id);
@@ -11415,9 +11536,17 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 <div class="card mt-4">
                     <div class="card-header">
                         <div class="card-title">Payment Ledger</div>
+                        <div style="display:flex;gap:6px;align-items:center;">
+                            <input type="text" id="tenant-ledger-search-${id}" placeholder="🔍 Search..." oninput="filterTenantLedger(${id})" style="padding:4px 8px;font-size:0.75rem;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-card);color:var(--text-primary);width:110px;">
+                            <select id="tenant-ledger-year-${id}" onchange="filterTenantLedger(${id})" style="padding:4px 6px;font-size:0.75rem;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-card);color:var(--text-primary);">
+                                <option value="">All Years</option>
+                                ${[...new Set(payments.map(p=>p.date?.substring(0,4)).filter(Boolean))].sort().reverse().map(y=>`<option value="${y}">${y}</option>`).join('')}
+                            </select>
+                        </div>
                     </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><div style="font-size:0.72rem;color:#64748b;" id="tenant-ledger-count-${id}">${payments.length} payment(s) — all time</div><button onclick="(function(){var si=document.getElementById('tenant-ledger-search-${id}');var yi=document.getElementById('tenant-ledger-year-${id}');if(si)si.value='';if(yi)yi.value='';filterTenantLedger(${id});})()" style="font-size:0.68rem;color:#6366f1;background:none;border:none;cursor:pointer;">↺ Show All</button></div>
                     ${payments.length === 0 ? '<p class="text-muted">No payments recorded</p>' : `
-                        <table class="ledger-table">
+                        <table class="ledger-table" id="tenant-ledger-table-${id}">
                             <thead>
                                 <tr>
                                     <th>Date</th>
@@ -14016,7 +14145,17 @@ async function loadWaterCustomers() {
                 </div>
                 ` : ''}
                 
-                <h4 style="margin-bottom: 10px;">📋 Transaction History</h4>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+                <h4 style="margin:0;">📋 Transaction History</h4>
+                <div style="display:flex;gap:6px;">
+                    <input type="text" id="water-hist-search-${id}" placeholder="🔍 Search..." oninput="filterWaterHistory(${id})" style="padding:4px 8px;font-size:0.75rem;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-card);color:var(--text-primary);width:100px;">
+                    <select id="water-hist-year-${id}" onchange="filterWaterHistory(${id})" style="padding:4px 6px;font-size:0.75rem;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-card);color:var(--text-primary);">
+                        <option value="">All Years</option>
+                        ${[...new Set(customerSales.map(s=>s.date?.substring(0,4)).filter(Boolean))].sort().reverse().map(y=>`<option value="${y}">${y}</option>`).join('')}
+                    </select>
+                </div>
+            </div>
+            <div style="font-size:0.72rem;color:#64748b;margin-bottom:6px;" id="water-hist-count-${id}">${customerSales.length} transaction(s) — all time</div>
                 <div style="max-height: 300px; overflow-y: auto;">
             `;
             
@@ -14368,8 +14507,8 @@ async function loadWaterCustomers() {
         }
 
         async function viewEmployeeDetails(id) {
-            // Cashier cannot view employee profiles
-            if (currentAppUser && currentAppUser.role === 'cashier') {
+            // Role gate — HR/Staff profiles are Admin/Owner/Manager only
+            if (currentAppUser && ['supervisor','cashier','viewer'].includes(currentAppUser.role)) {
                 showToast('⛔ Cashiers cannot view employee profiles.', 'error');
                 return;
             }
@@ -14450,7 +14589,7 @@ async function loadWaterCustomers() {
             if (empRecords.length === 0) {
                 content += '<p style="color: var(--text-secondary); font-size: 0.9rem;">No attendance records yet.</p>';
             } else {
-                empRecords.slice(0, 7).forEach(r => {
+                empRecords.forEach(r => {
                     const statusIcon = r.status === 'present' ? '✅' : r.status === 'absent' ? '❌' : r.status === 'halfday' ? '🕐' : r.status === 'restday' ? '🔘' : '📋';
                     const statusText = r.status === 'present' ? 'Present' : r.status === 'absent' ? 'Absent' : r.status === 'halfday' ? 'Half Day' : r.status === 'restday' ? 'Rest Day' : 'Leave';
                     const paidBadge = r.paid ? '<span class="badge badge-success" style="font-size: 0.7rem;">Paid</span>' : '<span class="badge badge-warning" style="font-size: 0.7rem;">Unpaid</span>';
@@ -14478,7 +14617,7 @@ async function loadWaterCustomers() {
             if (empSalaries.length === 0) {
                 content += '<p style="color: var(--text-secondary); font-size: 0.9rem;">No salary payments yet.</p>';
             } else {
-                empSalaries.slice(0, 5).forEach(s => {
+                empSalaries.forEach(s => {
                     content += `
                         <div class="list-item" style="padding: 8px;cursor:pointer;" onclick="editSalaryRecord(${s.id},${id})">
                             <div class="list-item-content">
@@ -15917,6 +16056,14 @@ async function showPayrollSummary() {
             document.body.appendChild(modal);
         }
         async function viewCreditDetails(id) {
+            // Role gate — personal ledger is Admin/Owner/Manager only
+            if (currentAppUser) {
+                const _role = currentAppUser.role;
+                if (['supervisor','cashier','viewer'].includes(_role)) {
+                    showToast('⛔ Access restricted. Credit ledger is for Admin/Owner/Manager only.', 'warning');
+                    return;
+                }
+            }
             // Validate ID
             if (!id || isNaN(id)) {
                 console.error('Invalid credit ID:', id);
@@ -16004,7 +16151,15 @@ async function showPayrollSummary() {
                 <div class="card mt-4">
                     <div class="card-header">
                         <div class="card-title">Transaction History</div>
+                        <div style="display:flex;gap:6px;align-items:center;">
+                            <input type="text" id="credit-ledger-search-${id}" placeholder="🔍 Search..." oninput="filterCreditLedger(${id})" style="padding:4px 8px;font-size:0.75rem;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-card);color:var(--text-primary);width:110px;">
+                            <select id="credit-ledger-year-${id}" onchange="filterCreditLedger(${id})" style="padding:4px 6px;font-size:0.75rem;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-card);color:var(--text-primary);">
+                                <option value="">All Years</option>
+                                ${[...new Set(payments.map(p=>p.date?.substring(0,4)).filter(Boolean))].sort().reverse().map(y=>`<option value="${y}">${y}</option>`).join('')}
+                            </select>
+                        </div>
                     </div>
+                    <div style="font-size:0.72rem;color:#64748b;margin-bottom:6px;" id="credit-ledger-count-${id}">${payments.length} payment(s) — all time</div>
                     ${payments.length === 0 ? '<p class="text-muted">No payments recorded</p>' : `
                         <table class="ledger-table">
                             <thead>
@@ -17602,7 +17757,8 @@ async function showPayrollSummary() {
 
                 const total = filtered.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
                 const allCount = all.filter(e => (e.category || '').toLowerCase() === catVal.toLowerCase()).length;
-                const canDelete = currentAppUser && ['owner','admin'].includes(currentAppUser.role);
+                const canDelete = currentAppUser && ['owner','admin','manager'].includes(currentAppUser.role);
+                const canRequestVoid = currentAppUser && ['supervisor','cashier'].includes(currentAppUser.role);
 
                 rowsEl.innerHTML = filtered.map(e => {
                     const d = e.date ? new Date(e.date + 'T00:00:00') : null;
@@ -18941,6 +19097,7 @@ async function showPayrollSummary() {
 
             // Refresh admin today's feed if visible
             if (typeof loadAdminTodayFeed === 'function') loadAdminTodayFeed();
+            if (typeof loadDashIncomeExpense === 'function') loadDashIncomeExpense();
 
             const now = new Date();
             const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -21538,11 +21695,12 @@ async function clearAllData() {
         function updatePermissionsChecklist() {
             const role = (document.getElementById('new-user-role')||{}).value || 'viewer';
             const perms = {
-                owner:   ['view','record','edit','delete','reports','settings','users'],
-                admin:   ['view','record','edit','delete','reports','settings'],
-                manager: ['view','record','edit','reports'],
-                cashier: ['view','record'],
-                viewer:  ['view']
+                owner:      ['view','record','edit','delete','reports','settings','users'],
+                admin:      ['view','record','edit','delete','reports','settings'],
+                supervisor: ['view','record','edit','reports','request-void'],
+                manager:    ['view','record','edit','reports'],
+                cashier:    ['view','record'],
+                viewer:     ['view']
             };
             const allowed = perms[role] || ['view'];
             document.querySelectorAll('.perm-check').forEach(cb => {
@@ -21969,75 +22127,339 @@ async function clearAllData() {
 
         // ── Dashboard Flashcard Details ──
         async function showFlashcardDetail(type) {
-            let title, items=[], total=0;
-            const tenants = await dbGetAll('tenants');
-            const credits = await dbGetAll('credits');
-            const payments = await dbGetAll('payments');
-            const creditPayments = await dbGetAll('creditPayments');
-            const today = new Date();
-            const currentMonth = today.toISOString().substring(0,7);
+            const now          = new Date();
+            const currentMonth = now.toISOString().substring(0,7);
+            const monthLabel   = now.toLocaleString('default',{month:'long',year:'numeric'});
+            const isAdmin      = currentAppUser && ['owner','admin','manager'].includes(currentAppUser.role);
 
-            if (type==='properties') {
-                const props = await dbGetAll('properties');
-                title='🏠 All Properties';
-                items = props.map(p=>'<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-color);"><span>'+p.name+'</span><span class="badge '+(p.status==='occupied'?'badge-success':'badge-warning')+'">'+p.status+'</span></div>');
-            } else if (type==='vacant') {
-                const props = await dbGetAll('properties');
-                title='🚪 Vacant Properties';
-                items = props.filter(p=>p.status==='vacant').map(p=>'<div style="padding:8px 0;border-bottom:1px solid var(--border-color);">'+p.name+'<span style="color:#64748b;font-size:0.8rem;"> — ₱'+p.rent+'</span></div>');
-            } else if (type==='tenants') {
-                title='👥 Active Tenants';
-                items = tenants.filter(t=>t.status==='active'||!t.status).map(t=>'<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-color);"><span>'+t.name+'</span><span style="color:#10b981;">₱'+t.rent+'</span></div>');
-            } else if (type==='debtors') {
-                title='💳 Active Debtors';
-                items = credits.filter(c=>c.status!=='paid'&&c.status!=='closed').map(c=>{
-                    const paid = creditPayments.filter(p=>p.creditId===c.id).reduce((s,p)=>s+p.amount,0);
-                    const bal = (c.principal||0)-paid;
-                    return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-color);"><span>'+c.debtor+'</span><span style="color:#f59e0b;">₱'+Math.max(0,bal).toLocaleString()+'</span></div>';
+            const [tenants, credits, payments, creditPayments, allExpenses, allIncome, waterSales] = await Promise.all([
+                dbGetAll('tenants'), dbGetAll('credits'), dbGetAll('payments'),
+                dbGetAll('creditPayments'), dbGetAll('expenses'), dbGetAll('additionalIncome'),
+                dbGetAll('waterSales')
+            ]);
+            const storeSales = await dbGetAll('waterStoreSales').catch(()=>[]);
+
+            let title = '', html = '';
+
+            // ─────────────────────────────────────────────
+            if (type === 'rent-collected') {
+                title = '🏠 Rent Collected — ' + monthLabel;
+                const monthPmts = payments.filter(p=>p.date&&p.date.startsWith(currentMonth)&&!p.voided);
+                const collected = monthPmts.reduce((s,p)=>s+(p.amount||0),0);
+                const activeTenants = tenants.filter(t=>t.status==='active'||!t.status);
+                const expected = activeTenants.reduce((s,t)=>s+(t.rent||0),0);
+
+                // Summary banner
+                html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">';
+                html += '<div style="background:rgba(16,185,129,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#10b981;font-size:1.1rem;">₱'+collected.toLocaleString()+'</div><div style="font-size:0.7rem;color:#64748b;">Collected</div></div>';
+                html += '<div style="background:rgba(245,158,11,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#f59e0b;font-size:1.1rem;">₱'+expected.toLocaleString()+'</div><div style="font-size:0.7rem;color:#64748b;">Expected</div></div>';
+                html += '<div style="background:rgba(239,68,68,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#ef4444;font-size:1.1rem;">₱'+Math.max(0,expected-collected).toLocaleString()+'</div><div style="font-size:0.7rem;color:#64748b;">Uncollected</div></div>';
+                html += '</div>';
+
+                // Per-tenant payment status with full history
+                html += '<div style="font-size:0.78rem;color:#64748b;margin-bottom:8px;">📋 Per-tenant status for '+monthLabel+' — click tenant for full history</div>';
+                activeTenants.forEach(t => {
+                    const tPmts = monthPmts.filter(p=>p.tenantId===t.id);
+                    const tPaid = tPmts.reduce((s,p)=>s+(p.amount||0),0);
+                    const status = tPaid >= (t.rent||0) ? '✅ PAID' : tPaid > 0 ? '⚠️ PARTIAL' : '🔴 UNPAID';
+                    const statusColor = tPaid >= (t.rent||0) ? '#10b981' : tPaid > 0 ? '#f59e0b' : '#ef4444';
+                    html += '<div style="border:1px solid var(--border-color);border-radius:8px;padding:10px;margin-bottom:8px;">';
+                    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">';
+                    html += '<div><div style="font-weight:700;font-size:0.88rem;">'+t.name+'</div>';
+                    html += '<div style="font-size:0.72rem;color:#64748b;">₱'+(t.rent||0).toLocaleString()+'/mo · Due day '+(t.dueDay||5)+'</div></div>';
+                    html += '<span style="font-size:0.75rem;font-weight:700;color:'+statusColor+';">'+status+'</span>';
+                    html += '</div>';
+                    // This month payments
+                    if (tPmts.length > 0) {
+                        tPmts.forEach(p => {
+                            html += '<div style="display:flex;justify-content:space-between;font-size:0.78rem;padding:3px 0;color:var(--text-secondary);">';
+                            html += '<span>'+p.date+' · '+(p.paymentMethod||'cash')+(p.monthCovered?' · '+p.monthCovered:'')+'</span>';
+                            html += '<span style="color:#10b981;font-weight:600;">+₱'+p.amount.toLocaleString()+'</span></div>';
+                        });
+                    }
+                    // Payment history summary (last 6 months)
+                    html += '<div style="margin-top:6px;"><div style="font-size:0.7rem;color:#64748b;margin-bottom:4px;">Last 6 months:</div>';
+                    html += '<div style="display:flex;gap:4px;flex-wrap:wrap;">';
+                    for (let i=5; i>=0; i--) {
+                        const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+                        const m = d.toISOString().substring(0,7);
+                        const mLabel = d.toLocaleString('default',{month:'short'});
+                        const mPaid = payments.filter(p=>p.tenantId===t.id&&!p.voided&&p.date&&p.date.startsWith(m)).reduce((s,p)=>s+(p.amount||0),0);
+                        const mColor = mPaid>=(t.rent||0)?'#10b981':mPaid>0?'#f59e0b':'#ef4444';
+                        const mBg = mPaid>=(t.rent||0)?'rgba(16,185,129,0.15)':mPaid>0?'rgba(245,158,11,0.15)':'rgba(239,68,68,0.1)';
+                        html += '<div style="background:'+mBg+';color:'+mColor+';padding:2px 7px;border-radius:4px;font-size:0.68rem;font-weight:700;" title="'+m+': ₱'+mPaid.toLocaleString()+'">'+mLabel+'<br>'+( mPaid>0?'₱'+mPaid.toLocaleString():'—')+'</div>';
+                    }
+                    // View Full Ledger button
+                    if (isAdmin) {
+                        html += '<div style="margin-top:8px;">';
+                        html += '<button onclick="document.querySelector('div[style*=fixed]').remove();viewTenantDetails(' + t.id + ')" style="width:100%;padding:6px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:600;">📋 View Full Ledger →</button>';
+                        html += '</div>';
+                    }
+                    html += '</div></div></div>';
                 });
-            } else if (type==='due-soon') {
-                title='📅 Due Soon (3 days)';
-                const todayDay = today.getDate();
-                items = tenants.filter(t=>{
-                    const d = t.dueDay||5;
-                    const diff = d - todayDay;
-                    return (t.status==='active'||!t.status) && diff>=0 && diff<=3;
-                }).map(t=>'<div style="padding:8px 0;border-bottom:1px solid var(--border-color);">'+t.name+' — Due day '+t.dueDay+'</div>');
-            } else if (type==='overdue') {
-                title='⚠️ Overdue Tenants';
-                const todayDay = today.getDate();
-                items = tenants.filter(t=>{
-                    const paid = payments.filter(p=>p.tenantId===t.id&&p.date&&p.date.startsWith(currentMonth)).reduce((s,p)=>s+p.amount,0);
-                    return (t.status==='active'||!t.status) && todayDay>(t.dueDay||5) && paid<(t.rent||0);
-                }).map(t=>'<div style="padding:8px 0;border-bottom:1px solid var(--border-color);">'+t.name+' — ₱'+t.rent+'/mo</div>');
-            } else if (type==='rent-collected') {
-                title='💰 Rent Collected This Month';
-                const rents = payments.filter(p=>p.date&&p.date.startsWith(currentMonth)&&!p.voided);
-                items = rents.map(p=>'<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-color);"><span>'+(p.tenantName||'Tenant')+'</span><span style="color:#10b981;">₱'+p.amount.toLocaleString()+'</span></div>');
-                total = rents.reduce((s,p)=>s+p.amount,0);
-            } else if (type==='credit-repaid') {
-                title='💳 Credit Repaid This Month';
-                const cp = creditPayments.filter(p=>p.date&&p.date.startsWith(currentMonth)&&!p.voided);
-                items = cp.map(p=>'<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-color);"><span>'+(p.debtorName||'Debtor')+'</span><span style="color:#10b981;">₱'+p.amount.toLocaleString()+'</span></div>');
-                total = cp.reduce((s,p)=>s+p.amount,0);
-            } else if (type==='other-income') {
-                title='💰 Other Income This Month';
-                const inc = await dbGetAll('additionalIncome');
-                const m = inc.filter(i=>i.date&&i.date.startsWith(currentMonth));
-                items = m.map(i=>'<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-color);"><span>'+(i.source||'Other')+'</span><span style="color:#10b981;">₱'+(i.amount||0).toLocaleString()+'</span></div>');
-                total = m.reduce((s,i)=>s+(i.amount||0),0);
+
+            // ─────────────────────────────────────────────
+            } else if (type === 'credit-repaid') {
+                title = '💳 Credit Repayments — ' + monthLabel;
+                const monthCP = creditPayments.filter(p=>p.date&&p.date.startsWith(currentMonth)&&!p.voided);
+                const repaid  = monthCP.reduce((s,p)=>s+(p.amount||0),0);
+                const activeCredits = credits.filter(c=>c.status!=='paid'&&c.status!=='closed');
+                const totalBal = activeCredits.reduce((s,c)=>{
+                    const paid = creditPayments.filter(p=>p.creditId===c.id).reduce((a,p)=>a+(p.amount||0),0);
+                    return s + Math.max(0,(c.principal||0)-paid);
+                },0);
+
+                html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">';
+                html += '<div style="background:rgba(16,185,129,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#10b981;font-size:1.1rem;">₱'+repaid.toLocaleString()+'</div><div style="font-size:0.7rem;color:#64748b;">Repaid This Month</div></div>';
+                html += '<div style="background:rgba(239,68,68,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#ef4444;font-size:1.1rem;">₱'+totalBal.toLocaleString()+'</div><div style="font-size:0.7rem;color:#64748b;">Total Outstanding</div></div>';
+                html += '</div>';
+                html += '<div style="font-size:0.78rem;color:#64748b;margin-bottom:8px;">Payments made in '+monthLabel+':</div>';
+                if (monthCP.length === 0) {
+                    html += '<div style="text-align:center;color:#64748b;padding:16px;">No repayments recorded this month.</div>';
+                } else {
+                    monthCP.forEach(p => {
+                        html += '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-color);">';
+                        html += '<div><div style="font-weight:600;font-size:0.85rem;">'+(p.debtorName||'Debtor')+'</div>';
+                        html += '<div style="font-size:0.72rem;color:#64748b;">'+p.date+' · '+(p.paymentMethod||'cash')+'</div></div>';
+                        html += '<span style="color:#10b981;font-weight:700;">₱'+p.amount.toLocaleString()+'</span></div>';
+                    });
+                }
+                html += '<div style="margin-top:12px;font-size:0.78rem;color:#64748b;margin-bottom:8px;">All active debtors — remaining balance:</div>';
+                activeCredits.forEach(c => {
+                    const paid = creditPayments.filter(p=>p.creditId===c.id).reduce((a,p)=>a+(p.amount||0),0);
+                    const bal  = Math.max(0,(c.principal||0)-paid);
+                    const pct  = c.principal > 0 ? Math.round((paid/c.principal)*100) : 0;
+                    html += '<div style="border:1px solid var(--border-color);border-radius:8px;padding:10px;margin-bottom:6px;">';
+                    html += '<div style="display:flex;justify-content:space-between;margin-bottom:6px;">';
+                    html += '<div><div style="font-weight:700;font-size:0.85rem;">'+(c.debtor||'Debtor')+'</div>';
+                    html += '<div style="font-size:0.72rem;color:#64748b;">Principal: ₱'+(c.principal||0).toLocaleString()+' · '+pct+'% paid</div></div>';
+                    html += '<span style="color:#ef4444;font-weight:700;">₱'+bal.toLocaleString()+' left</span></div>';
+                    html += '<div style="background:var(--bg-primary);border-radius:4px;height:5px;overflow:hidden;"><div style="height:100%;background:#10b981;width:'+pct+'%;"></div></div>';
+                    html += '</div>';
+                });
+
+            // ─────────────────────────────────────────────
+            } else if (type === 'other-income') {
+                title = '💰 Other Income — ' + monthLabel;
+                const mInc = allIncome.filter(i=>i.date&&i.date.startsWith(currentMonth)&&!i.storeRef);
+                const total = mInc.reduce((s,i)=>s+(i.amount||0),0);
+                html += '<div style="background:rgba(16,185,129,0.1);border-radius:8px;padding:10px;text-align:center;margin-bottom:14px;"><div style="font-weight:800;color:#10b981;font-size:1.2rem;">₱'+total.toLocaleString()+'</div><div style="font-size:0.72rem;color:#64748b;">Total other income in '+monthLabel+'</div></div>';
+                html += '<div style="font-size:0.78rem;color:#64748b;margin-bottom:8px;">This does NOT include rent, credit repayments, water sales, or store sales. Those are tracked separately.</div>';
+                if (mInc.length === 0) {
+                    html += '<div style="text-align:center;color:#64748b;padding:16px;">No other income recorded this month.</div>';
+                } else {
+                    // Group by source
+                    const bySource = {};
+                    mInc.forEach(i => { bySource[i.source||'Other'] = (bySource[i.source||'Other']||0)+(i.amount||0); });
+                    Object.entries(bySource).sort((a,b)=>b[1]-a[1]).forEach(([src,amt]) => {
+                        html += '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-color);">';
+                        html += '<span style="font-size:0.85rem;">'+src+'</span><span style="color:#10b981;font-weight:700;">₱'+amt.toLocaleString()+'</span></div>';
+                    });
+                    html += '<div style="padding-top:10px;"><div style="font-size:0.75rem;color:#64748b;margin-bottom:6px;">All entries this month:</div>';
+                    mInc.sort((a,b)=>(b.date||'')>(a.date||'')?1:-1).forEach(i => {
+                        html += '<div style="display:flex;justify-content:space-between;font-size:0.78rem;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);">';
+                        html += '<span style="color:var(--text-secondary);">'+(i.date||'')+' · '+(i.source||'Other')+(i.description?' — '+i.description:'')+'</span>';
+                        html += '<span style="color:#10b981;">₱'+(i.amount||0).toLocaleString()+'</span></div>';
+                    });
+                    html += '</div>';
+                }
+
+            // ─────────────────────────────────────────────
+            } else if (type === 'total-income') {
+                title = '📊 Total Income — ' + monthLabel;
+                const mPmts  = payments.filter(p=>p.date&&p.date.startsWith(currentMonth)&&!p.voided);
+                const mCP    = creditPayments.filter(p=>p.date&&p.date.startsWith(currentMonth)&&!p.voided);
+                const mWater = waterSales.filter(s=>s.date&&s.date.startsWith(currentMonth)&&!s.voided);
+                const mStore = storeSales.filter(s=>s.date&&s.date.startsWith(currentMonth)&&!s.voided);
+                const mOther = allIncome.filter(i=>i.date&&i.date.startsWith(currentMonth)&&!i.storeRef);
+                const rentAmt  = mPmts.reduce((s,p)=>s+(p.amount||0),0);
+                const creditAmt= mCP.reduce((s,p)=>s+(p.amount||0),0);
+                const waterAmt = mWater.reduce((s,s2)=>s+(s2.amountPaid||0),0);
+                const storeAmt = mStore.reduce((s,s2)=>s+(s2.total||0),0);
+                const otherAmt = mOther.reduce((s,i)=>s+(i.amount||0),0);
+                const totalAmt = rentAmt+creditAmt+waterAmt+storeAmt+otherAmt;
+                html += '<div style="background:rgba(99,102,241,0.1);border-radius:8px;padding:12px;text-align:center;margin-bottom:14px;"><div style="font-weight:900;color:#818cf8;font-size:1.4rem;">₱'+totalAmt.toLocaleString()+'</div><div style="font-size:0.72rem;color:#64748b;">Total income in '+monthLabel+'</div></div>';
+                const breakdown = [
+                    {label:'🏠 Rent',amount:rentAmt,color:'#10b981'},
+                    {label:'💳 Credit Repayments',amount:creditAmt,color:'#60a5fa'},
+                    {label:'💧 Water Sales',amount:waterAmt,color:'#38bdf8'},
+                    {label:'🛒 Store Sales',amount:storeAmt,color:'#a78bfa'},
+                    {label:'💰 Other Income',amount:otherAmt,color:'#34d399'},
+                ];
+                breakdown.forEach(b => {
+                    const pct = totalAmt > 0 ? Math.round((b.amount/totalAmt)*100) : 0;
+                    html += '<div style="margin-bottom:10px;">';
+                    html += '<div style="display:flex;justify-content:space-between;font-size:0.83rem;margin-bottom:4px;"><span>'+b.label+'</span><span style="font-weight:700;color:'+b.color+';">₱'+b.amount.toLocaleString()+' ('+pct+'%)</span></div>';
+                    html += '<div style="background:var(--bg-primary);border-radius:4px;height:6px;overflow:hidden;"><div style="height:100%;background:'+b.color+';width:'+pct+'%;transition:width 0.5s;"></div></div>';
+                    html += '</div>';
+                });
+
+            // ─────────────────────────────────────────────
+            } else if (type === 'expected-rent') {
+                title = '📅 Expected Rent — ' + monthLabel;
+                const activeTenants = tenants.filter(t=>t.status==='active'||!t.status);
+                const expected = activeTenants.reduce((s,t)=>s+(t.rent||0),0);
+                const mPmts = payments.filter(p=>p.date&&p.date.startsWith(currentMonth)&&!p.voided);
+                const collected = mPmts.reduce((s,p)=>s+(p.amount||0),0);
+                html += '<div style="font-size:0.8rem;color:#94a3b8;margin-bottom:12px;padding:10px;background:rgba(99,102,241,0.05);border-radius:8px;border-left:3px solid #6366f1;">This is the <strong>total rent expected</strong> from all active tenants this month. It is <strong>not a running total</strong> — it resets every month based on current tenants and their rent rates.</div>';
+                html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">';
+                html += '<div style="background:rgba(245,158,11,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#f59e0b;font-size:1.1rem;">₱'+expected.toLocaleString()+'</div><div style="font-size:0.7rem;color:#64748b;">Expected Total</div></div>';
+                html += '<div style="background:rgba(16,185,129,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#10b981;font-size:1.1rem;">₱'+collected.toLocaleString()+'</div><div style="font-size:0.7rem;color:#64748b;">Collected So Far</div></div>';
+                html += '</div>';
+                activeTenants.sort((a,b)=>(b.rent||0)-(a.rent||0)).forEach(t => {
+                    const tPaid = mPmts.filter(p=>p.tenantId===t.id).reduce((s,p)=>s+(p.amount||0),0);
+                    const color = tPaid>=(t.rent||0)?'#10b981':tPaid>0?'#f59e0b':'#ef4444';
+                    const label = tPaid>=(t.rent||0)?'✅ Paid':'🔴 ₱'+Math.max(0,(t.rent||0)-tPaid).toLocaleString()+' due';
+                    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color);">';
+                    html += '<div><div style="font-size:0.85rem;font-weight:600;">'+t.name+'</div>';
+                    html += '<div style="font-size:0.72rem;color:#64748b;">₱'+(t.rent||0).toLocaleString()+'/mo</div></div>';
+                    html += '<span style="font-size:0.78rem;font-weight:700;color:'+color+';">'+label+'</span></div>';
+                });
+
+            // ─────────────────────────────────────────────
+            } else if (type === 'outstanding-credit') {
+                title = '💸 Outstanding Credit — All Time';
+                const activeCredits = credits.filter(c=>c.status!=='paid'&&c.status!=='closed');
+                const totalOut = activeCredits.reduce((s,c)=>{
+                    const paid = creditPayments.filter(p=>p.creditId===c.id).reduce((a,p)=>a+(p.amount||0),0);
+                    return s+Math.max(0,(c.principal||0)-paid);
+                },0);
+                html += '<div style="font-size:0.8rem;color:#94a3b8;margin-bottom:12px;padding:10px;background:rgba(239,68,68,0.05);border-radius:8px;border-left:3px solid #ef4444;">This is the <strong>total unpaid balance</strong> across ALL active loans/credits — not just this month. It accumulates until fully repaid.</div>';
+                html += '<div style="background:rgba(239,68,68,0.1);border-radius:8px;padding:12px;text-align:center;margin-bottom:14px;"><div style="font-weight:900;color:#ef4444;font-size:1.3rem;">₱'+totalOut.toLocaleString()+'</div><div style="font-size:0.72rem;color:#64748b;">Total unpaid across '+activeCredits.length+' active credit(s)</div></div>';
+                activeCredits.sort((a,b)=>{
+                    const bBal = Math.max(0,(b.principal||0)-creditPayments.filter(p=>p.creditId===b.id).reduce((a,p)=>a+(p.amount||0),0));
+                    const aBal = Math.max(0,(a.principal||0)-creditPayments.filter(p=>p.creditId===a.id).reduce((a,p)=>a+(p.amount||0),0));
+                    return bBal - aBal;
+                }).forEach(c => {
+                    const paid = creditPayments.filter(p=>p.creditId===c.id).reduce((a,p)=>a+(p.amount||0),0);
+                    const bal  = Math.max(0,(c.principal||0)-paid);
+                    const pct  = c.principal > 0 ? Math.round((paid/c.principal)*100) : 0;
+                    const lastPmt = creditPayments.filter(p=>p.creditId===c.id).sort((a,b)=>(b.date||'')>(a.date||'')?1:-1)[0];
+                    html += '<div style="border:1px solid var(--border-color);border-radius:8px;padding:10px;margin-bottom:8px;">';
+                    html += '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">';
+                    html += '<div><div style="font-weight:700;font-size:0.88rem;">'+(c.debtor||'Debtor')+'</div>';
+                    html += '<div style="font-size:0.72rem;color:#64748b;">Principal: ₱'+(c.principal||0).toLocaleString()+' · Since: '+(c.dateLent||'?')+'</div></div>';
+                    html += '<div style="text-align:right;"><div style="color:#ef4444;font-weight:700;">₱'+bal.toLocaleString()+'</div><div style="font-size:0.68rem;color:#64748b;">remaining</div></div></div>';
+                    html += '<div style="background:var(--bg-primary);border-radius:4px;height:5px;overflow:hidden;margin-bottom:4px;"><div style="height:100%;background:#10b981;width:'+pct+'%;"></div></div>';
+                    html += '<div style="font-size:0.7rem;color:#64748b;">'+pct+'% paid · Last payment: '+(lastPmt?lastPmt.date+' ₱'+lastPmt.amount.toLocaleString():'none yet')+'</div>';
+                    html += '</div>';
+                });
+
+            // ─────────────────────────────────────────────
+            } else if (type === 'pending-charges') {
+                title = '⏳ Pending Charges';
+                const charges = await dbGetAll('clientCharges').catch(()=>[]);
+                const pending = charges.filter(c=>c.status==='pending');
+                const total   = pending.reduce((s,c)=>s+(c.amount||0),0);
+                html += '<div style="font-size:0.8rem;color:#94a3b8;margin-bottom:12px;padding:10px;background:rgba(245,158,11,0.05);border-radius:8px;border-left:3px solid #f59e0b;">Pending charges are fees or bills issued to clients/tenants that have not yet been paid.</div>';
+                html += '<div style="background:rgba(245,158,11,0.1);border-radius:8px;padding:10px;text-align:center;margin-bottom:14px;"><div style="font-weight:800;color:#f59e0b;font-size:1.2rem;">₱'+total.toLocaleString()+'</div><div style="font-size:0.7rem;color:#64748b;">'+pending.length+' pending charge(s)</div></div>';
+                if (pending.length === 0) {
+                    html += '<div style="text-align:center;color:#64748b;padding:16px;">No pending charges. All caught up! ✅</div>';
+                } else {
+                    pending.forEach(c => {
+                        html += '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-color);">';
+                        html += '<div><div style="font-weight:600;font-size:0.85rem;">'+(c.description||c.type||'Charge')+'</div>';
+                        html += '<div style="font-size:0.72rem;color:#64748b;">'+(c.date||'')+' · '+(c.clientName||'Client')+'</div></div>';
+                        html += '<span style="color:#f59e0b;font-weight:700;">₱'+(c.amount||0).toLocaleString()+'</span></div>';
+                    });
+                }
+
+            // ─────────────────────────────────────────────
+            } else if (type === 'total-receivables') {
+                title = '💰 Total Receivables';
+                const activeTenants = tenants.filter(t=>t.status==='active'||!t.status);
+                const expected   = activeTenants.reduce((s,t)=>s+(t.rent||0),0);
+                const mPmts      = payments.filter(p=>p.date&&p.date.startsWith(currentMonth)&&!p.voided);
+                const collected  = mPmts.reduce((s,p)=>s+(p.amount||0),0);
+                const outRent    = Math.max(0,expected-collected);
+                const activeCredits = credits.filter(c=>c.status!=='paid'&&c.status!=='closed');
+                const outCredit  = activeCredits.reduce((s,c)=>{
+                    const paid = creditPayments.filter(p=>p.creditId===c.id).reduce((a,p)=>a+(p.amount||0),0);
+                    return s+Math.max(0,(c.principal||0)-paid);
+                },0);
+                const charges    = await dbGetAll('clientCharges').catch(()=>[]);
+                const pendingC   = charges.filter(c=>c.status==='pending').reduce((s,c)=>s+(c.amount||0),0);
+                const total      = outRent+outCredit+pendingC;
+
+                html += '<div style="font-size:0.8rem;color:#94a3b8;margin-bottom:12px;padding:10px;background:rgba(99,102,241,0.05);border-radius:8px;border-left:3px solid #6366f1;">Total Receivables = money owed TO YOU. It combines unpaid rent this month + all outstanding credit balances + pending charges.</div>';
+                html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px;">';
+                html += '<div style="background:rgba(245,158,11,0.1);border-radius:8px;padding:8px;text-align:center;"><div style="font-weight:800;color:#f59e0b;">₱'+outRent.toLocaleString()+'</div><div style="font-size:0.68rem;color:#64748b;">Unpaid Rent<br>(this month)</div></div>';
+                html += '<div style="background:rgba(239,68,68,0.1);border-radius:8px;padding:8px;text-align:center;"><div style="font-weight:800;color:#ef4444;">₱'+outCredit.toLocaleString()+'</div><div style="font-size:0.68rem;color:#64748b;">Credit<br>Outstanding</div></div>';
+                html += '<div style="background:rgba(245,158,11,0.1);border-radius:8px;padding:8px;text-align:center;"><div style="font-weight:800;color:#f59e0b;">₱'+pendingC.toLocaleString()+'</div><div style="font-size:0.68rem;color:#64748b;">Pending<br>Charges</div></div>';
+                html += '</div>';
+                html += '<div style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:10px;padding:14px;text-align:center;margin-bottom:14px;"><div style="font-weight:900;color:#818cf8;font-size:1.4rem;">₱'+total.toLocaleString()+'</div><div style="font-size:0.75rem;color:#94a3b8;">Grand Total Receivables</div></div>';
+                html += '<div style="font-size:0.78rem;color:#64748b;margin-bottom:6px;">Tenants with unpaid rent this month:</div>';
+                activeTenants.forEach(t => {
+                    const tPaid = mPmts.filter(p=>p.tenantId===t.id).reduce((s,p)=>s+(p.amount||0),0);
+                    const tDue  = Math.max(0,(t.rent||0)-tPaid);
+                    if (tDue > 0) {
+                        html += '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-color);">';
+                        html += '<span style="font-size:0.83rem;">'+t.name+'</span>';
+                        html += '<span style="color:#ef4444;font-weight:700;">₱'+tDue.toLocaleString()+' due</span></div>';
+                    }
+                });
+
+            // ─────────────────────────────────────────────
+            } else {
+                // Fallback for properties, tenants, debtors, due-soon, overdue (existing logic)
+                const allTenants2 = tenants;
+                const allCredits2 = credits;
+                let items = [];
+                let total2 = 0;
+                let title2 = '';
+                if (type==='properties') {
+                    const props = await dbGetAll('properties');
+                    title2='🏠 All Properties';
+                    items = props.map(p=>'<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-color);"><span>'+p.name+'</span><span class="badge '+(p.status==='occupied'?'badge-success':'badge-warning')+'">'+p.status+'</span></div>');
+                } else if (type==='vacant') {
+                    const props = await dbGetAll('properties');
+                    title2='🚪 Vacant Properties';
+                    items = props.filter(p=>p.status==='vacant').map(p=>'<div style="padding:8px 0;border-bottom:1px solid var(--border-color);">'+p.name+'<span style="color:#64748b;font-size:0.8rem;"> — ₱'+p.rent+'</span></div>');
+                } else if (type==='tenants') {
+                    title2='👥 Active Tenants';
+                    items = allTenants2.filter(t=>t.status==='active'||!t.status).map(t=>'<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-color);"><span>'+t.name+'</span><span style="color:#10b981;">₱'+t.rent+'</span></div>');
+                } else if (type==='debtors') {
+                    title2='💳 Active Debtors';
+                    items = allCredits2.filter(c=>c.status!=='paid'&&c.status!=='closed').map(c=>{
+                        const paid = creditPayments.filter(p=>p.creditId===c.id).reduce((s,p)=>s+p.amount,0);
+                        const bal = (c.principal||0)-paid;
+                        return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-color);"><span>'+c.debtor+'</span><span style="color:#f59e0b;">₱'+Math.max(0,bal).toLocaleString()+'</span></div>';
+                    });
+                } else if (type==='due-soon') {
+                    title2='📅 Due Soon (next 3 days)';
+                    const todayDay = now.getDate();
+                    items = allTenants2.filter(t=>{
+                        const d = t.dueDay||5; const diff = d-todayDay;
+                        return (t.status==='active'||!t.status)&&diff>=0&&diff<=3;
+                    }).map(t=>'<div style="padding:8px 0;border-bottom:1px solid var(--border-color);">'+t.name+' — Due day '+t.dueDay+'</div>');
+                } else if (type==='overdue') {
+                    title2='⚠️ Overdue Tenants';
+                    const todayDay = now.getDate();
+                    items = allTenants2.filter(t=>{
+                        const paid = payments.filter(p=>p.tenantId===t.id&&p.date&&p.date.startsWith(currentMonth)).reduce((s,p)=>s+p.amount,0);
+                        return (t.status==='active'||!t.status)&&todayDay>(t.dueDay||5)&&paid<(t.rent||0);
+                    }).map(t=>'<div style="padding:8px 0;border-bottom:1px solid var(--border-color);">'+t.name+' — ₱'+t.rent+'/mo</div>');
+                }
+                title = title2;
+                html = (items.length ? items.join('') : '<div style="color:#64748b;padding:12px;text-align:center;">No data found.</div>');
+                if (total2>0) html += '<div style="display:flex;justify-content:space-between;padding-top:10px;margin-top:8px;border-top:1px solid #334155;font-weight:700;"><span>Total</span><span style="color:#10b981;">₱'+total2.toLocaleString()+'</span></div>';
             }
 
+            // ── Render modal ──
             const modal = document.createElement('div');
-            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
-            modal.innerHTML = '<div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;width:100%;max-width:440px;max-height:80vh;overflow-y:auto;">' +
-                '<div style="display:flex;justify-content:space-between;margin-bottom:14px;"><h3 style="margin:0;color:#f1f5f9;font-size:1rem;">'+title+'</h3><button onclick="this.closest(\'div[style*=fixed]\').remove()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.2rem;">✕</button></div>' +
-                (items.length ? items.join('') : '<div style="color:#64748b;padding:12px;text-align:center;">No data found.</div>') +
-                (total > 0 ? '<div style="display:flex;justify-content:space-between;padding-top:10px;margin-top:8px;border-top:1px solid #334155;font-weight:700;"><span>Total</span><span style="color:#10b981;">₱'+total.toLocaleString()+'</span></div>' : '') +
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
+            modal.innerHTML =
+                '<div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;width:100%;max-width:500px;max-height:85vh;overflow-y:auto;">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;position:sticky;top:0;background:#1e293b;padding-bottom:10px;border-bottom:1px solid #334155;">' +
+                '<h3 style="margin:0;color:#f1f5f9;font-size:1rem;">'+title+'</h3>' +
+                '<button onclick="this.closest('div[style*=fixed]').remove()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.3rem;padding:0 4px;">✕</button>' +
+                '</div>' +
+                '<div>'+html+'</div>' +
                 '</div>';
             document.body.appendChild(modal);
             modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
         }
+
         window.showFlashcardDetail = showFlashcardDetail;
 
         async function showWaterFlashcardDetail(type) {
@@ -22119,7 +22541,26 @@ async function clearAllData() {
         function copyContract()        { showToast('📋 Contract copied to clipboard.','info'); }
         function shareContract()       { showToast('📤 Share feature coming soon.','info'); }
         function loadContractTemplate(){ showToast('📄 Template loaded.','info'); }
-        function confirmVoidSale(id,type,reason) { if(typeof executeVoidSale==='function') executeVoidSale(id,type,reason); }
+        async function confirmVoidSale(id, type, reason) {
+            const role = currentAppUser && currentAppUser.role;
+            // Cashier & Supervisor: send void REQUEST as endorsement, don't actually void
+            if (['cashier','supervisor'].includes(role)) {
+                const msg = await showInputModal('Void Request Reason', 'Enter reason for void request:');
+                if (!msg) return;
+                const typeLabel = type === 'rent' ? 'Rent Payment' : type === 'credit' ? 'Credit Payment' : type === 'water' ? 'Water Sale' : 'Transaction';
+                quickEndorse('void-request',
+                    '🔴 VOID REQUEST\n' +
+                    'Type: ' + typeLabel + '\n' +
+                    'ID: ' + id + '\n' +
+                    'Reason: ' + msg + '\n' +
+                    'Requested by: ' + (currentAppUser.fullname || currentAppUser.username) + ' (' + role + ')'
+                );
+                showToast('📨 Void request sent to Admin for approval.', 'info');
+                return;
+            }
+            // Admin/Owner/Manager: execute void directly
+            if (typeof executeVoidSale === 'function') executeVoidSale(id, type, reason);
+        }
         function prismDemoGoTo(s)      { if(typeof showSection==='function') showSection(s); }
         window.showPolicySection    = showPolicySection;
         window.clearSignature       = clearSignature;
@@ -22181,7 +22622,7 @@ async function clearAllData() {
             if (!user) { el.innerHTML = ''; return; }
             const name    = user.fullname || user.email || '';
             const display = name.includes('@') ? name.split('@')[0] : name;
-            const roleColors = {owner:'#a78bfa',admin:'#60a5fa',manager:'#34d399',cashier:'#fbbf24',viewer:'#94a3b8'};
+            const roleColors = {owner:'#a78bfa',admin:'#60a5fa',supervisor:'#f97316',manager:'#34d399',cashier:'#fbbf24',viewer:'#94a3b8'};
             const roleColor  = roleColors[user.role] || '#94a3b8';
             el.innerHTML =
                 '<div style="display:flex;align-items:center;gap:6px;">' +
@@ -22361,6 +22802,200 @@ async function clearAllData() {
             if (typeof addStoreProduct === 'function') await addStoreProduct();
         }
         window.saveStoreProduct = saveStoreProduct;
+
+                // ═══════════════════════════════════════════════
+        // DASHBOARD INCOME VS EXPENSE WIDGET
+        // ═══════════════════════════════════════════════
+        let _dashRange = 'today';
+
+        function dashSetRange(range) {
+            _dashRange = range;
+            // Update button styles
+            document.querySelectorAll('.dash-range-btn').forEach(btn => {
+                const isActive = btn.dataset.range === range;
+                btn.style.background    = isActive ? 'var(--primary)' : 'var(--bg-card)';
+                btn.style.color         = isActive ? 'white' : 'var(--text-secondary)';
+                btn.style.borderColor   = isActive ? 'var(--primary)' : 'var(--border-color)';
+                btn.classList.toggle('active', isActive);
+            });
+            // Show/hide custom date row
+            const customRow = document.getElementById('dash-custom-range');
+            if (customRow) customRow.style.display = range === 'custom' ? 'flex' : 'none';
+            if (range !== 'custom') loadDashIncomeExpense();
+        }
+        window.dashSetRange = dashSetRange;
+
+        async function loadDashIncomeExpense() {
+            const today = new Date();
+            const fmt   = d => d.toISOString().split('T')[0];
+            let fromDate, toDate;
+
+            if (_dashRange === 'today') {
+                fromDate = toDate = fmt(today);
+            } else if (_dashRange === 'week') {
+                const d = new Date(today); d.setDate(d.getDate() - d.getDay());
+                fromDate = fmt(d); toDate = fmt(today);
+            } else if (_dashRange === 'month') {
+                fromDate = fmt(new Date(today.getFullYear(), today.getMonth(), 1));
+                toDate   = fmt(today);
+            } else if (_dashRange === 'custom') {
+                fromDate = (document.getElementById('dash-from')||{}).value;
+                toDate   = (document.getElementById('dash-to')||{}).value;
+                if (!fromDate || !toDate) return;
+            }
+
+            const inRange = (item, field) => {
+                const d = (item[field||'date']||'').substring(0,10);
+                return d >= fromDate && d <= toDate;
+            };
+
+            try {
+                const [payments, creditPayments, waterSales, expenses, addIncome] = await Promise.all([
+                    dbGetAll('payments'), dbGetAll('creditPayments'), dbGetAll('waterSales'),
+                    dbGetAll('expenses'), dbGetAll('additionalIncome')
+                ]);
+                const storeSales = await dbGetAll('waterStoreSales').catch(()=>[]);
+
+                const rentInc   = payments.filter(p=>!p.voided&&inRange(p)).reduce((s,p)=>s+(p.amount||0),0);
+                const creditInc = creditPayments.filter(p=>!p.voided&&inRange(p)).reduce((s,p)=>s+(p.amount||0),0);
+                const waterInc  = waterSales.filter(p=>!p.voided&&inRange(p)).reduce((s,p)=>s+(p.amountPaid||0),0);
+                const storeInc  = storeSales.filter(p=>!p.voided&&inRange(p)).reduce((s,p)=>s+(p.total||0),0);
+                const otherInc  = addIncome.filter(p=>!p.storeRef&&inRange(p)).reduce((s,p)=>s+(p.amount||0),0);
+                const totalInc  = Math.round((rentInc+creditInc+waterInc+storeInc+otherInc)*100)/100;
+                const totalExp  = Math.round(expenses.filter(e=>inRange(e)).reduce((s,e)=>s+(e.amount||0),0)*100)/100;
+                const net       = Math.round((totalInc - totalExp)*100)/100;
+                const margin    = totalInc > 0 ? Math.round((net/totalInc)*100) : 0;
+                const pct       = totalInc > 0 ? Math.min(100, Math.round((totalInc/(totalInc+totalExp))*100)) : 0;
+
+                const safeSet = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+                safeSet('dash-ie-income',  '₱'+totalInc.toLocaleString());
+                safeSet('dash-ie-expense', '₱'+totalExp.toLocaleString());
+                safeSet('dash-ie-net',     (net>=0?'₱':'-₱')+Math.abs(net).toLocaleString());
+                safeSet('dash-ie-pct',     margin+'% profit margin');
+                safeSet('dash-ie-label',   net >= 0 ? '📈 Net Profit' : '📉 Net Loss');
+
+                const netEl = document.getElementById('dash-ie-net');
+                if (netEl) netEl.style.color = net >= 0 ? '#10b981' : '#ef4444';
+                const barEl = document.getElementById('dash-ie-bar');
+                if (barEl) {
+                    barEl.style.width = pct + '%';
+                    barEl.style.background = net >= 0 ? 'linear-gradient(90deg,#10b981,#34d399)' : 'linear-gradient(90deg,#ef4444,#f87171)';
+                }
+
+                // Transaction list
+                const allTxns = [
+                    ...payments.filter(p=>!p.voided&&inRange(p)).map(p=>({type:'🏠 Rent',name:p.tenantName||'Tenant',amount:p.amount||0,date:p.date,in:true})),
+                    ...creditPayments.filter(p=>!p.voided&&inRange(p)).map(p=>({type:'💳 Credit',name:p.debtorName||'Debtor',amount:p.amount||0,date:p.date,in:true})),
+                    ...waterSales.filter(p=>!p.voided&&inRange(p)).map(p=>({type:'💧 Water',name:p.customerName||'Customer',amount:p.amountPaid||0,date:p.date,in:true})),
+                    ...storeSales.filter(p=>!p.voided&&inRange(p)).map(p=>({type:'🛒 Store',name:p.customerName||'Customer',amount:p.total||0,date:p.date,in:true})),
+                    ...addIncome.filter(p=>!p.storeRef&&inRange(p)).map(p=>({type:'💰 Income',name:p.source||'Other',amount:p.amount||0,date:p.date,in:true})),
+                    ...expenses.filter(e=>inRange(e)).map(e=>({type:'💸 Expense',name:e.category||'Expense',amount:e.amount||0,date:e.date,in:false})),
+                ].sort((a,b)=>(b.date||'')>(a.date||'')?1:-1);
+
+                const feedEl = document.getElementById('dash-ie-feed');
+                if (feedEl) {
+                    if (allTxns.length === 0) {
+                        feedEl.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:16px;font-size:0.83rem;">No transactions for this period.</div>';
+                    } else {
+                        feedEl.innerHTML = allTxns.slice(0,20).map(t =>
+                            '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border-color);">' +
+                            '<div><span style="font-size:0.8rem;font-weight:600;">' + t.type + ' — ' + t.name + '</span>' +
+                            '<span style="font-size:0.7rem;color:#64748b;margin-left:6px;">' + (t.date||'') + '</span></div>' +
+                            '<span style="font-weight:700;font-size:0.85rem;color:' + (t.in?'#10b981':'#ef4444') + ';">' + (t.in?'+':'-') + '₱' + t.amount.toLocaleString() + '</span>' +
+                            '</div>'
+                        ).join('') + (allTxns.length > 20 ? '<div style="text-align:center;color:#64748b;font-size:0.72rem;padding:6px;">Showing 20 of ' + allTxns.length + '</div>' : '');
+                    }
+                }
+            } catch(e) { console.error('[loadDashIncomeExpense]', e); }
+        }
+        window.loadDashIncomeExpense = loadDashIncomeExpense;
+
+                // ═══════════════════════════════════════════════
+        // LEDGER FILTER FUNCTIONS — search + year
+        // ═══════════════════════════════════════════════
+
+        function filterTenantLedger(tenantId) {
+            const search = (document.getElementById('tenant-ledger-search-' + tenantId)||{}).value?.toLowerCase() || '';
+            const year   = (document.getElementById('tenant-ledger-year-' + tenantId)||{}).value || '';
+            const table  = document.getElementById('tenant-ledger-table-' + tenantId);
+            if (!table) return;
+            let visible = 0;
+            table.querySelectorAll('tbody tr').forEach(row => {
+                const text = row.textContent.toLowerCase();
+                const rowYear = (row.querySelector('td')?.textContent || '').substring(0,4);
+                const matchSearch = !search || text.includes(search);
+                const matchYear   = !year   || rowYear === year;
+                const show = matchSearch && matchYear;
+                row.style.display = show ? '' : 'none';
+                if (show) visible++;
+            });
+            const countEl = document.getElementById('tenant-ledger-count-' + tenantId);
+            if (countEl) countEl.textContent = visible + ' payment(s) shown' + (search||year ? ' (filtered)' : ' — all time');
+        }
+        window.filterTenantLedger = filterTenantLedger;
+
+        function filterCreditLedger(creditId) {
+            const search = (document.getElementById('credit-ledger-search-' + creditId)||{}).value?.toLowerCase() || '';
+            const year   = (document.getElementById('credit-ledger-year-' + creditId)||{}).value || '';
+            const table  = document.querySelector('#credit-detail-content table') ||
+                           document.querySelector('.ledger-table');
+            if (!table) return;
+            let visible = 0;
+            table.querySelectorAll('tbody tr').forEach(row => {
+                const text = row.textContent.toLowerCase();
+                const rowYear = (row.querySelector('td')?.textContent || '').substring(0,4);
+                const matchSearch = !search || text.includes(search);
+                const matchYear   = !year   || rowYear === year;
+                const show = matchSearch && matchYear;
+                row.style.display = show ? '' : 'none';
+                if (show) visible++;
+            });
+            const countEl = document.getElementById('credit-ledger-count-' + creditId);
+            if (countEl) countEl.textContent = visible + ' payment(s) shown' + (search||year ? ' (filtered)' : ' — all time');
+        }
+        window.filterCreditLedger = filterCreditLedger;
+
+        function filterWaterHistory(customerId) {
+            const search = (document.getElementById('water-hist-search-' + customerId)||{}).value?.toLowerCase() || '';
+            const year   = (document.getElementById('water-hist-year-' + customerId)||{}).value || '';
+            const container = document.querySelector('#water-customer-modal .modal-body') ||
+                              document.getElementById('water-detail-content');
+            if (!container) return;
+            let visible = 0;
+            container.querySelectorAll('.list-item').forEach(item => {
+                const text = item.textContent.toLowerCase();
+                const dateEl = item.querySelector('.list-item-subtitle, small, .text-muted');
+                const itemYear = dateEl ? dateEl.textContent.substring(0,4) : '';
+                const matchSearch = !search || text.includes(search);
+                const matchYear   = !year   || itemYear === year || text.includes(year);
+                const show = matchSearch && matchYear;
+                item.style.display = show ? '' : 'none';
+                if (show) visible++;
+            });
+            const countEl = document.getElementById('water-hist-count-' + customerId);
+            if (countEl) countEl.textContent = visible + ' transaction(s) shown' + (search||year ? ' (filtered)' : ' — all time');
+        }
+        window.filterWaterHistory = filterWaterHistory;
+
+        // ── Notes search filter ──
+        function filterNotesList(query) {
+            const q = (query || (document.getElementById('notes-search-input')||{}).value || '').toLowerCase();
+            document.querySelectorAll('.note-item, [data-note-id]').forEach(el => {
+                const text = el.textContent.toLowerCase();
+                el.style.display = !q || text.includes(q) ? '' : 'none';
+            });
+        }
+        window.filterNotesList = filterNotesList;
+
+        // ── Tasks search filter ──
+        function filterTasksList(query) {
+            const q = (query || (document.getElementById('tasks-search-input')||{}).value || '').toLowerCase();
+            document.querySelectorAll('#tasks-list .list-item').forEach(el => {
+                const text = el.textContent.toLowerCase();
+                el.style.display = !q || text.includes(q) ? '' : 'none';
+            });
+        }
+        window.filterTasksList = filterTasksList;
 
                 window.refreshStats = refreshStats;
         window.manualSync = manualSync;
@@ -26764,7 +27399,7 @@ window.mtSAToggleOrgStatus=mtSAToggleOrgStatus;
             _updateSAPendingBadge(pending.length);
             const approved = users.filter(u => u.status !== 'pending');
             const statusColors = { approved:'#34d399', pending:'#fbbf24', suspended:'#f87171' };
-            const roleColors   = { owner:'#a78bfa', admin:'#60a5fa', manager:'#34d399', cashier:'#fbbf24', viewer:'#94a3b8' };
+            const roleColors   = { owner:'#a78bfa', admin:'#60a5fa', supervisor:'#f97316', manager:'#34d399', cashier:'#fbbf24', viewer:'#94a3b8' };
 
             // ── Pending approvals ──
             if (pendingEl) {
