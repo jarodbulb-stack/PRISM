@@ -4706,6 +4706,92 @@
         <!-- Other Income Sources Section -->
         <div id="income" class="section">
 
+            <!-- Income Section Tabs -->
+            <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
+                <button onclick="showIncomeTab('transactions')" id="income-tab-transactions" class="income-tab-btn" style="padding:6px 14px;border-radius:8px;border:none;background:var(--primary);color:white;cursor:pointer;font-weight:600;font-size:0.82rem;">📋 Transactions</button>
+                <button onclick="showIncomeTab('rent-history')" id="income-tab-rent-history" class="income-tab-btn" style="padding:6px 14px;border-radius:8px;border:none;background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-weight:600;font-size:0.82rem;">🏠 Rent History</button>
+                <button onclick="showIncomeTab('credit-history')" id="income-tab-credit-history" class="income-tab-btn" style="padding:6px 14px;border-radius:8px;border:none;background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-weight:600;font-size:0.82rem;">💳 Credit History</button>
+                <button onclick="showIncomeTab('other-history')" id="income-tab-other-history" class="income-tab-btn" style="padding:6px 14px;border-radius:8px;border:none;background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-weight:600;font-size:0.82rem;">💰 Other Income</button>
+            </div>
+
+            <!-- ══ RENT HISTORY PAGE ══ -->
+            <div id="income-view-rent-history" style="display:none;">
+                <div class="card">
+                    <div class="card-header" style="flex-wrap:wrap;gap:8px;">
+                        <div class="card-title">🏠 Rent Payment History</div>
+                        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                            <select id="rent-hist-year" onchange="loadRentHistory()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;">
+                                <option value="">All Years</option>
+                            </select>
+                            <select id="rent-hist-month" onchange="loadRentHistory()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;">
+                                <option value="">All Months</option>
+                                <option value="01">January</option><option value="02">February</option>
+                                <option value="03">March</option><option value="04">April</option>
+                                <option value="05">May</option><option value="06">June</option>
+                                <option value="07">July</option><option value="08">August</option>
+                                <option value="09">September</option><option value="10">October</option>
+                                <option value="11">November</option><option value="12">December</option>
+                            </select>
+                            <input type="text" id="rent-hist-search" placeholder="🔍 Search tenant..." oninput="loadRentHistory()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;width:130px;">
+                        </div>
+                    </div>
+                    <div id="rent-hist-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;"></div>
+                    <div id="rent-hist-content"></div>
+                </div>
+            </div>
+
+            <!-- ══ CREDIT REPAYMENT HISTORY PAGE ══ -->
+            <div id="income-view-credit-history" style="display:none;">
+                <div class="card">
+                    <div class="card-header" style="flex-wrap:wrap;gap:8px;">
+                        <div class="card-title">💳 Credit Repayment History</div>
+                        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                            <select id="credit-hist-year" onchange="loadCreditHistory()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;">
+                                <option value="">All Years</option>
+                            </select>
+                            <select id="credit-hist-month" onchange="loadCreditHistory()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;">
+                                <option value="">All Months</option>
+                                <option value="01">January</option><option value="02">February</option>
+                                <option value="03">March</option><option value="04">April</option>
+                                <option value="05">May</option><option value="06">June</option>
+                                <option value="07">July</option><option value="08">August</option>
+                                <option value="09">September</option><option value="10">October</option>
+                                <option value="11">November</option><option value="12">December</option>
+                            </select>
+                            <input type="text" id="credit-hist-search" placeholder="🔍 Search debtor..." oninput="loadCreditHistory()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;width:130px;">
+                        </div>
+                    </div>
+                    <div id="credit-hist-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;"></div>
+                    <div id="credit-hist-content"></div>
+                </div>
+            </div>
+
+            <!-- ══ OTHER INCOME HISTORY PAGE ══ -->
+            <div id="income-view-other-history" style="display:none;">
+                <div class="card">
+                    <div class="card-header" style="flex-wrap:wrap;gap:8px;">
+                        <div class="card-title">💰 Other Income History</div>
+                        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                            <select id="other-hist-year" onchange="loadOtherIncomeHistory()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;">
+                                <option value="">All Years</option>
+                            </select>
+                            <select id="other-hist-month" onchange="loadOtherIncomeHistory()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;">
+                                <option value="">All Months</option>
+                                <option value="01">January</option><option value="02">February</option>
+                                <option value="03">March</option><option value="04">April</option>
+                                <option value="05">May</option><option value="06">June</option>
+                                <option value="07">July</option><option value="08">August</option>
+                                <option value="09">September</option><option value="10">October</option>
+                                <option value="11">November</option><option value="12">December</option>
+                            </select>
+                            <input type="text" id="other-hist-search" placeholder="🔍 Search source..." oninput="loadOtherIncomeHistory()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;width:130px;">
+                        </div>
+                    </div>
+                    <div id="other-hist-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;"></div>
+                    <div id="other-hist-content"></div>
+                </div>
+            </div>
+
             <!-- Today's Transaction Summary -->
             <div class="card" id="income-today-card">
                 <div class="card-header">
@@ -11321,7 +11407,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
 
                 if (isInactive) {
                     return `
-                        <div class="list-item" style="opacity:0.6;border-left:3px solid #64748b;">
+                        <div class="list-item" style="opacity:0.6;border-left:3px solid #64748b;cursor:pointer;" onclick="viewTenantDetails(${tenant.id})">
                             <div class="item-info" style="flex:1;">
                                 <h4 style="color:#94a3b8;">${tenant.name} <span style="font-size:0.7rem;background:#334155;color:#94a3b8;padding:1px 7px;border-radius:8px;margin-left:4px;">Inactive</span></h4>
                                 <p style="color:#64748b;">${property ? property.name : 'No property assigned'} • ₱${tenant.rent.toLocaleString()}/mo</p>
@@ -23180,6 +23266,407 @@ async function clearAllData() {
         }
         window.dismissAllReminders = dismissAllReminders;
 
+                // ═══════════════════════════════════════════════════════
+        // INCOME TAB NAVIGATION
+        // ═══════════════════════════════════════════════════════
+        function showIncomeTab(tab) {
+            // Hide all views
+            ['transactions','rent-history','credit-history','other-history'].forEach(t => {
+                const view = document.getElementById('income-view-' + t);
+                const btn  = document.getElementById('income-tab-' + t);
+                if (view) view.style.display = 'none';
+                if (btn) {
+                    btn.style.background = 'var(--bg-card)';
+                    btn.style.color = 'var(--text-secondary)';
+                }
+            });
+            // Show selected
+            const activeView = document.getElementById('income-view-' + tab);
+            const activeBtn  = document.getElementById('income-tab-' + tab);
+            // Transactions uses existing income-today-card
+            if (tab === 'transactions') {
+                const card = document.getElementById('income-today-card');
+                const finCard = document.getElementById('income-financial-card');
+                if (card) card.style.display = '';
+                if (finCard) finCard.style.display = '';
+            } else {
+                const card = document.getElementById('income-today-card');
+                const finCard = document.getElementById('income-financial-card');
+                if (card) card.style.display = 'none';
+                if (finCard) finCard.style.display = 'none';
+                if (activeView) activeView.style.display = '';
+            }
+            if (activeBtn) {
+                activeBtn.style.background = 'var(--primary)';
+                activeBtn.style.color = 'white';
+            }
+            // Load data for the tab
+            if (tab === 'rent-history')    loadRentHistory();
+            if (tab === 'credit-history')  loadCreditHistory();
+            if (tab === 'other-history')   loadOtherIncomeHistory();
+        }
+        window.showIncomeTab = showIncomeTab;
+
+        // ── Populate year dropdowns ──
+        function populateYearDropdown(selectId, years) {
+            const el = document.getElementById(selectId);
+            if (!el) return;
+            const current = el.value;
+            el.innerHTML = '<option value="">All Years</option>';
+            years.sort().reverse().forEach(y => {
+                const opt = document.createElement('option');
+                opt.value = y; opt.textContent = y;
+                if (y === current) opt.selected = true;
+                el.appendChild(opt);
+            });
+        }
+
+        // ═══════════════════════════════════════════════════════
+        // RENT HISTORY PAGE
+        // ═══════════════════════════════════════════════════════
+        async function loadRentHistory() {
+            const yearEl   = document.getElementById('rent-hist-year');
+            const monthEl  = document.getElementById('rent-hist-month');
+            const searchEl = document.getElementById('rent-hist-search');
+            const summEl   = document.getElementById('rent-hist-summary');
+            const contEl   = document.getElementById('rent-hist-content');
+            if (!contEl) return;
+
+            contEl.innerHTML = '<div style="text-align:center;padding:20px;color:#64748b;">Loading...</div>';
+
+            const filterYear  = yearEl?.value  || '';
+            const filterMonth = monthEl?.value || '';
+            const filterSearch= (searchEl?.value || '').toLowerCase();
+
+            const [tenants, payments, properties] = await Promise.all([
+                dbGetAll('tenants'), dbGetAll('payments'), dbGetAll('properties')
+            ]);
+
+            // Populate year dropdown
+            const years = [...new Set(payments.map(p => p.date?.substring(0,4)).filter(Boolean))];
+            populateYearDropdown('rent-hist-year', years);
+
+            // Filter payments
+            let filtered = payments.filter(p => {
+                if (!p.date) return false;
+                if (filterYear  && !p.date.startsWith(filterYear))  return false;
+                if (filterMonth && p.date.substring(5,7) !== filterMonth) return false;
+                return true;
+            });
+
+            // Filter tenants by search
+            const activeTenants = tenants.filter(t =>
+                !filterSearch || (t.name||'').toLowerCase().includes(filterSearch)
+            );
+
+            // Summary pills
+            const totalCollected = filtered.filter(p=>!p.voided).reduce((s,p)=>s+(p.amount||0),0);
+            const expectedTotal  = activeTenants.filter(t=>t.status==='active'||!t.status).reduce((s,t)=>s+(t.rent||0),0);
+            const uniqueMonths   = [...new Set(filtered.map(p=>p.date?.substring(0,7)).filter(Boolean))];
+            if (summEl) {
+                summEl.innerHTML =
+                    '<div style="background:rgba(16,185,129,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#10b981;font-size:1rem;">₱'+totalCollected.toLocaleString()+'</div><div style="font-size:0.7rem;color:#64748b;">Total Collected</div></div>' +
+                    '<div style="background:rgba(245,158,11,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#f59e0b;font-size:1rem;">'+activeTenants.length+' tenants</div><div style="font-size:0.7rem;color:#64748b;">'+filtered.length+' payments</div></div>' +
+                    '<div style="background:rgba(99,102,241,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#818cf8;font-size:1rem;">'+uniqueMonths.length+' months</div><div style="font-size:0.7rem;color:#64748b;">'+(!filterYear&&!filterMonth?'All time':'Filtered')+'</div></div>';
+            }
+
+            // Group payments by month
+            const byMonth = {};
+            filtered.filter(p=>!p.voided).forEach(p => {
+                const mo = p.date?.substring(0,7);
+                if (!mo) return;
+                if (!byMonth[mo]) byMonth[mo] = [];
+                byMonth[mo].push(p);
+            });
+
+            const sortedMonths = Object.keys(byMonth).sort().reverse();
+            if (sortedMonths.length === 0) {
+                contEl.innerHTML = '<div style="text-align:center;color:#64748b;padding:24px;">No rent payments found for this period.</div>';
+                return;
+            }
+
+            let html = '';
+            sortedMonths.forEach(mo => {
+                const moPayments = byMonth[mo];
+                const moTotal    = moPayments.reduce((s,p)=>s+(p.amount||0),0);
+                const moLabel    = new Date(mo+'-01').toLocaleString('default',{month:'long',year:'numeric'});
+                const moTenantIds= [...new Set(moPayments.map(p=>p.tenantId))];
+
+                html += '<div style="margin-bottom:16px;">';
+                html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg-secondary);border-radius:10px 10px 0 0;border-bottom:2px solid var(--primary);">';
+                html += '<span style="font-weight:700;font-size:0.9rem;">📅 '+moLabel+'</span>';
+                html += '<span style="color:#10b981;font-weight:700;">₱'+moTotal.toLocaleString()+' collected · '+moPayments.length+' payment(s)</span>';
+                html += '</div>';
+
+                // Per-tenant rows for this month
+                const moTenants = activeTenants.filter(t => {
+                    const paid = moPayments.filter(p=>p.tenantId===t.id).reduce((s,p)=>s+(p.amount||0),0);
+                    return paid > 0 || moTenantIds.includes(t.id);
+                });
+
+                // Also show all active tenants to see who didn't pay
+                const allActive = tenants.filter(t=>t.status==='active'||!t.status);
+                const shownTenants = filterSearch ? moTenants : allActive;
+
+                shownTenants.forEach(t => {
+                    const tPayments = moPayments.filter(p=>p.tenantId===t.id);
+                    const tPaid     = tPayments.reduce((s,p)=>s+(p.amount||0),0);
+                    const status    = tPaid >= (t.rent||0) ? '✅ PAID' : tPaid > 0 ? '⚠️ PARTIAL' : '—';
+                    const statusColor = tPaid >= (t.rent||0) ? '#10b981' : tPaid > 0 ? '#f59e0b' : '#64748b';
+                    const prop      = properties.find(p=>p.id===t.propertyId);
+                    const isAdmin   = currentAppUser && ['owner','admin','manager'].includes(currentAppUser.role);
+
+                    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;background:var(--bg-primary);border-bottom:1px solid var(--border-color);">';
+                    html += '<div style="flex:1;">';
+                    html += '<div style="font-weight:600;font-size:0.85rem;cursor:pointer;color:var(--primary);" onclick="viewTenantDetails('+t.id+')">'+t.name+'</div>';
+                    html += '<div style="font-size:0.72rem;color:#64748b;">'+(prop?prop.name:'')+(t.rent?' · ₱'+t.rent.toLocaleString()+'/mo':'')+'</div>';
+                    html += '</div>';
+                    html += '<div style="text-align:right;">';
+                    if (tPaid > 0) {
+                        html += '<div style="font-weight:700;color:#10b981;">₱'+tPaid.toLocaleString()+'</div>';
+                        tPayments.forEach(p => {
+                            html += '<div style="font-size:0.7rem;color:#64748b;">'+p.date+' · '+(p.paymentMethod||'cash')+'</div>';
+                        });
+                    } else {
+                        html += '<div style="font-size:0.82rem;color:#64748b;">—</div>';
+                    }
+                    html += '<div style="font-size:0.72rem;font-weight:700;color:'+statusColor+';">'+status+'</div>';
+                    html += '</div>';
+                    if (isAdmin && tPaid > 0) {
+                        html += '<div style="display:flex;gap:4px;margin-left:8px;">';
+                        tPayments.forEach(p => {
+                            html += '<button onclick="editTenantPayment('+p.id+')" style="padding:2px 6px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:4px;cursor:pointer;font-size:0.68rem;">✏️</button>';
+                            html += '<button onclick="deleteTenantPayment('+p.id+')" style="padding:2px 6px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#ef4444;border-radius:4px;cursor:pointer;font-size:0.68rem;">🗑</button>';
+                        });
+                        html += '</div>';
+                    }
+                    html += '</div>';
+                });
+                html += '<div style="border-radius:0 0 10px 10px;background:var(--bg-secondary);padding:6px 14px;display:flex;justify-content:space-between;font-size:0.78rem;font-weight:600;">';
+                html += '<span style="color:#64748b;">'+moPayments.length+' payment(s)</span>';
+                html += '<span style="color:#10b981;">Total: ₱'+moTotal.toLocaleString()+'</span>';
+                html += '</div></div>';
+            });
+            contEl.innerHTML = html;
+        }
+        window.loadRentHistory = loadRentHistory;
+
+        // ═══════════════════════════════════════════════════════
+        // CREDIT REPAYMENT HISTORY PAGE
+        // ═══════════════════════════════════════════════════════
+        async function loadCreditHistory() {
+            const yearEl   = document.getElementById('credit-hist-year');
+            const monthEl  = document.getElementById('credit-hist-month');
+            const searchEl = document.getElementById('credit-hist-search');
+            const summEl   = document.getElementById('credit-hist-summary');
+            const contEl   = document.getElementById('credit-hist-content');
+            if (!contEl) return;
+
+            contEl.innerHTML = '<div style="text-align:center;padding:20px;color:#64748b;">Loading...</div>';
+
+            const filterYear   = yearEl?.value  || '';
+            const filterMonth  = monthEl?.value || '';
+            const filterSearch = (searchEl?.value || '').toLowerCase();
+
+            const [credits, payments] = await Promise.all([
+                dbGetAll('credits'), dbGetAll('creditPayments')
+            ]);
+
+            // Populate year dropdown
+            const years = [...new Set(payments.map(p=>p.date?.substring(0,4)).filter(Boolean))];
+            populateYearDropdown('credit-hist-year', years);
+
+            // Filter payments
+            let filtered = payments.filter(p => {
+                if (!p.date) return false;
+                if (filterYear  && !p.date.startsWith(filterYear))  return false;
+                if (filterMonth && p.date.substring(5,7) !== filterMonth) return false;
+                if (filterSearch && !(p.debtorName||'').toLowerCase().includes(filterSearch) &&
+                    !credits.find(c=>c.id===p.creditId&&(c.debtor||'').toLowerCase().includes(filterSearch))) return false;
+                return true;
+            });
+
+            const totalRepaid  = filtered.filter(p=>!p.voided).reduce((s,p)=>s+(p.amount||0),0);
+            const activeDebts  = credits.filter(c=>c.status!=='paid'&&c.status!=='closed');
+            const totalOutstanding = activeDebts.reduce((s,c)=>{
+                const paid = payments.filter(p=>p.creditId===c.id).reduce((a,p)=>a+(p.amount||0),0);
+                return s+Math.max(0,(c.principal||0)-paid);
+            },0);
+
+            if (summEl) {
+                summEl.innerHTML =
+                    '<div style="background:rgba(16,185,129,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#10b981;font-size:1rem;">₱'+totalRepaid.toLocaleString()+'</div><div style="font-size:0.7rem;color:#64748b;">Total Repaid</div></div>' +
+                    '<div style="background:rgba(239,68,68,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#ef4444;font-size:1rem;">₱'+totalOutstanding.toLocaleString()+'</div><div style="font-size:0.7rem;color:#64748b;">Still Outstanding</div></div>' +
+                    '<div style="background:rgba(99,102,241,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#818cf8;font-size:1rem;">'+filtered.length+'</div><div style="font-size:0.7rem;color:#64748b;">Payments</div></div>';
+            }
+
+            // Group by month
+            const byMonth = {};
+            filtered.filter(p=>!p.voided).forEach(p => {
+                const mo = p.date?.substring(0,7);
+                if (!mo) return;
+                if (!byMonth[mo]) byMonth[mo] = [];
+                byMonth[mo].push(p);
+            });
+
+            const sortedMonths = Object.keys(byMonth).sort().reverse();
+            if (sortedMonths.length === 0) {
+                contEl.innerHTML = '<div style="text-align:center;color:#64748b;padding:24px;">No repayments found for this period.</div>';
+                return;
+            }
+
+            const isAdmin = currentAppUser && ['owner','admin','manager'].includes(currentAppUser.role);
+            let html = '';
+            sortedMonths.forEach(mo => {
+                const moPayments = byMonth[mo];
+                const moTotal    = moPayments.reduce((s,p)=>s+(p.amount||0),0);
+                const moLabel    = new Date(mo+'-01').toLocaleString('default',{month:'long',year:'numeric'});
+
+                html += '<div style="margin-bottom:16px;">';
+                html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg-secondary);border-radius:10px 10px 0 0;border-bottom:2px solid #60a5fa;">';
+                html += '<span style="font-weight:700;font-size:0.9rem;">📅 '+moLabel+'</span>';
+                html += '<span style="color:#10b981;font-weight:700;">₱'+moTotal.toLocaleString()+' · '+moPayments.length+' payment(s)</span>';
+                html += '</div>';
+
+                moPayments.forEach(p => {
+                    const credit = credits.find(c=>c.id===p.creditId);
+                    const totalPaid = payments.filter(x=>x.creditId===p.creditId&&!x.voided).reduce((s,x)=>s+(x.amount||0),0);
+                    const balance   = Math.max(0,(credit?.principal||0)-totalPaid);
+                    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;background:var(--bg-primary);border-bottom:1px solid var(--border-color);">';
+                    html += '<div style="flex:1;">';
+                    html += '<div style="font-weight:600;font-size:0.85rem;cursor:pointer;color:var(--primary);" onclick="viewCreditDetails('+(p.creditId)+')">'+(p.debtorName||credit?.debtor||'Debtor')+'</div>';
+                    html += '<div style="font-size:0.72rem;color:#64748b;">'+p.date+' · '+(p.paymentMethod||'cash')+(credit?' · Principal: ₱'+(credit.principal||0).toLocaleString():'')+'</div>';
+                    html += '</div>';
+                    html += '<div style="text-align:right;margin-right:8px;">';
+                    html += '<div style="font-weight:700;color:#10b981;">₱'+(p.amount||0).toLocaleString()+'</div>';
+                    html += '<div style="font-size:0.7rem;color:#ef4444;">Bal: ₱'+balance.toLocaleString()+'</div>';
+                    html += '</div>';
+                    if (isAdmin) {
+                        html += '<div style="display:flex;gap:4px;">';
+                        html += '<button onclick="editCreditPayment('+p.id+','+p.creditId+')" style="padding:2px 6px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:4px;cursor:pointer;font-size:0.68rem;">✏️</button>';
+                        html += '<button onclick="deleteCreditPayment('+p.id+')" style="padding:2px 6px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#ef4444;border-radius:4px;cursor:pointer;font-size:0.68rem;">🗑</button>';
+                        html += '</div>';
+                    }
+                    html += '</div>';
+                });
+                html += '<div style="border-radius:0 0 10px 10px;background:var(--bg-secondary);padding:6px 14px;display:flex;justify-content:space-between;font-size:0.78rem;font-weight:600;">';
+                html += '<span style="color:#64748b;">'+moPayments.length+' payment(s)</span>';
+                html += '<span style="color:#10b981;">Total: ₱'+moTotal.toLocaleString()+'</span>';
+                html += '</div></div>';
+            });
+            contEl.innerHTML = html;
+        }
+        window.loadCreditHistory = loadCreditHistory;
+
+        // ═══════════════════════════════════════════════════════
+        // OTHER INCOME HISTORY PAGE
+        // ═══════════════════════════════════════════════════════
+        async function loadOtherIncomeHistory() {
+            const yearEl   = document.getElementById('other-hist-year');
+            const monthEl  = document.getElementById('other-hist-month');
+            const searchEl = document.getElementById('other-hist-search');
+            const summEl   = document.getElementById('other-hist-summary');
+            const contEl   = document.getElementById('other-hist-content');
+            if (!contEl) return;
+
+            contEl.innerHTML = '<div style="text-align:center;padding:20px;color:#64748b;">Loading...</div>';
+
+            const filterYear   = yearEl?.value  || '';
+            const filterMonth  = monthEl?.value || '';
+            const filterSearch = (searchEl?.value || '').toLowerCase();
+
+            const allIncome = await dbGetAll('additionalIncome');
+            // Exclude store ref entries
+            const income = allIncome.filter(i => !i.storeRef);
+
+            // Populate year dropdown
+            const years = [...new Set(income.map(i=>i.date?.substring(0,4)).filter(Boolean))];
+            populateYearDropdown('other-hist-year', years);
+
+            // Filter
+            let filtered = income.filter(i => {
+                if (!i.date) return false;
+                if (filterYear  && !i.date.startsWith(filterYear))  return false;
+                if (filterMonth && i.date.substring(5,7) !== filterMonth) return false;
+                if (filterSearch && !(i.source||'').toLowerCase().includes(filterSearch) &&
+                    !(i.description||'').toLowerCase().includes(filterSearch)) return false;
+                return true;
+            });
+
+            const totalIncome = filtered.reduce((s,i)=>s+(i.amount||0),0);
+            const bySource    = {};
+            filtered.forEach(i => { bySource[i.source||'Other'] = (bySource[i.source||'Other']||0)+(i.amount||0); });
+            const topSource   = Object.entries(bySource).sort((a,b)=>b[1]-a[1])[0];
+
+            if (summEl) {
+                summEl.innerHTML =
+                    '<div style="background:rgba(16,185,129,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#10b981;font-size:1rem;">₱'+totalIncome.toLocaleString()+'</div><div style="font-size:0.7rem;color:#64748b;">Total Income</div></div>' +
+                    '<div style="background:rgba(99,102,241,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#818cf8;font-size:1rem;">'+filtered.length+'</div><div style="font-size:0.7rem;color:#64748b;">Records</div></div>' +
+                    '<div style="background:rgba(245,158,11,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#f59e0b;font-size:0.85rem;">'+(topSource?topSource[0]:'—')+'</div><div style="font-size:0.7rem;color:#64748b;">Top Source</div></div>';
+            }
+
+            // Group by month
+            const byMonth = {};
+            filtered.forEach(i => {
+                const mo = i.date?.substring(0,7);
+                if (!mo) return;
+                if (!byMonth[mo]) byMonth[mo] = [];
+                byMonth[mo].push(i);
+            });
+
+            const sortedMonths = Object.keys(byMonth).sort().reverse();
+            if (sortedMonths.length === 0) {
+                contEl.innerHTML = '<div style="text-align:center;color:#64748b;padding:24px;">No other income found for this period.</div>';
+                return;
+            }
+
+            const isAdmin = currentAppUser && ['owner','admin','manager'].includes(currentAppUser.role);
+            let html = '';
+            sortedMonths.forEach(mo => {
+                const moItems = byMonth[mo];
+                const moTotal = moItems.reduce((s,i)=>s+(i.amount||0),0);
+                const moLabel = new Date(mo+'-01').toLocaleString('default',{month:'long',year:'numeric'});
+                // Group by source within month
+                const moBySource = {};
+                moItems.forEach(i => { moBySource[i.source||'Other'] = (moBySource[i.source||'Other']||0)+(i.amount||0); });
+
+                html += '<div style="margin-bottom:16px;">';
+                html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg-secondary);border-radius:10px 10px 0 0;border-bottom:2px solid #10b981;">';
+                html += '<span style="font-weight:700;font-size:0.9rem;">📅 '+moLabel+'</span>';
+                html += '<span style="color:#10b981;font-weight:700;">₱'+moTotal.toLocaleString()+' · '+moItems.length+' record(s)</span>';
+                html += '</div>';
+
+                moItems.sort((a,b)=>(b.date||'')>(a.date||'')?1:-1).forEach(i => {
+                    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;background:var(--bg-primary);border-bottom:1px solid var(--border-color);">';
+                    html += '<div style="flex:1;">';
+                    html += '<div style="font-weight:600;font-size:0.85rem;">'+(i.source||'Other Income')+'</div>';
+                    html += '<div style="font-size:0.72rem;color:#64748b;">'+i.date+(i.description?' · '+i.description:'')+'</div>';
+                    html += '</div>';
+                    html += '<div style="display:flex;gap:6px;align-items:center;">';
+                    html += '<span style="font-weight:700;color:#10b981;">₱'+(i.amount||0).toLocaleString()+'</span>';
+                    if (isAdmin) {
+                        html += '<button onclick="editAdditionalIncome('+i.id+')" style="padding:2px 6px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:4px;cursor:pointer;font-size:0.68rem;">✏️</button>';
+                        html += '<button onclick="deleteAdditionalIncome('+i.id+')" style="padding:2px 6px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#ef4444;border-radius:4px;cursor:pointer;font-size:0.68rem;">🗑</button>';
+                    }
+                    html += '</div></div>';
+                });
+
+                // Source breakdown for this month
+                html += '<div style="border-radius:0 0 10px 10px;background:var(--bg-secondary);padding:8px 14px;">';
+                html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px;">';
+                Object.entries(moBySource).sort((a,b)=>b[1]-a[1]).forEach(([src,amt]) => {
+                    html += '<span style="font-size:0.7rem;background:rgba(16,185,129,0.1);color:#10b981;padding:2px 8px;border-radius:4px;">'+src+': ₱'+amt.toLocaleString()+'</span>';
+                });
+                html += '</div>';
+                html += '<div style="display:flex;justify-content:space-between;font-size:0.78rem;font-weight:600;">';
+                html += '<span style="color:#64748b;">'+moItems.length+' record(s)</span>';
+                html += '<span style="color:#10b981;">Total: ₱'+moTotal.toLocaleString()+'</span>';
+                html += '</div></div></div>';
+            });
+            contEl.innerHTML = html;
+        }
+        window.loadOtherIncomeHistory = loadOtherIncomeHistory;
+
                 window.refreshStats = refreshStats;
         window.manualSync = manualSync;
         window.clearSpecificData = clearSpecificData;
@@ -24561,8 +25048,20 @@ function _mtShowAppActual() {
     if (!_prismAppInitialized) {
         _prismAppInitialized = true;
         if (typeof init === 'function') {
-            init().catch(e => console.error('[PRISM] init() failed:', e));
+            init().then(() => {
+                // Load dashboard after IDB is ready
+                setTimeout(() => {
+                    if (typeof loadDashboard === 'function') loadDashboard();
+                    if (typeof loadDashIncomeExpense === 'function') loadDashIncomeExpense();
+                }, 400);
+            }).catch(e => console.error('[PRISM] init() failed:', e));
         }
+    } else {
+        // App already initialized — just refresh dashboard
+        setTimeout(() => {
+            if (typeof loadDashboard === 'function') loadDashboard();
+            if (typeof loadDashIncomeExpense === 'function') loadDashIncomeExpense();
+        }, 300);
     }
 
     // Setup endorsement FAB based on role (after init has set currentAppUser)
@@ -25342,7 +25841,19 @@ function _doLocalAdminLogin() {
         mtToast('Welcome! Please set up your organization first.', 'info', 5000);
     } else {
         mtToast('✅ Logged in as Administrator', 'success');
-        setTimeout(() => { mtShowApp(); mtUpdateOrgBadge(); if (typeof updateUserDisplay === 'function') updateUserDisplay(); if (typeof loadTheme === 'function') loadTheme(); if (typeof loadDashboard === 'function') loadDashboard(); }, 300);
+        setTimeout(() => {
+        mtShowApp();
+        mtUpdateOrgBadge();
+        if (typeof updateUserDisplay === 'function') updateUserDisplay();
+        if (typeof loadTheme === 'function') loadTheme();
+        // Wait for IDB to be ready before loading dashboard
+        const _waitAndLoad = async () => {
+            if (window._dbReadyPromise) await window._dbReadyPromise;
+            if (typeof loadDashboard === 'function') await loadDashboard();
+            if (typeof loadDashIncomeExpense === 'function') loadDashIncomeExpense();
+        };
+        _waitAndLoad().catch(e => console.warn('[PRISM] Initial dashboard load:', e));
+    }, 300);
     }
 }
 
