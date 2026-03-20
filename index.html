@@ -22452,7 +22452,7 @@ async function clearAllData() {
                 '<div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;width:100%;max-width:500px;max-height:85vh;overflow-y:auto;">' +
                 '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;position:sticky;top:0;background:#1e293b;padding-bottom:10px;border-bottom:1px solid #334155;">' +
                 '<h3 style="margin:0;color:#f1f5f9;font-size:1rem;">'+title+'</h3>' +
-                '<button onclick="this.closest('div[style*=fixed]').remove()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.3rem;padding:0 4px;">✕</button>' +
+                '<button onclick="this.closest(&quot;div[style*=fixed]&quot;).remove()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.3rem;padding:0 4px;">✕</button>' +
                 '</div>' +
                 '<div>'+html+'</div>' +
                 '</div>';
@@ -23008,6 +23008,177 @@ async function clearAllData() {
             if (typeof viewTenantDetails === 'function') viewTenantDetails(tenantId);
         }
         window.viewTenantFullLedger = viewTenantFullLedger;
+
+                // ═══════════════════════════════════════════════════════
+        // MISSING FUNCTIONS — restored and connected
+        // ═══════════════════════════════════════════════════════
+
+        // ── executeVoidSale — called by confirmVoidSale for Admin/Owner/Manager ──
+        async function executeVoidSale(id, type, reason) {
+            if (!currentAppUser) return;
+            const voidReason = reason || await showInputModal('Void Reason', 'Enter reason for void:');
+            if (!voidReason) return;
+            try {
+                if (type === 'rent' || type === 'rent-payment') {
+                    const p = await dbGet('payments', id);
+                    if (!p) { showToast('⚠️ Payment not found.','warning'); return; }
+                    p.voided = true; p.voidReason = voidReason;
+                    p.voidedAt = new Date().toISOString();
+                    p.voidedBy = currentAppUser.fullname || currentAppUser.username;
+                    await dbUpdate('payments', p);
+                    if (typeof viewTenantDetails === 'function') viewTenantDetails(p.tenantId);
+                } else if (type === 'credit' || type === 'credit-payment') {
+                    const p = await dbGet('creditPayments', id);
+                    if (!p) { showToast('⚠️ Payment not found.','warning'); return; }
+                    p.voided = true; p.voidReason = voidReason;
+                    p.voidedAt = new Date().toISOString();
+                    p.voidedBy = currentAppUser.fullname || currentAppUser.username;
+                    await dbUpdate('creditPayments', p);
+                    if (typeof viewCreditDetails === 'function') viewCreditDetails(p.creditId);
+                } else if (type === 'water' || type === 'water-sale') {
+                    const s = await dbGet('waterSales', id);
+                    if (!s) { showToast('⚠️ Sale not found.','warning'); return; }
+                    s.voided = true; s.voidReason = voidReason;
+                    s.voidedAt = new Date().toISOString();
+                    s.voidedBy = currentAppUser.fullname || currentAppUser.username;
+                    await dbUpdate('waterSales', s);
+                    if (typeof loadWaterCustomers === 'function') loadWaterCustomers();
+                } else if (type === 'store' || type === 'store-sale') {
+                    const s = await dbGet('waterStoreSales', id);
+                    if (!s) { showToast('⚠️ Sale not found.','warning'); return; }
+                    s.voided = true; s.voidReason = voidReason;
+                    s.voidedAt = new Date().toISOString();
+                    s.voidedBy = currentAppUser.fullname || currentAppUser.username;
+                    await dbUpdate('waterStoreSales', s);
+                }
+                debouncedSync();
+                if (typeof loadDashboard === 'function') loadDashboard();
+                if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
+                quickEndorse('void', '🚫 VOID EXECUTED\nType: ' + type + '\nID: ' + id + '\nReason: ' + voidReason + '\nBy: ' + (currentAppUser.fullname||currentAppUser.username));
+                showToast('✅ Record voided successfully.', 'success');
+            } catch(e) { showToast('❌ Void failed: ' + e.message, 'error'); }
+        }
+        window.executeVoidSale = executeVoidSale;
+
+        // ── generateDateRangeTrend — called by generateReports for the trend chart ──
+        async function generateDateRangeTrend(fromDate, toDate, diffDays) {
+            try {
+                const subtitle = document.getElementById('trend-range-subtitle');
+                if (subtitle) {
+                    const fmt = d => d.toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'});
+                    subtitle.textContent = fmt(fromDate) + ' — ' + fmt(toDate) + ' (' + diffDays + ' days)';
+                }
+                const canvas = document.getElementById('six-month-trend');
+                if (!canvas) return;
+
+                const [payments, creditPayments, waterSales, expenses, addIncome] = await Promise.all([
+                    dbGetAll('payments'), dbGetAll('creditPayments'), dbGetAll('waterSales'),
+                    dbGetAll('expenses'), dbGetAll('additionalIncome')
+                ]);
+                const storeSales = await dbGetAll('waterStoreSales').catch(()=>[]);
+
+                // Split range into up to 6 buckets
+                const buckets = Math.min(6, diffDays);
+                const bucketDays = Math.ceil(diffDays / buckets);
+                const labels = [], incomeData = [], expenseData = [];
+
+                for (let i = 0; i < buckets; i++) {
+                    const bFrom = new Date(fromDate); bFrom.setDate(bFrom.getDate() + i * bucketDays);
+                    const bTo   = new Date(fromDate); bTo.setDate(bTo.getDate() + Math.min((i+1)*bucketDays-1, diffDays-1));
+                    const bFromStr = bFrom.toISOString().split('T')[0];
+                    const bToStr   = bTo.toISOString().split('T')[0];
+                    const inRange  = (item, f) => { const d=(item[f||'date']||'').substring(0,10); return d>=bFromStr && d<=bToStr; };
+
+                    const inc = payments.filter(p=>!p.voided&&inRange(p)).reduce((s,p)=>s+(p.amount||0),0)
+                        + creditPayments.filter(p=>!p.voided&&inRange(p)).reduce((s,p)=>s+(p.amount||0),0)
+                        + waterSales.filter(p=>!p.voided&&inRange(p)).reduce((s,p)=>s+(p.amountPaid||0),0)
+                        + storeSales.filter(p=>!p.voided&&inRange(p)).reduce((s,p)=>s+(p.total||0),0)
+                        + addIncome.filter(p=>!p.storeRef&&inRange(p)).reduce((s,p)=>s+(p.amount||0),0);
+                    const exp = expenses.filter(e=>inRange(e)).reduce((s,e)=>s+(e.amount||0),0);
+
+                    const lbl = diffDays <= 7
+                        ? bFrom.toLocaleDateString('en-PH',{weekday:'short',month:'short',day:'numeric'})
+                        : diffDays <= 31
+                        ? bFrom.toLocaleDateString('en-PH',{month:'short',day:'numeric'})
+                        : bFrom.toLocaleDateString('en-PH',{month:'short',year:'2-digit'});
+                    labels.push(lbl);
+                    incomeData.push(Math.round(inc));
+                    expenseData.push(Math.round(exp));
+                }
+
+                // Destroy existing chart if any
+                if (canvas._chartInstance) { canvas._chartInstance.destroy(); }
+                canvas._chartInstance = new Chart(canvas, {
+                    type: 'bar',
+                    data: {
+                        labels,
+                        datasets: [
+                            { label: 'Income', data: incomeData, backgroundColor: 'rgba(16,185,129,0.7)', borderRadius: 4 },
+                            { label: 'Expenses', data: expenseData, backgroundColor: 'rgba(239,68,68,0.6)', borderRadius: 4 }
+                        ]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { labels: { color: '#94a3b8' } } },
+                        scales: {
+                            x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                            y: { ticks: { color: '#64748b', callback: v => '₱'+v.toLocaleString() }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                        }
+                    }
+                });
+            } catch(e) { console.error('[generateDateRangeTrend]', e); }
+        }
+        window.generateDateRangeTrend = generateDateRangeTrend;
+
+        // ── applyRoleNav — show/hide nav items based on role ──
+        function applyRoleNav() {
+            const role = currentAppUser && currentAppUser.role;
+            if (!role) return;
+            // Hide employees nav for supervisor
+            const navBtns = document.querySelectorAll('.nav-btn, .bottom-nav-item');
+            navBtns.forEach(btn => {
+                const section = btn.dataset.section;
+                if (!section) return;
+                // Supervisor blocked from employees
+                if (section === 'employees' && role === 'supervisor') {
+                    btn.style.display = 'none';
+                }
+                // Viewer only sees dashboard, reports, notes
+                if (role === 'viewer' && !['dashboard','reports','notes'].includes(section)) {
+                    btn.style.opacity = '0.5';
+                }
+            });
+        }
+        window.applyRoleNav = applyRoleNav;
+
+        // ── loadEndorsements — load endorsement inbox ──
+        async function loadEndorsements() {
+            if (typeof loadAdminInbox === 'function') return loadAdminInbox();
+            if (typeof submitEndorsement === 'function') return;
+            // Fallback: trigger endorsement panel refresh
+            const inboxEl = document.getElementById('endorsement-inbox');
+            if (inboxEl && typeof renderEndorsementInbox === 'function') renderEndorsementInbox();
+        }
+        window.loadEndorsements = loadEndorsements;
+
+        // ── loadGiveSalaryModal ──
+        function loadGiveSalaryModal(employeeId) {
+            if (typeof showGiveSalaryModal === 'function') return showGiveSalaryModal(employeeId);
+            const el = document.getElementById('salary-employee-id');
+            if (el) el.value = employeeId || '';
+            showModal('give-salary-modal');
+        }
+        window.loadGiveSalaryModal = loadGiveSalaryModal;
+
+        // ── dismissAllReminders ──
+        function dismissAllReminders() {
+            localStorage.setItem('prism_reminders_dismissed', new Date().toDateString());
+            const banner = document.getElementById('reminder-banner') ||
+                           document.getElementById('reminders-section');
+            if (banner) banner.style.display = 'none';
+            showToast('✅ All reminders dismissed.', 'success');
+        }
+        window.dismissAllReminders = dismissAllReminders;
 
                 window.refreshStats = refreshStats;
         window.manualSync = manualSync;
@@ -24088,133 +24259,7 @@ async function clearAllData() {
         }
         window.filterWaterSalesList = filterWaterSalesList;
 
-        function filterWaterSalesList(query) {
-            const q = query.toLowerCase();
-            document.querySelectorAll('#water-sales-rows .list-item').forEach(row => {
-                const name = row.dataset.name || '';
-                const date = row.dataset.date || '';
-                row.style.display = (name.includes(q) || date.includes(q)) ? '' : 'none';
-            });
-        }
-        window.filterWaterSalesList = filterWaterSalesList;
-
-        window.editRentPayment = editRentPayment;
-        window.voidRentPayment = voidRentPayment;
-        window.editCreditPayment = editCreditPayment;
-        window.voidCreditPayment = voidCreditPayment;
-        window.editWaterSaleRecord = editWaterSaleRecord;
-        window.voidWaterSale = voidWaterSale;
-        window.editSalaryRecord = editSalaryRecord;
-        window.deleteSalaryRecord = deleteSalaryRecord;
-        window.deleteTimeRecord = deleteTimeRecord;
         
-        // Income functions
-        window.loadIncome = loadIncome;
-        window.saveIncome = saveIncome;
-        window.editIncome = editIncome;
-        window.deleteIncome = deleteIncome;
-        window.showAddIncomeModal = showAddIncomeModal;
-        window.quickAddIncome = quickAddIncome;
-        window.filterIncome = filterIncome;
-        window.showIncomeDetail = showIncomeDetail;
-        
-        // Note functions
-        window.setNoteFilter = setNoteFilter;
-        window.openNoteWithCategory = openNoteWithCategory;
-        window.filterNotes = filterNotes;
-        window.showAddNoteModal = showAddNoteModal;
-        window.saveNote = saveNote;
-        window.editNote = editNote;
-        window.deleteNote = deleteNote;
-        window.viewNoteDetails = viewNoteDetails;
-        window.addClientNote = addClientNote;
-        window.showNotesSummaryModal = showNotesSummaryModal;
-        window.showSection = showSection;
-        window.showModal = showModal;
-        window.setWaterFilter = setWaterFilter;
-        window.showStaffFlashcardDetail = showStaffFlashcardDetail;
-        window.showVoidRequests = showVoidRequests;
-        window.showWaterFlashcardDetail = showWaterFlashcardDetail;
-        window.showFlashcardDetail      = showFlashcardDetail;
-        window.toggleTheme              = toggleTheme;
-        window.showWaterSaleModal = showWaterSaleModal;
-
-        // ── Water Sale Quick CRUD (from Today's Sales panel) ──
-
-        async function waterSaleQuickEdit(saleId) {
-            const sale = await dbGet('waterSales', saleId);
-            if (!sale) { showToast('⚠️ Sale record not found.', 'warning'); return; }
-
-            const cust = (await dbGetAll('waterCustomers')).find(c => c.id === sale.customerId);
-            const custName = cust ? cust.name : (sale.customerName || 'Walk-in');
-
-            // Build edit modal
-            const modal = document.createElement('div');
-            modal.id = 'ws-quick-edit-modal';
-            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
-            modal.innerHTML = `
-                <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                        <h3 style="margin:0;color:#f1f5f9;font-size:1rem;">✏️ Edit Water Sale</h3>
-                        <button onclick="document.getElementById('ws-quick-edit-modal').remove()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.2rem;">✕</button>
-                    </div>
-                    <div style="font-size:0.82rem;color:#94a3b8;margin-bottom:14px;">Customer: <strong style="color:#f1f5f9;">${custName}</strong></div>
-
-                    <div class="form-group">
-                        <label style="font-size:0.82rem;color:#94a3b8;">Bottles / Qty</label>
-                        <input type="number" id="wse-gallons" value="${sale.gallons||0}" min="1"
-                            style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:1rem;box-sizing:border-box;">
-                    </div>
-                    <div class="form-group">
-                        <label style="font-size:0.82rem;color:#94a3b8;">Price per Unit (₱)</label>
-                        <input type="number" id="wse-price" value="${sale.pricePerGallon||0}" min="0"
-                            style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:1rem;box-sizing:border-box;"
-                            oninput="wseCalc()">
-                    </div>
-                    <div class="form-group">
-                        <label style="font-size:0.82rem;color:#94a3b8;">Amount Paid (₱)</label>
-                        <input type="number" id="wse-paid" value="${sale.amountPaid||sale.total||0}" min="0"
-                            style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:1rem;box-sizing:border-box;"
-                            oninput="wseCalc()">
-                    </div>
-                    <div class="form-group">
-                        <label style="font-size:0.82rem;color:#94a3b8;">Payment Type</label>
-                        <select id="wse-status" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;box-sizing:border-box;">
-                            <option value="paid" ${sale.status==='paid'?'selected':''}>💵 Cash (Paid)</option>
-                            <option value="credit" ${sale.status==='credit'?'selected':''}>📝 Credit (Pay Later)</option>
-                            <option value="partial" ${sale.status==='partial'?'selected':''}>💰 Partial Payment</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label style="font-size:0.82rem;color:#94a3b8;">Date</label>
-                        <input type="date" id="wse-date" value="${sale.date||''}"
-                            style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;box-sizing:border-box;">
-                    </div>
-                    <div class="form-group">
-                        <label style="font-size:0.82rem;color:#94a3b8;">Notes</label>
-                        <textarea id="wse-notes" rows="2"
-                            style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:0.88rem;box-sizing:border-box;resize:none;">${sale.notes||''}</textarea>
-                    </div>
-
-                    <!-- Net summary -->
-                    <div id="wse-summary" style="background:#0f172a;border-radius:8px;padding:10px;margin-bottom:14px;font-size:0.82rem;color:#94a3b8;"></div>
-
-                    <div style="display:flex;gap:8px;">
-                        <button onclick="waterSaleQuickSave(${saleId})"
-                            style="flex:1;padding:11px;background:#10b981;border:none;border-radius:8px;color:white;font-weight:700;cursor:pointer;font-size:0.9rem;">
-                            💾 Save Changes
-                        </button>
-                        <button onclick="document.getElementById('ws-quick-edit-modal').remove()"
-                            style="flex:1;padding:11px;background:rgba(255,255,255,0.06);border:1px solid #334155;border-radius:8px;color:#94a3b8;cursor:pointer;">
-                            Cancel
-                        </button>
-                    </div>
-                </div>`;
-            document.body.appendChild(modal);
-            wseCalc();
-        }
-        window.waterSaleQuickEdit = waterSaleQuickEdit;
-
         function wseCalc() {
             const qty   = parseFloat(document.getElementById('wse-gallons')?.value) || 0;
             const price = parseFloat(document.getElementById('wse-price')?.value) || 0;
@@ -24476,6 +24521,7 @@ function _mtShowAppActual() {
     if (typeof setupNavigation === 'function') setupNavigation();
     if (typeof updateUserDisplay === 'function') updateUserDisplay();
     if (typeof loadTheme === 'function') loadTheme();
+    if (typeof applyRoleNav === 'function') applyRoleNav();
 
     // Auto-clear old system errors from inbox
     setTimeout(function() { if (typeof clearOldSystemErrors === 'function') clearOldSystemErrors(); }, 2000);
