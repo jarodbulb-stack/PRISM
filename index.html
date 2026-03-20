@@ -13965,7 +13965,7 @@ async function loadWaterCustomers() {
 
         async function showWaterSaleModal() {
             const customers = await dbGetAll('waterCustomers');
-            let options = '<option value="">Select customer</option>';
+            let options = '<option value="">Select customer (optional)</option><option value="walkin">👤 Walk-in / No name</option>';
             customers.forEach(c => {
                 options += `<option value="${c.id}">${c.name}</option>`;
             });
@@ -14057,7 +14057,7 @@ async function loadWaterCustomers() {
             window._wsCart.push({ type:'big', bottleSize:'18L', qty:qty, price:price,
                 subtotal:subtotal, discount:discount, packageDeal:discount>0,
                 label:qty+' x Big (18L) @ P'+price, containerType:'big' });
-            var el = document.getElementById('ws-big-qty-input'); if (el) el.value = '1';
+            var el = document.getElementById('ws-big-qty-input'); if (el) el.value = '0';
             wsCartRender();
         }
         window.wsQuickAddBig = wsQuickAddBig;
@@ -14122,9 +14122,10 @@ async function loadWaterCustomers() {
             if (!customerId && newCustomer) {
                 customerId = await dbAdd('waterCustomers', { name: newCustomer, createdAt: new Date().toISOString() });
             }
+            // Allow walk-in sales without a customer name
             if (!customerId) {
-                showToast('⚠️ Please select or enter a customer name.', 'warning');
-                return;
+                // Create a walk-in customer record or use generic
+                customerId = 'walkin_' + Date.now();
             }
             if (!date) {
                 showToast('⚠️ Please enter a date.', 'warning');
@@ -14169,7 +14170,12 @@ async function loadWaterCustomers() {
                 date,  notes,
                 createdAt:     new Date().toISOString(),
                 recordedBy:    currentAppUser?.username   || 'unknown',
-                recordedByRole:currentAppUser?.role       || 'unknown'
+                recordedByRole:currentAppUser?.role       || 'unknown',
+                customerName:  (function(){
+                    var sel = document.getElementById('water-sale-customer');
+                    var opt = sel ? sel.options[sel.selectedIndex] : null;
+                    return opt && opt.value ? opt.text : (newCustomer || 'Walk-in');
+                })()
             };
 
             try {
@@ -23682,6 +23688,11 @@ async function clearAllData() {
             contEl.innerHTML = html;
         }
         window.loadOtherIncomeHistory = loadOtherIncomeHistory;
+
+                // ── Water module window exposures ──
+        window.loadWaterCustomers         = loadWaterCustomers;
+        window.viewWaterCustomerDetails   = viewWaterCustomerDetails;
+        window.showWaterCustomerSalesHistory = showWaterCustomerSalesHistory;
 
                 window.refreshStats = refreshStats;
         window.manualSync = manualSync;
