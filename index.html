@@ -22708,7 +22708,7 @@ async function clearAllData() {
                         const custTotal = cust.sales.reduce((a,s) => a + Math.max(0,(s.total||0)-(s.amountPaid||0)), 0);
                         html += '<div style="margin-bottom:12px;background:var(--bg-secondary);border-radius:10px;overflow:hidden;">';
                         // Customer header — clickable → ledger
-                        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-bottom:1px solid var(--border-color);cursor:pointer;background:rgba(239,68,68,0.05);" onclick="document.getElementById('wcfd-modal').remove();viewWaterCustomerDetails(' + cust.id + ')">';
+                        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-bottom:1px solid var(--border-color);cursor:pointer;background:rgba(239,68,68,0.05);" onclick="document.getElementById(&quot;wcfd-modal&quot;).remove();viewWaterCustomerDetails(' + cust.id + ')">';
                         html += '<span style="font-weight:700;color:#f87171;font-size:0.88rem;">👤 ' + cust.name + '</span>';
                         html += '<span style="font-weight:800;color:#ef4444;">₱' + custTotal.toLocaleString() + ' owed</span>';
                         html += '</div>';
@@ -22739,7 +22739,7 @@ async function clearAllData() {
                     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
                     '<div><h3 style="margin:0;color:#f1f5f9;font-size:1rem;">💳 Unpaid Water Credits</h3>' +
                     '<div style="font-size:0.75rem;color:#f59e0b;margin-top:2px;">Total owed: ₱' + totalUnpaid.toLocaleString() + ' · ' + unpaidSales.length + ' transaction(s)</div></div>' +
-                    '<button onclick="document.getElementById('wcfd-modal').remove()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.2rem;padding:0 4px;">✕</button>' +
+                    '<button onclick="document.getElementById(&quot;wcfd-modal&quot;).remove()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.2rem;padding:0 4px;">✕</button>' +
                     '</div>' +
                     '<div style="overflow-y:auto;flex:1;">' + html + '</div>' +
                     '<div style="padding-top:10px;margin-top:8px;border-top:1px solid #334155;font-size:0.75rem;color:#64748b;text-align:center;">Tap a customer name to open their full ledger</div>' +
@@ -22770,7 +22770,7 @@ async function clearAllData() {
                     html = '<div style="text-align:center;color:#64748b;padding:20px;">No customers yet.</div>';
                 } else {
                     custData.forEach(c => {
-                        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border-color);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='rgba(56,189,248,0.05)'" onmouseout="this.style.background='transparent'" onclick="document.getElementById('wcfd-modal').remove();viewWaterCustomerDetails(' + c.id + ')">';
+                        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border-color);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='rgba(56,189,248,0.05)'" onmouseout="this.style.background='transparent'" onclick="document.getElementById(&quot;wcfd-modal&quot;).remove();viewWaterCustomerDetails(' + c.id + ')">';
                         html += '<div style="flex:1;">';
                         html += '<div style="font-weight:600;font-size:0.88rem;color:#60a5fa;">' + c.name + '</div>';
                         html += '<div style="font-size:0.72rem;color:#64748b;">' + c.saleCount + ' purchase(s) · Last: ' + c.lastSale + '</div>';
@@ -22796,7 +22796,7 @@ async function clearAllData() {
                     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
                     '<div><h3 style="margin:0;color:#f1f5f9;font-size:1rem;">👥 Water Customers</h3>' +
                     '<div style="font-size:0.75rem;color:#64748b;margin-top:2px;">' + custData.length + ' customer(s) · Tap to open ledger</div></div>' +
-                    '<button onclick="document.getElementById('wcfd-modal').remove()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.2rem;padding:0 4px;">✕</button>' +
+                    '<button onclick="document.getElementById(&quot;wcfd-modal&quot;).remove()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.2rem;padding:0 4px;">✕</button>' +
                     '</div>' +
                     '<div style="overflow-y:auto;flex:1;">' + html + '</div>' +
                     '</div>';
@@ -22836,7 +22836,7 @@ async function clearAllData() {
                             : x.status==='partial'
                             ? '<span style="color:#f97316;font-size:0.7rem;font-weight:700;">PARTIAL</span>'
                             : '<span style="color:#10b981;font-size:0.7rem;font-weight:700;">PAID</span>';
-                        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color);cursor:pointer;" onclick="document.getElementById('wfd-modal').remove();viewWaterCustomerDetails(' + (x.customerId) + ')">';
+                        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color);cursor:pointer;" onclick="document.getElementById(&quot;wfd-modal&quot;).remove();viewWaterCustomerDetails(' + (x.customerId) + ')">';
                         html += '<div><div style="font-weight:600;font-size:0.85rem;color:#60a5fa;">' + name + '</div>';
                         html += '<div style="font-size:0.72rem;color:#64748b;">' + summary + ' · ' + (x.date||'') + ' ' + statusBadge + '</div></div>';
                         html += '<span style="font-weight:700;color:' + (isPaid?'#10b981':'#f59e0b') + ';white-space:nowrap;margin-left:8px;">₱' + (x.total||x.amountPaid||0).toLocaleString() + '</span>';
@@ -22863,7 +22863,7 @@ async function clearAllData() {
                 '<div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;width:100%;max-width:480px;max-height:85vh;display:flex;flex-direction:column;">' +
                 '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
                 '<h3 style="margin:0;color:#f1f5f9;font-size:1rem;">💧 Water Sales</h3>' +
-                '<button onclick="document.getElementById('wfd-modal').remove()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.2rem;padding:0 4px;">✕</button>' +
+                '<button onclick="document.getElementById(&quot;wfd-modal&quot;).remove()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.2rem;padding:0 4px;">✕</button>' +
                 '</div>' +
                 '<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">' +
                 '<input type="date" id="wfd-from" value="' + defaultFrom + '" style="flex:1;padding:6px 8px;background:#0f172a;border:1px solid #334155;border-radius:7px;color:#f1f5f9;font-size:0.78rem;" onchange="wfdReload()">' +
