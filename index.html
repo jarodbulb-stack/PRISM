@@ -3169,7 +3169,7 @@
             </div>
             <h1 class="prism-splash-title">PRISM</h1>
             <p class="prism-splash-sub">Property · Rental · Income · Sales · Management</p>
-            <button class="prism-enter-btn" onclick="prismGoToLogin()">
+            <button class="prism-enter-btn" onclick="prismEnterApp()">
                 <span>Enter</span>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </button>
@@ -18450,7 +18450,7 @@ async function showPayrollSummary() {
             const pageEnd   = Math.min(pageStart + _ITX_PER_PAGE, total);
             const pageTxns  = _itxAllTxns.slice(pageStart, pageEnd);
 
-            const methodLabel = {cash:'Cash',gcash:'GCash',maya:'Maya',bank:'Bank',other:'Other'};
+            const methodLabel = {cash:'Cash',gcash:'GCash',maya:'Maya',bank:'Bank',other:'Other',credit:'Credit',partial:'Partial',paid:'Paid'};
             const roleColor   = {owner:'#a78bfa',admin:'#60a5fa',manager:'#34d399',cashier:'#fbbf24',viewer:'#94a3b8'};
             const borderColor = {rent:'#818cf8',credit:'#f59e0b',water:'#38bdf8',income:'#10b981',store:'#a78bfa'};
 
@@ -18504,8 +18504,8 @@ async function showPayrollSummary() {
                             ${t.sub?`<div style="font-size:0.72rem;color:var(--text-secondary);margin-top:2px;padding-left:20px;">${t.sub}</div>`:''}
                         </div>
                         <div style="text-align:right;flex-shrink:0;margin-left:8px;">
-                            <div style="font-weight:700;color:#10b981;font-size:0.9rem;">+&#8369;${t.amount.toLocaleString()}</div>
-                            <div style="font-size:0.68rem;color:var(--text-secondary);">${methodLabel[t.method]||t.method||'—'}</div>
+                            <div style="font-weight:700;color:${t.method==='credit'?'#f59e0b':'#10b981'};font-size:0.9rem;">+&#8369;${t.amount.toLocaleString()}</div>
+                            <div style="font-size:0.68rem;color:${t.method==='credit'?'#f59e0b':t.method==='partial'?'#f97316':'var(--text-secondary)'};">${methodLabel[t.method]||t.method||'—'}</div>
                         </div>
                     </div>
                     ${crudBtns}
@@ -18640,7 +18640,7 @@ async function showPayrollSummary() {
                     txns.push(...waterSales.filter(s=>inRange(s.date||'')&&!s.voided).map(s=>({
                         icon:'💧', type:'Water',
                         name: s.customerName || _wcustMap[s.customerId] || 'Walk-in',
-                        amount:s.amountPaid||0, method:s.paymentMethod||'cash', date:s.date||'',
+                        amount:s.total||s.amountPaid||0, method:s.paymentMethod||s.status||'cash', date:s.date||'',
                         sub:(s.orderSummary
                             ? s.orderSummary + (s.packageDeal?' 🎁':'') + (s.balance>0?' · Bal:₱'+s.balance.toLocaleString():'')
                             : (s.containerType==='small'
@@ -18682,7 +18682,7 @@ async function showPayrollSummary() {
                 // Summary pills (whole range)
                 const totalRent   = payments.filter(p=>inRange(p.date||'')&&!p.voided).reduce((s,p)=>s+(p.amount||0),0);
                 const totalCredit = creditPayments.filter(p=>inRange(p.date||'')&&!p.voided).reduce((s,p)=>s+(p.amount||0),0);
-                const totalWater  = waterSales.filter(s=>inRange(s.date||'')&&!s.voided).reduce((s,x)=>s+(x.amountPaid||0),0);
+                const totalWater  = waterSales.filter(s=>inRange(s.date||'')&&!s.voided).reduce((s,x)=>s+(x.total||x.amountPaid||0),0);
                 const totalOther  = income.filter(i=>inRange(i.date||'')&&!i.storeRef).reduce((s,i)=>s+(i.amount||0),0);
                 let totalStore = 0;
                 try {
@@ -18702,7 +18702,7 @@ async function showPayrollSummary() {
                     </div>
                     <div style="background:rgba(245,158,11,0.1);border-radius:8px;padding:8px;text-align:center;cursor:pointer;" onclick="document.getElementById('income-today-filter').value='credit';loadIncomeTodayFeed()">
                         <div style="font-weight:700;color:#f59e0b;font-size:0.85rem;">₱${totalCredit.toLocaleString()}</div>
-                        <div style="font-size:0.65rem;color:var(--text-secondary);">💳 Credit</div>
+                        <div style="font-size:0.65rem;color:var(--text-secondary);">💳 Loans</div>
                     </div>
                     <div style="background:rgba(14,165,233,0.1);border-radius:8px;padding:8px;text-align:center;cursor:pointer;" onclick="document.getElementById('income-today-filter').value='water';loadIncomeTodayFeed()">
                         <div style="font-weight:700;color:#38bdf8;font-size:0.85rem;">₱${totalWater.toLocaleString()}</div>
@@ -27367,68 +27367,29 @@ async function mtInit() {
     // Show landing immediately — don't wait for Firebase
     mtHideLoading();
     
-    // Restore session immediately if local data exists (prevents flash of landing page)
+    // Check for saved session — but always show homepage first
+    // Session is stored as pending; launched only when user clicks Enter
     const savedUser = localStorage.getItem('carent_current_user');
     const savedOrg  = localStorage.getItem('mt_current_org');
+    window._pendingSession = null;
     if (savedUser && savedOrg) {
         try {
             const u = JSON.parse(savedUser);
             const o = JSON.parse(savedOrg);
             if (u && o && o.name) {
-                // For SUPER_ADMINS: restore session immediately then verify Firebase in background
-                // (no longer force them to sit at landing waiting for Firebase)
                 const isSAEmail = MT.SUPER_ADMINS.map(e=>e.toLowerCase()).includes((u.email||'').toLowerCase());
-                if (isSAEmail) {
-                    // Immediately restore with corrected owner role
-                    currentAppUser   = { ...u, role: 'owner' };
-                    MT.currentOrg   = o;
-                    MT.currentOrgRole = 'owner';
-                    MT.currentUser  = { uid: 'local_' + (u.id||1), email: u.email||'local@prism.app', displayName: u.fullname };
-                    mtShowApp();
-                    mtUpdateOrgBadge();
-                    // Show loading overlay immediately
-                    const _saLoad = document.getElementById('prism-app-loading');
-                    if (_saLoad) _saLoad.classList.remove('hidden');
-                    setTimeout(async () => {
-                        if (typeof updateUserDisplay === 'function') updateUserDisplay();
-                        if (typeof applyRoleNav === 'function') applyRoleNav();
-                        if (window._dbReadyPromise) await window._dbReadyPromise;
-                        if (typeof loadDashboard === 'function') await loadDashboard();
-                        // Hide overlay when data ready
-                        const _ld = document.getElementById('prism-app-loading');
-                        if (_ld) _ld.classList.add('hidden');
-                        setTimeout(() => {
-                            if (typeof prismAddCashierButtons === 'function') prismAddCashierButtons();
-                            if (typeof prismLoadAdminNotifications === 'function') prismLoadAdminNotifications();
-                        }, 800);
-                    }, 300);
-                } else {
-                    // Non-SA: restore session normally
-                    currentAppUser   = u;
-                    MT.currentOrg   = o;
-                    MT.currentOrgRole = u.role || 'admin';
-                    MT.currentUser  = { uid: 'local_' + (u.id||1), email: u.email||'local@prism.app', displayName: u.fullname };
-                    mtShowApp();
-                    mtUpdateOrgBadge();
-                    setTimeout(async () => {
-                        if (typeof updateUserDisplay === 'function') updateUserDisplay();
-                        if (typeof applyRoleNav === 'function') applyRoleNav();
-                        if (currentAppUser && currentAppUser.role === 'cashier') {
-                            await prismCashierAutoTimeIn();
-                        }
-                        if (window._dbReadyPromise) await window._dbReadyPromise;
-                        if (typeof loadDashboard === 'function') loadDashboard();
-                        setTimeout(() => {
-                            if (typeof prismAddCashierButtons === 'function') prismAddCashierButtons();
-                            if (typeof prismLoadAdminNotifications === 'function') prismLoadAdminNotifications();
-                        }, 800);
-                    }, 300);
-                }
+                // Store pending session — will be used when Enter is clicked
+                window._pendingSession = {
+                    user: isSAEmail ? { ...u, role: 'owner' } : u,
+                    org:  o,
+                    role: isSAEmail ? 'owner' : (u.role || 'admin'),
+                    isSA: isSAEmail
+                };
             }
-        } catch(e) { mtShowLanding(); }
-    } else {
-        mtShowLanding();
+        } catch(e) {}
     }
+    // Always show the homepage/splash first
+    mtShowLanding();
 
     // Update auth page status when Firebase becomes ready
     const updateAuthStatus = () => {
@@ -27719,6 +27680,40 @@ window.mtSAToggleOrgStatus=mtSAToggleOrgStatus;
             const target = document.getElementById(id);
             if (target) target.classList.add('active');
         }
+
+        function prismEnterApp() {
+            // If we have a pending saved session, restore it and go straight to app
+            if (window._pendingSession) {
+                const ps = window._pendingSession;
+                window._pendingSession = null;
+                currentAppUser    = ps.user;
+                MT.currentOrg     = ps.org;
+                MT.currentOrgRole = ps.role;
+                MT.currentUser    = { uid: 'local_' + (ps.user.id||1), email: ps.user.email||'local@prism.app', displayName: ps.user.fullname };
+                mtShowApp();
+                mtUpdateOrgBadge();
+                const _saLoad = document.getElementById('prism-app-loading');
+                if (_saLoad) _saLoad.classList.remove('hidden');
+                setTimeout(async () => {
+                    if (typeof updateUserDisplay === 'function') updateUserDisplay();
+                    if (typeof applyRoleNav === 'function') applyRoleNav();
+                    if (ps.isSA && currentAppUser) currentAppUser.role = 'owner';
+                    if (window._dbReadyPromise) await window._dbReadyPromise;
+                    if (typeof loadDashboard === 'function') await loadDashboard();
+                    if (typeof loadDashIncomeExpense === 'function') loadDashIncomeExpense();
+                    const _ld = document.getElementById('prism-app-loading');
+                    if (_ld) _ld.classList.add('hidden');
+                    setTimeout(() => {
+                        if (typeof prismAddCashierButtons === 'function') prismAddCashierButtons();
+                        if (typeof prismLoadAdminNotifications === 'function') prismLoadAdminNotifications();
+                    }, 800);
+                }, 200);
+            } else {
+                // No saved session — go to login screen
+                prismGoToLogin();
+            }
+        }
+        window.prismEnterApp = prismEnterApp;
 
         function prismGoToLogin() {
             prismScreen('prism-login-screen');
