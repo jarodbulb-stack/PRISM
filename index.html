@@ -22770,7 +22770,7 @@ async function clearAllData() {
                     html = '<div style="text-align:center;color:#64748b;padding:20px;">No customers yet.</div>';
                 } else {
                     custData.forEach(c => {
-                        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border-color);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='rgba(56,189,248,0.05)'" onmouseout="this.style.background='transparent'" onclick="document.getElementById(&quot;wcfd-modal&quot;).remove();viewWaterCustomerDetails(' + c.id + ')">';
+                        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border-color);cursor:pointer;transition:background 0.15s;" onclick="document.getElementById(&quot;wcfd-modal&quot;).remove();viewWaterCustomerDetails(' + c.id + ')">';
                         html += '<div style="flex:1;">';
                         html += '<div style="font-weight:600;font-size:0.88rem;color:#60a5fa;">' + c.name + '</div>';
                         html += '<div style="font-size:0.72rem;color:#64748b;">' + c.saleCount + ' purchase(s) · Last: ' + c.lastSale + '</div>';
