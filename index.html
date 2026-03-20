@@ -6449,7 +6449,7 @@
                                     <button type="button" onclick="wsQuickAddBig(35)" style="padding:3px 8px;border-radius:5px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-size:0.72rem;font-weight:600;">₱35</button>
                                 </div>
                                 <div style="display:flex;gap:4px;align-items:center;">
-                                    <input type="number" id="ws-big-qty-input" min="1" value="1" placeholder="Qty"
+                                    <input type="number" id="ws-big-qty-input" min="0" value="0" placeholder="Qty"
                                         style="width:52px;padding:5px;background:#0f172a;border:1px solid #334155;border-radius:6px;color:#f1f5f9;font-size:0.88rem;text-align:center;">
                                     <span style="font-size:0.72rem;color:#64748b;">bottles</span>
                                 </div>
@@ -6464,7 +6464,7 @@
                                     <button type="button" onclick="wsQuickAddSmall('15L',20)" style="padding:3px 6px;border-radius:5px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-size:0.68rem;">Lg ₱20</button>
                                 </div>
                                 <div style="display:flex;gap:4px;align-items:center;">
-                                    <input type="number" id="ws-small-qty-input" min="1" value="1" placeholder="Qty"
+                                    <input type="number" id="ws-small-qty-input" min="0" value="0" placeholder="Qty"
                                         style="width:52px;padding:5px;background:#0f172a;border:1px solid #334155;border-radius:6px;color:#f1f5f9;font-size:0.88rem;text-align:center;">
                                     <span style="font-size:0.72rem;color:#64748b;">bottles</span>
                                 </div>
@@ -12161,6 +12161,7 @@ async function recordTenantPayment(tenantId) {
         async function editWaterSaleRecord(saleId, customerId) {
             incomeFeedEdit('water', saleId, customerId);
         }
+        window.editWaterSaleRecord = editWaterSaleRecord;
 
         async function voidWaterSale(saleId, customerId) {
             if (!currentAppUser || !['owner','admin'].includes(currentAppUser.role)) return;
@@ -12178,6 +12179,7 @@ async function recordTenantPayment(tenantId) {
             showToast('🚫 Water sale voided.', 'success');
             await viewWaterCustomerDetails(customerId);
         }
+        window.voidWaterSale = voidWaterSale;
 
         async function editSalaryRecord(salaryId, employeeId) {
             if (!currentAppUser || !['owner','admin'].includes(currentAppUser.role)) return;
@@ -13914,6 +13916,7 @@ async function loadWaterCustomers() {
                 </div>
             `).join('');
         }
+        window.deleteWaterSale = deleteWaterSale;
 
         async function saveWaterCustomer(event) {
             event.preventDefault();
@@ -13958,6 +13961,7 @@ async function loadWaterCustomers() {
                 showToast('❌ Error: ' + error.message, 'error');
             }
         }
+        window.saveWaterCustomer = saveWaterCustomer;
 
         async function showWaterSaleModal() {
             const customers = await dbGetAll('waterCustomers');
@@ -13970,8 +13974,14 @@ async function loadWaterCustomers() {
             document.getElementById('water-sale-new-customer').value = '';
             document.getElementById('water-sale-notes').value = '';
             document.getElementById('water-sale-payment-type').value = 'cash';
-            // Reset cart
+            // Reset cart and qty inputs
             window._wsCart = [];
+            var bigQty = document.getElementById('ws-big-qty-input');
+            var smlQty = document.getElementById('ws-small-qty-input');
+            if (bigQty) bigQty.value = '0';
+            if (smlQty) smlQty.value = '0';
+            // Reset selected price buttons
+            document.querySelectorAll('.ws-price-btn').forEach(b => b.classList.remove('active'));
             wsCartRender();
             showModal('water-sale-modal');
         }
@@ -14038,7 +14048,7 @@ async function loadWaterCustomers() {
         window.wsCartRemove = wsCartRemove;
 
         function wsQuickAddBig(price) {
-            var qty = parseInt((document.getElementById('ws-big-qty-input')||{}).value) || 1;
+            var qty = parseInt((document.getElementById('ws-big-qty-input')||{}).value) || 0;
             if (qty <= 0) { showToast('Please enter a valid quantity.', 'warning'); return; }
             var gross = qty * price;
             var discount = 0;
@@ -14053,7 +14063,7 @@ async function loadWaterCustomers() {
         window.wsQuickAddBig = wsQuickAddBig;
 
         function wsQuickAddSmall(size, price) {
-            var qty = parseInt((document.getElementById('ws-small-qty-input')||{}).value) || 1;
+            var qty = parseInt((document.getElementById('ws-small-qty-input')||{}).value) || 0;
             if (qty <= 0) { showToast('Please enter a valid quantity.', 'warning'); return; }
             var sizeLabel = size==='500cc'?'Small(500cc-1L)':size==='4-10L'?'Medium(4L-10L)':'Large(15L)';
             window._wsCart.push({ type:'small', bottleSize:size, qty:qty, price:price,
@@ -14081,6 +14091,7 @@ async function loadWaterCustomers() {
             const type = document.getElementById('water-sale-payment-type').value;
             document.getElementById('water-partial-group').style.display = type === 'partial' ? 'block' : 'none';
         }
+        window.showWaterSaleModal = showWaterSaleModal;
 
         async function saveWaterSale(event) {
             event.preventDefault();
@@ -14189,6 +14200,7 @@ async function loadWaterCustomers() {
                 showToast('❌ Error: ' + error.message, 'error');
             }
         }
+        window.saveWaterSale = saveWaterSale;
 
         async function viewWaterCustomerDetails(id) {
             const customer = await dbGet('waterCustomers', id);
@@ -14305,6 +14317,7 @@ async function loadWaterCustomers() {
             
             processWaterPayment(customerId, paymentAmount);
         }
+        window.showWaterPaymentModal = showWaterPaymentModal;
 
         async function processWaterPayment(customerId, paymentAmount) {
             // Get unpaid sales and apply payment (oldest first)
@@ -14351,6 +14364,7 @@ async function loadWaterCustomers() {
             document.getElementById('water-sale-customer').value = customerId;
             document.getElementById('water-sale-new-customer').value = '';
         }
+        window.addWaterSaleForCustomer = addWaterSaleForCustomer;
 
         async function editWaterCustomer(id) {
             const customer = await dbGet('waterCustomers', id);
@@ -14365,6 +14379,7 @@ async function loadWaterCustomers() {
             hideModal('water-customer-detail-modal');
             showModal('water-customer-modal');
         }
+        window.editWaterCustomer = editWaterCustomer;
 
         async function deleteWaterCustomer(id) {
             if (currentAppUser && currentAppUser.role === 'cashier') {
@@ -14387,6 +14402,7 @@ async function loadWaterCustomers() {
             loadWaterCustomers();
             debouncedSync();
         }
+        window.deleteWaterCustomer = deleteWaterCustomer;
 
         // =====================
         // EMPLOYEE FUNCTIONS
