@@ -6443,10 +6443,10 @@
                             <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:8px;padding:10px;">
                                 <div style="font-size:0.75rem;font-weight:700;color:#60a5fa;margin-bottom:6px;">🔵 Big Round (18L)</div>
                                 <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">
-                                    <button type="button" onclick="wsQuickAddBig(20)" style="padding:3px 8px;border-radius:5px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-size:0.72rem;font-weight:600;">₱20</button>
-                                    <button type="button" onclick="wsQuickAddBig(25)" style="padding:3px 8px;border-radius:5px;border:1px solid #3b82f6;background:rgba(59,130,246,0.15);color:#60a5fa;cursor:pointer;font-size:0.72rem;font-weight:700;">₱25</button>
-                                    <button type="button" onclick="wsQuickAddBig(30)" style="padding:3px 8px;border-radius:5px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-size:0.72rem;font-weight:600;">₱30</button>
-                                    <button type="button" onclick="wsQuickAddBig(35)" style="padding:3px 8px;border-radius:5px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-size:0.72rem;font-weight:600;">₱35</button>
+                                    <button type="button" data-price="20" data-type="big" onclick="wsQuickAddBig(20)" style="padding:3px 8px;border-radius:5px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-size:0.72rem;font-weight:600;">₱20</button>
+                                    <button type="button" data-price="25" data-type="big" onclick="wsQuickAddBig(25)" style="padding:3px 8px;border-radius:5px;border:1px solid #3b82f6;background:rgba(59,130,246,0.15);color:#60a5fa;cursor:pointer;font-size:0.72rem;font-weight:700;">₱25</button>
+                                    <button type="button" data-price="30" data-type="big" onclick="wsQuickAddBig(30)" style="padding:3px 8px;border-radius:5px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-size:0.72rem;font-weight:600;">₱30</button>
+                                    <button type="button" data-price="35" data-type="big" onclick="wsQuickAddBig(35)" style="padding:3px 8px;border-radius:5px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-size:0.72rem;font-weight:600;">₱35</button>
                                 </div>
                                 <div style="display:flex;gap:4px;align-items:center;">
                                     <input type="number" id="ws-big-qty-input" min="0" value="0" placeholder="Qty"
@@ -6515,7 +6515,7 @@
                         <textarea id="water-sale-notes" rows="2" placeholder="Any notes..."></textarea>
                     </div>
 
-                    <button type="submit" class="btn btn-success btn-block" id="ws-submit-btn" disabled style="opacity:0.5;">Record Sale</button>
+                    <button type="button" class="btn btn-success btn-block" id="ws-submit-btn" onclick="saveWaterSale(event)">Record Sale</button>
                 </form>
             </div>
         </div>
@@ -13976,6 +13976,9 @@ async function loadWaterCustomers() {
             document.getElementById('water-sale-payment-type').value = 'cash';
             // Reset cart and qty inputs
             window._wsCart = [];
+            window._wsSelectedBigPrice = 0;
+            window._wsSelectedSmlPrice = 0;
+            window._wsSelectedSmlSize  = 'Small';
             var bigQty = document.getElementById('ws-big-qty-input');
             var smlQty = document.getElementById('ws-small-qty-input');
             if (bigQty) bigQty.value = '0';
@@ -14048,8 +14051,17 @@ async function loadWaterCustomers() {
         window.wsCartRemove = wsCartRemove;
 
         function wsQuickAddBig(price) {
+            // Mark this price as active
+            document.querySelectorAll('[data-type="big"]').forEach(function(b){
+                b.style.background = 'transparent'; b.style.color = '#94a3b8';
+                b.style.borderColor = '#334155';
+            });
+            var activeBtn = document.querySelector('[data-type="big"][data-price="'+price+'"]');
+            if (activeBtn) { activeBtn.style.background='rgba(59,130,246,0.2)'; activeBtn.style.color='#60a5fa'; activeBtn.style.borderColor='#3b82f6'; }
+            // Store selected price
+            window._wsSelectedBigPrice = price;
             var qty = parseInt((document.getElementById('ws-big-qty-input')||{}).value) || 0;
-            if (qty <= 0) { showToast('Please enter a valid quantity.', 'warning'); return; }
+            if (qty <= 0) { showToast('Enter quantity first, then click a price button.', 'warning'); return; }
             var gross = qty * price;
             var discount = 0;
             if (price === 35 && qty >= 3) { discount = Math.floor(qty/3) * 5; }
@@ -14063,6 +14075,8 @@ async function loadWaterCustomers() {
         window.wsQuickAddBig = wsQuickAddBig;
 
         function wsQuickAddSmall(size, price) {
+            window._wsSelectedSmlPrice = price;
+            window._wsSelectedSmlSize  = size;
             var qty = parseInt((document.getElementById('ws-small-qty-input')||{}).value) || 0;
             if (qty <= 0) { showToast('Please enter a valid quantity.', 'warning'); return; }
             var sizeLabel = size==='500cc'?'Small(500cc-1L)':size==='4-10L'?'Medium(4L-10L)':'Large(15L)';
@@ -14096,9 +14110,30 @@ async function loadWaterCustomers() {
         async function saveWaterSale(event) {
             event.preventDefault();
 
-            const cart = window._wsCart || [];
+            let cart = window._wsCart || [];
+            // Auto-add from qty inputs if cart is empty but qty was entered
             if (cart.length === 0) {
-                showToast('⚠️ Please add at least one item to the order.', 'warning');
+                const bigQty   = parseInt((document.getElementById('ws-big-qty-input')||{}).value) || 0;
+                const smlQty   = parseInt((document.getElementById('ws-small-qty-input')||{}).value) || 0;
+                // Find active price button for big
+                // Use stored price from last price button clicked
+                const bigPrice = window._wsSelectedBigPrice || 0;
+                const smlPrice = window._wsSelectedSmlPrice || 0;
+                const smlSize  = window._wsSelectedSmlSize  || 'Small';
+                if (bigQty > 0 && bigPrice > 0) {
+                    window._wsCart.push({type:'big',bottleSize:'18L',qty:bigQty,price:bigPrice,
+                        subtotal:bigQty*bigPrice,discount:0,packageDeal:false,
+                        label:bigQty+' x Big (18L) @ ₱'+bigPrice,containerType:'big'});
+                }
+                if (smlQty > 0 && smlPrice > 0) {
+                    window._wsCart.push({type:'small',bottleSize:smlSize,qty:smlQty,price:smlPrice,
+                        subtotal:smlQty*smlPrice,discount:0,packageDeal:false,
+                        label:smlQty+' x Small ('+smlSize+') @ ₱'+smlPrice,containerType:'small'});
+                }
+                cart = window._wsCart;
+            }
+            if (cart.length === 0) {
+                showToast('⚠️ Enter quantity and select a price (₱20/₱25/₱30/₱35), then tap Record Sale.', 'warning');
                 return;
             }
 
