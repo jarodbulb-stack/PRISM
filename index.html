@@ -4687,11 +4687,11 @@
                     <div class="stat-value text-warning" id="stat-water-credits">₱0</div>
                     <div class="stat-label">Unpaid Credits</div>
                 </div>
-                <div class="stat-card" style="cursor: pointer;" onclick="showWaterFlashcardDetail('today-sales')">
+                <div class="stat-card" style="cursor: pointer;" onclick="showWaterFlashcardDetail('today')">
                     <div class="stat-value text-success" id="stat-water-today">₱0</div>
                     <div class="stat-label">Today's Sales</div>
                 </div>
-                <div class="stat-card" style="cursor: pointer;" onclick="showWaterFlashcardDetail('gallons')">
+                <div class="stat-card">
                     <div class="stat-value" id="stat-water-gallons">0</div>
                     <div class="stat-label">Bottles Today</div>
                 </div>
@@ -4714,13 +4714,14 @@
                     <button class="btn btn-sm btn-secondary" onclick="setWaterFilter('paid')">Paid Up</button>
                 </div>
 
-                <input type="text" id="water-search" placeholder="🔍 Search customer..." style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 15px; background: var(--card-bg); color: var(--text-primary);" oninput="filterWaterCustomers()">
-
-                <!-- View toggle: Customers / All Sales / Store -->
-                <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
+                <!-- View toggle + inline search -->
+                <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
                     <button id="water-view-customers-btn" class="btn btn-sm btn-primary" onclick="setWaterView('customers')">👥 Customers</button>
                     <button id="water-view-sales-btn" class="btn btn-sm btn-secondary" onclick="setWaterView('sales')">🧾 All Sales</button>
                     <button id="water-view-store-btn" class="btn btn-sm btn-secondary" onclick="setWaterView('store')">🛒 Store</button>
+                    <input type="text" id="water-search" placeholder="🔍 Search name..."
+                        style="flex:1;min-width:130px;padding:6px 10px;border:1px solid var(--border-color);border-radius:7px;background:var(--bg-secondary);color:var(--text-primary);font-size:0.82rem;"
+                        oninput="waterSearchAll()">
                 </div>
 
                 <div id="water-customers-list">
@@ -13879,9 +13880,10 @@ async function loadWaterCustomers() {
             const today = new Date().toISOString().split('T')[0];
             
             customers.forEach(c => {
-                const customerSales = sales.filter(s => s.customerId === c.id);
-                const unpaid = customerSales.filter(s => s.status === 'credit' || s.status === 'partial')
-                    .reduce((sum, s) => sum + (s.balance || 0), 0);
+                const customerSales = sales.filter(s => String(s.customerId) === String(c.id));
+                const unpaid = customerSales
+                    .filter(s => !s.voided && (s.status === 'credit' || s.status === 'partial'))
+                    .reduce((sum, s) => sum + Math.max(0, (s.total || 0) - (s.amountPaid || 0)), 0);
                 c.balance = unpaid;
                 totalCredits += unpaid;
             });
@@ -13890,7 +13892,7 @@ async function loadWaterCustomers() {
                 // Count bottles only for today
                 if (s.date === today && !s.voided) {
                     totalGallons += s.bottles || s.gallons || 0;
-                    todaySales += s.amountPaid || 0;
+                    todaySales += s.total || s.amountPaid || 0;
                 }
             });
             
@@ -13916,19 +13918,30 @@ async function loadWaterCustomers() {
         }
 
         function filterWaterCustomers() {
-            const search = document.getElementById('water-search').value.toLowerCase();
-            let filtered = allWaterCustomersData.filter(c => 
-                c.name.toLowerCase().includes(search) ||
-                (c.phone && c.phone.includes(search)) ||
-                (c.address && c.address.toLowerCase().includes(search))
+            const search = (document.getElementById('water-search')?.value || '').toLowerCase().trim();
+            // Route search to the active view
+            if (typeof _waterView !== 'undefined' && _waterView === 'sales') {
+                // Filter All Sales list by customer name / description
+                if (typeof filterWaterSalesList === 'function') filterWaterSalesList(search);
+                return;
+            }
+            if (typeof _waterView !== 'undefined' && _waterView === 'store') {
+                // Filter store products by name
+                if (typeof filterStoreProducts === 'function') filterStoreProducts(search);
+                return;
+            }
+            // Default: filter customers list
+            let filtered = (allWaterCustomersData || []).filter(c =>
+                !search ||
+                (c.name||'').toLowerCase().includes(search) ||
+                (c.phone||'').includes(search) ||
+                (c.address||'').toLowerCase().includes(search)
             );
-            
             if (waterFilter === 'credit') {
                 filtered = filtered.filter(c => c.balance > 0);
             } else if (waterFilter === 'paid') {
                 filtered = filtered.filter(c => !c.balance || c.balance === 0);
             }
-            
             renderWaterCustomersList(filtered);
         }
 
@@ -14284,7 +14297,7 @@ async function loadWaterCustomers() {
             if (!customer) return;
             
             const sales = await dbGetAll('waterSales');
-            const customerSales = sales.filter(s => s.customerId === id).sort((a, b) => new Date(b.date) - new Date(a.date));
+            const customerSales = sales.filter(s => String(s.customerId) === String(id)).sort((a, b) => new Date(b.date) - new Date(a.date));
             
             const totalGallons = customerSales.reduce((sum, s) => sum + (s.bottles || s.gallons || 0), 0);
             const totalPurchases = customerSales.reduce((sum, s) => sum + s.total, 0);
@@ -14344,7 +14357,7 @@ async function loadWaterCustomers() {
                     content += `
                         <div class="list-item" style="cursor:pointer;" onclick="editWaterSaleRecord(${s.id},${id})">
                             <div class="list-item-content" style="flex:1;">
-                                <div class="list-item-title">${s.containerType==='small'?(s.gallons||0)+' × '+(s.bottleSize||'bottle')+' @ ₱'+s.pricePerGallon:s.gallons+' gal @ ₱'+s.pricePerGallon}${s.packageDeal?' <span style="font-size:0.68rem;color:#10b981;">(Package)</span>':''}</div>
+                                <div class="list-item-title">${s.orderSummary || (s.bottles||s.gallons||0)+' bottle(s) @ ₱'+(s.pricePerBottle||s.pricePerGallon||0)}${s.packageDeal?' <span style="font-size:0.68rem;color:#10b981;">(Package)</span>':''}</div>
                                 <div class="list-item-subtitle">${s.date} ${statusBadge}</div>
                             </div>
                             <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
@@ -22664,57 +22677,234 @@ async function clearAllData() {
         window.showFlashcardDetail = showFlashcardDetail;
 
         async function showWaterFlashcardDetail(type) {
-            const waterSales  = await dbGetAll('waterSales');
-            const customers   = await dbGetAll('waterCustomers');
-            const custMap     = {};
-            customers.forEach(c => { custMap[c.id] = c.name; });
-            const getName     = x => x.customerName || custMap[x.customerId] || custMap[parseInt(x.customerId)] || 'Walk-in';
-            const today       = new Date().toISOString().split('T')[0];
-            const currentMonth= today.substring(0,7);
-            let title='', salesList=[], total=0;
+            // ── Handle 'credits' — show all unpaid water credit accounts ──
+            if (type === 'credits') {
+                const waterSales  = await dbGetAll('waterSales');
+                const customers   = await dbGetAll('waterCustomers');
+                const custMap     = {};
+                customers.forEach(c => { custMap[c.id] = c.name; });
+                const getName = x => x.customerName || custMap[x.customerId] || custMap[parseInt(x.customerId)] || 'Walk-in';
 
-            if (type==='today') {
-                title = '💧 Water Sales Today';
-                salesList = waterSales.filter(x=>x.date===today&&!x.voided);
-            } else {
-                title = '💧 Water Sales This Month';
-                salesList = waterSales.filter(x=>x.date&&x.date.startsWith(currentMonth)&&!x.voided);
-            }
-            salesList.sort((a,b)=>(b.date||'')>(a.date||'')?1:-1);
-            total = salesList.reduce((a,x)=>a+(x.amountPaid||0),0);
+                // All unpaid/partial water sales (not voided)
+                const unpaidSales = waterSales
+                    .filter(s => !s.voided && (s.status === 'credit' || s.status === 'partial'))
+                    .sort((a,b) => (a.date||'') < (b.date||'') ? 1 : -1);
 
-            var html = '';
-            if (salesList.length === 0) {
-                html = '<div style="color:#64748b;padding:12px;text-align:center;">No data.</div>';
-            } else {
-                salesList.forEach(x => {
-                    const name    = getName(x);
-                    const summary = x.orderSummary || ((x.bottles||x.gallons||0)+' bottles');
-                    const status  = x.status === 'credit' ? '<span style="color:#f59e0b;font-size:0.7rem;">CREDIT</span>'
-                                  : x.status === 'partial' ? '<span style="color:#f97316;font-size:0.7rem;">PARTIAL</span>'
-                                  : '<span style="color:#10b981;font-size:0.7rem;">PAID</span>';
-                    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color);cursor:pointer;" onclick="viewWaterCustomerDetails(' + x.customerId + ')">';
-                    html += '<div><div style="font-weight:600;font-size:0.85rem;color:var(--primary);">' + name + '</div>';
-                    html += '<div style="font-size:0.72rem;color:#64748b;">' + summary + ' · ' + (x.date||'') + ' ' + status + '</div></div>';
-                    html += '<span style="font-weight:700;color:#38bdf8;">₱' + (x.amountPaid||0).toLocaleString() + '</span>';
-                    html += '</div>';
+                // Group by customer
+                const byCust = {};
+                unpaidSales.forEach(s => {
+                    const key = s.customerId || 'walkin';
+                    if (!byCust[key]) byCust[key] = { name: getName(s), id: s.customerId, sales: [] };
+                    byCust[key].sales.push(s);
                 });
+
+                const totalUnpaid = unpaidSales.reduce((a,s) => a + Math.max(0,(s.total||0)-(s.amountPaid||0)), 0);
+
+                let html = '';
+                if (unpaidSales.length === 0) {
+                    html = '<div style="text-align:center;color:#10b981;padding:24px;font-size:0.9rem;">🎉 No unpaid credits! All clear.</div>';
+                } else {
+                    Object.values(byCust).forEach(cust => {
+                        const custTotal = cust.sales.reduce((a,s) => a + Math.max(0,(s.total||0)-(s.amountPaid||0)), 0);
+                        html += '<div style="margin-bottom:12px;background:var(--bg-secondary);border-radius:10px;overflow:hidden;">';
+                        // Customer header — clickable → ledger
+                        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-bottom:1px solid var(--border-color);cursor:pointer;background:rgba(239,68,68,0.05);" onclick="document.getElementById('wcfd-modal').remove();viewWaterCustomerDetails(' + cust.id + ')">';
+                        html += '<span style="font-weight:700;color:#f87171;font-size:0.88rem;">👤 ' + cust.name + '</span>';
+                        html += '<span style="font-weight:800;color:#ef4444;">₱' + custTotal.toLocaleString() + ' owed</span>';
+                        html += '</div>';
+                        // Individual sale rows
+                        cust.sales.forEach(s => {
+                            const owed    = Math.max(0,(s.total||0)-(s.amountPaid||0));
+                            const summary = s.orderSummary || ((s.bottles||s.gallons||0)+' bottles');
+                            const badge   = s.status==='partial'
+                                ? '<span style="color:#f97316;font-size:0.68rem;font-weight:700;">PARTIAL</span>'
+                                : '<span style="color:#f59e0b;font-size:0.68rem;font-weight:700;">CREDIT</span>';
+                            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 12px;border-bottom:1px solid rgba(255,255,255,0.04);">';
+                            html += '<div>';
+                            html += '<div style="font-size:0.8rem;color:var(--text-primary);">' + summary + ' ' + badge + '</div>';
+                            html += '<div style="font-size:0.7rem;color:#64748b;">' + (s.date||'') + (s.amountPaid > 0 ? ' · Partial paid: ₱'+s.amountPaid.toLocaleString() : '') + '</div>';
+                            html += '</div>';
+                            html += '<span style="font-weight:700;color:#f59e0b;white-space:nowrap;margin-left:8px;">₱' + owed.toLocaleString() + '</span>';
+                            html += '</div>';
+                        });
+                        html += '</div>';
+                    });
+                }
+
+                const modal = document.createElement('div');
+                modal.id = 'wcfd-modal';
+                modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
+                modal.innerHTML =
+                    '<div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;width:100%;max-width:480px;max-height:85vh;display:flex;flex-direction:column;">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
+                    '<div><h3 style="margin:0;color:#f1f5f9;font-size:1rem;">💳 Unpaid Water Credits</h3>' +
+                    '<div style="font-size:0.75rem;color:#f59e0b;margin-top:2px;">Total owed: ₱' + totalUnpaid.toLocaleString() + ' · ' + unpaidSales.length + ' transaction(s)</div></div>' +
+                    '<button onclick="document.getElementById('wcfd-modal').remove()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.2rem;padding:0 4px;">✕</button>' +
+                    '</div>' +
+                    '<div style="overflow-y:auto;flex:1;">' + html + '</div>' +
+                    '<div style="padding-top:10px;margin-top:8px;border-top:1px solid #334155;font-size:0.75rem;color:#64748b;text-align:center;">Tap a customer name to open their full ledger</div>' +
+                    '</div>';
+                document.body.appendChild(modal);
+                modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+                return;
             }
+
+            // ── Handle 'customers' — show full customer list ──
+            if (type === 'customers') {
+                const customers  = await dbGetAll('waterCustomers');
+                const waterSales = await dbGetAll('waterSales');
+                const today      = new Date().toISOString().split('T')[0];
+
+                // Compute stats per customer
+                const custData = customers.map(c => {
+                    const sales    = waterSales.filter(s => s.customerId === c.id && !s.voided);
+                    const unpaid   = sales.filter(s => s.status==='credit'||s.status==='partial')
+                        .reduce((a,s) => a + Math.max(0,(s.total||0)-(s.amountPaid||0)), 0);
+                    const totalSpent = sales.reduce((a,s) => a+(s.total||0), 0);
+                    const lastSale = sales.sort((a,b)=>(b.date||'')>(a.date||'')?1:-1)[0];
+                    return { ...c, unpaid, totalSpent, lastSale: lastSale?.date||'—', saleCount: sales.length };
+                }).sort((a,b) => b.totalSpent - a.totalSpent);
+
+                let html = '';
+                if (custData.length === 0) {
+                    html = '<div style="text-align:center;color:#64748b;padding:20px;">No customers yet.</div>';
+                } else {
+                    custData.forEach(c => {
+                        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border-color);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='rgba(56,189,248,0.05)'" onmouseout="this.style.background='transparent'" onclick="document.getElementById('wcfd-modal').remove();viewWaterCustomerDetails(' + c.id + ')">';
+                        html += '<div style="flex:1;">';
+                        html += '<div style="font-weight:600;font-size:0.88rem;color:#60a5fa;">' + c.name + '</div>';
+                        html += '<div style="font-size:0.72rem;color:#64748b;">' + c.saleCount + ' purchase(s) · Last: ' + c.lastSale + '</div>';
+                        html += '</div>';
+                        html += '<div style="text-align:right;margin-left:8px;">';
+                        html += '<div style="font-size:0.82rem;color:var(--text-primary);">₱' + c.totalSpent.toLocaleString() + '</div>';
+                        if (c.unpaid > 0) {
+                            html += '<div style="font-size:0.7rem;color:#f59e0b;font-weight:700;">₱' + c.unpaid.toLocaleString() + ' unpaid</div>';
+                        } else {
+                            html += '<div style="font-size:0.7rem;color:#10b981;">✓ Clear</div>';
+                        }
+                        html += '</div>';
+                        html += '<div style="color:#475569;margin-left:8px;font-size:0.8rem;">›</div>';
+                        html += '</div>';
+                    });
+                }
+
+                const modal = document.createElement('div');
+                modal.id = 'wcfd-modal';
+                modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
+                modal.innerHTML =
+                    '<div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;width:100%;max-width:480px;max-height:85vh;display:flex;flex-direction:column;">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
+                    '<div><h3 style="margin:0;color:#f1f5f9;font-size:1rem;">👥 Water Customers</h3>' +
+                    '<div style="font-size:0.75rem;color:#64748b;margin-top:2px;">' + custData.length + ' customer(s) · Tap to open ledger</div></div>' +
+                    '<button onclick="document.getElementById('wcfd-modal').remove()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.2rem;padding:0 4px;">✕</button>' +
+                    '</div>' +
+                    '<div style="overflow-y:auto;flex:1;">' + html + '</div>' +
+                    '</div>';
+                document.body.appendChild(modal);
+                modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+                return;
+            }
+
+            // ── Handle 'today' and 'month' (sales popup with date picker) ──
+            const customers  = await dbGetAll('waterCustomers');
+            const custMap    = {};
+            customers.forEach(c => { custMap[c.id] = c.name; });
+            const getName    = x => x.customerName || custMap[x.customerId] || custMap[parseInt(x.customerId)] || 'Walk-in';
+
+            const today      = new Date().toISOString().split('T')[0];
+            const defaultFrom = type === 'today' ? today : today.substring(0,7) + '-01';
+            const defaultTo   = today;
+
+            const buildContent = async (fromDate, toDate) => {
+                const waterSales = await dbGetAll('waterSales');
+                const salesList  = waterSales.filter(x => x.date && x.date >= fromDate && x.date <= toDate && !x.voided);
+                salesList.sort((a,b) => (b.date||'') > (a.date||'') ? 1 : -1);
+                const total  = salesList.reduce((a,x) => a + (x.total||x.amountPaid||0), 0);
+                const unpaid = salesList.filter(x => x.status==='credit'||x.status==='partial')
+                    .reduce((a,x) => a + Math.max(0,(x.total||0)-(x.amountPaid||0)), 0);
+
+                let html = '';
+                if (salesList.length === 0) {
+                    html = '<div style="text-align:center;color:#64748b;padding:20px;">No sales found.</div>';
+                } else {
+                    salesList.forEach(x => {
+                        const name    = getName(x);
+                        const summary = x.orderSummary || ((x.bottles||x.gallons||0)+' bottles');
+                        const isPaid  = x.status==='paid'||x.status==='cash';
+                        const statusBadge = x.status==='credit'
+                            ? '<span style="color:#f59e0b;font-size:0.7rem;font-weight:700;">CREDIT</span>'
+                            : x.status==='partial'
+                            ? '<span style="color:#f97316;font-size:0.7rem;font-weight:700;">PARTIAL</span>'
+                            : '<span style="color:#10b981;font-size:0.7rem;font-weight:700;">PAID</span>';
+                        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color);cursor:pointer;" onclick="document.getElementById('wfd-modal').remove();viewWaterCustomerDetails(' + (x.customerId) + ')">';
+                        html += '<div><div style="font-weight:600;font-size:0.85rem;color:#60a5fa;">' + name + '</div>';
+                        html += '<div style="font-size:0.72rem;color:#64748b;">' + summary + ' · ' + (x.date||'') + ' ' + statusBadge + '</div></div>';
+                        html += '<span style="font-weight:700;color:' + (isPaid?'#10b981':'#f59e0b') + ';white-space:nowrap;margin-left:8px;">₱' + (x.total||x.amountPaid||0).toLocaleString() + '</span>';
+                        html += '</div>';
+                    });
+                }
+
+                const contentEl = document.getElementById('wfd-content');
+                const footerEl  = document.getElementById('wfd-footer');
+                if (contentEl) contentEl.innerHTML = html;
+                if (footerEl)  footerEl.innerHTML  =
+                    '<span style="color:#64748b;">' + salesList.length + ' sale(s)' +
+                    (unpaid > 0 ? ' · <span style="color:#f59e0b;">₱' + unpaid.toLocaleString() + ' unpaid</span>' : '') + '</span>' +
+                    '<span style="color:#38bdf8;font-weight:700;">₱' + total.toLocaleString() + '</span>';
+            };
+
+            const existing = document.getElementById('wfd-modal');
+            if (existing) existing.remove();
 
             const modal = document.createElement('div');
+            modal.id = 'wfd-modal';
             modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
             modal.innerHTML =
-                '<div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;width:100%;max-width:460px;max-height:80vh;overflow-y:auto;">' +
-                '<div style="display:flex;justify-content:space-between;margin-bottom:14px;">' +
-                '<h3 style="margin:0;color:#f1f5f9;font-size:1rem;">' + title + '</h3>' +
-                '<button onclick="this.closest(&quot;div[style*=fixed]&quot;).remove()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.2rem;">✕</button>' +
+                '<div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;width:100%;max-width:480px;max-height:85vh;display:flex;flex-direction:column;">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
+                '<h3 style="margin:0;color:#f1f5f9;font-size:1rem;">💧 Water Sales</h3>' +
+                '<button onclick="document.getElementById('wfd-modal').remove()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.2rem;padding:0 4px;">✕</button>' +
                 '</div>' +
-                html +
-                '<div style="display:flex;justify-content:space-between;padding-top:10px;margin-top:8px;border-top:1px solid #334155;font-weight:700;">' +
-                '<span>' + salesList.length + ' sale(s)</span><span style="color:#38bdf8;">₱' + total.toLocaleString() + '</span>' +
-                '</div></div>';
+                '<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">' +
+                '<input type="date" id="wfd-from" value="' + defaultFrom + '" style="flex:1;padding:6px 8px;background:#0f172a;border:1px solid #334155;border-radius:7px;color:#f1f5f9;font-size:0.78rem;" onchange="wfdReload()">' +
+                '<span style="color:#64748b;font-size:0.8rem;">to</span>' +
+                '<input type="date" id="wfd-to" value="' + defaultTo + '" style="flex:1;padding:6px 8px;background:#0f172a;border:1px solid #334155;border-radius:7px;color:#f1f5f9;font-size:0.78rem;" onchange="wfdReload()">' +
+                '</div>' +
+                '<div style="display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap;">' +
+                '<button onclick="wfdSetRange('today')" style="padding:3px 10px;border-radius:6px;border:1px solid #334155;background:' + (type==='today'?'rgba(99,102,241,0.2)':'transparent') + ';color:' + (type==='today'?'#818cf8':'#64748b') + ';font-size:0.72rem;cursor:pointer;">Today</button>' +
+                '<button onclick="wfdSetRange('week')" style="padding:3px 10px;border-radius:6px;border:1px solid #334155;background:transparent;color:#64748b;font-size:0.72rem;cursor:pointer;">This Week</button>' +
+                '<button onclick="wfdSetRange('month')" style="padding:3px 10px;border-radius:6px;border:1px solid #334155;background:' + (type!=='today'?'rgba(99,102,241,0.2)':'transparent') + ';color:' + (type!=='today'?'#818cf8':'#64748b') + ';font-size:0.72rem;cursor:pointer;">This Month</button>' +
+                '</div>' +
+                '<div id="wfd-content" style="overflow-y:auto;flex:1;min-height:0;"></div>' +
+                '<div id="wfd-footer" style="display:flex;justify-content:space-between;padding-top:10px;margin-top:8px;border-top:1px solid #334155;font-weight:700;font-size:0.82rem;"></div>' +
+                '</div>';
             document.body.appendChild(modal);
             modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+
+            window.wfdReload = async () => {
+                const f = document.getElementById('wfd-from')?.value || today;
+                const t = document.getElementById('wfd-to')?.value   || today;
+                await buildContent(f, t);
+            };
+            window.wfdSetRange = (range) => {
+                const now = new Date();
+                const fmt = d => d.toISOString().split('T')[0];
+                let f = today, t = today;
+                if (range === 'week') {
+                    const d = new Date(now); d.setDate(d.getDate() - d.getDay());
+                    f = fmt(d); t = today;
+                } else if (range === 'month') {
+                    f = fmt(new Date(now.getFullYear(), now.getMonth(), 1)); t = today;
+                }
+                const fe = document.getElementById('wfd-from');
+                const te = document.getElementById('wfd-to');
+                if (fe) fe.value = f;
+                if (te) te.value = t;
+                wfdReload();
+            };
+
+            await buildContent(defaultFrom, defaultTo);
+        }tTo);
         }
         window.showWaterFlashcardDetail = showWaterFlashcardDetail;
 
@@ -23815,6 +24005,45 @@ async function clearAllData() {
         window.viewWaterCustomerDetails   = viewWaterCustomerDetails;
         window.showWaterCustomerSalesHistory = showWaterCustomerSalesHistory;
 
+                // ── waterSearchAll: unified search across all water tabs ──
+        function waterSearchAll() {
+            const q = (document.getElementById('water-search')?.value || '').toLowerCase().trim();
+            if (_waterView === 'customers') {
+                // Filter customer list
+                if (!allWaterCustomersData) return;
+                const filtered = allWaterCustomersData.filter(c =>
+                    (c.name||'').toLowerCase().includes(q) ||
+                    (c.phone||'').toLowerCase().includes(q) ||
+                    (c.address||'').toLowerCase().includes(q)
+                );
+                // Re-render using existing renderWaterCustomersList if available
+                // else filter DOM nodes directly
+                const list = document.getElementById('water-customers-list');
+                if (!list) return;
+                const items = list.querySelectorAll('.list-item, [data-cust-id]');
+                if (items.length > 0) {
+                    // Has rendered items — filter by name text
+                    items.forEach(item => {
+                        const nameEl = item.querySelector('h4, .item-name, [style*="font-weight"]');
+                        const text = (nameEl?.textContent || item.textContent || '').toLowerCase();
+                        item.style.display = !q || text.includes(q) ? '' : 'none';
+                    });
+                } else {
+                    filterWaterCustomers();
+                }
+            } else if (_waterView === 'sales') {
+                filterWaterSalesList(q);
+            } else if (_waterView === 'store') {
+                // Filter store product list
+                const storeItems = document.querySelectorAll('#water-store-panel .list-item, #water-store-panel [style*="border-radius"]');
+                storeItems.forEach(item => {
+                    const text = (item.textContent || '').toLowerCase();
+                    item.style.display = !q || text.includes(q) ? '' : 'none';
+                });
+            }
+        }
+        window.waterSearchAll = waterSearchAll;
+
                 window.refreshStats = refreshStats;
         window.manualSync = manualSync;
         window.clearSpecificData = clearSpecificData;
@@ -24144,21 +24373,34 @@ async function clearAllData() {
         let _waterView = 'customers';
         function setWaterView(view) {
             _waterView = view;
+            // Clear search on tab switch
+            const srch = document.getElementById('water-search');
+            if (srch) srch.value = '';
             const custList  = document.getElementById('water-customers-list');
             const salesList = document.getElementById('water-all-sales-list');
             const storePanel= document.getElementById('water-store-panel');
             const custBtn   = document.getElementById('water-view-customers-btn');
             const salesBtn  = document.getElementById('water-view-sales-btn');
             const storeBtn  = document.getElementById('water-view-store-btn');
+            const searchEl  = document.getElementById('water-search');
             if (!custList) return;
 
-            // Hide all
+            // Hide all, reset button styles
             [custList, salesList, storePanel].forEach(el => { if (el) el.style.display = 'none'; });
             [custBtn, salesBtn, storeBtn].forEach(btn => { if (btn) btn.className = 'btn btn-sm btn-secondary'; });
+
+            // Clear search and update placeholder per view
+            if (searchEl) {
+                searchEl.value = '';
+                if (view === 'customers') searchEl.placeholder = '🔍 Search customer...';
+                else if (view === 'sales') searchEl.placeholder = '🔍 Search sales...';
+                else if (view === 'store') searchEl.placeholder = '🔍 Search products...';
+            }
 
             if (view === 'customers') {
                 if (custList)  custList.style.display = '';
                 if (custBtn)   custBtn.className = 'btn btn-sm btn-primary';
+                filterWaterCustomers();
             } else if (view === 'sales') {
                 if (salesList) salesList.style.display = '';
                 if (salesBtn)  salesBtn.className = 'btn btn-sm btn-primary';
@@ -24758,6 +25000,9 @@ async function clearAllData() {
             el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-secondary);">Loading...</div>';
             try {
                 const allSales = await dbGetAll('waterSales');
+                const _wCusts = await dbGetAll('waterCustomers');
+                const _wCustMap = {};
+                _wCusts.forEach(c => { _wCustMap[c.id] = c.name; _wCustMap[String(c.id)] = c.name; });
                 const sales = allSales.sort((a,b) => (b.date||'') > (a.date||'') ? 1 : -1);
                 if (sales.length === 0) {
                     el.innerHTML = '<div class="empty-state"><p>No water sales recorded yet.</p></div>';
@@ -24855,7 +25100,7 @@ async function clearAllData() {
                             data-status="${statusKey}"
                             style="${vs}margin-bottom:4px;border-radius:8px;">
                             <div style="flex:1;">
-                                <div style="font-weight:600;font-size:0.88rem;">${s.customerName||'Unknown'}</div>
+                                <div style="font-weight:600;font-size:0.88rem;">${s.customerName || _wCustMap[s.customerId] || _wCustMap[String(s.customerId)] || 'Walk-in'}</div>
                                 <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:1px;">
                                     ${_bottleLabel(s)}${s.packageDeal?' 🎁 Package':''}${s.discount>0?' <span style="color:#10b981;">−₱'+s.discount+'</span>':''}
                                 </div>
@@ -27682,32 +27927,58 @@ window.mtSAToggleOrgStatus=mtSAToggleOrgStatus;
         }
 
         function prismEnterApp() {
-            // If we have a pending saved session, restore it and go straight to app
             if (window._pendingSession) {
+                // Has saved session — restore data FIRST, then show app (no zero flash)
                 const ps = window._pendingSession;
                 window._pendingSession = null;
+
+                // Show loading state on splash while data loads
+                const enterBtn = document.querySelector('.prism-enter-btn');
+                if (enterBtn) { enterBtn.innerHTML = '<span>Loading...</span>'; enterBtn.disabled = true; }
+                const hintEl = document.querySelector('.prism-hint');
+                if (hintEl) hintEl.textContent = 'Restoring your session...';
+
+                // Restore session variables
                 currentAppUser    = ps.user;
                 MT.currentOrg     = ps.org;
                 MT.currentOrgRole = ps.role;
                 MT.currentUser    = { uid: 'local_' + (ps.user.id||1), email: ps.user.email||'local@prism.app', displayName: ps.user.fullname };
-                mtShowApp();
-                mtUpdateOrgBadge();
-                const _saLoad = document.getElementById('prism-app-loading');
-                if (_saLoad) _saLoad.classList.remove('hidden');
-                setTimeout(async () => {
-                    if (typeof updateUserDisplay === 'function') updateUserDisplay();
-                    if (typeof applyRoleNav === 'function') applyRoleNav();
-                    if (ps.isSA && currentAppUser) currentAppUser.role = 'owner';
-                    if (window._dbReadyPromise) await window._dbReadyPromise;
-                    if (typeof loadDashboard === 'function') await loadDashboard();
-                    if (typeof loadDashIncomeExpense === 'function') loadDashIncomeExpense();
-                    const _ld = document.getElementById('prism-app-loading');
-                    if (_ld) _ld.classList.add('hidden');
-                    setTimeout(() => {
-                        if (typeof prismAddCashierButtons === 'function') prismAddCashierButtons();
-                        if (typeof prismLoadAdminNotifications === 'function') prismLoadAdminNotifications();
-                    }, 800);
-                }, 200);
+                if (ps.isSA && currentAppUser) currentAppUser.role = 'owner';
+
+                // Initialize app and load data BEFORE showing the dashboard
+                (async () => {
+                    try {
+                        // Init IDB
+                        if (typeof init === 'function' && !window._prismAppInitialized) {
+                            window._prismAppInitialized = true;
+                            await init();
+                        } else if (window._dbReadyPromise) {
+                            await window._dbReadyPromise;
+                        }
+                        // Load all data
+                        if (typeof loadAllData === 'function') {
+                            await loadAllData();
+                        } else {
+                            if (typeof loadDashboard === 'function') await loadDashboard();
+                        }
+                        // NOW show the app — data is ready, no zeros
+                        mtShowApp();
+                        mtUpdateOrgBadge();
+                        if (typeof updateUserDisplay === 'function') updateUserDisplay();
+                        if (typeof applyRoleNav === 'function') applyRoleNav();
+                        if (typeof loadDashIncomeExpense === 'function') loadDashIncomeExpense();
+                        setTimeout(() => {
+                            if (typeof prismAddCashierButtons === 'function') prismAddCashierButtons();
+                            if (typeof prismLoadAdminNotifications === 'function') prismLoadAdminNotifications();
+                        }, 800);
+                        // Trigger background sync
+                        if (typeof debouncedSync === 'function') debouncedSync();
+                    } catch(e) {
+                        console.error('[PRISM] prismEnterApp error:', e);
+                        // On error, show app anyway
+                        mtShowApp();
+                    }
+                })();
             } else {
                 // No saved session — go to login screen
                 prismGoToLogin();
