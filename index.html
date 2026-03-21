@@ -3141,10 +3141,10 @@
 <!-- ==================== MULTI-TENANT HTML ==================== -->
 
 <!-- Loading Screen -->
-<div id="mt-loading">
+<div id="mt-loading" class="active">
     <div class="mt-loading-logo">P</div>
     <div style="color:#f8fafc;font-weight:800;font-size:1.4rem;letter-spacing:3px;">PRISM</div>
-    <div class="mt-loading-text" id="mt-loading-text">Initializing...</div>
+    <div class="mt-loading-text" id="mt-loading-text">Signing you in...</div>
     <div class="mt-loading-bar"><div class="mt-loading-fill"></div></div>
 </div>
 
@@ -7959,21 +7959,11 @@
 
 try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.settings({localCache:firebase.firestore.persistentLocalCache({tabManager:firebase.firestore.persistentMultipleTabManager()})});}}catch(e){}
 
-                // Auth state listener
-                auth.onAuthStateChanged(async (user) => {
+                // Auth state listener — lightweight, only tracks currentUser & UI
+                // Sync is handled exclusively by the MT/mtInit auth listener to avoid double-sync
+                auth.onAuthStateChanged((user) => {
                     currentUser = user;
                     updateAuthUI();
-                    if (user) {
-                        console.log('[Auth] User signed in:', user.email);
-                        updateSyncStatus('syncing');
-                        // Push local data first, then pull from cloud
-                        try { await syncToFirebase(); } catch(e) {}
-                        await syncFromFirebase();
-                        updateSyncStatus('synced');
-                    } else {
-                        console.log('[Auth] User signed out');
-                        updateSyncStatus('offline');
-                    }
                 });
 
             } catch (error) {
@@ -27608,11 +27598,10 @@ async function mtAppLogout() {
 
 // ---- Main Init ----
 async function mtInit() {
-    // Show landing immediately — don't wait for Firebase
-    mtHideLoading();
-    
-    // Check for saved session — but always show homepage first
-    // Session is stored as pending; launched only when user clicks Enter
+    // Show loading screen while we wait for Firebase auth to resolve
+    mtShowLoading('Signing you in...');
+
+    // Check for saved session
     const savedUser = localStorage.getItem('carent_current_user');
     const savedOrg  = localStorage.getItem('mt_current_org');
     window._pendingSession = null;
@@ -27622,7 +27611,6 @@ async function mtInit() {
             const o = JSON.parse(savedOrg);
             if (u && o && o.name) {
                 const isSAEmail = MT.SUPER_ADMINS.map(e=>e.toLowerCase()).includes((u.email||'').toLowerCase());
-                // Store pending session — will be used when Enter is clicked
                 window._pendingSession = {
                     user: isSAEmail ? { ...u, role: 'owner' } : u,
                     org:  o,
@@ -27632,8 +27620,16 @@ async function mtInit() {
             }
         } catch(e) {}
     }
-    // Always show the homepage/splash first
-    mtShowLanding();
+
+    // Safety fallback: if Firebase auth doesn't resolve in 6s, show landing
+    window._mtInitFallbackTimer = setTimeout(() => {
+        const loading = document.getElementById('mt-loading');
+        const isStillLoading = loading && loading.classList.contains('active');
+        if (isStillLoading) {
+            mtHideLoading();
+            mtShowLanding();
+        }
+    }, 6000);
 
     // Update auth page status when Firebase becomes ready
     const updateAuthStatus = () => {
@@ -27659,6 +27655,9 @@ async function mtInit() {
         _fbAuthListenerSet = true;
 
         window.auth.onAuthStateChanged(async (user) => {
+            // Cancel the safety fallback — auth has resolved
+            if (window._mtInitFallbackTimer) { clearTimeout(window._mtInitFallbackTimer); window._mtInitFallbackTimer = null; }
+
             // Skip if app is already active from local login
             const appWrapper = document.querySelector('.prism-app-wrapper');
             const appAlreadyActive = appWrapper && appWrapper.classList.contains('mt-active');
@@ -27817,7 +27816,14 @@ async function mtInit() {
                                 // Fresh device — pull from Firebase first to populate IndexedDB
                                 if (typeof syncFromFirebase === 'function') {
                                     try { await syncFromFirebase(); } catch(e) {}
-                                    if (typeof loadDashboard === 'function') loadDashboard();
+                                    // Reload all sections so dashboard stats are accurate immediately
+                                    if (typeof loadAllData === 'function') {
+                                        try { await loadAllData(); } catch(e) {
+                                            if (typeof loadDashboard === 'function') loadDashboard();
+                                        }
+                                    } else if (typeof loadDashboard === 'function') {
+                                        loadDashboard();
+                                    }
                                 }
                             } else {
                                 // Existing device — push first, then pull
@@ -27878,6 +27884,7 @@ async function mtInit() {
 
             } else {
                 // No Firebase user — check for local session
+                if (window._mtInitFallbackTimer) { clearTimeout(window._mtInitFallbackTimer); window._mtInitFallbackTimer = null; }
                 MT.currentUser = null;
                 if (appAlreadyActive && currentAppUser) return; // local login still valid
 
