@@ -3141,7 +3141,7 @@
 <!-- ==================== MULTI-TENANT HTML ==================== -->
 
 <!-- Loading Screen -->
-<div id="mt-loading" class="active">
+<div id="mt-loading">
     <div class="mt-loading-logo">P</div>
     <div style="color:#f8fafc;font-weight:800;font-size:1.4rem;letter-spacing:3px;">PRISM</div>
     <div class="mt-loading-text" id="mt-loading-text">Signing you in...</div>
@@ -3982,9 +3982,13 @@
         </div>
 
         <div id="dashboard" class="section active">
-            <!-- Notifications Banner -->
+            <!-- Overdue / Due-Soon Payments Banner -->
             <div id="notifications-banner" class="hidden">
-                <!-- Notifications will be loaded here -->
+                <!-- Payment notifications loaded by renderNotificationsBanner() -->
+            </div>
+            <!-- Notes / Tasks Reminders Banner -->
+            <div id="reminders-banner" class="hidden">
+                <!-- Reminder notifications loaded by prismCheckReminders() -->
             </div>
 
             <div class="stats-grid">
@@ -17019,7 +17023,7 @@ async function showPayrollSummary() {
 
                 const allAlerts = [...reminders, ...recurringTasksDue];
 
-                const banner = document.getElementById('notifications-banner');
+                const banner = document.getElementById('reminders-banner');
                 if (!banner) return;
 
                 if (allAlerts.length === 0) {
@@ -17073,7 +17077,7 @@ async function showPayrollSummary() {
         }
 
         function prismDismissReminders() {
-            const banner = document.getElementById('notifications-banner');
+            const banner = document.getElementById('reminders-banner');
             if (banner) {
                 banner.classList.add('hidden');
                 banner.innerHTML = '';
@@ -21583,7 +21587,7 @@ async function showPayrollSummary() {
             // 1b. Immediately zero the Notes badge and clear reminder banner
             try { prismUpdateReminderBadge(0); } catch(e) {}
             try {
-                const banner = document.getElementById('notifications-banner');
+                const banner = document.getElementById('reminders-banner');
                 if (banner) { banner.classList.add('hidden'); banner.innerHTML = ''; }
             } catch(e) {}
 
@@ -25450,6 +25454,11 @@ function _mtShowAppActual() {
                 // Data ready — hide overlay
                 const _ld = document.getElementById('prism-app-loading');
                 if (_ld) _ld.classList.add('hidden');
+                // NOW run sync — IDB and app are fully ready
+                if (typeof window._pendingRunSyncAfterDB === 'function') {
+                    window._pendingRunSyncAfterDB();
+                    window._pendingRunSyncAfterDB = null;
+                }
             }).catch(e => {
                 console.error('[PRISM] init() failed:', e);
                 const _ld = document.getElementById('prism-app-loading');
@@ -27598,8 +27607,13 @@ async function mtAppLogout() {
 
 // ---- Main Init ----
 async function mtInit() {
-    // Show loading screen while we wait for Firebase auth to resolve
-    mtShowLoading('Signing you in...');
+    // Show the splash screen silently (dark background) while waiting for Firebase auth
+    // prismShowConnecting() will play the cinematic animation when auth resolves
+    mtShowScreen('mt-landing');
+    prismScreen('prism-splash');
+    // Hide the splash content — just show the dark background, no text yet
+    const splashContent = document.getElementById('prism-splash');
+    if (splashContent) splashContent.style.opacity = '0';
 
     // Check for saved session
     const savedUser = localStorage.getItem('carent_current_user');
@@ -27621,13 +27635,12 @@ async function mtInit() {
         } catch(e) {}
     }
 
-    // Safety fallback: if Firebase auth doesn't resolve in 6s, show landing
+    // Safety fallback: if Firebase auth doesn't resolve in 6s, show landing normally
     window._mtInitFallbackTimer = setTimeout(() => {
-        const loading = document.getElementById('mt-loading');
-        const isStillLoading = loading && loading.classList.contains('active');
-        if (isStillLoading) {
-            mtHideLoading();
-            mtShowLanding();
+        const splashContent = document.getElementById('prism-splash');
+        if (splashContent && splashContent.style.opacity === '0') {
+            splashContent.style.transition = 'opacity 0.5s ease';
+            splashContent.style.opacity = '1';
         }
     }, 6000);
 
@@ -27805,9 +27818,10 @@ async function mtInit() {
                     mtUpdateOrgBadge();
                     setTimeout(() => {
                         if (typeof updateUserDisplay === 'function') updateUserDisplay();
-                        if (typeof loadDashboard === 'function') loadDashboard();
-                        // Wait for DB ready before any Firebase sync
-                        const _runSyncAfterDB = async () => {
+                        // Define sync-after-DB as a pending function —
+                        // it will be called by _mtShowAppActual AFTER init() completes
+                        // This prevents reading empty IDB before the app is ready
+                        window._pendingRunSyncAfterDB = async () => {
                             if (window._dbReadyPromise) await window._dbReadyPromise;
                             // On fresh device (empty IndexedDB), pull first then push
                             const _localProps = await dbGetAll('properties').catch(()=>[]);
@@ -27841,8 +27855,7 @@ async function mtInit() {
                             // Start real-time listener for live cross-device sync
                             mtStartRealtimeSync();
                         };
-                        _runSyncAfterDB();
-                    }, 500);
+                    }, 200);
 
                 } else {
                     // No org in localStorage — check Firestore before showing setup
@@ -27900,7 +27913,12 @@ async function mtInit() {
                     } catch(e) {}
                     // App already shown by mtInit — don't navigate again
                 } else {
-                    mtHideLoading();
+                    // No session — fade in the splash so user can click Enter
+                    const splashContent = document.getElementById('prism-splash');
+                    if (splashContent) {
+                        splashContent.style.transition = 'opacity 0.5s ease';
+                        splashContent.style.opacity = '1';
+                    }
                     mtShowLanding();
                 }
             }
