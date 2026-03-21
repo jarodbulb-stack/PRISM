@@ -4020,6 +4020,22 @@
                     <div class="stat-value text-danger" id="stat-overdue">0</div>
                     <div class="stat-label">⚠️ Overdue</div>
                 </div>
+                <div class="stat-card stat-card-info" style="cursor: pointer;" onclick="showFlashcardDetail('water-credits')">
+                    <div class="stat-value" style="color:#38bdf8;" id="stat-dash-water-credits">0</div>
+                    <div class="stat-label">💧 Water Credits</div>
+                </div>
+            </div>
+
+            <!-- Tasks & Notes Overdue -->
+            <div class="stats-grid">
+                <div class="stat-card stat-card-danger" style="cursor: pointer;" onclick="showFlashcardDetail('overdue-tasks')">
+                    <div class="stat-value text-danger" id="stat-dash-overdue-tasks">0</div>
+                    <div class="stat-label">✅ Overdue Tasks</div>
+                </div>
+                <div class="stat-card stat-card-warning" style="cursor: pointer;" onclick="showFlashcardDetail('overdue-notes')">
+                    <div class="stat-value text-warning" id="stat-dash-overdue-notes">0</div>
+                    <div class="stat-label">📝 Overdue Reminders</div>
+                </div>
             </div>
 
             <!-- Financial Summary -->
@@ -4308,6 +4324,14 @@
             <div class="card">
                 <div class="card-header">
                     <div class="card-title">My Properties</div>
+                </div>
+                <!-- Search bar -->
+                <div style="position:relative;margin-bottom:12px;">
+                    <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#64748b;font-size:1rem;pointer-events:none;">🔍</span>
+                    <input type="text" id="properties-search" placeholder="Search property name..."
+                        oninput="filterProperties(this.value)"
+                        style="width:100%;padding:10px 12px 10px 36px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;color:var(--text-primary);font-size:0.88rem;box-sizing:border-box;outline:none;"
+                        onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='var(--border-color)'">
                 </div>
                 <div id="properties-list">
                     <div class="empty-state">
@@ -10796,21 +10820,23 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                         </button>
                     </div>
                 `;
+                // Clear search on empty
+                const srch = document.getElementById('properties-search');
+                if (srch) srch.value = '';
                 return;
             }
 
-            container.innerHTML = properties.map(prop => {
-                // Check actual status based on active tenants
+            // Build items with data-name for search filtering
+            const html = properties.map(prop => {
                 const activeTenants = tenants.filter(t => t.propertyId === prop.id && t.status === 'active');
                 const isOccupied = activeTenants.length > 0;
                 const displayStatus = isOccupied ? 'occupied' : (prop.status || 'vacant');
-                const statusBadge = displayStatus === 'occupied' ? 'badge-success' : 
+                const statusBadge = displayStatus === 'occupied' ? 'badge-success' :
                                    displayStatus === 'maintenance' ? 'badge-warning' : 'badge-secondary';
-                const statusText = displayStatus === 'occupied' ? 'Occupied' : 
+                const statusText = displayStatus === 'occupied' ? 'Occupied' :
                                   displayStatus === 'maintenance' ? 'Maintenance' : 'Vacant';
-                
                 return `
-                    <div class="list-item" onclick="viewPropertyDetails(${prop.id})">
+                    <div class="list-item prop-search-item" data-name="${(prop.name||'').toLowerCase()}" onclick="viewPropertyDetails(${prop.id})">
                         <div class="item-info">
                             <h4>${prop.name}</h4>
                             <p>${prop.type} ${prop.address ? '• ' + prop.address : ''}</p>
@@ -10822,7 +10848,42 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     </div>
                 `;
             }).join('');
+
+            container.innerHTML = html;
+
+            // Re-apply any active search after reload
+            const srch = document.getElementById('properties-search');
+            if (srch && srch.value.trim()) filterProperties(srch.value);
         }
+
+        function filterProperties(query) {
+            const q = (query || '').toLowerCase().trim();
+            const items = document.querySelectorAll('#properties-list .prop-search-item');
+            let visibleCount = 0;
+            items.forEach(item => {
+                const name = item.getAttribute('data-name') || '';
+                const match = !q || name.includes(q);
+                item.style.display = match ? '' : 'none';
+                if (match) visibleCount++;
+            });
+            // Show no-results message if needed
+            let noResult = document.getElementById('prop-search-noresult');
+            if (q && visibleCount === 0) {
+                if (!noResult) {
+                    noResult = document.createElement('div');
+                    noResult.id = 'prop-search-noresult';
+                    noResult.style.cssText = 'text-align:center;color:#64748b;padding:20px;font-size:0.88rem;';
+                    noResult.textContent = 'No properties match "' + query + '"';
+                    document.getElementById('properties-list').appendChild(noResult);
+                } else {
+                    noResult.textContent = 'No properties match "' + query + '"';
+                    noResult.style.display = '';
+                }
+            } else if (noResult) {
+                noResult.style.display = 'none';
+            }
+        }
+        window.filterProperties = filterProperties;
 
         async function viewPropertyDetails(id) {
             if (!id || isNaN(id)) return;
@@ -11452,7 +11513,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 }
 
                 return `
-                    <div class="list-item" onclick="viewTenantDetails(${tenant.id})">
+                    <div class="list-item" style="cursor:pointer;" onclick="${(tenantFilter === 'unpaid' || tenantFilter === 'overdue') ? `viewTenantLedgerAndPay(${tenant.id})` : `viewTenantDetails(${tenant.id})`}">
                         <div class="item-info" style="flex: 1">
                             <h4>${tenant.name}</h4>
                             <p>${property ? property.name : 'Unknown property'} • ₱${tenant.rent.toLocaleString()}/mo</p>
@@ -11466,6 +11527,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                             <span class="badge ${currentMonthProgress >= 100 ? 'badge-success' : 'badge-warning'}">
                                 ${currentMonthProgress >= 100 ? 'Paid' : Math.round(currentMonthProgress) + '%'}
                             </span>
+                            ${(tenantFilter === 'unpaid' || tenantFilter === 'overdue') ? `<div style="font-size:0.68rem;color:#10b981;margin-top:4px;font-weight:600;">Tap to Pay →</div>` : ''}
                         </div>
                     </div>`;
             };
@@ -11948,6 +12010,19 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
 
         // Record payment for specific tenant
         async function recordPayment(tenantId) { return recordTenantPayment(tenantId); }
+
+        // Open tenant ledger then immediately show payment form — used from Unpaid/Overdue filter
+        async function viewTenantLedgerAndPay(id) {
+            await viewTenantDetails(id);
+            // Short delay to let the modal render fully, then trigger payment
+            setTimeout(() => {
+                if (typeof recordTenantPayment === 'function') {
+                    recordTenantPayment(id);
+                }
+            }, 350);
+        }
+        window.viewTenantLedgerAndPay = viewTenantLedgerAndPay;
+
 async function recordTenantPayment(tenantId) {
             const tenant = await dbGet('tenants', tenantId);
             if (!tenant) return;
@@ -19428,6 +19503,41 @@ async function showPayrollSummary() {
             if (statOverdue) statOverdue.textContent = overdueCount;
             if (statDueToday) statDueToday.textContent = dueSoonCount;
 
+            // ── Water Credits count ──
+            try {
+                const _wCustomers = await dbGetAll('waterCustomers').catch(()=>[]);
+                const _wSales     = await dbGetAll('waterSales').catch(()=>[]);
+                const _wCreditCount = _wCustomers.filter(c => {
+                    const unpaid = _wSales.filter(s => String(s.customerId)===String(c.id) && !s.voided && (s.status==='credit'||s.status==='partial'))
+                        .reduce((sum,s)=>sum+Math.max(0,(s.total||0)-(s.amountPaid||0)),0);
+                    return unpaid > 0;
+                }).length;
+                const _elWC = document.getElementById('stat-dash-water-credits');
+                if (_elWC) _elWC.textContent = _wCreditCount;
+            } catch(e) {}
+
+            // ── Overdue Tasks count ──
+            try {
+                const _tasks = await dbGetAll('tasks').catch(()=>[]);
+                const _now2 = new Date(); _now2.setHours(0,0,0,0);
+                const _overdueTaskCount = _tasks.filter(t => t.status !== 'completed' && t.dueDate && new Date(t.dueDate) < _now2).length;
+                const _elOT = document.getElementById('stat-dash-overdue-tasks');
+                if (_elOT) _elOT.textContent = _overdueTaskCount;
+            } catch(e) {}
+
+            // ── Overdue Notes/Reminders count ──
+            try {
+                const _notes = await dbGetAll('customNotes').catch(()=>[]);
+                const _todayStr = new Date().toDateString();
+                const _overdueNoteCount = _notes.filter(n => {
+                    if (!n.reminderDate) return false;
+                    const rd = new Date(n.reminderDate);
+                    return rd < new Date() && n.reminderDate !== _todayStr;
+                }).length;
+                const _elON = document.getElementById('stat-dash-overdue-notes');
+                if (_elON) _elON.textContent = _overdueNoteCount;
+            } catch(e) {}
+
             // Show notifications banner if there are any
             renderNotificationsBanner();
 
@@ -22609,50 +22719,155 @@ async function clearAllData() {
 
             // ─────────────────────────────────────────────
             } else {
-                // Fallback for properties, tenants, debtors, due-soon, overdue (existing logic)
                 const allTenants2 = tenants;
                 const allCredits2 = credits;
-                let items = [];
-                let total2 = 0;
-                let title2 = '';
+                const _navBtn = (label, section) =>
+                    `<button onclick="showSection('${section}')" style="margin-top:10px;width:100%;padding:8px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:8px;cursor:pointer;font-size:0.8rem;font-weight:600;">→ Go to ${label}</button>`;
+
                 if (type==='properties') {
                     const props = await dbGetAll('properties');
-                    title2='🏠 All Properties';
-                    items = props.map(p=>'<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-color);"><span>'+p.name+'</span><span class="badge '+(p.status==='occupied'?'badge-success':'badge-warning')+'">'+p.status+'</span></div>');
+                    title='🏠 All Properties';
+                    const rows = props.map(p=>`<div onclick="showSection('properties')" style="display:flex;justify-content:space-between;padding:10px 8px;border-bottom:1px solid var(--border-color);cursor:pointer;border-radius:6px;" onmouseover="this.style.background='rgba(99,102,241,0.08)'" onmouseout="this.style.background=''"><span style="font-weight:600;">${p.name}</span><span class="badge ${p.status==='occupied'?'badge-success':'badge-warning'}">${p.status}</span></div>`).join('');
+                    html = (rows || '<div style="color:#64748b;padding:12px;text-align:center;">No properties found.</div>') + _navBtn('Properties','properties');
+
                 } else if (type==='vacant') {
                     const props = await dbGetAll('properties');
-                    title2='🚪 Vacant Properties';
-                    items = props.filter(p=>p.status==='vacant').map(p=>'<div style="padding:8px 0;border-bottom:1px solid var(--border-color);">'+p.name+'<span style="color:#64748b;font-size:0.8rem;"> — ₱'+p.rent+'</span></div>');
-                } else if (type==='tenants') {
-                    title2='👥 Active Tenants';
-                    items = allTenants2.filter(t=>t.status==='active'||!t.status).map(t=>'<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-color);"><span>'+t.name+'</span><span style="color:#10b981;">₱'+t.rent+'</span></div>');
-                } else if (type==='debtors') {
-                    title2='💳 Active Debtors';
-                    items = allCredits2.filter(c=>c.status!=='paid'&&c.status!=='closed').map(c=>{
-                        const paid = creditPayments.filter(p=>p.creditId===c.id).reduce((s,p)=>s+p.amount,0);
-                        const bal = (c.principal||0)-paid;
-                        return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-color);"><span>'+c.debtor+'</span><span style="color:#f59e0b;">₱'+Math.max(0,bal).toLocaleString()+'</span></div>';
-                    });
-                } else if (type==='due-soon') {
-                    title2='📅 Due Soon (next 3 days)';
-                    const todayDay = now.getDate();
-                    items = allTenants2.filter(t=>{
-                        const d = t.dueDay||5; const diff = d-todayDay;
-                        return (t.status==='active'||!t.status)&&diff>=0&&diff<=3;
-                    }).map(t=>'<div style="padding:8px 0;border-bottom:1px solid var(--border-color);">'+t.name+' — Due day '+t.dueDay+'</div>');
-                } else if (type==='overdue') {
-                    title2='⚠️ Overdue Tenants';
-                    const todayDay = now.getDate();
-                    items = allTenants2.filter(t=>{
-                        const paid = payments.filter(p=>p.tenantId===t.id&&p.date&&p.date.startsWith(currentMonth)).reduce((s,p)=>s+p.amount,0);
-                        return (t.status==='active'||!t.status)&&todayDay>(t.dueDay||5)&&paid<(t.rent||0);
-                    }).map(t=>'<div style="padding:8px 0;border-bottom:1px solid var(--border-color);">'+t.name+' — ₱'+t.rent+'/mo</div>');
-                }
-                title = title2;
-                html = (items.length ? items.join('') : '<div style="color:#64748b;padding:12px;text-align:center;">No data found.</div>');
-                if (total2>0) html += '<div style="display:flex;justify-content:space-between;padding-top:10px;margin-top:8px;border-top:1px solid #334155;font-weight:700;"><span>Total</span><span style="color:#10b981;">₱'+total2.toLocaleString()+'</span></div>';
-            }
+                    title='🚪 Vacant Properties';
+                    const rows = props.filter(p=>p.status==='vacant'||!p.status).map(p=>`<div onclick="showSection('properties')" style="padding:10px 8px;border-bottom:1px solid var(--border-color);cursor:pointer;border-radius:6px;" onmouseover="this.style.background='rgba(245,158,11,0.08)'" onmouseout="this.style.background=''"><span style="font-weight:600;">${p.name}</span><span style="color:#64748b;font-size:0.8rem;"> — ₱${(p.rent||0).toLocaleString()}/mo</span></div>`).join('');
+                    html = (rows || '<div style="color:#64748b;padding:12px;text-align:center;">No vacant properties.</div>') + _navBtn('Properties','properties');
 
+                } else if (type==='tenants') {
+                    title='👥 Active Tenants';
+                    const rows = allTenants2.filter(t=>t.status==='active'||!t.status).map(t=>`<div onclick="showSection('tenants')" style="display:flex;justify-content:space-between;padding:10px 8px;border-bottom:1px solid var(--border-color);cursor:pointer;border-radius:6px;" onmouseover="this.style.background='rgba(16,185,129,0.08)'" onmouseout="this.style.background=''"><span style="font-weight:600;">${t.name}</span><span style="color:#10b981;font-weight:700;">₱${(t.rent||0).toLocaleString()}/mo</span></div>`).join('');
+                    html = (rows || '<div style="color:#64748b;padding:12px;text-align:center;">No active tenants.</div>') + _navBtn('Tenants','tenants');
+
+                } else if (type==='debtors') {
+                    title='💳 Active Debtors';
+                    const rows = allCredits2.filter(c=>c.status!=='paid'&&c.status!=='closed').map(c=>{
+                        const paid = creditPayments.filter(p=>p.creditId===c.id).reduce((s,p)=>s+(p.amount||0),0);
+                        const bal = Math.max(0,(c.principal||0)-paid);
+                        return `<div onclick="showSection('credits')" style="display:flex;justify-content:space-between;padding:10px 8px;border-bottom:1px solid var(--border-color);cursor:pointer;border-radius:6px;" onmouseover="this.style.background='rgba(245,158,11,0.08)'" onmouseout="this.style.background=''"><span style="font-weight:600;">${c.debtor}</span><span style="color:#f59e0b;font-weight:700;">₱${bal.toLocaleString()} left</span></div>`;
+                    }).join('');
+                    html = (rows || '<div style="color:#64748b;padding:12px;text-align:center;">No active debtors.</div>') + _navBtn('Credits','credits');
+
+                } else if (type==='due-soon') {
+                    title='📅 Due Soon (within 3 days)';
+                    const todayDay = now.getDate();
+                    const rows = allTenants2.filter(t=>{
+                        const d=t.dueDay||5; const diff=d-todayDay;
+                        return (t.status==='active'||!t.status)&&diff>=0&&diff<=3;
+                    }).map(t=>`<div onclick="showSection('tenants')" style="display:flex;justify-content:space-between;padding:10px 8px;border-bottom:1px solid var(--border-color);cursor:pointer;border-radius:6px;" onmouseover="this.style.background='rgba(245,158,11,0.08)'" onmouseout="this.style.background=''"><span style="font-weight:600;">${t.name}</span><span style="color:#f59e0b;font-size:0.8rem;">Due day ${t.dueDay||5}</span></div>`).join('');
+                    html = (rows || '<div style="color:#10b981;padding:16px;text-align:center;">✅ No payments due in the next 3 days.</div>') + _navBtn('Tenants','tenants');
+
+                } else if (type==='overdue') {
+                    title='⚠️ All Overdue Collections';
+                    const todayDay = now.getDate();
+                    let rows = '';
+
+                    // 1. Overdue rent tenants
+                    const overdueTenants = allTenants2.filter(t=>{
+                        const paid = payments.filter(p=>p.tenantId===t.id&&p.date&&p.date.startsWith(currentMonth)&&!p.voided).reduce((s,p)=>s+(p.amount||0),0);
+                        return (t.status==='active'||!t.status)&&todayDay>(t.dueDay||5)&&paid<(t.rent||0);
+                    });
+                    if (overdueTenants.length > 0) {
+                        rows += `<div style="font-size:0.75rem;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:0.05em;padding:8px 0 4px;">🏠 Overdue Rent (${overdueTenants.length})</div>`;
+                        rows += overdueTenants.map(t=>{
+                            const paid = payments.filter(p=>p.tenantId===t.id&&p.date&&p.date.startsWith(currentMonth)&&!p.voided).reduce((s,p)=>s+(p.amount||0),0);
+                            const due = Math.max(0,(t.rent||0)-paid);
+                            return `<div onclick="showSection('tenants')" style="display:flex;justify-content:space-between;padding:10px 8px;border-bottom:1px solid var(--border-color);cursor:pointer;border-radius:6px;" onmouseover="this.style.background='rgba(239,68,68,0.08)'" onmouseout="this.style.background=''"><div><div style="font-weight:600;">${t.name}</div><div style="font-size:0.72rem;color:#64748b;">${todayDay-(t.dueDay||5)} days overdue</div></div><span style="color:#ef4444;font-weight:700;">₱${due.toLocaleString()}</span></div>`;
+                        }).join('');
+                    }
+
+                    // 2. Overdue credit debtors
+                    const overdueCredits = allCredits2.filter(c=>{
+                        if (c.status==='paid'||c.status==='closed') return false;
+                        const paid = creditPayments.filter(p=>p.creditId===c.id).reduce((s,p)=>s+(p.amount||0),0);
+                        return paid < (c.principal||0);
+                    });
+                    if (overdueCredits.length > 0) {
+                        rows += `<div style="font-size:0.75rem;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:0.05em;padding:12px 0 4px;">💳 Credit Debtors (${overdueCredits.length})</div>`;
+                        rows += overdueCredits.map(c=>{
+                            const paid = creditPayments.filter(p=>p.creditId===c.id).reduce((s,p)=>s+(p.amount||0),0);
+                            const bal = Math.max(0,(c.principal||0)-paid);
+                            return `<div onclick="showSection('credits')" style="display:flex;justify-content:space-between;padding:10px 8px;border-bottom:1px solid var(--border-color);cursor:pointer;border-radius:6px;" onmouseover="this.style.background='rgba(239,68,68,0.08)'" onmouseout="this.style.background=''"><div><div style="font-weight:600;">${c.debtor}</div><div style="font-size:0.72rem;color:#64748b;">Since ${c.dateLent||'?'}</div></div><span style="color:#ef4444;font-weight:700;">₱${bal.toLocaleString()}</span></div>`;
+                        }).join('');
+                    }
+
+                    // 3. Water credit customers
+                    const _wCust3 = await dbGetAll('waterCustomers').catch(()=>[]);
+                    const _wSal3  = await dbGetAll('waterSales').catch(()=>[]);
+                    const overdueWater = _wCust3.filter(c=>{
+                        const unpaid = _wSal3.filter(s=>String(s.customerId)===String(c.id)&&!s.voided&&(s.status==='credit'||s.status==='partial'))
+                            .reduce((sum,s)=>sum+Math.max(0,(s.total||0)-(s.amountPaid||0)),0);
+                        return unpaid > 0;
+                    });
+                    if (overdueWater.length > 0) {
+                        rows += `<div style="font-size:0.75rem;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:0.05em;padding:12px 0 4px;">💧 Water Credit Customers (${overdueWater.length})</div>`;
+                        rows += overdueWater.map(c=>{
+                            const unpaid = _wSal3.filter(s=>String(s.customerId)===String(c.id)&&!s.voided&&(s.status==='credit'||s.status==='partial'))
+                                .reduce((sum,s)=>sum+Math.max(0,(s.total||0)-(s.amountPaid||0)),0);
+                            return `<div onclick="showSection('water')" style="display:flex;justify-content:space-between;padding:10px 8px;border-bottom:1px solid var(--border-color);cursor:pointer;border-radius:6px;" onmouseover="this.style.background='rgba(56,189,248,0.08)'" onmouseout="this.style.background=''"><span style="font-weight:600;">${c.name}</span><span style="color:#38bdf8;font-weight:700;">₱${unpaid.toLocaleString()}</span></div>`;
+                        }).join('');
+                    }
+
+                    if (!rows) rows = '<div style="color:#10b981;padding:16px;text-align:center;">✅ No overdue collections!</div>';
+                    html = rows + `<div style="display:flex;gap:8px;margin-top:12px;"><button onclick="showSection('tenants')" style="flex:1;padding:8px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#f87171;border-radius:8px;cursor:pointer;font-size:0.78rem;font-weight:600;">🏠 Tenants</button><button onclick="showSection('credits')" style="flex:1;padding:8px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:#f59e0b;border-radius:8px;cursor:pointer;font-size:0.78rem;font-weight:600;">💳 Credits</button><button onclick="showSection('water')" style="flex:1;padding:8px;background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.3);color:#38bdf8;border-radius:8px;cursor:pointer;font-size:0.78rem;font-weight:600;">💧 Water</button></div>`;
+
+                } else if (type==='water-credits') {
+                    title='💧 Water Credit Customers';
+                    const _wCust = await dbGetAll('waterCustomers').catch(()=>[]);
+                    const _wSal  = await dbGetAll('waterSales').catch(()=>[]);
+                    const withCredit = _wCust.map(c=>{
+                        const unpaid = _wSal.filter(s=>String(s.customerId)===String(c.id)&&!s.voided&&(s.status==='credit'||s.status==='partial'))
+                            .reduce((sum,s)=>sum+Math.max(0,(s.total||0)-(s.amountPaid||0)),0);
+                        return {...c, unpaid};
+                    }).filter(c=>c.unpaid>0).sort((a,b)=>b.unpaid-a.unpaid);
+                    const totalWC = withCredit.reduce((s,c)=>s+c.unpaid,0);
+                    html += `<div style="background:rgba(56,189,248,0.1);border-radius:8px;padding:10px;text-align:center;margin-bottom:14px;"><div style="font-weight:800;color:#38bdf8;font-size:1.2rem;">₱${totalWC.toLocaleString()}</div><div style="font-size:0.72rem;color:#64748b;">${withCredit.length} customer(s) with unpaid water balance</div></div>`;
+                    if (withCredit.length === 0) {
+                        html += '<div style="color:#10b981;padding:16px;text-align:center;">✅ No water credit balances!</div>';
+                    } else {
+                        html += withCredit.map(c=>`<div onclick="showSection('water')" style="display:flex;justify-content:space-between;padding:10px 8px;border-bottom:1px solid var(--border-color);cursor:pointer;border-radius:6px;" onmouseover="this.style.background='rgba(56,189,248,0.08)'" onmouseout="this.style.background=''"><span style="font-weight:600;">${c.name}</span><span style="color:#38bdf8;font-weight:700;">₱${c.unpaid.toLocaleString()}</span></div>`).join('');
+                    }
+                    html += _navBtn('Water Station','water');
+
+                } else if (type==='overdue-tasks') {
+                    title='✅ Overdue Tasks';
+                    const _tasks2 = await dbGetAll('tasks').catch(()=>[]);
+                    const _now3 = new Date(); _now3.setHours(0,0,0,0);
+                    const overdueTasks = _tasks2.filter(t=>t.status!=='completed'&&t.dueDate&&new Date(t.dueDate)<_now3)
+                        .sort((a,b)=>new Date(a.dueDate)-new Date(b.dueDate));
+                    html += `<div style="background:rgba(239,68,68,0.1);border-radius:8px;padding:10px;text-align:center;margin-bottom:14px;"><div style="font-weight:800;color:#ef4444;font-size:1.2rem;">${overdueTasks.length}</div><div style="font-size:0.72rem;color:#64748b;">overdue task(s)</div></div>`;
+                    if (overdueTasks.length === 0) {
+                        html += '<div style="color:#10b981;padding:16px;text-align:center;">✅ No overdue tasks!</div>';
+                    } else {
+                        html += overdueTasks.map(t=>{
+                            const daysOver = Math.floor((_now3-new Date(t.dueDate))/(1000*60*60*24));
+                            const priority = t.priority||'normal';
+                            const pColor = priority==='high'?'#ef4444':priority==='medium'?'#f59e0b':'#64748b';
+                            return `<div onclick="showSection('tasks')" style="padding:10px 8px;border-bottom:1px solid var(--border-color);cursor:pointer;border-radius:6px;" onmouseover="this.style.background='rgba(239,68,68,0.08)'" onmouseout="this.style.background=''"><div style="display:flex;justify-content:space-between;"><span style="font-weight:600;">${t.title||t.name||'Task'}</span><span style="color:${pColor};font-size:0.75rem;font-weight:700;">${priority.toUpperCase()}</span></div><div style="font-size:0.72rem;color:#ef4444;margin-top:2px;">${daysOver} day${daysOver!==1?'s':''} overdue · Due: ${t.dueDate}</div></div>`;
+                        }).join('');
+                    }
+                    html += _navBtn('Tasks','tasks');
+
+                } else if (type==='overdue-notes') {
+                    title='📝 Overdue Note Reminders';
+                    const _notes2 = await dbGetAll('customNotes').catch(()=>[]);
+                    const _nowD = new Date();
+                    const overdueNotes = _notes2.filter(n=>n.reminderDate&&new Date(n.reminderDate)<_nowD)
+                        .sort((a,b)=>new Date(a.reminderDate)-new Date(b.reminderDate));
+                    html += `<div style="background:rgba(245,158,11,0.1);border-radius:8px;padding:10px;text-align:center;margin-bottom:14px;"><div style="font-weight:800;color:#f59e0b;font-size:1.2rem;">${overdueNotes.length}</div><div style="font-size:0.72rem;color:#64748b;">overdue reminder(s)</div></div>`;
+                    if (overdueNotes.length === 0) {
+                        html += '<div style="color:#10b981;padding:16px;text-align:center;">✅ No overdue reminders!</div>';
+                    } else {
+                        html += overdueNotes.map(n=>`<div onclick="showSection('notes')" style="padding:10px 8px;border-bottom:1px solid var(--border-color);cursor:pointer;border-radius:6px;" onmouseover="this.style.background='rgba(245,158,11,0.08)'" onmouseout="this.style.background=''"><div style="font-weight:600;">${n.title||'Note'}</div><div style="font-size:0.72rem;color:#f59e0b;margin-top:2px;">Reminder was: ${n.reminderDate}</div>${n.content?`<div style="font-size:0.75rem;color:#64748b;margin-top:3px;">${(n.content||'').substring(0,60)}${(n.content||'').length>60?'...':''}</div>`:''}</div>`).join('');
+                    }
+                    html += _navBtn('Notes','notes');
+
+                } else {
+                    html = '<div style="color:#64748b;padding:12px;text-align:center;">No data found.</div>';
+                }
+            }
             // ── Render modal ──
             const modal = document.createElement('div');
             modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
@@ -25444,27 +25659,33 @@ function _mtShowAppActual() {
     // Initialize PRISM app if not done yet
     if (!_prismAppInitialized) {
         _prismAppInitialized = true;
-        if (typeof init === 'function') {
-            // Show loading overlay
-            const _initLoad = document.getElementById('prism-app-loading');
-            if (_initLoad) _initLoad.classList.remove('hidden');
-            init().then(async () => {
-                if (typeof loadDashboard === 'function') await loadDashboard();
-                if (typeof loadDashIncomeExpense === 'function') loadDashIncomeExpense();
-                // Data ready — hide overlay
+        // Show loading overlay while data loads
+        const _initLoad = document.getElementById('prism-app-loading');
+        if (_initLoad) _initLoad.classList.remove('hidden');
+        (async () => {
+            try {
+                // Wait for IDB to be ready
+                if (window._dbReadyPromise) await window._dbReadyPromise;
+                // Load all data so dashboard shows real numbers immediately
+                if (typeof loadAllData === 'function') {
+                    await loadAllData();
+                } else {
+                    if (typeof loadDashboard === 'function') await loadDashboard();
+                    if (typeof loadDashIncomeExpense === 'function') loadDashIncomeExpense();
+                }
+            } catch(e) {
+                console.error('[PRISM] Initial data load failed:', e);
+                if (typeof loadDashboard === 'function') loadDashboard();
+            } finally {
                 const _ld = document.getElementById('prism-app-loading');
                 if (_ld) _ld.classList.add('hidden');
-                // NOW run sync — IDB and app are fully ready
+                // Run sync AFTER data is loaded and IDB is ready
                 if (typeof window._pendingRunSyncAfterDB === 'function') {
                     window._pendingRunSyncAfterDB();
                     window._pendingRunSyncAfterDB = null;
                 }
-            }).catch(e => {
-                console.error('[PRISM] init() failed:', e);
-                const _ld = document.getElementById('prism-app-loading');
-                if (_ld) _ld.classList.add('hidden');
-            });
-        }
+            }
+        })();
     } else {
         // App already initialized — just refresh dashboard
         setTimeout(() => {
@@ -27823,32 +28044,33 @@ async function mtInit() {
                         // This prevents reading empty IDB before the app is ready
                         window._pendingRunSyncAfterDB = async () => {
                             if (window._dbReadyPromise) await window._dbReadyPromise;
-                            // On fresh device (empty IndexedDB), pull first then push
+                            const _reloadAll = async () => {
+                                if (typeof loadAllData === 'function') {
+                                    try { await loadAllData(); } catch(e) {
+                                        if (typeof loadDashboard === 'function') loadDashboard();
+                                    }
+                                } else if (typeof loadDashboard === 'function') {
+                                    loadDashboard();
+                                }
+                            };
+                            // On fresh device (empty IndexedDB), pull first then reload all
                             const _localProps = await dbGetAll('properties').catch(()=>[]);
                             const _isFreshDevice = !_localProps || _localProps.length === 0;
                             if (_isFreshDevice) {
                                 // Fresh device — pull from Firebase first to populate IndexedDB
                                 if (typeof syncFromFirebase === 'function') {
                                     try { await syncFromFirebase(); } catch(e) {}
-                                    // Reload all sections so dashboard stats are accurate immediately
-                                    if (typeof loadAllData === 'function') {
-                                        try { await loadAllData(); } catch(e) {
-                                            if (typeof loadDashboard === 'function') loadDashboard();
-                                        }
-                                    } else if (typeof loadDashboard === 'function') {
-                                        loadDashboard();
-                                    }
+                                    await _reloadAll();
                                 }
                             } else {
-                                // Existing device — push first, then pull
+                                // Existing device — push first, then pull, then reload all
                                 if (typeof syncToFirebase === 'function') {
                                     syncToFirebase().catch(e => {});
                                 }
                                 if (typeof syncFromFirebase === 'function') {
                                     setTimeout(() => {
-                                        syncFromFirebase().then(() => {
-                                            if (typeof loadDashboard === 'function') loadDashboard();
-                                        }).catch(e => console.warn('[MT] Sync on load failed:', e));
+                                        syncFromFirebase().then(() => _reloadAll())
+                                            .catch(e => console.warn('[MT] Sync on load failed:', e));
                                     }, 1500);
                                 }
                             }
@@ -28912,7 +29134,13 @@ window.addEventListener('DOMContentLoaded', () => {
             mtLogout();
         }
     };
-    
+
+    // Pre-warm IndexedDB immediately — don't wait for auth to resolve
+    // By the time prismShowConnecting (3.8s) finishes, IDB will be open and ready
+    if (typeof initDB === 'function') {
+        initDB().catch(e => console.warn('[DB] Pre-warm failed:', e));
+    }
+
     // Start MT init
     mtInit();
 });
