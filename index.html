@@ -8061,6 +8061,9 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
 
         // Google Sign In
         async function signInWithGoogle() {
+            // Mark as manual login — cinematic animation will play
+            window._mtManualLogin = true;
+            window._mtReturningUser = false;
             // Block if local file
             if (window.location.protocol === 'file:') {
                 showToast('☁️ Cloud features require HTTPS. The app works fully offline!', 'info');
@@ -20717,8 +20720,6 @@ async function showPayrollSummary() {
                         rp + '<div style="font-size:0.68rem;color:' + pc + ';margin-top:3px;">' + (t.priority || 'task') + '</div>');
                 });
                 sections.push(h + '</div>');
-            });
-                sections.push(h + '</div>');
             }
 
             // Notes & Reminders (Step 7: repeat support)
@@ -20743,8 +20744,6 @@ async function showPayrollSummary() {
                         n.description ? prismSafeString(n.description).substring(0, 80) : '',
                         tm + '<div style="font-size:0.68rem;color:' + cc + ';margin-top:3px;">' + (n.category || 'note') + '</div>');
                 });
-                sections.push(h2 + '</div>');
-            });
                 sections.push(h2 + '</div>');
             }
 
@@ -25736,7 +25735,11 @@ function mtShowApp() {
     if (app && app.classList.contains('mt-active')) {
         _mtShowAppActual(); return;
     }
-    // Show cinematic connecting screen then launch app
+    // Returning user (already signed into Google) — skip the 3.8s cinematic, go straight in
+    if (window._mtReturningUser) {
+        _mtShowAppActual(); return;
+    }
+    // New login — show cinematic connecting screen then launch app
     if (typeof prismShowConnecting === 'function') {
         prismShowConnecting(() => _mtShowAppActual());
     } else {
@@ -25845,7 +25848,15 @@ function _mtShowAppActual() {
 }
 
 function mtShowSuperAdmin() {
-    // Show cinematic connecting screen first, then SA panel
+    // Returning user — go straight in, no cinematic delay
+    if (window._mtReturningUser) {
+        mtShowScreen('mt-superadmin');
+        const _saEmail = document.getElementById('mt-sa-user-email');
+        if (_saEmail) _saEmail.textContent = MT.currentUser?.email || '';
+        mtLoadSAData();
+        return;
+    }
+    // New login — show cinematic connecting screen first, then SA panel
     if (typeof prismShowConnecting === 'function') {
         prismShowConnecting(() => {
             mtShowScreen('mt-superadmin');
@@ -26407,6 +26418,9 @@ async function mtRegister() {
 }
 
 async function mtGoogleLogin() {
+    // Mark as manual login — cinematic animation will play
+    window._mtManualLogin = true;
+    window._mtReturningUser = false;
     const googleBtn = document.querySelector('.mt-google-btn');
     const originalHTML = googleBtn ? googleBtn.innerHTML : '';
     const setBusy = (b) => {
@@ -27966,9 +27980,11 @@ async function mtAppLogout() {
 
 // ---- Main Init ----
 async function mtInit() {
-    // Keep the dark loading screen visible while Firebase auth resolves
-    // For returning Google users this takes <1s, then prismShowConnecting fires
-    mtShowLoading('Signing you in...');
+    // Show landing splash immediately — no dark screen gap
+    // Returning users: Firebase resolves in <1s and jumps straight to dashboard
+    // New users: splash stays visible so they can click Enter → login
+    mtShowScreen('mt-landing');
+    prismScreen('prism-splash');
 
     // Check for saved session
     const savedUser = localStorage.getItem('carent_current_user');
@@ -27990,12 +28006,8 @@ async function mtInit() {
         } catch(e) {}
     }
 
-    // Safety fallback: if Firebase auth doesn't resolve in 6s, show landing
-    window._mtInitFallbackTimer = setTimeout(() => {
-        mtHideLoading();
-        mtShowScreen('mt-landing');
-        prismScreen('prism-splash');
-    }, 6000);
+    // Safety fallback: if Firebase doesn't resolve in 5s, splash is already showing — nothing to do
+    window._mtInitFallbackTimer = setTimeout(() => {}, 5000);
 
     // Update auth page status when Firebase becomes ready
     const updateAuthStatus = () => {
@@ -28030,6 +28042,9 @@ async function mtInit() {
             if (appAlreadyActive && currentAppUser && !user) return; // local-only session, no firebase user
 
             if (user) {
+                // Mark as returning user — Firebase restored the session automatically (no manual login)
+                // This flag tells mtShowApp/mtShowSuperAdmin to skip the 3.8s cinematic animation
+                if (!window._mtManualLogin) window._mtReturningUser = true;
                 MT.currentUser = user;
 
                 // ── SECURITY GATE: Allowlist check (skip for super admins) ──
