@@ -4130,17 +4130,17 @@
                 </div>
                 <!-- Summary numbers -->
                 <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:10px 0;">
-                    <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:10px;padding:12px;text-align:center;">
+                    <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:10px;padding:12px;text-align:center;cursor:pointer;" onclick="showDashIeDetail('income')" title="Tap to see income breakdown">
                         <div style="font-size:1.2rem;font-weight:800;color:#10b981;" id="dash-ie-income">₱0</div>
-                        <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:3px;">💰 Income</div>
+                        <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:3px;">💰 Income ↗</div>
                     </div>
-                    <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:12px;text-align:center;">
+                    <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:12px;text-align:center;cursor:pointer;" onclick="showDashIeDetail('expense')" title="Tap to see expense breakdown">
                         <div style="font-size:1.2rem;font-weight:800;color:#ef4444;" id="dash-ie-expense">₱0</div>
-                        <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:3px;">💸 Expenses</div>
+                        <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:3px;">💸 Expenses ↗</div>
                     </div>
-                    <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:10px;padding:12px;text-align:center;">
+                    <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:10px;padding:12px;text-align:center;cursor:pointer;" onclick="showDashIeDetail('net')" title="Tap to see net breakdown">
                         <div style="font-size:1.2rem;font-weight:800;" id="dash-ie-net">₱0</div>
-                        <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:3px;" id="dash-ie-label">💹 Net</div>
+                        <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:3px;" id="dash-ie-label">💹 Net ↗</div>
                     </div>
                 </div>
                 <!-- Progress bar -->
@@ -4245,32 +4245,32 @@
                 </div>
                 <!-- Expense Category Breakdown -->
                 <div class="expense-summary-grid" id="expense-category-breakdown">
-                    <div class="expense-summary-item" onclick="openExpenseWithCategory('electric')" style="cursor: pointer;" title="Click to add Electric expense">
+                    <div class="expense-summary-item" onclick="showExpenseCategoryDetail('electric')" style="cursor: pointer;" title="Click to add Electric expense">
                         <div class="icon">⚡</div>
                         <div class="amount" id="exp-electric">₱0</div>
                         <div class="label">Electric</div>
                     </div>
-                    <div class="expense-summary-item" onclick="openExpenseWithCategory('water')" style="cursor: pointer;" title="Click to add Water expense">
+                    <div class="expense-summary-item" onclick="showExpenseCategoryDetail('water')" style="cursor: pointer;" title="Click to add Water expense">
                         <div class="icon">💧</div>
                         <div class="amount" id="exp-water">₱0</div>
                         <div class="label">Water</div>
                     </div>
-                    <div class="expense-summary-item" onclick="openExpenseWithCategory('fuel')" style="cursor: pointer;" title="Click to add Fuel expense">
+                    <div class="expense-summary-item" onclick="showExpenseCategoryDetail('fuel')" style="cursor: pointer;" title="Click to add Fuel expense">
                         <div class="icon">⛽</div>
                         <div class="amount" id="exp-fuel">₱0</div>
                         <div class="label">Fuel</div>
                     </div>
-                    <div class="expense-summary-item" onclick="openExpenseWithCategory('repairs')" style="cursor: pointer;" title="Click to add Repairs expense">
+                    <div class="expense-summary-item" onclick="showExpenseCategoryDetail('repairs')" style="cursor: pointer;" title="Click to add Repairs expense">
                         <div class="icon">🔧</div>
                         <div class="amount" id="exp-repairs">₱0</div>
                         <div class="label">Repairs</div>
                     </div>
-                    <div class="expense-summary-item" onclick="openExpenseWithCategory('personal_loan')" style="cursor: pointer;" title="Click to add Loan expense">
+                    <div class="expense-summary-item" onclick="showExpenseCategoryDetail('personal_loan')" style="cursor: pointer;" title="Click to add Loan expense">
                         <div class="icon">💳</div>
                         <div class="amount" id="exp-loans">₱0</div>
                         <div class="label">Loans</div>
                     </div>
-                    <div class="expense-summary-item" onclick="openExpenseWithCategory('savings')" style="cursor: pointer;" title="Click to add Savings">
+                    <div class="expense-summary-item" onclick="showExpenseCategoryDetail('savings')" style="cursor: pointer;" title="Click to add Savings">
                         <div class="icon">🏦</div>
                         <div class="amount" id="exp-savings">₱0</div>
                         <div class="label">Savings</div>
@@ -4466,23 +4466,23 @@
                 
                 <p style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin: 10px 0 5px;">🏠 Property</p>
                 <div class="expense-summary-grid">
-                    <div class="expense-summary-item" onclick="openExpenseWithCategory('electric')" style="cursor: pointer;">
+                    <div class="expense-summary-item" onclick="showExpenseCategoryDetail('electric')" style="cursor: pointer;">
                         <div class="icon">⚡</div>
                         <div class="label">Electric</div>
                     </div>
-                    <div class="expense-summary-item" onclick="openExpenseWithCategory('water')" style="cursor: pointer;">
+                    <div class="expense-summary-item" onclick="showExpenseCategoryDetail('water')" style="cursor: pointer;">
                         <div class="icon">💧</div>
                         <div class="label">Water</div>
                     </div>
-                    <div class="expense-summary-item" onclick="openExpenseWithCategory('repairs')" style="cursor: pointer;">
+                    <div class="expense-summary-item" onclick="showExpenseCategoryDetail('repairs')" style="cursor: pointer;">
                         <div class="icon">🔧</div>
                         <div class="label">Repairs</div>
                     </div>
-                    <div class="expense-summary-item" onclick="openExpenseWithCategory('taxes')" style="cursor: pointer;">
+                    <div class="expense-summary-item" onclick="showExpenseCategoryDetail('taxes')" style="cursor: pointer;">
                         <div class="icon">📋</div>
                         <div class="label">Taxes</div>
                     </div>
-                    <div class="expense-summary-item" onclick="openExpenseWithCategory('insurance')" style="cursor: pointer;">
+                    <div class="expense-summary-item" onclick="showExpenseCategoryDetail('insurance')" style="cursor: pointer;">
                         <div class="icon">🛡️</div>
                         <div class="label">Insurance</div>
                     </div>
@@ -4490,19 +4490,19 @@
                 
                 <p style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin: 15px 0 5px;">🚗 Operations</p>
                 <div class="expense-summary-grid">
-                    <div class="expense-summary-item" onclick="openExpenseWithCategory('fuel')" style="cursor: pointer;">
+                    <div class="expense-summary-item" onclick="showExpenseCategoryDetail('fuel')" style="cursor: pointer;">
                         <div class="icon">⛽</div>
                         <div class="label">Fuel</div>
                     </div>
-                    <div class="expense-summary-item" onclick="openExpenseWithCategory('transport')" style="cursor: pointer;">
+                    <div class="expense-summary-item" onclick="showExpenseCategoryDetail('transport')" style="cursor: pointer;">
                         <div class="icon">🚌</div>
                         <div class="label">Transport</div>
                     </div>
-                    <div class="expense-summary-item" onclick="openExpenseWithCategory('supplies')" style="cursor: pointer;">
+                    <div class="expense-summary-item" onclick="showExpenseCategoryDetail('supplies')" style="cursor: pointer;">
                         <div class="icon">📦</div>
                         <div class="label">Supplies</div>
                     </div>
-                    <div class="expense-summary-item" onclick="openExpenseWithCategory('labor')" style="cursor: pointer;">
+                    <div class="expense-summary-item" onclick="showExpenseCategoryDetail('labor')" style="cursor: pointer;">
                         <div class="icon">👷</div>
                         <div class="label">Labor</div>
                     </div>
@@ -4510,19 +4510,19 @@
                 
                 <p style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin: 15px 0 5px;">💰 Personal</p>
                 <div class="expense-summary-grid">
-                    <div class="expense-summary-item" onclick="openExpenseWithCategory('personal_loan')" style="cursor: pointer;">
+                    <div class="expense-summary-item" onclick="showExpenseCategoryDetail('personal_loan')" style="cursor: pointer;">
                         <div class="icon">💳</div>
                         <div class="label">Loans</div>
                     </div>
-                    <div class="expense-summary-item" onclick="openExpenseWithCategory('food')" style="cursor: pointer;">
+                    <div class="expense-summary-item" onclick="showExpenseCategoryDetail('food')" style="cursor: pointer;">
                         <div class="icon">🍔</div>
                         <div class="label">Food</div>
                     </div>
-                    <div class="expense-summary-item" onclick="openExpenseWithCategory('communication')" style="cursor: pointer;">
+                    <div class="expense-summary-item" onclick="showExpenseCategoryDetail('communication')" style="cursor: pointer;">
                         <div class="icon">📱</div>
                         <div class="label">Comms</div>
                     </div>
-                    <div class="expense-summary-item" onclick="openExpenseWithCategory('other')" style="cursor: pointer;">
+                    <div class="expense-summary-item" onclick="showExpenseCategoryDetail('other')" style="cursor: pointer;">
                         <div class="icon">📝</div>
                         <div class="label">Other</div>
                     </div>
@@ -4530,23 +4530,23 @@
                 
                 <p style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin: 15px 0 5px;">🏛️ Government Contributions</p>
                 <div class="expense-summary-grid">
-                    <div class="expense-summary-item" onclick="openExpenseWithCategory('sss')" style="cursor: pointer;">
+                    <div class="expense-summary-item" onclick="showExpenseCategoryDetail('sss')" style="cursor: pointer;">
                         <div class="icon">🏛️</div>
                         <div class="label">SSS</div>
                     </div>
-                    <div class="expense-summary-item" onclick="openExpenseWithCategory('philhealth')" style="cursor: pointer;">
+                    <div class="expense-summary-item" onclick="showExpenseCategoryDetail('philhealth')" style="cursor: pointer;">
                         <div class="icon">🏥</div>
                         <div class="label">PhilHealth</div>
                     </div>
-                    <div class="expense-summary-item" onclick="openExpenseWithCategory('pagibig')" style="cursor: pointer;">
+                    <div class="expense-summary-item" onclick="showExpenseCategoryDetail('pagibig')" style="cursor: pointer;">
                         <div class="icon">🏠</div>
                         <div class="label">Pag-IBIG</div>
                     </div>
-                    <div class="expense-summary-item" onclick="openExpenseWithCategory('bir')" style="cursor: pointer;">
+                    <div class="expense-summary-item" onclick="showExpenseCategoryDetail('bir')" style="cursor: pointer;">
                         <div class="icon">📋</div>
                         <div class="label">BIR Tax</div>
                     </div>
-                    <div class="expense-summary-item" onclick="openExpenseWithCategory('accountant')" style="cursor: pointer;">
+                    <div class="expense-summary-item" onclick="showExpenseCategoryDetail('accountant')" style="cursor: pointer;">
                         <div class="icon">👨‍💼</div>
                         <div class="label">Accountant</div>
                     </div>
@@ -4554,19 +4554,19 @@
                 
                 <p style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin: 15px 0 5px;">💼 Money Allocation</p>
                 <div class="expense-summary-grid">
-                    <div class="expense-summary-item" onclick="openExpenseWithCategory('savings')" style="cursor: pointer;">
+                    <div class="expense-summary-item" onclick="showExpenseCategoryDetail('savings')" style="cursor: pointer;">
                         <div class="icon">🏦</div>
                         <div class="label">Savings</div>
                     </div>
-                    <div class="expense-summary-item" onclick="openExpenseWithCategory('investment')" style="cursor: pointer;">
+                    <div class="expense-summary-item" onclick="showExpenseCategoryDetail('investment')" style="cursor: pointer;">
                         <div class="icon">📈</div>
                         <div class="label">Investment</div>
                     </div>
-                    <div class="expense-summary-item" onclick="openExpenseWithCategory('capital_reserve')" style="cursor: pointer;">
+                    <div class="expense-summary-item" onclick="showExpenseCategoryDetail('capital_reserve')" style="cursor: pointer;">
                         <div class="icon">🏠</div>
                         <div class="label">Reserve</div>
                     </div>
-                    <div class="expense-summary-item" onclick="openExpenseWithCategory('owners_draw')" style="cursor: pointer;">
+                    <div class="expense-summary-item" onclick="showExpenseCategoryDetail('owners_draw')" style="cursor: pointer;">
                         <div class="icon">👤</div>
                         <div class="label">Owner Draw</div>
                     </div>
@@ -5887,6 +5887,10 @@
         <div class="fab-item">
             <span>Add Income</span>
             <button onclick="showIncomeModal()">💵</button>
+        </div>
+        <div class="fab-item">
+            <span>Add Expense</span>
+            <button onclick="toggleFabMenu();showFabExpenseModal()">💸</button>
         </div>
         <div class="fab-item">
             <span>Contract & Policies</span>
@@ -11609,7 +11613,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             }
 
             // Close modal
-            const modal = document.querySelector('.modal-overlay[style*="99999"]');
+            const modal = document.getElementById('flashcard-modal') || document.querySelector('.modal-overlay.show');
             if (modal) modal.remove();
 
             debouncedSync();
@@ -18518,6 +18522,114 @@ async function showPayrollSummary() {
         }
 
         // Open expense modal with pre-selected category
+        // ── FAB Quick Expense Modal ──
+        function showFabExpenseModal() {
+            const existing = document.getElementById('fab-expense-modal');
+            if (existing) { existing.remove(); return; }
+            const cats = [
+                { group:'🏠 Property', items:[
+                    {icon:'⚡',label:'Electric',cat:'electric'},
+                    {icon:'💧',label:'Water',cat:'water'},
+                    {icon:'🔧',label:'Repairs',cat:'repairs'},
+                    {icon:'📋',label:'Taxes',cat:'taxes'},
+                    {icon:'🛡️',label:'Insurance',cat:'insurance'},
+                ]},
+                { group:'🚗 Operations', items:[
+                    {icon:'⛽',label:'Fuel',cat:'fuel'},
+                    {icon:'🚌',label:'Transport',cat:'transport'},
+                    {icon:'📦',label:'Supplies',cat:'supplies'},
+                    {icon:'👷',label:'Labor',cat:'labor'},
+                ]},
+                { group:'💰 Personal', items:[
+                    {icon:'💳',label:'Loans',cat:'personal_loan'},
+                    {icon:'🍔',label:'Food',cat:'food'},
+                    {icon:'📱',label:'Comms',cat:'communication'},
+                    {icon:'📝',label:'Other',cat:'other'},
+                ]},
+                { group:'🏛️ Government', items:[
+                    {icon:'🏛️',label:'SSS',cat:'sss'},
+                    {icon:'🏥',label:'PhilHealth',cat:'philhealth'},
+                    {icon:'🏠',label:'Pag-IBIG',cat:'pagibig'},
+                    {icon:'📋',label:'BIR Tax',cat:'bir'},
+                    {icon:'👨‍💼',label:'Accountant',cat:'accountant'},
+                ]},
+                { group:'💼 Money Allocation', items:[
+                    {icon:'🏦',label:'Savings',cat:'savings'},
+                    {icon:'📈',label:'Investment',cat:'investment'},
+                    {icon:'🏠',label:'Reserve',cat:'capital_reserve'},
+                    {icon:'👤',label:'Owner Draw',cat:'owners_draw'},
+                ]},
+            ];
+            const groupsHtml = cats.map(g =>
+                '<div style="margin-bottom:14px;">' +
+                '<div style="font-size:0.72rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">' + g.group + '</div>' +
+                '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">' +
+                g.items.map(function(item){ return (
+                    '<div onclick="document.getElementById(\'fab-expense-modal\').remove();showExpenseCategoryDetail(\'' + item.cat + '\')"' +
+                    ' style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;padding:10px 6px;text-align:center;cursor:pointer;"' +
+                    ' onmouseover="this.style.background=\'rgba(239,68,68,0.12)\';this.style.borderColor=\'rgba(239,68,68,0.3)\'"' +
+                    ' onmouseout="this.style.background=\'var(--bg-secondary)\';this.style.borderColor=\'var(--border-color)\'">' +
+                    '<div style="font-size:1.4rem;margin-bottom:4px;">' + item.icon + '</div>' +
+                    '<div style="font-size:0.65rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;">' + item.label + '</div>' +
+                    '</div>'
+                ); }).join('') +
+                '</div></div>'
+            ).join('');
+
+            const modal = document.createElement('div');
+            modal.id = 'fab-expense-modal';
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.80);z-index:99998;display:flex;align-items:flex-end;justify-content:center;';
+            modal.innerHTML =
+                '<div style="background:var(--bg-card,#1e293b);border:1px solid var(--border-color,#334155);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:600px;max-height:88vh;overflow-y:auto;">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;position:sticky;top:0;background:var(--bg-card,#1e293b);padding-bottom:12px;border-bottom:1px solid var(--border-color,#334155);">' +
+                '<div><h3 style="margin:0;color:var(--text-primary,#f1f5f9);font-size:1.05rem;">💸 Quick Add Expense</h3>' +
+                '<div style="font-size:0.75rem;color:#94a3b8;margin-top:2px;">Tap a category to record an expense</div></div>' +
+                '<button onclick="document.getElementById(\'fab-expense-modal\').remove()" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#f87171;cursor:pointer;font-size:1.1rem;width:32px;height:32px;border-radius:50%;">✕</button>' +
+                '</div>' + groupsHtml + '</div>';
+            document.body.appendChild(modal);
+            modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+        }
+        window.showFabExpenseModal = showFabExpenseModal;
+
+        // Show category breakdown first, with option to add new expense
+        async function showExpenseCategoryDetail(category) {
+            try {
+                const now2 = new Date();
+                const thisMonth2 = now2.getFullYear()+'-'+String(now2.getMonth()+1).padStart(2,'0');
+                const allExp = await dbGetAll('expenses');
+                const catLabel = category.charAt(0).toUpperCase()+category.slice(1).replace('_',' ');
+                const catExp = allExp.filter(e=>e.date&&e.date.startsWith(thisMonth2)&&(e.category||'').toLowerCase()===category.toLowerCase());
+                const total = catExp.reduce((s,e)=>s+(e.amount||0),0);
+                let rows = '';
+                if (catExp.length === 0) {
+                    rows = `<div style="text-align:center;color:#64748b;padding:16px;">No ${catLabel} expenses this month.</div>`;
+                } else {
+                    catExp.sort((a,b)=>(b.date||'')>(a.date||'')?1:-1).forEach(e=>{
+                        rows += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg-primary);border-radius:8px;margin-bottom:5px;border-left:3px solid #ef4444;">
+                            <div><div style="font-weight:600;font-size:0.83rem;">${e.description||catLabel}</div><div style="font-size:0.7rem;color:#94a3b8;">${e.date||''}</div></div>
+                            <span style="font-weight:700;color:#ef4444;">-₱${(e.amount||0).toLocaleString()}</span>
+                        </div>`;
+                    });
+                    rows += `<div style="border-top:2px solid rgba(239,68,68,0.3);margin-top:10px;padding-top:8px;display:flex;justify-content:space-between;font-weight:800;"><span>Total ${catLabel}</span><span style="color:#ef4444;">₱${total.toLocaleString()}</span></div>`;
+                }
+                rows += `<button onclick="var m=document.getElementById('flashcard-modal');if(m)m.remove();openExpenseWithCategory('${category}');" style="width:100%;margin-top:14px;padding:10px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;">+ Add ${catLabel} Expense</button>`;
+                const existing = document.getElementById('flashcard-modal');
+                if (existing) existing.remove();
+                const modal = document.createElement('div');
+                modal.id = 'flashcard-modal';
+                modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
+                modal.innerHTML =
+                    '<div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;position:sticky;top:0;background:#1e293b;padding-bottom:10px;border-bottom:1px solid #334155;">' +
+                    '<h3 style="margin:0;color:#f1f5f9;font-size:1rem;">⚡ '+catLabel+' — This Month</h3>' +
+                    '<button onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.3rem;padding:0 4px;">✕</button>' +
+                    '</div><div>'+rows+'</div></div>';
+                document.body.appendChild(modal);
+                modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+            } catch(e2) { openExpenseWithCategory(category); }
+        }
+        window.showExpenseCategoryDetail = showExpenseCategoryDetail;
+
         async function openExpenseWithCategory(category) {
             console.log('Opening expense with category:', category);
             try {
@@ -22956,13 +23068,13 @@ async function clearAllData() {
                 if (type==='properties') {
                     const props = await dbGetAll('properties');
                     title='🏠 All Properties';
-                    const rows = props.map(p=>`<div onclick="showSection('properties')" style="display:flex;justify-content:space-between;padding:10px 8px;border-bottom:1px solid var(--border-color);cursor:pointer;border-radius:6px;" onmouseover="this.style.background='rgba(99,102,241,0.08)'" onmouseout="this.style.background=''"><span style="font-weight:600;">${p.name}</span><span class="badge ${p.status==='occupied'?'badge-success':'badge-warning'}">${p.status}</span></div>`).join('');
+                    const rows = props.map(p=>`<div onclick="(function(){var fm=document.getElementById('flashcard-modal');if(fm)fm.remove();showSection('properties');setTimeout(function(){viewPropertyDetails(${p.id});},300);})()" style="display:flex;justify-content:space-between;padding:10px 8px;border-bottom:1px solid var(--border-color);cursor:pointer;border-radius:6px;" onmouseover="this.style.background='rgba(99,102,241,0.08)'" onmouseout="this.style.background=''"><span style="font-weight:600;">${p.name}</span><span class="badge ${p.status==='occupied'?'badge-success':'badge-warning'}">${p.status||'vacant'}</span></div>`).join('');
                     html = (rows || '<div style="color:#64748b;padding:12px;text-align:center;">No properties found.</div>') + _navBtn('Properties','properties');
 
                 } else if (type==='vacant') {
                     const props = await dbGetAll('properties');
                     title='🚪 Vacant Properties';
-                    const rows = props.filter(p=>p.status==='vacant'||!p.status).map(p=>`<div onclick="showSection('properties')" style="padding:10px 8px;border-bottom:1px solid var(--border-color);cursor:pointer;border-radius:6px;" onmouseover="this.style.background='rgba(245,158,11,0.08)'" onmouseout="this.style.background=''"><span style="font-weight:600;">${p.name}</span><span style="color:#64748b;font-size:0.8rem;"> — ₱${(p.rent||0).toLocaleString()}/mo</span></div>`).join('');
+                    const rows = props.filter(p=>p.status==='vacant'||!p.status).map(p=>`<div onclick="(function(){var fm=document.getElementById('flashcard-modal');if(fm)fm.remove();showSection('properties');setTimeout(function(){viewPropertyDetails(${p.id});},300);})()" style="display:flex;justify-content:space-between;align-items:center;padding:10px 8px;border-bottom:1px solid var(--border-color);cursor:pointer;border-radius:6px;" onmouseover="this.style.background='rgba(245,158,11,0.08)'" onmouseout="this.style.background=''"><div><span style="font-weight:600;">${p.name}</span><div style="font-size:0.72rem;color:#64748b;">₱${(p.rent||0).toLocaleString()}/mo · Tap to manage</div></div><span class="badge badge-warning">vacant</span></div>`).join('');
                     html = (rows || '<div style="color:#64748b;padding:12px;text-align:center;">No vacant properties.</div>') + _navBtn('Properties','properties');
 
                 } else if (type==='tenants') {
@@ -22993,8 +23105,7 @@ async function clearAllData() {
                     const todayDay = now.getDate();
                     // Helper: close flashcard modal then open ledger
                     window._flashcardGoLedger = function(type2, id) {
-                        // Close the flashcard modal
-                        const fm = document.querySelector('div[style*="position:fixed"][style*="99999"]');
+                        const fm = document.getElementById('flashcard-modal');
                         if (fm) fm.remove();
                         if (type2 === 'tenant') {
                             viewTenantLedgerAndPay(id);
@@ -23002,6 +23113,7 @@ async function clearAllData() {
                             viewCreditDetails(id);
                         } else if (type2 === 'water') {
                             showSection('water');
+                            setTimeout(function(){ viewWaterCustomerDetails(id); }, 350);
                         }
                     };
                     let rows = '';
@@ -23048,12 +23160,12 @@ async function clearAllData() {
                         rows += overdueWater.map(c=>{
                             const unpaid = _wSal3.filter(s=>String(s.customerId)===String(c.id)&&!s.voided&&(s.status==='credit'||s.status==='partial'))
                                 .reduce((sum,s)=>sum+Math.max(0,(s.total||0)-(s.amountPaid||0)),0);
-                            return `<div onclick="_flashcardGoLedger('water',${c.id})" style="display:flex;justify-content:space-between;padding:10px 8px;border-bottom:1px solid var(--border-color);cursor:pointer;border-radius:6px;" onmouseover="this.style.background='rgba(56,189,248,0.08)'" onmouseout="this.style.background=''"><div><div style="font-weight:600;">${c.name}</div><div style="font-size:0.72rem;color:#64748b;">Tap to go to Water Station</div></div><span style="color:#38bdf8;font-weight:700;">₱${unpaid.toLocaleString()}</span></div>`;
+                            return `<div onclick="_flashcardGoLedger('water',${c.id})" style="display:flex;justify-content:space-between;padding:10px 8px;border-bottom:1px solid var(--border-color);cursor:pointer;border-radius:6px;" onmouseover="this.style.background='rgba(56,189,248,0.08)'" onmouseout="this.style.background=''"><div><div style="font-weight:600;">${c.name}</div><div style="font-size:0.72rem;color:#64748b;">Tap to open customer ledger →</div></div><span style="color:#38bdf8;font-weight:700;">₱${unpaid.toLocaleString()}</span></div>`;
                         }).join('');
                     }
 
                     if (!rows) rows = '<div style="color:#10b981;padding:16px;text-align:center;">✅ No overdue collections!</div>';
-                    html = rows + `<div style="display:flex;gap:8px;margin-top:12px;"><button onclick="(function(){var fm=document.querySelector('div[style*=fixed][style*=99999]');if(fm)fm.remove();showSection('tenants');})()" style="flex:1;padding:8px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#f87171;border-radius:8px;cursor:pointer;font-size:0.78rem;font-weight:600;">🏠 All Tenants</button><button onclick="(function(){var fm=document.querySelector('div[style*=fixed][style*=99999]');if(fm)fm.remove();showSection('credits');})()" style="flex:1;padding:8px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:#f59e0b;border-radius:8px;cursor:pointer;font-size:0.78rem;font-weight:600;">💳 All Credits</button><button onclick="(function(){var fm=document.querySelector('div[style*=fixed][style*=99999]');if(fm)fm.remove();showSection('water');})()" style="flex:1;padding:8px;background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.3);color:#38bdf8;border-radius:8px;cursor:pointer;font-size:0.78rem;font-weight:600;">💧 Water</button></div>`;
+                    html = rows + `<div style="display:flex;gap:8px;margin-top:12px;"><button onclick="(function(){var fm=document.getElementById('flashcard-modal');if(fm)fm.remove();showSection('tenants');})()" style="flex:1;padding:8px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#f87171;border-radius:8px;cursor:pointer;font-size:0.78rem;font-weight:600;">🏠 All Tenants</button><button onclick="(function(){var fm=document.getElementById('flashcard-modal');if(fm)fm.remove();showSection('credits');})()" style="flex:1;padding:8px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:#f59e0b;border-radius:8px;cursor:pointer;font-size:0.78rem;font-weight:600;">💳 All Credits</button><button onclick="(function(){var fm=document.getElementById('flashcard-modal');if(fm)fm.remove();showSection('water');})()" style="flex:1;padding:8px;background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.3);color:#38bdf8;border-radius:8px;cursor:pointer;font-size:0.78rem;font-weight:600;">💧 Water</button></div>`;
 
                 } else if (type==='water-credits') {
                     title='💧 Water Credit Customers';
@@ -23069,7 +23181,7 @@ async function clearAllData() {
                     if (withCredit.length === 0) {
                         html += '<div style="color:#10b981;padding:16px;text-align:center;">✅ No water credit balances!</div>';
                     } else {
-                        html += withCredit.map(c=>`<div onclick="_flashcardGoLedger&&_flashcardGoLedger('water',c ? c.id : 0)" style="display:flex;justify-content:space-between;padding:10px 8px;border-bottom:1px solid var(--border-color);cursor:pointer;border-radius:6px;" onmouseover="this.style.background='rgba(56,189,248,0.08)'" onmouseout="this.style.background=''"><div><span style="font-weight:600;">${c.name}</span><div style="font-size:0.72rem;color:#64748b;">Tap to go to Water Station</div></div><span style="color:#38bdf8;font-weight:700;">₱${c.unpaid.toLocaleString()}</span></div>`).join('');
+                        html += withCredit.map(c=>`<div onclick="_flashcardGoLedger('water',${c.id})" style="display:flex;justify-content:space-between;padding:10px 8px;border-bottom:1px solid var(--border-color);cursor:pointer;border-radius:6px;" onmouseover="this.style.background='rgba(56,189,248,0.08)'" onmouseout="this.style.background=''"><div><span style="font-weight:600;">${c.name}</span><div style="font-size:0.72rem;color:#64748b;">Tap to open customer ledger →</div></div><span style="color:#38bdf8;font-weight:700;">₱${c.unpaid.toLocaleString()}</span></div>`).join('');
                     }
                     html += _navBtn('Water Station','water');
 
@@ -23111,13 +23223,16 @@ async function clearAllData() {
                 }
             }
             // ── Render modal ──
+            const _existingFc = document.getElementById('flashcard-modal');
+            if (_existingFc) _existingFc.remove();
             const modal = document.createElement('div');
+            modal.id = 'flashcard-modal';
             modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
             modal.innerHTML =
                 '<div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;width:100%;max-width:500px;max-height:85vh;overflow-y:auto;">' +
                 '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;position:sticky;top:0;background:#1e293b;padding-bottom:10px;border-bottom:1px solid #334155;">' +
                 '<h3 style="margin:0;color:#f1f5f9;font-size:1rem;">'+title+'</h3>' +
-                '<button onclick="this.closest(&quot;div[style*=fixed]&quot;).remove()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.3rem;padding:0 4px;">✕</button>' +
+                '<button onclick="var fm=document.getElementById(\'flashcard-modal\');if(fm)fm.remove();" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.3rem;padding:0 4px;">✕</button>' +
                 '</div>' +
                 '<div>'+html+'</div>' +
                 '</div>';
@@ -23369,26 +23484,118 @@ async function clearAllData() {
         window.goToFlashcardSection = goToFlashcardSection;
 
         // ── Report detail modals (income/expense breakdown drilldowns) ──
-        function showIncomeDetails()         { _showReportDetail('income'); }
-        function showNetIncomeDetails()      { _showReportDetail('net'); }
-        function showNetProfitDetails()      { _showReportDetail('net'); }
+        function showIncomeDetails()         { showDashIeDetail('income'); }
+        function showNetIncomeDetails()      { showDashIeDetail('net'); }
+        function showNetProfitDetails()      { showDashIeDetail('net'); }
         function showLentOutDetails()        { _showReportDetail('lent'); }
         function showRepaidDetails()         { _showReportDetail('repaid'); }
         function showIncomeVsExpenseChart()  { _showReportDetail('chart'); }
-        function showExpenseDetails()        { _showReportDetail('expenses'); }
-        function showExpensesMonthDetails()  { _showReportDetail('expenses'); }
-        function showExpensesTotalDetails()  { _showReportDetail('expenses'); }
-        function showTotalSpentDetails()     { _showReportDetail('expenses'); }
-        function showCreditsByStatus()       { _showReportDetail('credits'); }
-        function showTenantsByStatus()       { _showReportDetail('tenants'); }
+        function showExpenseDetails()        { showDashIeDetail('expense'); }
+        function showExpensesMonthDetails()  { showTotalSpentDetails(); }
+        function showExpensesTotalDetails()  { showTotalSpentDetails(); }
+        function showTotalSpentDetails()     { showDashIeDetail('expenses-month'); }
+        function showCreditsByStatus()       { showSection('credits'); }
+        function showTenantsByStatus()       { showSection('tenants'); }
         function showCashierReports()        { _showReportDetail('cashier'); }
         function toggleTransactionDetails(id) {
             const el = document.getElementById('txn-detail-'+id);
             if (el) el.style.display = el.style.display==='none' ? 'block' : 'none';
         }
         function _showReportDetail(type) {
-            showToast('ℹ️ Generate a report above to see ' + type + ' details.','info');
+            showToast('ℹ️ Switch to Reports page to see ' + type + ' details.','info');
         }
+
+        // ── Dashboard drill-down popup ──
+        async function showDashIeDetail(type) {
+            const d = window._dashIeBreakdown;
+            // For today-in / today-out use today's range
+            let title = '', rows = '';
+            const fmt = (amt, pos) => `<span style="font-weight:700;color:${pos?'#10b981':'#ef4444'};">${pos?'+':'-'}₱${Math.abs(amt).toLocaleString()}</span>`;
+            const row = (name, date, amount, isIn, sub) =>
+                `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg-primary);border-radius:8px;margin-bottom:5px;border-left:3px solid ${isIn?'#10b981':'#ef4444'};">` +
+                `<div><div style="font-weight:600;font-size:0.83rem;">${name}</div>` +
+                (sub ? `<div style="font-size:0.7rem;color:#64748b;">${sub}</div>` : '') +
+                `<div style="font-size:0.7rem;color:#94a3b8;">${date||''}</div></div>` +
+                `${fmt(amount, isIn)}</div>`;
+
+            if (type === 'income' || type === 'today-in') {
+                title = '💰 Income Breakdown' + (d ? ' · ' + (d.period||'') : '');
+                if (!d || !d.income || d.income.length === 0) {
+                    rows = '<div style="text-align:center;color:#64748b;padding:20px;">No income data for this period.</div>';
+                } else {
+                    d.income.forEach(group => {
+                        rows += `<div style="font-size:0.72rem;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:0.05em;padding:8px 0 4px;">${group.label} — ₱${group.amount.toLocaleString()}</div>`;
+                        group.items.forEach(i => { rows += row(i.name, i.date, i.amount, true); });
+                    });
+                    rows += `<div style="border-top:2px solid rgba(16,185,129,0.3);margin-top:10px;padding-top:8px;display:flex;justify-content:space-between;font-weight:800;"><span>Total Income</span><span style="color:#10b981;">₱${d.totalInc.toLocaleString()}</span></div>`;
+                }
+            } else if (type === 'expense' || type === 'today-out') {
+                title = '💸 Expense Breakdown' + (d ? ' · ' + (d.period||'') : '');
+                if (!d || !d.expense || d.expense.length === 0) {
+                    rows = '<div style="text-align:center;color:#64748b;padding:20px;">No expenses for this period.</div>';
+                } else {
+                    d.expense.forEach(e => { rows += row(e.name, e.date, e.amount, false, e.description||''); });
+                    rows += `<div style="border-top:2px solid rgba(239,68,68,0.3);margin-top:10px;padding-top:8px;display:flex;justify-content:space-between;font-weight:800;"><span>Total Expenses</span><span style="color:#ef4444;">₱${d.totalExp.toLocaleString()}</span></div>`;
+                }
+            } else if (type === 'net') {
+                title = '📊 Net Summary' + (d ? ' · ' + (d.period||'') : '');
+                if (!d) {
+                    rows = '<div style="text-align:center;color:#64748b;padding:20px;">No data — switch filter to load.</div>';
+                } else {
+                    const isPos = d.net >= 0;
+                    rows = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
+                        <div style="background:rgba(16,185,129,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#10b981;">₱${d.totalInc.toLocaleString()}</div><div style="font-size:0.7rem;color:#64748b;">Income</div></div>
+                        <div style="background:rgba(239,68,68,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#ef4444;">₱${d.totalExp.toLocaleString()}</div><div style="font-size:0.7rem;color:#64748b;">Expenses</div></div>
+                        <div style="background:rgba(99,102,241,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:${isPos?'#10b981':'#ef4444'};">${isPos?'₱':'-₱'}${Math.abs(d.net).toLocaleString()}</div><div style="font-size:0.7rem;color:#64748b;">${isPos?'Net Profit':'Net Loss'}</div></div>
+                    </div>`;
+                    if (d.income && d.income.length > 0) {
+                        rows += `<div style="font-size:0.78rem;font-weight:700;color:#10b981;padding:6px 0;">Income Sources</div>`;
+                        d.income.forEach(g => { rows += `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border-color);font-size:0.82rem;"><span>${g.label}</span><span style="color:#10b981;font-weight:700;">+₱${g.amount.toLocaleString()}</span></div>`; });
+                    }
+                    if (d.expense && d.expense.length > 0) {
+                        rows += `<div style="font-size:0.78rem;font-weight:700;color:#ef4444;padding:8px 0 6px;">Expenses</div>`;
+                        d.expense.forEach(e => { rows += `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border-color);font-size:0.82rem;"><span>${e.name}</span><span style="color:#ef4444;font-weight:700;">-₱${e.amount.toLocaleString()}</span></div>`; });
+                    }
+                }
+            } else if (type === 'expenses-month') {
+                title = '💸 Expenses This Month';
+                try {
+                    const now2 = new Date();
+                    const thisMonth2 = now2.getFullYear()+'-'+String(now2.getMonth()+1).padStart(2,'0');
+                    const allExp = await dbGetAll('expenses');
+                    const monthExp = allExp.filter(e=>e.date&&e.date.startsWith(thisMonth2));
+                    const totalSpent = monthExp.reduce((s,e)=>s+(e.amount||0),0);
+                    if (monthExp.length === 0) {
+                        rows = '<div style="text-align:center;color:#64748b;padding:20px;">No expenses recorded this month.</div>';
+                    } else {
+                        // Group by category
+                        const byCat = {};
+                        monthExp.forEach(e=>{ const c=e.category||'Other'; byCat[c]=(byCat[c]||0)+(e.amount||0); });
+                        rows += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">`;
+                        Object.entries(byCat).forEach(([cat,amt])=>{ rows+=`<div style="background:rgba(239,68,68,0.08);border-radius:8px;padding:8px;text-align:center;"><div style="font-weight:800;color:#ef4444;font-size:0.9rem;">₱${amt.toLocaleString()}</div><div style="font-size:0.7rem;color:#64748b;">${cat}</div></div>`; });
+                        rows += '</div>';
+                        monthExp.sort((a,b)=>(b.date||'')>(a.date||'')?1:-1).forEach(e=>{ rows += row(e.category||'Expense', e.date, e.amount, false, e.description||''); });
+                        rows += `<div style="border-top:2px solid rgba(239,68,68,0.3);margin-top:10px;padding-top:8px;display:flex;justify-content:space-between;font-weight:800;"><span>Total Spent</span><span style="color:#ef4444;">₱${totalSpent.toLocaleString()}</span></div>`;
+                    }
+                } catch(e2) { rows = '<div style="text-align:center;color:#64748b;padding:20px;">Error loading expenses.</div>'; }
+            }
+
+            // Show popup
+            const existing = document.getElementById('flashcard-modal');
+            if (existing) existing.remove();
+            const modal = document.createElement('div');
+            modal.id = 'flashcard-modal';
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
+            modal.innerHTML =
+                '<div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;width:100%;max-width:500px;max-height:85vh;overflow-y:auto;">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;position:sticky;top:0;background:#1e293b;padding-bottom:10px;border-bottom:1px solid #334155;">' +
+                '<h3 style="margin:0;color:#f1f5f9;font-size:1rem;">'+title+'</h3>' +
+                '<button onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.3rem;padding:0 4px;">✕</button>' +
+                '</div><div>'+rows+'</div></div>';
+            document.body.appendChild(modal);
+            modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
+        }
+        window.showDashIeDetail = showDashIeDetail;
         window.showIncomeDetails        = showIncomeDetails;
         window.showNetIncomeDetails     = showNetIncomeDetails;
         window.showNetProfitDetails     = showNetProfitDetails;
@@ -23742,6 +23949,19 @@ async function clearAllData() {
                 safeSet('dash-ie-net',     (net>=0?'₱':'-₱')+Math.abs(net).toLocaleString());
                 safeSet('dash-ie-pct',     margin+'% profit margin');
                 safeSet('dash-ie-label',   net >= 0 ? '📈 Net Profit' : '📉 Net Loss');
+                // Store breakdown for drill-down popups
+                window._dashIeBreakdown = {
+                    income: [
+                        {label:'🏠 Rent', amount:rentInc, items: payments.filter(p=>!p.voided&&inRange(p)).map(p=>({name:p.tenantName||'Tenant',amount:p.amount||0,date:p.date}))},
+                        {label:'💳 Credit Repayments', amount:creditInc, items: creditPayments.filter(p=>!p.voided&&inRange(p)).map(p=>({name:p.debtorName||'Debtor',amount:p.amount||0,date:p.date}))},
+                        {label:'💧 Water Sales', amount:waterInc, items: waterSales.filter(p=>!p.voided&&inRange(p)).map(p=>({name:p.customerName||'Customer',amount:p.amountPaid||0,date:p.date}))},
+                        {label:'🛒 Store Sales', amount:storeInc, items: storeSales.filter(p=>!p.voided&&inRange(p)).map(p=>({name:p.customerName||'Customer',amount:p.total||0,date:p.date}))},
+                        {label:'💰 Other Income', amount:otherInc, items: addIncome.filter(p=>!p.storeRef&&inRange(p)).map(p=>({name:p.source||p.description||'Other',amount:p.amount||0,date:p.date}))},
+                    ].filter(g=>g.amount>0),
+                    expense: expenses.filter(e=>inRange(e)).map(e=>({name:e.category||'Expense',amount:e.amount||0,date:e.date,description:e.description||''})),
+                    net, totalInc, totalExp,
+                    period: periodTxt,
+                };
                 // Update period label in card title
                 const rangeLabels = {today:'Today',week:'This Week',month:'This Month',custom:'Custom Range'};
                 const fmtShort = d => new Date(d+'T00:00:00').toLocaleDateString('en-PH',{month:'short',day:'numeric'});
@@ -24806,17 +25026,17 @@ async function clearAllData() {
 
                 el.innerHTML = `
                     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
-                        <div style="background:rgba(16,185,129,0.1);border-radius:8px;padding:8px;text-align:center;">
+                        <div style="background:rgba(16,185,129,0.1);border-radius:8px;padding:8px;text-align:center;cursor:pointer;" onclick="showDashIeDetail('today-in')" title="Tap to see income breakdown">
                             <div style="font-weight:800;color:#10b981;font-size:0.95rem;">₱${totalIn.toLocaleString()}</div>
-                            <div style="font-size:0.7rem;color:var(--text-secondary);">Total In</div>
+                            <div style="font-size:0.7rem;color:var(--text-secondary);">Total In ↗</div>
                         </div>
-                        <div style="background:rgba(239,68,68,0.1);border-radius:8px;padding:8px;text-align:center;">
+                        <div style="background:rgba(239,68,68,0.1);border-radius:8px;padding:8px;text-align:center;cursor:pointer;" onclick="showDashIeDetail('today-out')" title="Tap to see expense breakdown">
                             <div style="font-weight:800;color:#ef4444;font-size:0.95rem;">₱${totalOut.toLocaleString()}</div>
-                            <div style="font-size:0.7rem;color:var(--text-secondary);">Total Out</div>
+                            <div style="font-size:0.7rem;color:var(--text-secondary);">Total Out ↗</div>
                         </div>
-                        <div style="background:rgba(99,102,241,0.1);border-radius:8px;padding:8px;text-align:center;">
+                        <div style="background:rgba(99,102,241,0.1);border-radius:8px;padding:8px;text-align:center;cursor:pointer;" onclick="showCashierTodayTransactions()" title="View all entries">
                             <div style="font-weight:800;color:#818cf8;font-size:0.95rem;">${txns.length}</div>
-                            <div style="font-size:0.7rem;color:var(--text-secondary);">Entries</div>
+                            <div style="font-size:0.7rem;color:var(--text-secondary);">Entries ↗</div>
                         </div>
                     </div>
                     ${txns.map(t=>`
