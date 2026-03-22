@@ -4445,27 +4445,16 @@
 
         <!-- Expenses Section -->
         <div id="expenses" class="section">
-            <!-- Expenses Stats -->
-            <div class="stats-grid">
-                <div class="stat-card" onclick="showExpensesMonthDetails()" style="cursor: pointer;">
-                    <div class="stat-value" id="stat-expenses-month">₱0</div>
-                    <div class="stat-label" id="stat-expenses-month-label">This Month</div>
-                </div>
-                <div class="stat-card stat-card-danger" onclick="showExpensesRangeDetails()" style="cursor: pointer;">
-                    <div class="stat-value text-danger" id="stat-expenses-total">₱0</div>
-                    <div class="stat-label" id="stat-expenses-total-label">All Time</div>
-                </div>
-            </div>
-
-            <!-- Date Range Filter -->
-            <div class="card" style="margin-bottom:0;">
+            <!-- Date Range Filter — FIRST so it controls the cards below -->
+            <div class="card" style="margin-bottom:10px;">
                 <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
+                    <span style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);white-space:nowrap;">📅 Period:</span>
                     <div style="display:flex;gap:6px;flex-wrap:wrap;">
                         <button class="exp-range-btn" data-range="month" onclick="setExpenseRange('month')" style="padding:5px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;font-weight:600;">📅 This Month</button>
                         <button class="exp-range-btn" data-range="last-month" onclick="setExpenseRange('last-month')" style="padding:5px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;font-weight:600;">⬅ Last Month</button>
                         <button class="exp-range-btn" data-range="3m" onclick="setExpenseRange('3m')" style="padding:5px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;font-weight:600;">3 Months</button>
                         <button class="exp-range-btn" data-range="year" onclick="setExpenseRange('year')" style="padding:5px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;font-weight:600;">📆 This Year</button>
-                        <button class="exp-range-btn active" data-range="all" onclick="setExpenseRange('all')" style="padding:5px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;font-weight:600;">All Time</button>
+                        <button class="exp-range-btn" data-range="all" onclick="setExpenseRange('all')" style="padding:5px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;font-weight:600;">All Time</button>
                         <button class="exp-range-btn" data-range="custom" onclick="setExpenseRange('custom')" style="padding:5px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;font-weight:600;">✏️ Custom</button>
                     </div>
                 </div>
@@ -4475,6 +4464,27 @@
                     <input type="date" id="exp-from" onchange="loadExpenses()" style="padding:5px 8px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.8rem;">
                     <label style="font-size:0.78rem;color:var(--text-secondary);">To:</label>
                     <input type="date" id="exp-to" onchange="loadExpenses()" style="padding:5px 8px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.8rem;">
+                </div>
+                <!-- Period label -->
+                <div id="exp-period-label" style="font-size:0.72rem;color:var(--text-secondary);margin-top:8px;text-align:center;"></div>
+            </div>
+
+            <!-- Expenses + Income + Net Stats — all synced to date range -->
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;">
+                <div class="stat-card stat-card-danger" onclick="showExpensesRangeDetails()" style="cursor:pointer;">
+                    <div class="stat-value text-danger" id="stat-exp-range">₱0</div>
+                    <div style="font-size:0.68rem;color:#94a3b8;margin-top:2px;">💸 Expenses</div>
+                    <div id="stat-exp-range-label" style="font-size:0.65rem;color:#64748b;margin-top:1px;">—</div>
+                </div>
+                <div class="stat-card stat-card-success" onclick="showExpensesIncomeDetail()" style="cursor:pointer;">
+                    <div class="stat-value text-success" id="stat-exp-income">₱0</div>
+                    <div style="font-size:0.68rem;color:#94a3b8;margin-top:2px;">💰 Income</div>
+                    <div id="stat-exp-income-label" style="font-size:0.65rem;color:#64748b;margin-top:1px;">—</div>
+                </div>
+                <div class="stat-card" id="stat-exp-net-card" onclick="showExpensesNetDetail()" style="cursor:pointer;">
+                    <div class="stat-value" id="stat-exp-net">₱0</div>
+                    <div style="font-size:0.68rem;color:#94a3b8;margin-top:2px;" id="stat-exp-net-lbl">📊 Net</div>
+                    <div id="stat-exp-net-label" style="font-size:0.65rem;color:#64748b;margin-top:1px;">—</div>
                 </div>
             </div>
 
@@ -18222,7 +18232,7 @@ async function showPayrollSummary() {
 
         window.expHistDelete = expHistDelete;
 
-        let _expenseRange = 'all'; // default — left card shows This Month, right shows All Time
+        let _expenseRange = 'month'; // default — This Month
 
         function setExpenseRange(range) {
             _expenseRange = range;
@@ -18276,44 +18286,72 @@ async function showPayrollSummary() {
         }
 
         async function loadExpenses() {
-            const expenses   = await dbGetAll('expenses');
-            const properties = await dbGetAll('properties');
-
-            // Calculate This Month stats (always fixed)
-            const now = new Date();
-            const currentMonth = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
-            const monthlyTotal = expenses.filter(e=>e.date&&e.date.startsWith(currentMonth)).reduce((s,e)=>s+(e.amount||0),0);
-
+            const [expenses, payments, creditPayments, waterSales, addIncome, properties] = await Promise.all([
+                dbGetAll('expenses'), dbGetAll('payments'), dbGetAll('creditPayments'),
+                dbGetAll('waterSales'), dbGetAll('additionalIncome'), dbGetAll('properties')
+            ]);
+            const storeSales = await dbGetAll('waterStoreSales').catch(()=>[]);
             const safeSet = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
-            safeSet('stat-expenses-month', '₱'+monthlyTotal.toLocaleString());
-            safeSet('stat-expenses-month-label', 'This Month');
+            const label = getExpenseRangeLabel();
 
-            // Range-filtered stats
+            // Date range filter
             const range = getExpenseDateRange();
-            let rangeExpenses = expenses;
-            if (range) {
-                rangeExpenses = expenses.filter(e => {
-                    const d = (e.date||'').substring(0,10);
-                    return d >= range.from && d <= range.to;
-                });
-            }
-            const rangeTotal = rangeExpenses.reduce((s,e)=>s+(e.amount||0),0);
-            safeSet('stat-expenses-total', '₱'+rangeTotal.toLocaleString());
-            safeSet('stat-expenses-total-label', getExpenseRangeLabel());
+            const inRange = item => {
+                if (!range) return true;
+                const d = (item.date||'').substring(0,10);
+                return d >= range.from && d <= range.to;
+            };
 
-            // Store for filtering
+            // Expenses in range
+            const rangeExpenses = expenses.filter(inRange);
+            const totalExp = rangeExpenses.reduce((s,e)=>s+(e.amount||0),0);
+
+            // Income in range (all sources)
+            const rentInc  = payments.filter(p=>!p.voided&&inRange(p)).reduce((s,p)=>s+(p.amount||0),0);
+            const credInc  = creditPayments.filter(p=>!p.voided&&inRange(p)).reduce((s,p)=>s+(p.amount||0),0);
+            const waterInc = waterSales.filter(p=>!p.voided&&inRange(p)).reduce((s,p)=>s+(p.amountPaid||0),0);
+            const storeInc = storeSales.filter(p=>!p.voided&&inRange(p)).reduce((s,p)=>s+(p.total||0),0);
+            const otherInc = addIncome.filter(p=>!p.storeRef&&inRange(p)).reduce((s,p)=>s+(p.amount||0),0);
+            const totalInc = rentInc+credInc+waterInc+storeInc+otherInc;
+            const net      = totalInc - totalExp;
+            const isGain   = net >= 0;
+
+            // Update the 3 stat cards
+            safeSet('stat-exp-range',       '\u20b1'+totalExp.toLocaleString());
+            safeSet('stat-exp-range-label', label);
+            safeSet('stat-exp-income',      '\u20b1'+totalInc.toLocaleString());
+            safeSet('stat-exp-income-label',label);
+            safeSet('stat-exp-net',         (isGain?'\u20b1':'-\u20b1')+Math.abs(net).toLocaleString());
+            safeSet('stat-exp-net-lbl',     isGain ? '\ud83d\udcc8 Net Gain' : '\ud83d\udcc9 Net Loss');
+            safeSet('stat-exp-net-label',   label);
+            safeSet('exp-period-label',     label);
+
+            // Net card color
+            const netCard = document.getElementById('stat-exp-net-card');
+            if (netCard) netCard.style.background = isGain
+                ? 'linear-gradient(135deg,rgba(16,185,129,0.15),rgba(5,150,105,0.08))'
+                : 'linear-gradient(135deg,rgba(239,68,68,0.15),rgba(185,28,28,0.08))';
+            const netVal = document.getElementById('stat-exp-net');
+            if (netVal) netVal.style.color = isGain ? '#10b981' : '#ef4444';
+
+            // Store breakdown for drill-downs
             allExpensesData = rangeExpenses;
+            window._expPageBreakdown = {
+                label, range, totalExp, totalInc, net,
+                expenses: rangeExpenses,
+                income: [
+                    {label:'\ud83c\udfe0 Rent', amount:rentInc, items: payments.filter(p=>!p.voided&&inRange(p)).map(p=>({name:p.tenantName||'Tenant',amount:p.amount||0,date:p.date}))},
+                    {label:'\ud83d\udcb3 Credits', amount:credInc, items: creditPayments.filter(p=>!p.voided&&inRange(p)).map(p=>({name:p.debtorName||'Debtor',amount:p.amount||0,date:p.date}))},
+                    {label:'\ud83d\udca7 Water', amount:waterInc, items: waterSales.filter(p=>!p.voided&&inRange(p)).map(p=>({name:p.customerName||'Customer',amount:p.amountPaid||0,date:p.date}))},
+                    {label:'\ud83d\uded2 Store', amount:storeInc, items: storeSales.filter(p=>!p.voided&&inRange(p)).map(p=>({name:p.customerName||'Customer',amount:p.total||0,date:p.date}))},
+                    {label:'\ud83d\udcb0 Other', amount:otherInc, items: addIncome.filter(p=>!p.storeRef&&inRange(p)).map(p=>({name:p.source||p.description||'Other',amount:p.amount||0,date:p.date}))},
+                ].filter(g=>g.amount>0),
+            };
 
             // Reset search and filter
             const searchInput = document.getElementById('expense-search');
-            if (searchInput && searchInput.value) {
-                filterExpenses();
-                return;
-            }
-            if (expenseFilter !== 'all') {
-                filterExpenses();
-                return;
-            }
+            if (searchInput && searchInput.value) { filterExpenses(); return; }
+            if (expenseFilter !== 'all') { filterExpenses(); return; }
             renderExpensesList(rangeExpenses, properties);
         }
 
@@ -23689,6 +23727,68 @@ async function clearAllData() {
             modal.addEventListener('click', e=>{if(e.target===modal)modal.remove();});
         }
         window.showExpensesRangeDetails = showExpensesRangeDetails;
+
+        function showExpensesIncomeDetail() {
+            const d = window._expPageBreakdown;
+            if (!d) { showToast('⚠️ Loading data...','info'); return; }
+            let rows = '';
+            const rowHtml = (name, date, amount, isIn) =>
+                '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--bg-primary);border-radius:8px;margin-bottom:4px;border-left:3px solid '+(isIn?'#10b981':'#ef4444')+';">' +
+                '<div><div style="font-weight:600;font-size:0.82rem;">'+(name||'—')+'</div>' +
+                '<div style="font-size:0.7rem;color:#94a3b8;">'+(date||'')+'</div></div>' +
+                '<span style="font-weight:700;color:'+(isIn?'#10b981':'#ef4444')+';">'+(isIn?'+':'-')+'₱'+Math.abs(amount).toLocaleString()+'</span></div>';
+            if (!d.income || d.income.length === 0) {
+                rows = '<div style="text-align:center;color:#64748b;padding:20px;">No income for this period.</div>';
+            } else {
+                d.income.forEach(g => {
+                    rows += '<div style="font-size:0.72rem;font-weight:700;color:#10b981;text-transform:uppercase;padding:8px 0 4px;">'+g.label+' — ₱'+g.amount.toLocaleString()+'</div>';
+                    (g.items||[]).forEach(i => { rows += rowHtml(i.name, i.date, i.amount, true); });
+                });
+                rows += '<div style="border-top:2px solid rgba(16,185,129,0.3);margin-top:10px;padding-top:8px;display:flex;justify-content:space-between;font-weight:800;"><span>Total Income</span><span style="color:#10b981;">₱'+d.totalInc.toLocaleString()+'</span></div>';
+            }
+            _expShowModal('💰 Income — '+d.label, rows);
+        }
+        window.showExpensesIncomeDetail = showExpensesIncomeDetail;
+
+        function showExpensesNetDetail() {
+            const d = window._expPageBreakdown;
+            if (!d) { showToast('⚠️ Loading data...','info'); return; }
+            const isGain = d.net >= 0;
+            let rows = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">' +
+                '<div style="background:rgba(16,185,129,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#10b981;">₱'+d.totalInc.toLocaleString()+'</div><div style="font-size:0.7rem;color:#64748b;">Income</div></div>' +
+                '<div style="background:rgba(239,68,68,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#ef4444;">₱'+d.totalExp.toLocaleString()+'</div><div style="font-size:0.7rem;color:#64748b;">Expenses</div></div>' +
+                '<div style="background:rgba(99,102,241,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:'+(isGain?'#10b981':'#ef4444')+'">'+(isGain?'₱':'-₱')+Math.abs(d.net).toLocaleString()+'</div><div style="font-size:0.7rem;color:#64748b;">'+(isGain?'Gain':'Loss')+'</div></div>' +
+                '</div>';
+            if (d.income && d.income.length) {
+                rows += '<div style="font-size:0.75rem;font-weight:700;color:#10b981;padding:4px 0 6px;">Income Sources</div>';
+                d.income.forEach(g=>{ rows+='<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border-color);font-size:0.82rem;"><span>'+g.label+'</span><span style="color:#10b981;font-weight:700;">+₱'+g.amount.toLocaleString()+'</span></div>'; });
+            }
+            if (d.expenses && d.expenses.length) {
+                const byCat = {};
+                d.expenses.forEach(e=>{ byCat[e.category||'Other']=(byCat[e.category||'Other']||0)+(e.amount||0); });
+                rows += '<div style="font-size:0.75rem;font-weight:700;color:#ef4444;padding:8px 0 6px;">Expenses by Category</div>';
+                Object.entries(byCat).sort((a,b)=>b[1]-a[1]).forEach(([cat,amt])=>{
+                    rows+='<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border-color);font-size:0.82rem;"><span>'+cat+'</span><span style="color:#ef4444;font-weight:700;">-₱'+amt.toLocaleString()+'</span></div>';
+                });
+            }
+            _expShowModal((isGain?'📈':'📉')+' Net Summary — '+d.label, rows);
+        }
+        window.showExpensesNetDetail = showExpensesNetDetail;
+
+        function _expShowModal(title, rows) {
+            const existing = document.getElementById('flashcard-modal');
+            if (existing) existing.remove();
+            const modal = document.createElement('div');
+            modal.id = 'flashcard-modal';
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
+            modal.innerHTML = '<div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;width:100%;max-width:500px;max-height:85vh;overflow-y:auto;">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;position:sticky;top:0;background:#1e293b;padding-bottom:10px;border-bottom:1px solid #334155;">' +
+                '<h3 style="margin:0;color:#f1f5f9;font-size:0.95rem;">'+title+'</h3>' +
+                '<button onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.3rem;padding:0 4px;">✕</button>' +
+                '</div><div>'+rows+'</div></div>';
+            document.body.appendChild(modal);
+            modal.addEventListener('click', e=>{if(e.target===modal)modal.remove();});
+        }
         function showTotalSpentDetails()     { showDashIeDetail('expenses-month'); }
         function showCreditsByStatus()       { showSection('credits'); }
         function showTenantsByStatus()       { showSection('tenants'); }
