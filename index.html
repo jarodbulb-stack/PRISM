@@ -4449,11 +4449,32 @@
             <div class="stats-grid">
                 <div class="stat-card" onclick="showExpensesMonthDetails()" style="cursor: pointer;">
                     <div class="stat-value" id="stat-expenses-month">₱0</div>
-                    <div class="stat-label">This Month</div>
+                    <div class="stat-label" id="stat-expenses-month-label">This Month</div>
                 </div>
-                <div class="stat-card" onclick="showExpensesTotalDetails()" style="cursor: pointer;">
+                <div class="stat-card" onclick="showExpensesRangeDetails()" style="cursor: pointer;">
                     <div class="stat-value" id="stat-expenses-total">₱0</div>
-                    <div class="stat-label">Total Expenses</div>
+                    <div class="stat-label" id="stat-expenses-total-label">Total Expenses</div>
+                </div>
+            </div>
+
+            <!-- Date Range Filter -->
+            <div class="card" style="margin-bottom:0;">
+                <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                        <button class="exp-range-btn active" data-range="month" onclick="setExpenseRange('month')" style="padding:5px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;font-weight:600;">📅 This Month</button>
+                        <button class="exp-range-btn" data-range="last-month" onclick="setExpenseRange('last-month')" style="padding:5px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;font-weight:600;">⬅ Last Month</button>
+                        <button class="exp-range-btn" data-range="3m" onclick="setExpenseRange('3m')" style="padding:5px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;font-weight:600;">3 Months</button>
+                        <button class="exp-range-btn" data-range="year" onclick="setExpenseRange('year')" style="padding:5px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;font-weight:600;">📆 This Year</button>
+                        <button class="exp-range-btn" data-range="all" onclick="setExpenseRange('all')" style="padding:5px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;font-weight:600;">All Time</button>
+                        <button class="exp-range-btn" data-range="custom" onclick="setExpenseRange('custom')" style="padding:5px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;font-weight:600;">✏️ Custom</button>
+                    </div>
+                </div>
+                <!-- Custom date range row -->
+                <div id="exp-custom-range" style="display:none;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap;">
+                    <label style="font-size:0.78rem;color:var(--text-secondary);">From:</label>
+                    <input type="date" id="exp-from" onchange="loadExpenses()" style="padding:5px 8px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.8rem;">
+                    <label style="font-size:0.78rem;color:var(--text-secondary);">To:</label>
+                    <input type="date" id="exp-to" onchange="loadExpenses()" style="padding:5px 8px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.8rem;">
                 </div>
             </div>
 
@@ -18197,36 +18218,99 @@ async function showPayrollSummary() {
 
         window.expHistDelete = expHistDelete;
 
+        let _expenseRange = 'month'; // default
+
+        function setExpenseRange(range) {
+            _expenseRange = range;
+            // Update active button
+            document.querySelectorAll('.exp-range-btn').forEach(b => {
+                const active = b.dataset.range === range;
+                b.style.background    = active ? 'var(--primary,#6366f1)' : 'var(--bg-secondary)';
+                b.style.color         = active ? 'white' : 'var(--text-secondary)';
+                b.style.borderColor   = active ? 'var(--primary,#6366f1)' : 'var(--border-color)';
+            });
+            // Show/hide custom row
+            const customRow = document.getElementById('exp-custom-range');
+            if (customRow) customRow.style.display = range === 'custom' ? 'flex' : 'none';
+            if (range !== 'custom') loadExpenses();
+        }
+        window.setExpenseRange = setExpenseRange;
+
+        function getExpenseDateRange() {
+            const now = new Date();
+            const fmt = d => d.toISOString().split('T')[0];
+            if (_expenseRange === 'month') {
+                return { from: fmt(new Date(now.getFullYear(), now.getMonth(), 1)), to: fmt(now) };
+            } else if (_expenseRange === 'last-month') {
+                const f = new Date(now.getFullYear(), now.getMonth()-1, 1);
+                const t = new Date(now.getFullYear(), now.getMonth(), 0);
+                return { from: fmt(f), to: fmt(t) };
+            } else if (_expenseRange === '3m') {
+                const f = new Date(now); f.setMonth(f.getMonth()-3);
+                return { from: fmt(f), to: fmt(now) };
+            } else if (_expenseRange === 'year') {
+                return { from: fmt(new Date(now.getFullYear(), 0, 1)), to: fmt(now) };
+            } else if (_expenseRange === 'custom') {
+                const from = document.getElementById('exp-from')?.value;
+                const to   = document.getElementById('exp-to')?.value;
+                if (!from || !to) return null;
+                return { from, to };
+            } else { // all
+                return { from: '2000-01-01', to: '2099-12-31' };
+            }
+        }
+        window.getExpenseDateRange = getExpenseDateRange;
+
+        function getExpenseRangeLabel() {
+            const labels = { month:'This Month', 'last-month':'Last Month', '3m':'Last 3 Months', year:'This Year', all:'All Time', custom:'Custom Range' };
+            if (_expenseRange === 'custom') {
+                const f = document.getElementById('exp-from')?.value;
+                const t = document.getElementById('exp-to')?.value;
+                if (f && t) return f + ' → ' + t;
+            }
+            return labels[_expenseRange] || 'This Month';
+        }
+
         async function loadExpenses() {
-            const expenses = await dbGetAll('expenses');
+            const expenses   = await dbGetAll('expenses');
             const properties = await dbGetAll('properties');
 
-            // Calculate stats
+            // Calculate This Month stats (always fixed)
             const now = new Date();
-            const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-            const monthlyExpenses = expenses.filter(e => e.date.startsWith(currentMonth));
-            const monthlyTotal = monthlyExpenses.reduce((sum, e) => sum + e.amount, 0);
-            const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+            const currentMonth = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+            const monthlyTotal = expenses.filter(e=>e.date&&e.date.startsWith(currentMonth)).reduce((s,e)=>s+(e.amount||0),0);
 
-            document.getElementById('stat-expenses-month').textContent = '₱' + monthlyTotal.toLocaleString();
-            document.getElementById('stat-expenses-total').textContent = '₱' + totalExpenses.toLocaleString();
+            const safeSet = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+            safeSet('stat-expenses-month', '₱'+monthlyTotal.toLocaleString());
+            safeSet('stat-expenses-month-label', 'This Month');
+
+            // Range-filtered stats
+            const range = getExpenseDateRange();
+            let rangeExpenses = expenses;
+            if (range) {
+                rangeExpenses = expenses.filter(e => {
+                    const d = (e.date||'').substring(0,10);
+                    return d >= range.from && d <= range.to;
+                });
+            }
+            const rangeTotal = rangeExpenses.reduce((s,e)=>s+(e.amount||0),0);
+            safeSet('stat-expenses-total', '₱'+rangeTotal.toLocaleString());
+            safeSet('stat-expenses-total-label', getExpenseRangeLabel());
 
             // Store for filtering
-            allExpensesData = expenses;
-            
+            allExpensesData = rangeExpenses;
+
             // Reset search and filter
             const searchInput = document.getElementById('expense-search');
             if (searchInput && searchInput.value) {
                 filterExpenses();
                 return;
             }
-            
             if (expenseFilter !== 'all') {
                 filterExpenses();
                 return;
             }
-
-            renderExpensesList(expenses, properties);
+            renderExpensesList(rangeExpenses, properties);
         }
 
         function renderExpensesList(expenses, properties) {
@@ -23555,6 +23639,52 @@ async function clearAllData() {
         function showExpenseDetails()        { showReportDetail('expense'); }
         function showExpensesMonthDetails()  { showDashIeDetail('expenses-month'); }
         function showExpensesTotalDetails()  { showDashIeDetail('expenses-month'); }
+        async function showExpensesRangeDetails() {
+            const range = getExpenseDateRange ? getExpenseDateRange() : null;
+            const label = getExpenseRangeLabel ? getExpenseRangeLabel() : 'Selected Range';
+            const expenses = await dbGetAll('expenses');
+            let filtered = expenses;
+            if (range) {
+                filtered = expenses.filter(e => {
+                    const d = (e.date||'').substring(0,10);
+                    return d >= range.from && d <= range.to;
+                });
+            }
+            const total = filtered.reduce((s,e)=>s+(e.amount||0),0);
+            const rowHtml = (name, date, amount, sub) =>
+                '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg-primary);border-radius:8px;margin-bottom:5px;border-left:3px solid #ef4444;">' +
+                '<div><div style="font-weight:600;font-size:0.83rem;">'+(name||'Expense')+'</div>' +
+                (sub?'<div style="font-size:0.7rem;color:#64748b;">'+sub+'</div>':'') +
+                '<div style="font-size:0.7rem;color:#94a3b8;">'+(date||'')+'</div></div>' +
+                '<span style="font-weight:700;color:#ef4444;">-₱'+(amount||0).toLocaleString()+'</span></div>';
+            let rows = '';
+            if (filtered.length === 0) {
+                rows = '<div style="text-align:center;color:#64748b;padding:20px;">No expenses for this period.</div>';
+            } else {
+                const byCat = {};
+                filtered.forEach(e=>{const c=e.category||'Other';byCat[c]=(byCat[c]||0)+(e.amount||0);});
+                rows += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;">';
+                Object.entries(byCat).sort((a,b)=>b[1]-a[1]).forEach(([cat,amt])=>{
+                    rows+='<div style="background:rgba(239,68,68,0.08);border-radius:8px;padding:8px;text-align:center;"><div style="font-weight:800;color:#ef4444;font-size:0.88rem;">₱'+amt.toLocaleString()+'</div><div style="font-size:0.68rem;color:#94a3b8;">'+cat+'</div></div>';
+                });
+                rows += '</div>';
+                filtered.sort((a,b)=>(b.date||'')>(a.date||'')?1:-1).forEach(e=>{rows+=rowHtml(e.category||'Expense',e.date,e.amount,e.description||'');});
+                rows += '<div style="border-top:2px solid rgba(239,68,68,0.3);margin-top:10px;padding-top:8px;display:flex;justify-content:space-between;font-weight:800;"><span>Total</span><span style="color:#ef4444;">₱'+total.toLocaleString()+'</span></div>';
+            }
+            const existing = document.getElementById('flashcard-modal');
+            if (existing) existing.remove();
+            const modal = document.createElement('div');
+            modal.id = 'flashcard-modal';
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
+            modal.innerHTML = '<div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;width:100%;max-width:500px;max-height:85vh;overflow-y:auto;">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;position:sticky;top:0;background:#1e293b;padding-bottom:10px;border-bottom:1px solid #334155;">' +
+                '<h3 style="margin:0;color:#f1f5f9;font-size:1rem;">💸 Expenses — '+label+'</h3>' +
+                '<button onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.3rem;padding:0 4px;">✕</button>' +
+                '</div><div>'+rows+'</div></div>';
+            document.body.appendChild(modal);
+            modal.addEventListener('click', e=>{if(e.target===modal)modal.remove();});
+        }
+        window.showExpensesRangeDetails = showExpensesRangeDetails;
         function showTotalSpentDetails()     { showDashIeDetail('expenses-month'); }
         function showCreditsByStatus()       { showSection('credits'); }
         function showTenantsByStatus()       { showSection('tenants'); }
