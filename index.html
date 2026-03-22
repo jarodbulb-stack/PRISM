@@ -4113,7 +4113,7 @@
             <!-- ══ Income vs Expense Summary Widget ══ -->
             <div class="card" id="dash-income-expense-card" style="margin-bottom:16px;">
                 <div class="card-header" style="flex-wrap:wrap;gap:8px;">
-                    <div class="card-title">📊 Income vs Expenses</div>
+                    <div class="card-title">📊 Income vs Expenses <span id="dash-ie-period" style="font-size:0.72rem;font-weight:400;color:var(--text-secondary);margin-left:6px;"></span></div>
                     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
                         <button onclick="dashSetRange('today')" class="dash-range-btn active" data-range="today" style="padding:3px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;">Today</button>
                         <button onclick="dashSetRange('week')" class="dash-range-btn" data-range="week" style="padding:3px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;">This Week</button>
@@ -5142,18 +5142,22 @@
                 <div class="stat-card stat-card-success" onclick="showIncomeDetails()" style="cursor: pointer;">
                     <div class="stat-value text-success" id="report-total-income">₱0</div>
                     <div class="stat-label">Total Income</div>
+                    <div id="report-income-period" style="font-size:0.68rem;color:var(--text-secondary);margin-top:3px;opacity:0.8;">Select range &amp; Generate</div>
                 </div>
                 <div class="stat-card stat-card-danger" onclick="showExpenseDetails()" style="cursor: pointer;">
                     <div class="stat-value text-danger" id="report-total-expenses">₱0</div>
                     <div class="stat-label">Total Expenses</div>
+                    <div id="report-expenses-period" style="font-size:0.68rem;color:var(--text-secondary);margin-top:3px;opacity:0.8;">Select range &amp; Generate</div>
                 </div>
                 <div class="stat-card" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); cursor: pointer;" onclick="showNetProfitDetails()">
                     <div class="stat-value" style="color: white;" id="report-net-profit">₱0</div>
                     <div class="stat-label" style="color: rgba(255,255,255,0.9);">Net Profit</div>
+                    <div id="report-net-period" style="font-size:0.68rem;color:rgba(255,255,255,0.7);margin-top:3px;">Select range &amp; Generate</div>
                 </div>
                 <div class="stat-card stat-card-info" onclick="showIncomeVsExpenseChart()" style="cursor: pointer;">
                     <div class="stat-value stat-value-primary" id="report-profit-margin">0%</div>
                     <div class="stat-label">Profit Margin</div>
+                    <div id="report-margin-period" style="font-size:0.68rem;color:var(--text-secondary);margin-top:3px;opacity:0.8;">Select range &amp; Generate</div>
                 </div>
             </div>
 
@@ -6153,7 +6157,8 @@
                                         <button type="button" onclick="pmWsQuickAddBig(35)" style="padding:2px 6px;border-radius:4px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-size:0.68rem;font-weight:600;">₱35</button>
                                     </div>
                                     <div style="display:flex;gap:4px;align-items:center;">
-                                        <input type="number" id="pm-ws-big-qty" min="1" value="1"
+                                        <input type="number" id="pm-ws-big-qty" min="0" value="0"
+                                            oninput="pmWsQtyChanged('big')"
                                             style="width:48px;padding:4px;background:#0f172a;border:1px solid #334155;border-radius:5px;color:#f1f5f9;font-size:0.85rem;text-align:center;">
                                         <span style="font-size:0.68rem;color:#64748b;">bot</span>
                                     </div>
@@ -6167,7 +6172,8 @@
                                         <button type="button" onclick="pmWsQuickAddSmall('15L',20)"   style="padding:2px 5px;border-radius:4px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-size:0.65rem;">Lg ₱20</button>
                                     </div>
                                     <div style="display:flex;gap:4px;align-items:center;">
-                                        <input type="number" id="pm-ws-small-qty" min="1" value="1"
+                                        <input type="number" id="pm-ws-small-qty" min="0" value="0"
+                                            oninput="pmWsQtyChanged('small')"
                                             style="width:48px;padding:4px;background:#0f172a;border:1px solid #334155;border-radius:5px;color:#f1f5f9;font-size:0.85rem;text-align:center;">
                                         <span style="font-size:0.68rem;color:#64748b;">bot</span>
                                     </div>
@@ -6509,6 +6515,7 @@
                                 </div>
                                 <div style="display:flex;gap:4px;align-items:center;">
                                     <input type="number" id="ws-big-qty-input" min="0" value="0" placeholder="Qty"
+                                        oninput="wsQtyChanged('big')"
                                         style="width:52px;padding:5px;background:#0f172a;border:1px solid #334155;border-radius:6px;color:#f1f5f9;font-size:0.88rem;text-align:center;">
                                     <span style="font-size:0.72rem;color:#64748b;">bottles</span>
                                 </div>
@@ -6524,6 +6531,7 @@
                                 </div>
                                 <div style="display:flex;gap:4px;align-items:center;">
                                     <input type="number" id="ws-small-qty-input" min="0" value="0" placeholder="Qty"
+                                        oninput="wsQtyChanged('small')"
                                         style="width:52px;padding:5px;background:#0f172a;border:1px solid #334155;border-radius:6px;color:#f1f5f9;font-size:0.88rem;text-align:center;">
                                     <span style="font-size:0.72rem;color:#64748b;">bottles</span>
                                 </div>
@@ -12722,28 +12730,54 @@ async function recordTenantPayment(tenantId) {
         }
         window.saveQuickSell = saveQuickSell;
 
-        function pmWsQuickAddBig(price) {
-            var qty = parseInt((document.getElementById('pm-ws-big-qty')||{}).value) || 1;
-            if (qty <= 0) { showToast('Enter a valid quantity.', 'warning'); return; }
-            var gross = qty * price;
-            var discount = (price === 35 && qty >= 3) ? Math.floor(qty/3) * 5 : 0;
-            window._pmWsCart.push({ type:'big', bottleSize:'18L', qty:qty, price:price,
-                subtotal:Math.max(0, gross-discount), discount:discount, packageDeal:discount>0,
-                label:qty+' x Big(18L) @P'+price, containerType:'big' });
-            var el = document.getElementById('pm-ws-big-qty'); if (el) el.value = '1';
+        // Live qty update for floating + button water cart
+        function pmWsQtyChanged(type) {
+            if (type === 'big') {
+                var qty = parseInt((document.getElementById('pm-ws-big-qty')||{}).value) || 0;
+                var price = window._pmWsSelectedBigPrice || 25;
+                window._pmWsCart = (window._pmWsCart||[]).filter(function(i){ return i.type !== 'big'; });
+                if (qty > 0) {
+                    var gross = qty * price;
+                    var discount = (price === 35 && qty >= 3) ? Math.floor(qty/3) * 5 : 0;
+                    window._pmWsCart.push({ type:'big', bottleSize:'18L', qty:qty, price:price,
+                        subtotal:Math.max(0,gross-discount), discount:discount, packageDeal:discount>0,
+                        label:qty+' x Big(18L) @P'+price, containerType:'big' });
+                }
+            } else {
+                var qty = parseInt((document.getElementById('pm-ws-small-qty')||{}).value) || 0;
+                var price = window._pmWsSelectedSmlPrice || 15;
+                var size  = window._pmWsSelectedSmlSize  || '4-10L';
+                window._pmWsCart = (window._pmWsCart||[]).filter(function(i){ return i.type !== 'small'; });
+                if (qty > 0) {
+                    var sizeLabel = size==='500cc'?'Sm(500cc)':size==='4-10L'?'Med(4-10L)':'Lg(15L)';
+                    window._pmWsCart.push({ type:'small', bottleSize:size, qty:qty, price:price,
+                        subtotal:qty*price, discount:0, packageDeal:false,
+                        label:qty+' x '+sizeLabel+' @P'+price, containerType:'small' });
+                }
+            }
             pmWsCartRender();
+            // Auto-fill the amount field from cart total
+            var total = (window._pmWsCart||[]).reduce(function(s,i){ return s+i.subtotal; }, 0);
+            var amtEl = document.getElementById('payment-amount');
+            if (amtEl && total > 0) amtEl.value = total;
         }
-        window.pmWsQuickAddBig = pmWsQuickAddBig;
+        window.pmWsQtyChanged = pmWsQtyChanged;
+
+        function pmWsQuickAddBig(price) {
+            // Mark active price button
+            document.querySelectorAll('#water-payment-fields [onclick*="pmWsQuickAddBig"]').forEach(function(b){
+                b.style.background='transparent'; b.style.color='#94a3b8'; b.style.borderColor='#334155';
+            });
+            var activeBtn = document.querySelector('#water-payment-fields [onclick*="pmWsQuickAddBig('+price+')"]');
+            if (activeBtn) { activeBtn.style.background='rgba(59,130,246,0.2)'; activeBtn.style.color='#60a5fa'; activeBtn.style.borderColor='#3b82f6'; }
+            window._pmWsSelectedBigPrice = price;
+            pmWsQtyChanged('big');
+        }
 
         function pmWsQuickAddSmall(size, price) {
-            var qty = parseInt((document.getElementById('pm-ws-small-qty')||{}).value) || 1;
-            if (qty <= 0) { showToast('Enter a valid quantity.', 'warning'); return; }
-            var sizeLabel = size==='500cc'?'Sm(500cc)':size==='4-10L'?'Med(4-10L)':'Lg(15L)';
-            window._pmWsCart.push({ type:'small', bottleSize:size, qty:qty, price:price,
-                subtotal:qty*price, discount:0, packageDeal:false,
-                label:qty+' x '+sizeLabel+' @P'+price, containerType:'small' });
-            var el = document.getElementById('pm-ws-small-qty'); if (el) el.value = '1';
-            pmWsCartRender();
+            window._pmWsSelectedSmlPrice = price;
+            window._pmWsSelectedSmlSize  = size;
+            pmWsQtyChanged('small');
         }
         window.pmWsQuickAddSmall = pmWsQuickAddSmall;
 
@@ -14174,35 +14208,56 @@ async function loadWaterCustomers() {
             });
             var activeBtn = document.querySelector('[data-type="big"][data-price="'+price+'"]');
             if (activeBtn) { activeBtn.style.background='rgba(59,130,246,0.2)'; activeBtn.style.color='#60a5fa'; activeBtn.style.borderColor='#3b82f6'; }
-            // Store selected price
+            // Store selected price and immediately update cart from current qty
             window._wsSelectedBigPrice = price;
-            var qty = parseInt((document.getElementById('ws-big-qty-input')||{}).value) || 0;
-            if (qty <= 0) { showToast('Enter quantity first, then click a price button.', 'warning'); return; }
-            var gross = qty * price;
-            var discount = 0;
-            if (price === 35 && qty >= 3) { discount = Math.floor(qty/3) * 5; }
-            var subtotal = Math.max(0, gross - discount);
-            window._wsCart.push({ type:'big', bottleSize:'18L', qty:qty, price:price,
-                subtotal:subtotal, discount:discount, packageDeal:discount>0,
-                label:qty+' x Big (18L) @ P'+price, containerType:'big' });
-            var el = document.getElementById('ws-big-qty-input'); if (el) el.value = '0';
-            wsCartRender();
+            wsQtyChanged('big');
         }
         window.wsQuickAddBig = wsQuickAddBig;
 
         function wsQuickAddSmall(size, price) {
             window._wsSelectedSmlPrice = price;
             window._wsSelectedSmlSize  = size;
-            var qty = parseInt((document.getElementById('ws-small-qty-input')||{}).value) || 0;
-            if (qty <= 0) { showToast('Please enter a valid quantity.', 'warning'); return; }
-            var sizeLabel = size==='500cc'?'Small(500cc-1L)':size==='4-10L'?'Medium(4L-10L)':'Large(15L)';
-            window._wsCart.push({ type:'small', bottleSize:size, qty:qty, price:price,
-                subtotal:qty*price, discount:0, packageDeal:false,
-                label:qty+' x '+sizeLabel+' @ P'+price, containerType:'small' });
-            var el = document.getElementById('ws-small-qty-input'); if (el) el.value = '1';
-            wsCartRender();
+            // Highlight active small button
+            document.querySelectorAll('[onclick*="wsQuickAddSmall"]').forEach(function(b){
+                b.style.borderColor='#334155'; b.style.color='#94a3b8'; b.style.background='transparent';
+            });
+            var activeSmBtn = document.querySelector('[onclick*="wsQuickAddSmall(\''+size+"',"+price+')"]') ||
+                document.querySelector('[onclick*="wsQuickAddSmall"]');
+            if (activeSmBtn) { activeSmBtn.style.background='rgba(99,102,241,0.2)'; activeSmBtn.style.color='#818cf8'; activeSmBtn.style.borderColor='#6366f1'; }
+            wsQtyChanged('small');
         }
         window.wsQuickAddSmall = wsQuickAddSmall;
+
+        // Live qty update — called as user types in qty fields
+        // Updates existing cart item for that type, or adds one if price is already selected
+        function wsQtyChanged(type) {
+            if (type === 'big') {
+                var qty = parseInt((document.getElementById('ws-big-qty-input')||{}).value) || 0;
+                var price = window._wsSelectedBigPrice || 25;
+                // Remove existing big item from cart then re-add with new qty
+                window._wsCart = (window._wsCart||[]).filter(function(i){ return i.type !== 'big'; });
+                if (qty > 0) {
+                    var gross = qty * price;
+                    var discount = (price === 35 && qty >= 3) ? Math.floor(qty/3) * 5 : 0;
+                    window._wsCart.push({ type:'big', bottleSize:'18L', qty:qty, price:price,
+                        subtotal:Math.max(0,gross-discount), discount:discount, packageDeal:discount>0,
+                        label:qty+' x Big (18L) @ P'+price, containerType:'big' });
+                }
+            } else {
+                var qty = parseInt((document.getElementById('ws-small-qty-input')||{}).value) || 0;
+                var price = window._wsSelectedSmlPrice || 15;
+                var size  = window._wsSelectedSmlSize  || '4-10L';
+                window._wsCart = (window._wsCart||[]).filter(function(i){ return i.type !== 'small'; });
+                if (qty > 0) {
+                    var sizeLabel = size==='500cc'?'Small(500cc-1L)':size==='4-10L'?'Medium(4L-10L)':'Large(15L)';
+                    window._wsCart.push({ type:'small', bottleSize:size, qty:qty, price:price,
+                        subtotal:qty*price, discount:0, packageDeal:false,
+                        label:qty+' x '+sizeLabel+' @ P'+price, containerType:'small' });
+                }
+            }
+            wsCartRender();
+        }
+        window.wsQtyChanged = wsQtyChanged;
 
         // Stubs for backward compat
         function wsSetType(t) {}  function wsSetBigPrice(p) {}  function wsSetSmallSize(s,p) {}
@@ -14461,18 +14516,26 @@ async function loadWaterCustomers() {
             showModal('water-customer-detail-modal');
         }
 
-        // Show water payment modal
+        // Show water payment modal — opens the full cart modal pre-filled with this customer
         async function showWaterPaymentModal(customerId, customerName, balance) {
-            const amount = await showInputModal('Record Payment', `💵 Record Payment for ${customerName}\n\nOutstanding Balance: ₱${balance.toLocaleString()}\n\nEnter payment amount:`);
-            if (!amount) return;
-            
-            const paymentAmount = parseFloat(amount.replace(/,/g, '')) || 0;
-            if (paymentAmount <= 0) {
-                showToast('⚠️ Please enter a valid amount.', 'warning');
-                return;
-            }
-            
-            processWaterPayment(customerId, paymentAmount);
+            await showWaterSaleModal();
+            setTimeout(function() {
+                // Pre-select the customer
+                var custEl = document.getElementById('water-sale-customer');
+                if (custEl && customerId) {
+                    custEl.value = customerId;
+                }
+                if (custEl && !custEl.value && customerName) {
+                    var newEl = document.getElementById('water-sale-new-customer');
+                    if (newEl) newEl.value = customerName;
+                }
+                // Default to credit since this customer has a balance
+                var ptEl = document.getElementById('water-sale-payment-type');
+                if (ptEl) {
+                    ptEl.value = 'credit';
+                    if (typeof toggleWaterPaymentFields === 'function') toggleWaterPaymentFields();
+                }
+            }, 200);
         }
         window.showWaterPaymentModal = showWaterPaymentModal;
 
@@ -14598,8 +14661,8 @@ async function loadWaterCustomers() {
                 e.unpaidAdvances = unpaidAdv;
                 totalAdvances += unpaidAdv;
                 
-                // Calculate unpaid work days (not yet paid out)
-                const empRecords = timeRecords.filter(r => r.employeeId === e.id && !r.paid && r.status === 'present');
+                // Calculate unpaid work days (present + halfday, not yet paid)
+                const empRecords = timeRecords.filter(r => r.employeeId === e.id && !r.paid && (r.status === 'present' || r.status === 'halfday'));
                 e.unpaidDays = empRecords.length;
                 totalUnpaidDays += empRecords.length;
             });
@@ -15289,13 +15352,38 @@ Enter reason:`);
 
         // Payroll Summary
         async function processPayroll() { return showPayrollSummary(); }
+
+        // Set payroll date range to cover ALL unpaid attendance records
+        async function setPayrollAllUnpaid() {
+            try {
+                const allRecords = await dbGetAll('timeRecords');
+                const unpaid = allRecords.filter(r => !r.paid && (r.status === 'present' || r.status === 'halfday'));
+                if (unpaid.length === 0) { showToast('No unpaid days found.', 'info'); return; }
+                const dates = unpaid.map(r => r.date).sort();
+                document.getElementById('payroll-from').value = dates[0];
+                document.getElementById('payroll-to').value = dates[dates.length - 1];
+                loadPayrollSummary();
+            } catch(e) { showToast('Error loading records.', 'error'); }
+        }
+        window.setPayrollAllUnpaid = setPayrollAllUnpaid;
 async function showPayrollSummary() {
             const today = new Date();
-            const startOfWeek = new Date(today);
-            startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Monday
-            
-            document.getElementById('payroll-from').value = startOfWeek.toISOString().split('T')[0];
-            document.getElementById('payroll-to').value = today.toISOString().split('T')[0];
+            const todayStr = today.toISOString().split('T')[0];
+            // Default: show all unpaid records — find earliest unpaid attendance date
+            let fromDate = todayStr;
+            try {
+                const allRecords = await dbGetAll('timeRecords');
+                const unpaid = allRecords.filter(r => !r.paid && (r.status === 'present' || r.status === 'halfday'));
+                if (unpaid.length > 0) {
+                    const earliest = unpaid.map(r => r.date).sort()[0];
+                    fromDate = earliest;
+                } else {
+                    // No unpaid records — default to start of current month
+                    fromDate = todayStr.substring(0,8) + '01';
+                }
+            } catch(e) {}
+            document.getElementById('payroll-from').value = fromDate;
+            document.getElementById('payroll-to').value = todayStr;
             
             showModal('payroll-summary-modal');
             loadPayrollSummary();
@@ -15338,6 +15426,14 @@ async function showPayrollSummary() {
             let totalPayroll = 0;
             let employeeCount = 0;
             
+            // Also compute total unpaid across ALL dates for reference
+            let totalUnpaidAllTime = 0;
+            employees.forEach(emp => {
+                totalUnpaidAllTime += timeRecords.filter(r =>
+                    r.employeeId === emp.id && !r.paid && (r.status === 'present' || r.status === 'halfday')
+                ).length;
+            });
+            
             employees.forEach(emp => {
                 const empRecords = timeRecords.filter(r => 
                     r.employeeId === emp.id && 
@@ -15369,7 +15465,7 @@ async function showPayrollSummary() {
                     html += `
                         <div class="list-item" onclick="showGiveSalaryModal(${emp.id})" style="cursor: pointer;" title="Click to process payment">
                             <div class="list-item-content">
-                                <div class="list-item-title">👷 ${employee.name}</div>
+                                <div class="list-item-title">👷 ${emp.name}</div>
                                 <div class="list-item-subtitle">${fullDays} full days + ${halfDays} half days${totalOT > 0 ? ' • OT: ' + totalOT + 'hrs' : ''}</div>
                             </div>
                             <div style="text-align: right;">
@@ -15382,11 +15478,16 @@ async function showPayrollSummary() {
             });
             
             if (!html) {
+                const outsideRangeNote = totalUnpaidAllTime > 0
+                    ? `<p style="font-size:0.82rem;color:#f59e0b;margin-top:8px;">⚠️ There are <strong>${totalUnpaidAllTime} unpaid day(s)</strong> outside this date range.<br>Widen the date range or click "All Unpaid" below.</p>
+                       <button class="btn btn-sm btn-warning" onclick="setPayrollAllUnpaid()" style="margin-top:8px;">📋 Show All Unpaid Days</button>`
+                    : '';
                 html = `
                     <div style="text-align: center; padding: 20px; color: var(--text-secondary);">
                         <div style="font-size: 3rem; margin-bottom: 10px;">📋</div>
                         <p><strong>No unpaid work days in this period</strong></p>
                         <p style="font-size: 0.85rem; margin-top: 8px;">Mark attendance first using the 📋 Quick Attendance button</p>
+                        ${outsideRangeNote}
                         <button class="btn btn-sm btn-success" onclick="hideModal('payroll-summary-modal'); showQuickAttendance();" style="margin-top: 10px;">
                             Mark Attendance
                         </button>
@@ -22413,6 +22514,9 @@ async function clearAllData() {
             safeSet('report-total-expenses', '₱'+totalExpenses.toLocaleString());
             safeSet('report-net-profit',     (netProfit>=0?'₱':'-₱')+Math.abs(netProfit).toLocaleString('en-PH',{minimumFractionDigits:0,maximumFractionDigits:2}));
             safeSet('report-profit-margin',  profitMargin+'%');
+            // Update period sub-labels on all stat cards
+            const shortRange = fromDate.toLocaleDateString('en-PH',{month:'short',day:'numeric'}) + ' – ' + toDate.toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'});
+            ['report-income-period','report-expenses-period','report-net-period','report-margin-period'].forEach(id => safeSet(id, shortRange));
 
             // Income breakdown — populate the actual HTML card
             const incBreakEl = document.getElementById('income-breakdown-content');
@@ -23637,6 +23741,13 @@ async function clearAllData() {
                 safeSet('dash-ie-net',     (net>=0?'₱':'-₱')+Math.abs(net).toLocaleString());
                 safeSet('dash-ie-pct',     margin+'% profit margin');
                 safeSet('dash-ie-label',   net >= 0 ? '📈 Net Profit' : '📉 Net Loss');
+                // Update period label in card title
+                const rangeLabels = {today:'Today',week:'This Week',month:'This Month',custom:'Custom Range'};
+                const fmtShort = d => new Date(d+'T00:00:00').toLocaleDateString('en-PH',{month:'short',day:'numeric'});
+                const periodTxt = _dashRange === 'custom'
+                    ? (fromDate === toDate ? fmtShort(fromDate) : fmtShort(fromDate)+' – '+fmtShort(toDate))
+                    : (rangeLabels[_dashRange] || '');
+                safeSet('dash-ie-period', periodTxt);
 
                 const netEl = document.getElementById('dash-ie-net');
                 if (netEl) netEl.style.color = net >= 0 ? '#10b981' : '#ef4444';
