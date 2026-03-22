@@ -6253,6 +6253,7 @@
                             <option value="gcash">GCash</option>
                             <option value="maya">Maya/PayMaya</option>
                             <option value="bank">Bank Transfer</option>
+                            <option value="credit">📝 Credit (Pay Later)</option>
                             <option value="other">Other</option>
                         </select>
                     </div>
@@ -12426,8 +12427,8 @@ async function recordTenantPayment(tenantId) {
             if (type === 'water') {
                 window._pmWsCart = [];
                 setTimeout(function() {
-                    var bq = document.getElementById('pm-ws-big-qty');   if (bq) bq.value = '1';
-                    var sq = document.getElementById('pm-ws-small-qty'); if (sq) sq.value = '1';
+                    var bq = document.getElementById('pm-ws-big-qty');   if (bq) bq.value = '0';
+                    var sq = document.getElementById('pm-ws-small-qty'); if (sq) sq.value = '0';
                     var ol = document.getElementById('pm-ws-order-list'); if (ol) ol.style.display = 'none';
                     document.getElementById('payment-amount').value = '0';
                     document.getElementById('payment-water-gallons').value = '0';
