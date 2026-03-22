@@ -3848,11 +3848,6 @@
 
 <!-- ==================== ORIGINAL PRISM APP ==================== -->
 <!-- App Loading Overlay -->
-    <div id="prism-app-loading" class="hidden">
-        <div class="prism-app-loading-logo">PRISM</div>
-        <div class="prism-app-loading-bar"><div class="prism-app-loading-bar-inner"></div></div>
-        <div class="prism-app-loading-text">Loading your data...</div>
-    </div>
 
     <div class="prism-app-wrapper">
     <!-- Header -->
@@ -25801,8 +25796,7 @@ function _mtShowAppActual() {
     if (!_prismAppInitialized) {
         _prismAppInitialized = true;
         // Show loading overlay while data loads
-        const _initLoad = document.getElementById('prism-app-loading');
-        if (_initLoad) _initLoad.classList.remove('hidden');
+        
         (async () => {
             try {
                 // Wait for IDB to be ready
@@ -25818,8 +25812,7 @@ function _mtShowAppActual() {
                 console.error('[PRISM] Initial data load failed:', e);
                 if (typeof loadDashboard === 'function') loadDashboard();
             } finally {
-                const _ld = document.getElementById('prism-app-loading');
-                if (_ld) _ld.classList.add('hidden');
+                
                 // Run sync AFTER data is loaded and IDB is ready
                 if (typeof window._pendingRunSyncAfterDB === 'function') {
                     window._pendingRunSyncAfterDB();
@@ -26630,20 +26623,18 @@ function _doLocalAdminLogin() {
         if (typeof loadTheme === 'function') loadTheme();
         // Wait for IDB to be ready before loading dashboard
         // Show loading overlay while data loads (prevents zero-flash)
-        const _loadingEl = document.getElementById('prism-app-loading');
+        const _loadingEl = null; // prism-app-loading removed
         if (_loadingEl) _loadingEl.classList.remove('hidden');
         const _waitAndLoad = async () => {
             if (window._dbReadyPromise) await window._dbReadyPromise;
             if (typeof loadDashboard === 'function') await loadDashboard();
             if (typeof loadDashIncomeExpense === 'function') loadDashIncomeExpense();
             // Hide loading overlay — data is ready
-            const _ld = document.getElementById('prism-app-loading');
-            if (_ld) _ld.classList.add('hidden');
+            
         };
         _waitAndLoad().catch(e => {
             console.warn('[PRISM] Initial dashboard load:', e);
-            const _ld = document.getElementById('prism-app-loading');
-            if (_ld) _ld.classList.add('hidden');
+            
         });
     }, 300);
     }
