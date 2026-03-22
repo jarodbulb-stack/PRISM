@@ -9343,7 +9343,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `carent-diagnostics-${new Date().toISOString().split('T')[0]}.json`;
+                a.download = `carent-diagnostics-${(function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date())}.json`;
                 a.click();
                 URL.revokeObjectURL(url);
             },
@@ -9855,14 +9855,14 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             if (modalId === 'payment-modal') {
                 populateTenantDropdown();
                 populateCreditDropdown();
-                document.getElementById('payment-date').value = new Date().toISOString().split('T')[0];
+                document.getElementById('payment-date').value = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             }
             if (modalId === 'credit-modal') {
-                document.getElementById('credit-date').value = new Date().toISOString().split('T')[0];
+                document.getElementById('credit-date').value = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             }
             if (modalId === 'expense-modal') {
                 populateExpensePropertyDropdown();
-                document.getElementById('expense-date').value = new Date().toISOString().split('T')[0];
+                document.getElementById('expense-date').value = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             }
             if (modalId === 'policies-modal') {
                 loadPoliciesModal();
@@ -11459,7 +11459,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             // Reset form
             document.getElementById('tenant-form').reset();
             document.getElementById('tenant-edit-id').value = '';
-            document.getElementById('tenant-movein').value = new Date().toISOString().split('T')[0];
+            document.getElementById('tenant-movein').value = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             
             // Reset existing tenant selection
             document.getElementById('selected-existing-tenant-id').value = '';
@@ -11912,7 +11912,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             if (!await showConfirm('Mark this security deposit as paid?', 'success', '💰 Security Deposit', 'Yes, Mark Paid')) return;
             const tenant = await dbGet('tenants', tenantId);
             tenant.depositPaid = true;
-            tenant.depositPaidDate = new Date().toISOString().split('T')[0];
+            tenant.depositPaidDate = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             showToast('⏳ Updating deposit...', 'info');
                 await dbUpdate('tenants', tenant);
             await viewTenantDetails(tenantId);
@@ -12387,7 +12387,7 @@ async function recordTenantPayment(tenantId) {
 
             // Set tenant inactive and record move-out date
             tenant.status = 'inactive';
-            tenant.moveOutDate = new Date().toISOString().split('T')[0];
+            tenant.moveOutDate = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             await dbUpdate('tenants', tenant);
 
             // Set property back to vacant
@@ -12664,7 +12664,7 @@ async function recordTenantPayment(tenantId) {
                         </div>
                         <div style="flex:1;">
                             <label style="font-size:0.75rem;color:#94a3b8;display:block;margin-bottom:3px;">Date</label>
-                            <input type="date" id="qs-date" value="${new Date().toISOString().split('T')[0]}"
+                            <input type="date" id="qs-date" value="${(function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date())}"
                                 style="width:100%;padding:9px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;box-sizing:border-box;">
                         </div>
                     </div>
@@ -12708,7 +12708,7 @@ async function recordTenantPayment(tenantId) {
             const price   = parseFloat(document.getElementById('qs-price')?.value) || 0;
             const custId  = document.getElementById('qs-customer')?.value          || '';
             const payment = document.getElementById('qs-payment')?.value           || 'cash';
-            const date    = document.getElementById('qs-date')?.value              || new Date().toISOString().split('T')[0];
+            const date    = document.getElementById('qs-date')?.value              || (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             const notes   = (document.getElementById('qs-notes')?.value?.trim())   || '';
 
             if (!name)    { showToast('⚠️ Please enter an item name.', 'warning');  return; }
@@ -14019,7 +14019,7 @@ async function loadWaterCustomers() {
             let totalCredits = 0;
             let todaySales = 0;
             let totalGallons = 0;
-            const today = new Date().toISOString().split('T')[0];
+            const today = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             
             customers.forEach(c => {
                 const customerSales = sales.filter(s => String(s.customerId) === String(c.id));
@@ -14161,7 +14161,7 @@ async function loadWaterCustomers() {
                 options += `<option value="${c.id}">${c.name}</option>`;
             });
             document.getElementById('water-sale-customer').innerHTML = options;
-            document.getElementById('water-sale-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('water-sale-date').value = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             document.getElementById('water-sale-new-customer').value = '';
             document.getElementById('water-sale-notes').value = '';
             document.getElementById('water-sale-payment-type').value = 'cash';
@@ -14596,7 +14596,7 @@ async function loadWaterCustomers() {
                 sale.amountPaid += applied;
                 sale.balance -= applied;
                 sale.status = sale.balance <= 0 ? 'paid' : 'partial';
-                sale.lastPaymentDate = new Date().toISOString().split('T')[0];
+                sale.lastPaymentDate = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
                 showToast('⏳ Recording water payment...', 'info');
                 await dbUpdate('waterSales', sale);
                 remaining -= applied;
@@ -15041,7 +15041,7 @@ async function loadWaterCustomers() {
             document.getElementById('timerecord-employee-id').value = employeeId;
             document.getElementById('timerecord-edit-id').value = '';
             document.getElementById('timerecord-employee-name').value = employeeName;
-            document.getElementById('timerecord-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('timerecord-date').value = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             document.getElementById('timerecord-status').value = 'present';
             document.getElementById('timerecord-late').value = '0';
             document.getElementById('timerecord-ot-hours').value = '0';
@@ -15139,7 +15139,7 @@ async function loadWaterCustomers() {
         // Quick Attendance for all employees
         async function saveAttendance() { return showQuickAttendance(); }
 async function showQuickAttendance() {
-            document.getElementById('attendance-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('attendance-date').value = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             showModal('quick-attendance-modal');
             loadQuickAttendance();
         }
@@ -15219,7 +15219,7 @@ async function showQuickAttendance() {
 
         // Cashier quick attendance record (cannot delete once saved)
         async function cashierQuickRecord(employeeId, employeeName, status) {
-            const today = new Date().toISOString().split('T')[0];
+            const today = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             const existing = await dbGetAll('timeRecords');
             const duplicate = existing.find(r => r.employeeId === employeeId && r.date === today);
 
@@ -15257,7 +15257,7 @@ async function showQuickAttendance() {
             document.getElementById('advance-form').reset();
             document.getElementById('advance-employee-id').value = employeeId;
             document.getElementById('advance-employee-name').value = employeeName;
-            document.getElementById('advance-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('advance-date').value = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
 
             // Mark that this was opened by cashier — hide delete button
             const advanceModal = document.getElementById('advance-modal');
@@ -15673,7 +15673,7 @@ async function showPayrollSummary() {
             if (!await showConfirm(`Pay ₱${netPay.toLocaleString()} to this employee?`, 'success', '💵 Confirm Salary Payment', 'Yes, Pay')) return;
             
             const employee = await dbGet('employees', employeeId);
-            const paymentDate = new Date().toISOString().split('T')[0];
+            const paymentDate = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             
             // Create salary record
             const salary = {
@@ -15743,11 +15743,11 @@ async function showPayrollSummary() {
         function showCashAdvanceModal(employeeId, employeeName) {
             document.getElementById('advance-employee-id').value = employeeId;
             document.getElementById('advance-employee-name').value = employeeName;
-            document.getElementById('advance-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('advance-date').value = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             document.getElementById('advance-form').reset();
             document.getElementById('advance-employee-id').value = employeeId;
             document.getElementById('advance-employee-name').value = employeeName;
-            document.getElementById('advance-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('advance-date').value = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             hideModal('employee-detail-modal');
             showModal('advance-modal');
         }
@@ -15802,7 +15802,7 @@ async function showPayrollSummary() {
             document.getElementById('salary-employee-id').value = employeeId;
             document.getElementById('salary-employee-name').value = employeeName;
             document.getElementById('salary-daily-rate').value = '₱' + dailyRate.toLocaleString() + '/day';
-            document.getElementById('salary-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('salary-date').value = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             document.getElementById('salary-deductions').value = unpaidAdvances.toLocaleString();
             
             // Reset all fields
@@ -16204,7 +16204,7 @@ async function showPayrollSummary() {
         }
 
         async function showCashierTodayTransactions() {
-            const today = new Date().toISOString().split('T')[0];
+            const today = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             const [payments, creditPayments, waterSales, expenses, additionalIncome] = await Promise.all([
                 dbGetAll('payments'), dbGetAll('creditPayments'), dbGetAll('waterSales'),
                 dbGetAll('expenses'), dbGetAll('additionalIncome')
@@ -16285,7 +16285,7 @@ async function showPayrollSummary() {
                 incentive: { title:'🏆 Add Incentive', label:'Incentive Amount', icon:'🏆', color:'#6366f1' }
             };
             const cfg = labels[type];
-            const today = new Date().toISOString().split('T')[0];
+            const today = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
 
             const ex = document.getElementById('payroll-adjust-modal');
             if (ex) ex.remove();
@@ -16993,7 +16993,7 @@ async function showPayrollSummary() {
                 document.getElementById('note-form').reset();
                 document.getElementById('note-edit-id').value = '';
                 prismToggleReminderFields('');  // hide reminder fields on new note
-                document.getElementById('note-date').value = new Date().toISOString().split('T')[0];
+                document.getElementById('note-date').value = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
                 clearNotePhoto();
                 populateNoteLinkDropdown();
                 showModal('note-modal');
@@ -17010,7 +17010,7 @@ async function showPayrollSummary() {
                 document.getElementById('note-modal-title').textContent = 'Add Note';
                 document.getElementById('note-form').reset();
                 document.getElementById('note-edit-id').value = '';
-                document.getElementById('note-date').value = new Date().toISOString().split('T')[0];
+                document.getElementById('note-date').value = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
                 document.getElementById('note-category').value = category;
                 clearNotePhoto();
                 populateNoteLinkDropdown();
@@ -17215,7 +17215,7 @@ async function showPayrollSummary() {
                 let recurringTasksDue = [];
                 try {
                     const tasks = await dbGetAll('tasks');
-                    const todayStr = new Date().toISOString().split('T')[0];
+                    const todayStr = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
                     const todayDate = new Date(todayStr + 'T00:00:00');
                     recurringTasksDue = (tasks||[]).filter(t => {
                         if (t.status === 'completed' || !t.dueDate || !t.repeat || t.repeat === 'none') return false;
@@ -17486,7 +17486,7 @@ async function showPayrollSummary() {
             const info = categoryInfo[filter] || categoryInfo['all'];
             
             const filtered = filter === 'all' ? allNotes : allNotes.filter(n => n.category === filter);
-            const today = new Date().toISOString().split('T')[0];
+            const today = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             
             // Build modal
             const existing = document.getElementById('notes-summary-modal');
@@ -17762,9 +17762,9 @@ async function showPayrollSummary() {
             }
             
             document.getElementById('income-linked-to').innerHTML = options;
-            document.getElementById('income-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('income-date').value = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             document.getElementById('income-form').reset();
-            document.getElementById('income-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('income-date').value = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             document.getElementById('custom-source-group').style.display = 'none';
             showModal('income-modal');
         }
@@ -17829,7 +17829,7 @@ async function showPayrollSummary() {
                     </div>
                     <div class="form-group">
                         <label>Date</label>
-                        <input type="date" id="charge-date" value="${new Date().toISOString().split('T')[0]}" required>
+                        <input type="date" id="charge-date" value="${(function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date())}" required>
                     </div>
                     <div class="form-group">
                         <label>Description</label>
@@ -17909,7 +17909,7 @@ async function showPayrollSummary() {
             if (!charge) return;
 
             charge.status = 'paid';
-            charge.paidDate = new Date().toISOString().split('T')[0];
+            charge.paidDate = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             await dbUpdate('clientCharges', charge);
 
             // Also record as income
@@ -18252,7 +18252,10 @@ async function showPayrollSummary() {
 
         function getExpenseDateRange() {
             const now = new Date();
-            const fmt = d => d.toISOString().split('T')[0];
+            // Use LOCAL date formatting to avoid UTC timezone shift (critical for PH UTC+8)
+            const fmt = d => d.getFullYear() + '-' +
+                String(d.getMonth()+1).padStart(2,'0') + '-' +
+                String(d.getDate()).padStart(2,'0');
             if (_expenseRange === 'month') {
                 return { from: fmt(new Date(now.getFullYear(), now.getMonth(), 1)), to: fmt(now) };
             } else if (_expenseRange === 'last-month') {
@@ -18260,7 +18263,7 @@ async function showPayrollSummary() {
                 const t = new Date(now.getFullYear(), now.getMonth(), 0);
                 return { from: fmt(f), to: fmt(t) };
             } else if (_expenseRange === '3m') {
-                const f = new Date(now); f.setMonth(f.getMonth()-3);
+                const f = new Date(now.getFullYear(), now.getMonth()-3, now.getDate());
                 return { from: fmt(f), to: fmt(now) };
             } else if (_expenseRange === 'year') {
                 return { from: fmt(new Date(now.getFullYear(), 0, 1)), to: fmt(now) };
@@ -18763,7 +18766,7 @@ async function showPayrollSummary() {
             console.log('Opening expense with category:', category);
             try {
                 await populateExpensePropertyDropdown();
-                document.getElementById('expense-date').value = new Date().toISOString().split('T')[0];
+                document.getElementById('expense-date').value = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
                 document.getElementById('expense-category').value = category;
                 
                 // Set a helpful description based on category
@@ -19022,7 +19025,7 @@ async function showPayrollSummary() {
             const summEl  = document.getElementById('income-today-summary');
             if (!feedEl) return;
 
-            const today    = new Date().toISOString().split('T')[0];
+            const today    = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             let dateFrom   = document.getElementById('income-date-from')?.value || '';
             let dateTo     = document.getElementById('income-date-to')?.value   || '';
             const filter   = document.getElementById('income-today-filter')?.value || 'all';
@@ -19551,7 +19554,7 @@ async function showPayrollSummary() {
             const form = document.getElementById('income-form');
             form.reset();
             document.getElementById('income-edit-id').value = '';
-            document.getElementById('income-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('income-date').value = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             document.getElementById('income-modal-title').textContent = 'Add Other Income Source';
             document.getElementById('income-delete-btn').style.display = 'none';
             // Always hide delete btn for cashier
@@ -19567,7 +19570,7 @@ async function showPayrollSummary() {
             form.reset();
             document.getElementById('income-edit-id').value = '';
             document.getElementById('income-category').value = category;
-            document.getElementById('income-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('income-date').value = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             
             // Focus on description to let user add details
             document.getElementById('income-description').focus();
@@ -21376,7 +21379,7 @@ async function showPayrollSummary() {
                 timeRecords: timeRecords
             };
 
-            const dateStr = new Date().toISOString().split('T')[0];
+            const dateStr = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             const fileName = `PRISM-backup-${dateStr}.json`;
             
             showToast('⏳ Preparing backup...', 'info');
@@ -21538,7 +21541,7 @@ async function showPayrollSummary() {
         // ── AUTO TIME-IN ON LOGIN ──
         async function prismCashierAutoTimeIn() {
             try {
-                const today = new Date().toISOString().split('T')[0];
+                const today = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
                 const email = currentAppUser && currentAppUser.email;
                 if (!email) return;
 
@@ -21592,7 +21595,7 @@ async function showPayrollSummary() {
             if (!reason || !reason.trim()) return;
 
             try {
-                const today = new Date().toISOString().split('T')[0];
+                const today = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
                 const now = new Date().toLocaleTimeString('en-PH', {hour:'2-digit',minute:'2-digit'});
                 const email = currentAppUser && currentAppUser.email;
 
@@ -21705,7 +21708,7 @@ async function showPayrollSummary() {
                     userName: currentAppUser && (currentAppUser.fullname || currentAppUser.email),
                     role: currentAppUser && currentAppUser.role,
                     timestamp: new Date().toISOString(),
-                    date: new Date().toISOString().split('T')[0],
+                    date: (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date()),
                     ...(extra || {})
                 };
                 await dbAdd('auditLog', log);
@@ -22583,7 +22586,7 @@ async function clearAllData() {
                 const url   = URL.createObjectURL(blob);
                 const a     = document.createElement('a');
                 a.href      = url;
-                a.download  = 'PRISM_backup_' + new Date().toISOString().split('T')[0] + '.json';
+                a.download  = 'PRISM_backup_' + (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date()) + '.json';
                 document.body.appendChild(a); a.click(); document.body.removeChild(a);
                 URL.revokeObjectURL(url);
                 const total = Object.values(backup.data).reduce((s,arr)=>s+(Array.isArray(arr)?arr.length:0),0);
@@ -22611,7 +22614,7 @@ async function clearAllData() {
         async function loadSampleData() {
             showToast('⏳ Loading sample data...','info');
             try {
-                const today = new Date().toISOString().split('T')[0];
+                const today = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
                 const p1 = await dbAdd('properties',{name:'Unit 1',type:'apartment',rent:3000,status:'occupied',isSample:true});
                 const p2 = await dbAdd('properties',{name:'Unit 2',type:'apartment',rent:5000,status:'occupied',isSample:true});
                 const t1 = await dbAdd('tenants',{name:'Sample Tenant A',propertyId:p1,rent:3000,status:'active',dueDay:5,startDate:today,isSample:true});
@@ -22649,7 +22652,7 @@ async function clearAllData() {
                 tenants.forEach(t => {
                     csv += `"${t.name||''}","${t.propertyId||''}","${t.rent||0}","${t.status||''}","${t.dueDay||5}","${t.startDate||''}","${t.phone||''}","${t.email||''}"\n`;
                 });
-                downloadCSV(csv, 'PRISM_Tenants_' + new Date().toISOString().split('T')[0] + '.csv');
+                downloadCSV(csv, 'PRISM_Tenants_' + (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date()) + '.csv');
                 showToast('✅ Tenants exported.','success');
             } catch(e) { showToast('❌ Export failed: ' + e.message,'error'); }
         }
@@ -22662,7 +22665,7 @@ async function clearAllData() {
                 credits.forEach(c => {
                     csv += `"${c.debtor||''}","${c.principal||0}","${c.interestRate||0}","${c.interestType||''}","${c.dateLent||''}","${c.status||''}","${c.purpose||''}"\n`;
                 });
-                downloadCSV(csv, 'PRISM_Credits_' + new Date().toISOString().split('T')[0] + '.csv');
+                downloadCSV(csv, 'PRISM_Credits_' + (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date()) + '.csv');
                 showToast('✅ Credits exported.','success');
             } catch(e) { showToast('❌ Export failed: ' + e.message,'error'); }
         }
@@ -22675,7 +22678,7 @@ async function clearAllData() {
                 payments.forEach(p => {
                     csv += `"${p.date||''}","Rent","${p.tenantName||''}","${p.amount||0}","${p.paymentMethod||''}","${p.monthCovered||''}","${p.notes||''}"\n`;
                 });
-                downloadCSV(csv, 'PRISM_Payments_' + new Date().toISOString().split('T')[0] + '.csv');
+                downloadCSV(csv, 'PRISM_Payments_' + (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date()) + '.csv');
                 showToast('✅ Payments exported.','success');
             } catch(e) { showToast('❌ Export failed: ' + e.message,'error'); }
         }
@@ -22688,7 +22691,7 @@ async function clearAllData() {
                 expenses.forEach(e => {
                     csv += `"${e.date||''}","${e.category||''}","${e.amount||0}","${e.description||''}","${e.vendor||''}"\n`;
                 });
-                downloadCSV(csv, 'PRISM_Expenses_' + new Date().toISOString().split('T')[0] + '.csv');
+                downloadCSV(csv, 'PRISM_Expenses_' + (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date()) + '.csv');
                 showToast('✅ Expenses exported.','success');
             } catch(e) { showToast('❌ Export failed: ' + e.message,'error'); }
         }
@@ -22758,8 +22761,8 @@ async function clearAllData() {
             const fromEl = document.getElementById('report-date-from');
             const toEl   = document.getElementById('report-date-to');
             if (!fromEl || !toEl) return;
-            const fromDate = new Date((fromEl.value || new Date().toISOString().split('T')[0]) + 'T00:00:00');
-            const toDate   = new Date((toEl.value   || new Date().toISOString().split('T')[0]) + 'T23:59:59');
+            const fromDate = new Date((fromEl.value || (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date())) + 'T00:00:00');
+            const toDate   = new Date((toEl.value   || (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date())) + 'T23:59:59');
             if (fromDate > toDate) { showToast('⚠️ "From" date must be before "To" date.','warning'); return; }
 
             const diffDays = Math.round((toDate - fromDate) / 86400000) + 1;
@@ -22916,7 +22919,7 @@ async function clearAllData() {
                 const blob = new Blob([content], {type:'text/html'});
                 const url  = URL.createObjectURL(blob);
                 const a    = document.createElement('a');
-                a.href = url; a.download = 'PRISM_Report_' + new Date().toISOString().split('T')[0] + '.html';
+                a.href = url; a.download = 'PRISM_Report_' + (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date()) + '.html';
                 document.body.appendChild(a); a.click(); document.body.removeChild(a);
                 URL.revokeObjectURL(url);
                 showToast('✅ Report exported!','success');
@@ -22925,7 +22928,7 @@ async function clearAllData() {
         window.exportReportPDF = exportReportPDF;
 
         function initReportsPage() {
-            const today = new Date().toISOString().split('T')[0];
+            const today = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
             const fromEl = document.getElementById('report-date-from');
             const toEl   = document.getElementById('report-date-to');
@@ -23507,7 +23510,7 @@ async function clearAllData() {
             if (type === 'customers') {
                 const customers  = await dbGetAll('waterCustomers');
                 const waterSales = await dbGetAll('waterSales');
-                const today      = new Date().toISOString().split('T')[0];
+                const today      = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
 
                 // Compute stats per customer
                 const custData = customers.map(c => {
@@ -23565,7 +23568,7 @@ async function clearAllData() {
             customers.forEach(c => { custMap[c.id] = c.name; });
             const getName    = x => x.customerName || custMap[x.customerId] || custMap[parseInt(x.customerId)] || 'Walk-in';
 
-            const today      = new Date().toISOString().split('T')[0];
+            const today      = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             const defaultFrom = type === 'today' ? today : today.substring(0,7) + '-01';
             const defaultTo   = today;
 
@@ -23642,7 +23645,7 @@ async function clearAllData() {
             };
             window.wfdSetRange = (range) => {
                 const now = new Date();
-                const fmt = d => d.toISOString().split('T')[0];
+                const fmt = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
                 let f = today, t = today;
                 if (range === 'week') {
                     const d = new Date(now); d.setDate(d.getDate() - d.getDay());
@@ -23890,7 +23893,7 @@ async function clearAllData() {
         async function showDashIeDetail(type) {
             // Always fetch live data so the popup is always accurate
             const today = new Date();
-            const fmt = d => d.toISOString().split('T')[0];
+            const fmt = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
             let fromDate, toDate, periodLabel;
             const rangeLabels = {today:'Today',week:'This Week',month:'This Month',custom:'Custom Range'};
 
@@ -24208,7 +24211,7 @@ async function clearAllData() {
             if (event) event.preventDefault();
             const source  = (document.getElementById('income-source')||{}).value?.trim() || '';
             const amount  = parseFloat((document.getElementById('income-amount')||{}).value) || 0;
-            const date    = (document.getElementById('income-date')||{}).value || new Date().toISOString().split('T')[0];
+            const date    = (document.getElementById('income-date')||{}).value || (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             const desc    = (document.getElementById('income-description')||{}).value?.trim() || '';
             const editId  = (document.getElementById('income-edit-id')||{}).value || '';
             if (!source) { showToast('⚠️ Please enter a source.','warning'); return; }
@@ -24263,7 +24266,7 @@ async function clearAllData() {
             if (event) event.preventDefault();
             const empId  = (document.getElementById('salary-employee-id')||{}).value || '';
             const amount = parseFloat((document.getElementById('salary-amount')||{}).value) || 0;
-            const date   = (document.getElementById('salary-date')||{}).value || new Date().toISOString().split('T')[0];
+            const date   = (document.getElementById('salary-date')||{}).value || (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             const period = (document.getElementById('salary-period')||{}).value || '';
             const notes  = (document.getElementById('salary-notes')||{}).value?.trim() || '';
             if (!empId)    { showToast('⚠️ Please select an employee.','warning'); return; }
@@ -25248,7 +25251,7 @@ async function clearAllData() {
             const priColor  = {high:'#ef4444', medium:'#f59e0b', low:'#10b981'};
             const statColor = {pending:'#64748b','in-progress':'#3b82f6', completed:'#10b981'};
             const statLabel = {pending:'⏳ Pending','in-progress':'🔄 In Progress', completed:'✅ Done'};
-            const today     = new Date().toISOString().split('T')[0];
+            const today     = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
 
             listEl.innerHTML = filtered.map(t => {
                 const overdue  = t.dueDate && t.dueDate < today && t.status !== 'completed';
@@ -25395,7 +25398,7 @@ async function clearAllData() {
             document.getElementById('task-edit-id').value = '';
             document.getElementById('task-modal-title').textContent = 'Add New Task';
             const dateEl = document.getElementById('task-due-date');
-            if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+            if (dateEl) dateEl.value = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             showModal('task-modal');
         }
         window.showAddTaskModal = showAddTaskModal;
@@ -25454,7 +25457,7 @@ async function clearAllData() {
         async function loadAdminTodayFeed() {
             const el = document.getElementById('admin-today-feed');
             if (!el) return;
-            const today = new Date().toISOString().split('T')[0];
+            const today = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             try {
                 const [payments, creditPayments, waterSales, expenses, income] = await Promise.all([
                     dbGetAll('payments'), dbGetAll('creditPayments'), dbGetAll('waterSales'),
@@ -25579,7 +25582,7 @@ async function clearAllData() {
             const isAdmin = currentAppUser && ['owner','admin'].includes(currentAppUser.role);
             const products = await getStoreProducts();
             const storeSales = await dbGetAll('waterStoreSales').catch(()=>[]);
-            const today = new Date().toISOString().split('T')[0];
+            const today = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             const todaySales = storeSales.filter(s => s.date === today && !s.voided);
             const todayTotal = todaySales.reduce((s,x) => s + (x.total||0), 0);
 
@@ -25765,7 +25768,7 @@ async function clearAllData() {
 
                     <div class="form-group">
                         <label style="font-size:0.82rem;color:#94a3b8;">Date</label>
-                        <input type="date" id="ss-date" value="${new Date().toISOString().split('T')[0]}" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;box-sizing:border-box;">
+                        <input type="date" id="ss-date" value="${(function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date())}" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;box-sizing:border-box;">
                     </div>
 
                     <div class="form-group">
@@ -25822,7 +25825,7 @@ async function clearAllData() {
             const unitPrice  = parseFloat(document.getElementById('ss-price')?.value) || 0;
             const customerId = document.getElementById('ss-customer')?.value || '';
             const payment    = document.getElementById('ss-payment')?.value || 'cash';
-            const date       = document.getElementById('ss-date')?.value || new Date().toISOString().split('T')[0];
+            const date       = document.getElementById('ss-date')?.value || (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             const notes      = document.getElementById('ss-notes')?.value?.trim() || '';
 
             let itemName, itemIcon;
@@ -26145,7 +26148,7 @@ async function clearAllData() {
                     return;
                 }
                 const isAdmin = currentAppUser && ['owner','admin'].includes(currentAppUser.role);
-                const today   = new Date().toISOString().split('T')[0];
+                const today   = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
                 const uniqueDates = [...new Set(sales.map(s=>s.date||''))].sort((a,b)=>b>a?1:-1);
 
                 const _bottleLabel = (s) => {
@@ -28169,7 +28172,7 @@ function submitEndorsement(prefillMsg, prefillType) {
 // Auto-generate shift summary from today's data
 async function autoEndorseReport() {
     try {
-        const today = new Date().toISOString().split('T')[0];
+        const today = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
         const [expenses, credits, creditPayments, waterSales, advances, timeRecords] = await Promise.all([
             dbGetAll('expenses'), dbGetAll('credits'), dbGetAll('creditPayments'),
             dbGetAll('waterSales'), dbGetAll('cashAdvances'), dbGetAll('timeRecords')
@@ -28215,7 +28218,7 @@ async function autoEndorseReport() {
 
 function renderSentEndorsements() {
     const list = getEndorsements();
-    const today = new Date().toISOString().split('T')[0];
+    const today = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
     const todaySent = list.filter(e =>
         e.sentAt?.startsWith(today) &&
         e.sentByRole === 'cashier' &&
@@ -28336,7 +28339,7 @@ function quickEndorse(type, message) {
 // ================================================================
 
 async function loadCashierDashboard() {
-    const today = new Date().toISOString().split('T')[0];
+    const today = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
     const cashierName = currentAppUser?.fullname || currentAppUser?.username || 'Cashier';
     const filterType = document.getElementById('cashier-txn-filter')?.value || 'all';
 
@@ -28450,7 +28453,7 @@ async function loadAdminCashierSummary() {
     if (!container) return;
 
     try {
-        const today = new Date().toISOString().split('T')[0];
+        const today = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
         const endorsements = JSON.parse(localStorage.getItem('prism_endorsements') || '[]');
         const todayEndorse = endorsements.filter(e => e.timestamp && e.timestamp.startsWith(today));
         const unreadCount = endorsements.filter(e => !e.read).length;
