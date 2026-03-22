@@ -19144,8 +19144,8 @@ async function showPayrollSummary() {
                 .map(income => `
                     <div class="list-item" ${!_isCashierView ? `onclick="editIncome(${income.id})"` : ''} style="${!_isCashierView ? 'cursor:pointer;' : ''}">
                         <div class="item-info">
-                            <h4>💰 ${income.description}</h4>
-                            <p>${income.date} • <strong>${income.category}</strong>${income.recordedBy ? ' • by ' + income.recordedBy : ''}</p>
+                            <h4>💰 ${income.description || income.source || 'Income'}</h4>
+                            <p>${income.date} • <strong>${income.category || income.source || 'Other'}</strong>${income.recordedBy ? ' • by ' + income.recordedBy : ''}</p>
                         </div>
                         <div class="item-amount">
                             <div class="amount collected">+₱${income.amount.toLocaleString()}</div>
@@ -21731,21 +21731,29 @@ async function showPayrollSummary() {
 
             try {
                 const tables = ['properties', 'tenants', 'payments', 'credits', 'creditPayments', 'employees', 'timeRecords', 'cashAdvances', 'waterCustomers', 'waterSales', 'expenses', 'tasks', 'customNotes', 'clientCharges', 'additionalIncome'];
+                // Known sample record identifiers (for records loaded before isSample flag was added)
+                const _sampleNames = new Set([
+                    'unit 1', 'unit 2',
+                    'sample tenant a', 'sample tenant b',
+                    'sample debtor',
+                    'sample water customer',
+                    'sample expense', 'sample income',
+                ]);
+                const _isSampleRecord = (r) => {
+                    if (r.isSample === true) return true;
+                    // Fallback: match by known sample names (case-insensitive)
+                    const name = (r.name || r.debtor || r.description || r.source || r.tenantName || '').toLowerCase().trim();
+                    return _sampleNames.has(name);
+                };
                 let realDataCount = 0;
                 for (const table of tables) {
                     try {
                         const allRecords = await dbGetAll(table);
-                        realDataCount += allRecords.filter(r => r.isSample !== true).length;
+                        realDataCount += allRecords.filter(r => !_isSampleRecord(r)).length;
 
-                        // TRIPLE SAFETY: only touch records where isSample is STRICTLY true
-                        const sampleRecords = allRecords.filter(r => r.isSample === true);
+                        const sampleRecords = allRecords.filter(r => _isSampleRecord(r));
 
                         for (const record of sampleRecords) {
-                            // Final guard — never delete a record without the exact flag
-                            if (record.isSample !== true) {
-                                console.warn('[DeleteSample] BLOCKED non-sample delete:', table, record.id);
-                                continue;
-                            }
                             await dbDelete(table, record.id);
                             totalDeleted++;
                         }
@@ -21817,9 +21825,13 @@ async function showPayrollSummary() {
             const loaders = [
                 loadDashboard, loadProperties, loadTenants, loadCredits,
                 loadWaterCustomers, loadEmployees, loadExpenses, loadIncome,
-                loadNotes, loadTasks, loadReports, loadPayrollSummary,
-                refreshStats, refreshFinancialOverview, updateDeleteStats
-            ];
+                loadNotes, loadTasks,
+                typeof loadReports === 'function' ? loadReports : null,
+                typeof loadPayrollSummary === 'function' ? loadPayrollSummary : null,
+                typeof refreshStats === 'function' ? refreshStats : null,
+                typeof refreshFinancialOverview === 'function' ? refreshFinancialOverview : null,
+                typeof updateDeleteStats === 'function' ? updateDeleteStats : null,
+            ].filter(Boolean);
             for (const fn of loaders) {
                 try { await fn(); } catch(e) { console.warn('[prismFullRefresh] skipped:', fn.name, e.message); }
             }
@@ -22210,16 +22222,16 @@ async function clearAllData() {
         async function loadSampleData() {
             showToast('⏳ Loading sample data...','info');
             try {
-                const p1 = await dbAdd('properties',{name:'Unit 1',type:'apartment',rent:3000,status:'occupied'});
-                const p2 = await dbAdd('properties',{name:'Unit 2',type:'apartment',rent:5000,status:'occupied'});
-                const t1 = await dbAdd('tenants',{name:'Sample Tenant A',propertyId:p1,rent:3000,status:'active',dueDay:5,startDate:new Date().toISOString().split('T')[0]});
-                const t2 = await dbAdd('tenants',{name:'Sample Tenant B',propertyId:p2,rent:5000,status:'active',dueDay:5,startDate:new Date().toISOString().split('T')[0]});
                 const today = new Date().toISOString().split('T')[0];
-                await dbAdd('payments',{tenantId:t1,tenantName:'Sample Tenant A',amount:3000,paymentMethod:'cash',date:today,createdAt:new Date().toISOString()});
-                await dbAdd('credits',{debtor:'Sample Debtor',principal:5000,interestRate:5,interestType:'simple',dateLent:today,status:'active'});
-                await dbAdd('waterCustomers',{name:'Sample Water Customer',createdAt:new Date().toISOString()});
-                await dbAdd('expenses',{category:'Utilities',amount:500,date:today,description:'Sample expense'});
-                await dbAdd('additionalIncome',{source:'Parking',amount:200,date:today,description:'Sample income'});
+                const p1 = await dbAdd('properties',{name:'Unit 1',type:'apartment',rent:3000,status:'occupied',isSample:true});
+                const p2 = await dbAdd('properties',{name:'Unit 2',type:'apartment',rent:5000,status:'occupied',isSample:true});
+                const t1 = await dbAdd('tenants',{name:'Sample Tenant A',propertyId:p1,rent:3000,status:'active',dueDay:5,startDate:today,isSample:true});
+                const t2 = await dbAdd('tenants',{name:'Sample Tenant B',propertyId:p2,rent:5000,status:'active',dueDay:5,startDate:today,isSample:true});
+                await dbAdd('payments',{tenantId:t1,tenantName:'Sample Tenant A',amount:3000,paymentMethod:'cash',date:today,createdAt:new Date().toISOString(),isSample:true});
+                await dbAdd('credits',{debtor:'Sample Debtor',principal:5000,interestRate:5,interestType:'simple',dateLent:today,status:'active',isSample:true});
+                await dbAdd('waterCustomers',{name:'Sample Water Customer',createdAt:new Date().toISOString(),isSample:true});
+                await dbAdd('expenses',{category:'Utilities',amount:500,date:today,description:'Sample expense',isSample:true});
+                await dbAdd('additionalIncome',{source:'Parking',amount:200,date:today,description:'Sample income',isSample:true});
                 if (typeof loadDashboard === 'function') loadDashboard();
                 showToast('✅ Sample data loaded!','success');
             } catch(e) { showToast('❌ Error: ' + e.message,'error'); }
