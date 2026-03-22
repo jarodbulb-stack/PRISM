@@ -11071,7 +11071,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             hideModal('expense-detail-modal');
             loadProperties();
             loadDashboard();
-            debouncedSync();
+            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
         }
 
         async function populatePropertyDropdown() {
@@ -12321,7 +12321,7 @@ async function recordTenantPayment(tenantId) {
             if (!currentAppUser || !['owner','admin'].includes(currentAppUser.role)) return;
             if (!await showConfirm('Delete this salary payment record? This cannot be undone.', 'danger', '🗑️ Delete Salary Record', 'Yes, Delete')) return;
             await dbDelete('salaryPayments', salaryId);
-            debouncedSync();
+            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
             showToast('Salary record deleted.', 'success');
             await viewEmployeeDetails(employeeId);
         }
@@ -12330,7 +12330,7 @@ async function recordTenantPayment(tenantId) {
             if (!currentAppUser || !['owner','admin'].includes(currentAppUser.role)) return;
             if (!await showConfirm('Delete this attendance record? This cannot be undone.', 'danger', '🗑️ Delete Attendance', 'Yes, Delete')) return;
             await dbDelete('timeRecords', recordId);
-            debouncedSync();
+            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
             showToast('Attendance record deleted.', 'success');
             await viewEmployeeDetails(employeeId);
         }
@@ -12397,7 +12397,7 @@ async function recordTenantPayment(tenantId) {
             hideModal('tenant-detail-modal');
             loadTenants();
             loadDashboard();
-            debouncedSync();
+            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
         }
 
         async function populateTenantDropdown() {
@@ -13969,6 +13969,7 @@ async function recordTenantPayment(tenantId) {
     if (!await showConfirm('This water sale record will be permanently deleted.', 'danger', '🗑️ Delete Water Sale', 'Yes, Delete')) return;
     showToast('⏳ Deleting record...', 'info');
                 await dbDelete('waterSales', id);
+    try { await syncToFirebase(); } catch(e) { debouncedSync(); }
     loadWaterCustomers();
     showToast('Water sale deleted', 'success');
 }
@@ -14625,7 +14626,7 @@ async function loadWaterCustomers() {
             await dbDelete('waterCustomers', id);
             hideModal('water-customer-detail-modal');
             loadWaterCustomers();
-            debouncedSync();
+            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
         }
         window.deleteWaterCustomer = deleteWaterCustomer;
 
@@ -16003,7 +16004,7 @@ async function showPayrollSummary() {
                 await dbDelete('employees', id);
             hideModal('employee-detail-modal');
             loadEmployees();
-            debouncedSync();
+            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
             showToast('Employee deleted successfully!', 'success');
         }
     window.deleteEmployee = deleteEmployee;
@@ -16870,7 +16871,7 @@ async function showPayrollSummary() {
             hideModal('credit-detail-modal');
             loadCredits();
             loadDashboard();
-            debouncedSync();
+            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
         }
 
         async function populateCreditDropdown() {
@@ -17674,7 +17675,9 @@ async function showPayrollSummary() {
             await dbDelete('customNotes', id);
             hideModal('note-detail-modal');
             loadNotes();
-            debouncedSync();
+            showToast('🗑️ Note deleted.', 'success');
+            // Sync immediately (not debounced) so deletion reaches Firebase before logout
+            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
         }
 
         // =====================
@@ -18178,7 +18181,7 @@ async function showPayrollSummary() {
             if (!await showConfirm('Delete this expense record? This cannot be undone.', 'danger', '🗑️ Delete Expense', 'Yes, Delete')) return;
             try {
                 await dbDelete('expenses', id);
-                debouncedSync();
+                try { await syncToFirebase(); } catch(e) { debouncedSync(); }
                 loadExpenses();
                 loadExpenseHistory();
                 showToast('Expense deleted.', 'success');
@@ -19340,7 +19343,7 @@ async function showPayrollSummary() {
             );
             if (!confirmed) return;
             await dbDelete(dbStore, id);
-            debouncedSync();
+            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
             loadDashboard();
             if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
             if (typeof renderWaterAllSales === 'function' && src === 'water') renderWaterAllSales();
@@ -23946,7 +23949,7 @@ async function clearAllData() {
         async function deleteTenantPayment(paymentId) {
             if (!await showConfirm('Delete this rent payment? This cannot be undone.','danger','🗑 Delete Payment','Yes, Delete','Cancel')) return;
             await dbDelete('payments', paymentId);
-            debouncedSync();
+            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
             if (typeof loadDashboard === 'function') loadDashboard();
             if (typeof loadTenants === 'function') loadTenants();
             if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
@@ -23958,7 +23961,7 @@ async function clearAllData() {
         async function deleteCreditPayment(paymentId) {
             if (!await showConfirm('Delete this credit payment? This cannot be undone.','danger','🗑 Delete Payment','Yes, Delete','Cancel')) return;
             await dbDelete('creditPayments', paymentId);
-            debouncedSync();
+            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
             if (typeof loadDashboard === 'function') loadDashboard();
             if (typeof loadCredits === 'function') loadCredits();
             if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
@@ -24014,7 +24017,7 @@ async function clearAllData() {
         async function deleteAdditionalIncome(id) {
             if (!await showConfirm('Delete this income record?','danger','🗑 Delete','Yes, Delete','Cancel')) return;
             await dbDelete('additionalIncome', id);
-            debouncedSync();
+            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
             if (typeof loadIncome === 'function') loadIncome();
             if (typeof loadDashboard === 'function') loadDashboard();
             showToast('🗑 Income record deleted.','success');
@@ -24062,7 +24065,7 @@ async function clearAllData() {
         async function deleteSalaryPayment(id) {
             if (!await showConfirm('Delete this salary payment?','danger','🗑 Delete','Yes, Delete','Cancel')) return;
             await dbDelete('salaryPayments', id);
-            debouncedSync();
+            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
             if (typeof loadEmployees === 'function') loadEmployees();
             if (typeof loadPayrollSummary === 'function') loadPayrollSummary();
             showToast('🗑 Salary payment deleted.','success');
@@ -24080,7 +24083,7 @@ async function clearAllData() {
         async function deleteCashAdvance(id) {
             if (!await showConfirm('Delete this cash advance record?','danger','🗑 Delete','Yes, Delete','Cancel')) return;
             await dbDelete('cashAdvances', id);
-            debouncedSync();
+            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
             if (typeof loadEmployees === 'function') loadEmployees();
             showToast('🗑 Cash advance deleted.','success');
         }
@@ -25112,8 +25115,9 @@ async function clearAllData() {
             if (!await showConfirm('This task will be permanently deleted.', 'danger', '🗑 Delete Task', 'Yes, Delete', 'Cancel')) return;
             await dbDelete('tasks', id);
             await loadTasks();
-            debouncedSync();
             showToast('🗑 Task deleted.', 'success');
+            // Sync immediately so deletion reaches Firebase before logout
+            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
         }
         window.deleteTask = deleteTask;
 
@@ -26135,7 +26139,7 @@ async function clearAllData() {
             );
             if (!confirmed) return;
             await dbDelete('waterSales', saleId);
-            debouncedSync();
+            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
             loadWaterCustomers();
             showToast('🗑 Sale deleted.', 'success');
             showWaterFlashcardDetail('today-sales');
