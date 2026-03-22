@@ -25730,11 +25730,7 @@ function mtShowApp() {
     if (app && app.classList.contains('mt-active')) {
         _mtShowAppActual(); return;
     }
-    // Returning user (already signed into Google) — skip the 3.8s cinematic, go straight in
-    if (window._mtReturningUser) {
-        _mtShowAppActual(); return;
-    }
-    // New login — show cinematic connecting screen then launch app
+    // Always show cinematic connecting screen then launch app
     if (typeof prismShowConnecting === 'function') {
         prismShowConnecting(() => _mtShowAppActual());
     } else {
@@ -25841,15 +25837,7 @@ function _mtShowAppActual() {
 }
 
 function mtShowSuperAdmin() {
-    // Returning user — go straight in, no cinematic delay
-    if (window._mtReturningUser) {
-        mtShowScreen('mt-superadmin');
-        const _saEmail = document.getElementById('mt-sa-user-email');
-        if (_saEmail) _saEmail.textContent = MT.currentUser?.email || '';
-        mtLoadSAData();
-        return;
-    }
-    // New login — show cinematic connecting screen first, then SA panel
+    // Always show cinematic connecting screen first, then SA panel
     if (typeof prismShowConnecting === 'function') {
         prismShowConnecting(() => {
             mtShowScreen('mt-superadmin');
