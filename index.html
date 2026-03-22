@@ -19166,6 +19166,27 @@ async function showPayrollSummary() {
                         <label style="font-size:0.82rem;color:#94a3b8;">Notes</label>
                         <textarea id="ife-notes" rows="2" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:0.88rem;box-sizing:border-box;resize:none;">${record.notes||''}</textarea>
                     </div>`;
+            } else if (src === 'store') {
+                record = await dbGet('waterStoreSales', id);
+                if (!record) { showToast('\u26a0\ufe0f Store sale not found.', 'warning'); return; }
+                title = '\u270f\ufe0f Edit Store Sale';
+                const _spt = record.paymentType||record.status||'cash';
+                const _inp = 'width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;box-sizing:border-box;';
+                fields =
+                    '<div class="form-group"><label style="font-size:0.82rem;color:#94a3b8;">Customer / Description</label>' +
+                    '<input type="text" id="ife-customer" value="'+(record.customerName||record.description||'')+'" style="'+_inp+'font-size:0.92rem;"></div>' +
+                    '<div class="form-group"><label style="font-size:0.82rem;color:#94a3b8;">Amount (\u20b1)</label>' +
+                    '<input type="number" id="ife-amount" value="'+(record.total||record.amount||0)+'" min="0" style="'+_inp+'font-size:1rem;"></div>' +
+                    '<div class="form-group"><label style="font-size:0.82rem;color:#94a3b8;">Payment Type</label>' +
+                    '<select id="ife-status" style="'+_inp+'">' +
+                    '<option value="cash"'+(_spt==='cash'?' selected':'')+'>\ud83d\udcb5 Cash</option>' +
+                    '<option value="credit"'+(_spt==='credit'?' selected':'')+'>\ud83d\udcdd Credit (Pay Later)</option>' +
+                    '<option value="gcash"'+(_spt==='gcash'?' selected':'')+'>GCash</option>' +
+                    '</select></div>' +
+                    '<div class="form-group"><label style="font-size:0.82rem;color:#94a3b8;">Date</label>' +
+                    '<input type="date" id="ife-date" value="'+(record.date||'')+'" style="'+_inp+'"></div>' +
+                    '<div class="form-group"><label style="font-size:0.82rem;color:#94a3b8;">Notes</label>' +
+                    '<textarea id="ife-notes" rows="2" style="'+_inp+'font-size:0.88rem;resize:none;">'+(record.notes||'')+'</textarea></div>';
             } else { return; }
 
             // Build modal
@@ -19270,6 +19291,24 @@ async function showPayrollSummary() {
                 s.editedBy      = currentAppUser?.username || 'admin';
                 s.editedAt      = new Date().toISOString();
                 await dbUpdate('waterSales', s);
+
+            } else if (src === 'store') {
+                const customer = document.getElementById('ife-customer')?.value?.trim() || '';
+                const status   = document.getElementById('ife-status')?.value || 'cash';
+                if (amount <= 0) { showToast('⚠️ Amount must be greater than 0.', 'warning'); return; }
+                const s = await dbGet('waterStoreSales', id);
+                if (!s) { showToast('⚠️ Record not found.', 'warning'); return; }
+                s.customerName  = customer || s.customerName;
+                s.description   = customer || s.description;
+                s.total         = amount;
+                s.amount        = amount;
+                s.paymentType   = status;
+                s.status        = status;
+                s.date          = date;
+                s.notes         = notes;
+                s.editedBy      = currentAppUser?.username || 'admin';
+                s.editedAt      = new Date().toISOString();
+                await dbUpdate('waterStoreSales', s);
             }
 
             document.getElementById('ife-modal')?.remove();
@@ -19278,6 +19317,7 @@ async function showPayrollSummary() {
             if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
             if (typeof renderWaterAllSales === 'function' && src === 'water') renderWaterAllSales();
             if (src === 'water') loadWaterCustomers();
+            if (src === 'store') { loadWaterCustomers(); if(typeof renderWaterStore==='function') renderWaterStore(); }
             if (src === 'rent')  loadTenants();
             if (src === 'credit') loadCredits();
             showToast('✅ Record updated successfully!', 'success');
@@ -19286,20 +19326,26 @@ async function showPayrollSummary() {
 
         async function incomeFeedDelete(src, id) {
             if (!currentAppUser || !['owner','admin'].includes(currentAppUser.role)) return;
-            const store = src==='rent'?'payments':src==='credit'?'creditPayments':src==='water'?'waterSales':'additionalIncome';
-            const record = await dbGet(store, id);
+            const storeMap = {
+                rent:'payments', credit:'creditPayments',
+                water:'waterSales', store:'waterStoreSales',
+                income:'additionalIncome'
+            };
+            const dbStore = storeMap[src] || 'additionalIncome';
+            const record = await dbGet(dbStore, id);
             if (!record) { showToast('⚠️ Record not found.', 'warning'); return; }
             const confirmed = await showConfirm(
                 'Permanently delete this ' + src + ' record?\n\nThis cannot be undone.',
                 'danger', '🗑 Delete Record', 'Yes, Delete', 'Cancel'
             );
             if (!confirmed) return;
-            await dbDelete(store, id);
+            await dbDelete(dbStore, id);
             debouncedSync();
             loadDashboard();
             if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
             if (typeof renderWaterAllSales === 'function' && src === 'water') renderWaterAllSales();
             if (src === 'water') loadWaterCustomers();
+            if (src === 'store') { loadWaterCustomers(); if(typeof renderWaterStore==='function') renderWaterStore(); }
             if (src === 'rent')  loadTenants();
             if (src === 'credit') loadCredits();
             showToast('🗑 Record deleted.', 'success');
