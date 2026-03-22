@@ -4451,9 +4451,9 @@
                     <div class="stat-value" id="stat-expenses-month">₱0</div>
                     <div class="stat-label" id="stat-expenses-month-label">This Month</div>
                 </div>
-                <div class="stat-card" onclick="showExpensesRangeDetails()" style="cursor: pointer;">
-                    <div class="stat-value" id="stat-expenses-total">₱0</div>
-                    <div class="stat-label" id="stat-expenses-total-label">Total Expenses</div>
+                <div class="stat-card stat-card-danger" onclick="showExpensesRangeDetails()" style="cursor: pointer;">
+                    <div class="stat-value text-danger" id="stat-expenses-total">₱0</div>
+                    <div class="stat-label" id="stat-expenses-total-label">All Time</div>
                 </div>
             </div>
 
@@ -4461,11 +4461,11 @@
             <div class="card" style="margin-bottom:0;">
                 <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
                     <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                        <button class="exp-range-btn active" data-range="month" onclick="setExpenseRange('month')" style="padding:5px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;font-weight:600;">📅 This Month</button>
+                        <button class="exp-range-btn" data-range="month" onclick="setExpenseRange('month')" style="padding:5px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;font-weight:600;">📅 This Month</button>
                         <button class="exp-range-btn" data-range="last-month" onclick="setExpenseRange('last-month')" style="padding:5px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;font-weight:600;">⬅ Last Month</button>
                         <button class="exp-range-btn" data-range="3m" onclick="setExpenseRange('3m')" style="padding:5px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;font-weight:600;">3 Months</button>
                         <button class="exp-range-btn" data-range="year" onclick="setExpenseRange('year')" style="padding:5px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;font-weight:600;">📆 This Year</button>
-                        <button class="exp-range-btn" data-range="all" onclick="setExpenseRange('all')" style="padding:5px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;font-weight:600;">All Time</button>
+                        <button class="exp-range-btn active" data-range="all" onclick="setExpenseRange('all')" style="padding:5px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;font-weight:600;">All Time</button>
                         <button class="exp-range-btn" data-range="custom" onclick="setExpenseRange('custom')" style="padding:5px 12px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-secondary);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;font-weight:600;">✏️ Custom</button>
                     </div>
                 </div>
@@ -9811,7 +9811,11 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             if (sectionId === 'water')      _safeLoad('water',      loadWaterCustomers);
             if (sectionId === 'income')     { _safeLoad('income', loadIncome); if(typeof loadIncomeTodayFeed==='function') loadIncomeTodayFeed(); }
             if (sectionId === 'employees')  _safeLoad('employees',  loadEmployees);
-            if (sectionId === 'expenses')   _safeLoad('expenses',   loadExpenses);
+            if (sectionId === 'expenses') {
+                // Apply active button state before loading
+                if (typeof setExpenseRange === 'function') setExpenseRange(_expenseRange || 'all');
+                else _safeLoad('expenses', loadExpenses);
+            }
             if (sectionId === 'tasks')      _safeLoad('tasks',      loadTasks);
             if (sectionId === 'notes')      _safeLoad('notes',      loadNotes);
             if (sectionId === 'reports') {
@@ -18218,7 +18222,7 @@ async function showPayrollSummary() {
 
         window.expHistDelete = expHistDelete;
 
-        let _expenseRange = 'month'; // default
+        let _expenseRange = 'all'; // default — left card shows This Month, right shows All Time
 
         function setExpenseRange(range) {
             _expenseRange = range;
