@@ -14559,58 +14559,130 @@ async function loadWaterCustomers() {
 
         // Show water payment modal — opens the full cart modal pre-filled with this customer
         async function showWaterPaymentModal(customerId, customerName, balance) {
-            await showWaterSaleModal();
-            setTimeout(function() {
-                // Pre-select the customer
-                var custEl = document.getElementById('water-sale-customer');
-                if (custEl && customerId) {
-                    custEl.value = customerId;
-                }
-                if (custEl && !custEl.value && customerName) {
-                    var newEl = document.getElementById('water-sale-new-customer');
-                    if (newEl) newEl.value = customerName;
-                }
-                // Default to credit since this customer has a balance
-                var ptEl = document.getElementById('water-sale-payment-type');
-                if (ptEl) {
-                    ptEl.value = 'credit';
-                    if (typeof toggleWaterPaymentFields === 'function') toggleWaterPaymentFields();
-                }
-            }, 200);
+            // Get all unpaid/partial sales for this customer
+            const allSales = await dbGetAll('waterSales');
+            const unpaid = allSales.filter(s=>String(s.customerId)===String(customerId)&&(s.status==='credit'||s.status==='partial')&&(s.balance||0)>0)
+                .sort((a,b)=>new Date(a.date)-new Date(b.date));
+            const totalOwed = unpaid.reduce((s,x)=>s+Math.max(0,(x.balance||0)),0);
+
+            const existing = document.getElementById('water-pay-modal');
+            if (existing) existing.remove();
+            const modal = document.createElement('div');
+            modal.id = 'water-pay-modal';
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
+
+            let unpaidRows = unpaid.map(s=>`
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg-primary);border-radius:8px;margin-bottom:5px;border-left:3px solid #f59e0b;">
+                    <div>
+                        <div style="font-weight:600;font-size:0.83rem;">${s.orderSummary||(s.bottles||s.gallons||0)+' bottle(s) @ ₱'+(s.pricePerBottle||s.pricePerGallon||0)}</div>
+                        <div style="font-size:0.7rem;color:#94a3b8;">${s.date}</div>
+                    </div>
+                    <span style="font-weight:700;color:#f59e0b;">₱${(s.balance||0).toLocaleString()}</span>
+                </div>`).join('');
+
+            if (unpaid.length === 0) unpaidRows = '<div style="text-align:center;color:#10b981;padding:12px;">✅ No outstanding balance!</div>';
+
+            modal.innerHTML = `
+                <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;width:100%;max-width:420px;max-height:88vh;overflow-y:auto;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;border-bottom:1px solid #334155;padding-bottom:12px;">
+                        <div>
+                            <h3 style="margin:0;color:#f1f5f9;font-size:1rem;">💵 Settle Credit — ${customerName}</h3>
+                            <div style="font-size:0.72rem;color:#f59e0b;margin-top:3px;">Outstanding: ₱${totalOwed.toLocaleString()}</div>
+                        </div>
+                        <button onclick="document.getElementById('water-pay-modal').remove()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.3rem;">✕</button>
+                    </div>
+
+                    <div style="margin-bottom:14px;">
+                        <div style="font-size:0.75rem;font-weight:700;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;">Unpaid Transactions</div>
+                        ${unpaidRows}
+                    </div>
+
+                    ${unpaid.length > 0 ? `
+                    <div style="margin-bottom:14px;">
+                        <label style="font-size:0.82rem;color:#94a3b8;display:block;margin-bottom:6px;">Payment Amount (₱)</label>
+                        <input type="number" id="wpm-amount" value="${totalOwed}" min="1" max="${totalOwed*2}"
+                            style="width:100%;padding:12px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:1.1rem;font-weight:700;box-sizing:border-box;text-align:center;"
+                            oninput="wpmUpdateLabel(${totalOwed})">
+                        <div id="wpm-label" style="font-size:0.72rem;color:#10b981;text-align:center;margin-top:6px;">Full settlement — ₱${totalOwed.toLocaleString()} clears all ${unpaid.length} transaction(s)</div>
+                    </div>
+
+                    <div style="margin-bottom:14px;">
+                        <label style="font-size:0.82rem;color:#94a3b8;display:block;margin-bottom:6px;">Payment Method</label>
+                        <select id="wpm-method" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;box-sizing:border-box;">
+                            <option value="cash">💵 Cash</option>
+                            <option value="gcash">GCash</option>
+                            <option value="maya">Maya</option>
+                            <option value="bank">Bank Transfer</option>
+                        </select>
+                    </div>
+
+                    <div style="display:flex;gap:8px;">
+                        <button onclick="wpmSetAmount(${totalOwed})"
+                            style="flex:1;padding:10px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);color:#f59e0b;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;">
+                            Full ₱${totalOwed.toLocaleString()}
+                        </button>
+                        <button onclick="wpmConfirmPayment(${customerId},${totalOwed})"
+                            style="flex:2;padding:10px;background:linear-gradient(135deg,#10b981,#059669);border:none;color:white;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.92rem;">
+                            ✅ Confirm Payment
+                        </button>
+                    </div>
+                    ` : `<button onclick="document.getElementById('water-pay-modal').remove()" style="width:100%;padding:12px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);color:#10b981;border-radius:8px;cursor:pointer;font-weight:700;">✅ No Balance — Close</button>`}
+                </div>`;
+            document.body.appendChild(modal);
+            modal.addEventListener('click', e=>{ if(e.target===modal) modal.remove(); });
         }
         window.showWaterPaymentModal = showWaterPaymentModal;
 
-        async function processWaterPayment(customerId, paymentAmount) {
-            // Get unpaid sales and apply payment (oldest first)
+        function wpmSetAmount(val) {
+            const el = document.getElementById('wpm-amount');
+            if (el) { el.value = val; el.dispatchEvent(new Event('input')); }
+        }
+        function wpmUpdateLabel(totalOwed) {
+            const amt = parseFloat(document.getElementById('wpm-amount')?.value)||0;
+            const lbl = document.getElementById('wpm-label');
+            if (!lbl) return;
+            if (amt >= totalOwed) lbl.style.color='#10b981', lbl.textContent='Full settlement — clears all outstanding balance';
+            else if (amt > 0) lbl.style.color='#f59e0b', lbl.textContent='Partial payment — ₱'+(totalOwed-amt).toLocaleString()+' will remain';
+            else lbl.style.color='#ef4444', lbl.textContent='Enter an amount to pay';
+        }
+        window.wpmSetAmount = wpmSetAmount;
+        window.wpmUpdateLabel = wpmUpdateLabel;
+
+        async function wpmConfirmPayment(customerId, totalOwed) {
+            const amt = parseFloat(document.getElementById('wpm-amount')?.value)||0;
+            const method = document.getElementById('wpm-method')?.value || 'cash';
+            if (amt <= 0) { showToast('⚠️ Enter a valid amount.','warning'); return; }
+            document.getElementById('water-pay-modal')?.remove();
+            await processWaterPayment(customerId, amt, method);
+            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
+        }
+        window.wpmConfirmPayment = wpmConfirmPayment;
+
+        async function processWaterPayment(customerId, paymentAmount, method) {
             const sales = await dbGetAll('waterSales');
-            const unpaidSales = sales.filter(s => s.customerId === customerId && s.balance > 0)
-                .sort((a, b) => new Date(a.date) - new Date(b.date));
-            
+            const unpaidSales = sales.filter(s=>String(s.customerId)===String(customerId)&&(s.balance||0)>0)
+                .sort((a,b)=>new Date(a.date)-new Date(b.date));
             let remaining = paymentAmount;
             let appliedCount = 0;
-            
             for (const sale of unpaidSales) {
                 if (remaining <= 0) break;
-                
-                const applied = Math.min(remaining, sale.balance);
-                sale.amountPaid += applied;
-                sale.balance -= applied;
-                sale.status = sale.balance <= 0 ? 'paid' : 'partial';
+                const applied = Math.min(remaining, sale.balance||0);
+                sale.amountPaid = (sale.amountPaid||0) + applied;
+                sale.balance    = Math.max(0,(sale.balance||0) - applied);
+                sale.status     = sale.balance <= 0 ? 'paid' : 'partial';
+                sale.paymentMethod = method || 'cash';
                 sale.lastPaymentDate = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
-                showToast('⏳ Recording water payment...', 'info');
                 await dbUpdate('waterSales', sale);
                 remaining -= applied;
                 appliedCount++;
             }
-            
             loadWaterCustomers();
             viewWaterCustomerDetails(customerId);
-            debouncedSync();
-            
+            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
             if (remaining > 0) {
-                showToast(`✅ Payment of ₱${paymentAmount.toLocaleString()} recorded! — ₱${(paymentAmount - remaining).toLocaleString()} applied to ${appliedCount} transaction(s). ₱${remaining.toLocaleString()} is overpayment/advance.`, 'success');
+                showToast(`✅ ₱${paymentAmount.toLocaleString()} recorded! ₱${(paymentAmount-remaining).toLocaleString()} applied to ${appliedCount} sale(s). ₱${remaining.toLocaleString()} is advance credit.`, 'success');
             } else {
-                showToast(`✅ Payment of ₱${paymentAmount.toLocaleString()} recorded! — Applied to ${appliedCount} transaction(s).`, 'success');
+                showToast(`✅ ₱${paymentAmount.toLocaleString()} recorded! ${appliedCount} sale(s) settled.`, 'success');
             }
         }
 
@@ -23687,47 +23759,66 @@ async function clearAllData() {
         async function showExpensesRangeDetails() {
             const range = getExpenseDateRange ? getExpenseDateRange() : null;
             const label = getExpenseRangeLabel ? getExpenseRangeLabel() : 'Selected Range';
-            const expenses = await dbGetAll('expenses');
-            let filtered = expenses;
-            if (range) {
-                filtered = expenses.filter(e => {
-                    const d = (e.date||'').substring(0,10);
-                    return d >= range.from && d <= range.to;
-                });
-            }
-            const total = filtered.reduce((s,e)=>s+(e.amount||0),0);
-            const rowHtml = (name, date, amount, sub) =>
-                '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg-primary);border-radius:8px;margin-bottom:5px;border-left:3px solid #ef4444;">' +
-                '<div><div style="font-weight:600;font-size:0.83rem;">'+(name||'Expense')+'</div>' +
-                (sub?'<div style="font-size:0.7rem;color:#64748b;">'+sub+'</div>':'') +
-                '<div style="font-size:0.7rem;color:#94a3b8;">'+(date||'')+'</div></div>' +
-                '<span style="font-weight:700;color:#ef4444;">-₱'+(amount||0).toLocaleString()+'</span></div>';
+            const expenses = (window._expPageBreakdown && window._expPageBreakdown.expenses)
+                ? window._expPageBreakdown.expenses
+                : await dbGetAll('expenses').then(all => range
+                    ? all.filter(e=>{ const d=(e.date||'').substring(0,10); return d>=range.from&&d<=range.to; })
+                    : all);
+            const total = expenses.reduce((s,e)=>s+(e.amount||0),0);
+
+            // Category display map
+            const catMap = {
+                electric:'⚡ Electric Bill', water:'💧 Water Bill', fuel:'⛽ Fuel/Gas',
+                repairs:'🔧 Repairs', taxes:'📋 Taxes', insurance:'🛡️ Insurance',
+                transport:'🚌 Transport', supplies:'📦 Supplies', labor:'👷 Labor',
+                personal_loan:'💳 Loans', food:'🍔 Food', communication:'📱 Comms',
+                salaries:'👔 Salaries', sss:'🏛️ SSS', philhealth:'🏥 PhilHealth',
+                pagibig:'🏠 Pag-IBIG', bir:'📋 BIR Tax', accountant:'👨‍💼 Accountant',
+                savings:'🏦 Savings', investment:'📈 Investment',
+                capital_reserve:'🏠 Reserve', owners_draw:'👤 Owner Draw', other:'📝 Other'
+            };
+            const catLabel = c => catMap[c] || (c ? c.charAt(0).toUpperCase()+c.slice(1).replace(/_/g,' ') : 'Other');
+
             let rows = '';
-            if (filtered.length === 0) {
+            if (expenses.length === 0) {
                 rows = '<div style="text-align:center;color:#64748b;padding:20px;">No expenses for this period.</div>';
             } else {
+                // Category summary — grouped totals
                 const byCat = {};
-                filtered.forEach(e=>{const c=e.category||'Other';byCat[c]=(byCat[c]||0)+(e.amount||0);});
-                rows += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;">';
-                Object.entries(byCat).sort((a,b)=>b[1]-a[1]).forEach(([cat,amt])=>{
-                    rows+='<div style="background:rgba(239,68,68,0.08);border-radius:8px;padding:8px;text-align:center;"><div style="font-weight:800;color:#ef4444;font-size:0.88rem;">₱'+amt.toLocaleString()+'</div><div style="font-size:0.68rem;color:#94a3b8;">'+cat+'</div></div>';
+                expenses.forEach(e=>{ const c=e.category||'other'; byCat[c]=(byCat[c]||0)+(e.amount||0); });
+                const catEntries = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+
+                rows += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px;margin-bottom:14px;">';
+                catEntries.forEach(([cat,amt])=>{
+                    const lbl = catLabel(cat);
+                    rows += '<div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.15);border-radius:8px;padding:8px 6px;text-align:center;">' +
+                        '<div style="font-size:1.1rem;margin-bottom:2px;">'+lbl.split(' ')[0]+'</div>' +
+                        '<div style="font-weight:800;color:#ef4444;font-size:0.85rem;">₱'+amt.toLocaleString()+'</div>' +
+                        '<div style="font-size:0.62rem;color:#94a3b8;margin-top:1px;">'+lbl.substring(lbl.indexOf(' ')+1)+'</div>' +
+                        '</div>';
                 });
                 rows += '</div>';
-                filtered.sort((a,b)=>(b.date||'')>(a.date||'')?1:-1).forEach(e=>{rows+=rowHtml(e.category||'Expense',e.date,e.amount,e.description||'');});
-                rows += '<div style="border-top:2px solid rgba(239,68,68,0.3);margin-top:10px;padding-top:8px;display:flex;justify-content:space-between;font-weight:800;"><span>Total</span><span style="color:#ef4444;">₱'+total.toLocaleString()+'</span></div>';
+
+                // Items grouped by category
+                catEntries.forEach(([cat])=>{
+                    const catItems = expenses.filter(e=>(e.category||'other')===cat).sort((a,b)=>(b.date||'')>(a.date||'')?1:-1);
+                    const lbl = catLabel(cat);
+                    const catTotal = catItems.reduce((s,e)=>s+(e.amount||0),0);
+                    rows += '<div style="font-size:0.72rem;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:0.05em;padding:8px 0 4px;border-top:1px solid rgba(239,68,68,0.15);margin-top:4px;">'+lbl+' — ₱'+catTotal.toLocaleString()+'</div>';
+                    catItems.forEach(e=>{
+                        rows += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg-primary);border-radius:8px;margin-bottom:4px;border-left:3px solid #ef4444;">' +
+                            '<div>' +
+                            '<div style="font-weight:600;font-size:0.83rem;">'+(e.description||lbl)+'</div>' +
+                            '<div style="font-size:0.7rem;color:#94a3b8;">'+(e.date||'')+(e.property?' · '+e.property:'')+'</div>' +
+                            '</div>' +
+                            '<span style="font-weight:700;color:#ef4444;white-space:nowrap;">-₱'+(e.amount||0).toLocaleString()+'</span>' +
+                            '</div>';
+                    });
+                });
+
+                rows += '<div style="border-top:2px solid rgba(239,68,68,0.4);margin-top:12px;padding-top:10px;display:flex;justify-content:space-between;font-weight:800;font-size:1rem;"><span>Total</span><span style="color:#ef4444;">₱'+total.toLocaleString()+'</span></div>';
             }
-            const existing = document.getElementById('flashcard-modal');
-            if (existing) existing.remove();
-            const modal = document.createElement('div');
-            modal.id = 'flashcard-modal';
-            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
-            modal.innerHTML = '<div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;width:100%;max-width:500px;max-height:85vh;overflow-y:auto;">' +
-                '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;position:sticky;top:0;background:#1e293b;padding-bottom:10px;border-bottom:1px solid #334155;">' +
-                '<h3 style="margin:0;color:#f1f5f9;font-size:1rem;">💸 Expenses — '+label+'</h3>' +
-                '<button onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.3rem;padding:0 4px;">✕</button>' +
-                '</div><div>'+rows+'</div></div>';
-            document.body.appendChild(modal);
-            modal.addEventListener('click', e=>{if(e.target===modal)modal.remove();});
+            _expShowModal('💸 Expenses — '+label, rows);
         }
         window.showExpensesRangeDetails = showExpensesRangeDetails;
 
