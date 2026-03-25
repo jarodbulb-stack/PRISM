@@ -4607,7 +4607,7 @@
             <div class="card mt-4">
                 <div class="card-header">
                     <div class="card-title">Expense Records</div>
-                    <button class="btn btn-sm btn-primary" onclick="showModal('expense-modal')">+ Add</button>
+                    <button class="btn btn-sm btn-primary" onclick="showAddExpenseModal()">+ Add</button>
                 </div>
                 <div class="search-box">
                     <span class="search-icon">🔍</span>
@@ -4650,7 +4650,7 @@
                 <!-- Quick Action Buttons -->
                 <div style="display:flex;gap:8px;">
                     <button class="btn btn-danger" style="flex:1;font-size:0.88rem;font-weight:700;padding:12px;"
-                        onclick="showModal('expense-modal')">
+                        onclick="showAddExpenseModal()">
                         💸 Add Expense
                     </button>
                     <button class="btn btn-success" style="flex:1;font-size:0.88rem;font-weight:700;padding:12px;"
@@ -5041,7 +5041,7 @@
                         💰 Add Income
                     </button>
                     <button class="btn btn-danger" style="flex:1;font-size:0.88rem;font-weight:700;padding:12px;"
-                        onclick="showModal('expense-modal')">
+                        onclick="showAddExpenseModal()">
                         💸 Add Expense
                     </button>
                 </div>
@@ -6588,12 +6588,16 @@
                                     <button type="button" data-price="30" data-type="big" onclick="wsQuickAddBig(30)" style="padding:3px 8px;border-radius:5px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-size:0.72rem;font-weight:600;">₱30</button>
                                     <button type="button" data-price="35" data-type="big" onclick="wsQuickAddBig(35)" style="padding:3px 8px;border-radius:5px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-size:0.72rem;font-weight:600;">₱35</button>
                                 </div>
-                                <div style="display:flex;gap:4px;align-items:center;">
+                                <div style="display:flex;gap:4px;align-items:center;margin-bottom:6px;">
                                     <input type="number" id="ws-big-qty-input" min="0" value="0" placeholder="Qty"
                                         oninput="wsQtyChanged('big')"
                                         style="width:52px;padding:5px;background:#0f172a;border:1px solid #334155;border-radius:6px;color:#f1f5f9;font-size:0.88rem;text-align:center;">
                                     <span style="font-size:0.72rem;color:#64748b;">bottles</span>
                                 </div>
+                                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none;" title="When ON: 3 bottles @₱35 = ₱100. When OFF: each bottle is always ₱35 regardless of quantity.">
+                                    <input type="checkbox" id="ws-no-discount" onchange="wsQtyChanged('big')" style="accent-color:#f59e0b;width:14px;height:14px;">
+                                    <span style="font-size:0.68rem;color:#f59e0b;font-weight:600;">No discount (₱35 each always)</span>
+                                </label>
                             </div>
 
                             <!-- Small bottle quick add -->
@@ -7117,59 +7121,16 @@
                 <form id="expense-form" onsubmit="saveExpense(event)">
                     <div class="form-group">
                         <label>Category</label>
-                        <select id="expense-category" required onchange="toggleExpenseSubcategory(); expHistOnCategoryChange();">
-                            <option value="">Select category</option>
-                            <optgroup label="🏠 Property Expenses">
-                                <option value="electric">⚡ Electric Bill</option>
-                                <option value="water">💧 Water Bill</option>
-                                <option value="repairs">🔧 Repairs & Maintenance</option>
-                                <option value="taxes">📋 Taxes & Permits</option>
-                                <option value="insurance">🛡️ Insurance</option>
-                            </optgroup>
-                            <optgroup label="🚗 Operations">
-                                <option value="fuel">⛽ Fuel/Gas</option>
-                                <option value="transport">🚌 Transportation</option>
-                                <option value="supplies">📦 Supplies & Materials</option>
-                                <option value="labor">👷 Labor/Services</option>
-                            </optgroup>
-                            <optgroup label="💰 Personal">
-                                <option value="personal_loan">💳 Personal Loan Payment</option>
-                                <option value="food">🍔 Food & Meals</option>
-                                <option value="communication">📱 Communication/Internet</option>
-                            </optgroup>
-                            <optgroup label="🏛️ Government Contributions">
-                                <option value="sss">🏛️ SSS Contribution</option>
-                                <option value="philhealth">🏥 PhilHealth</option>
-                                <option value="pagibig">🏠 Pag-IBIG</option>
-                                <option value="bir">📋 BIR / Income Tax</option>
-                                <option value="accountant">👨‍💼 Accountant Fee</option>
-                            </optgroup>
-                            <optgroup label="💼 Money Allocation">
-                                <option value="savings">🏦 Savings</option>
-                                <option value="investment">📈 Investment</option>
-                                <option value="capital_reserve">🏠 Capital Reserve</option>
-                                <option value="owners_draw">👤 Owner's Draw</option>
-                            </optgroup>
-                            <optgroup label="🏪 Hardware Store">
-                                <option value="hw_inventory">📦 Inventory Restocking</option>
-                                <option value="hw_cement">🧱 Cement & Construction</option>
-                                <option value="hw_electrical">⚡ Electrical Supplies</option>
-                                <option value="hw_plumbing">🔧 Plumbing Materials</option>
-                                <option value="hw_tools">🛠️ Tools & Equipment</option>
-                                <option value="hw_paint">🎨 Paint & Finishing</option>
-                                <option value="hw_delivery">🚚 Delivery Costs</option>
-                            </optgroup>
-                            <optgroup label="💧 Water Station">
-                                <option value="ws_filter">🔵 Filter Replacement</option>
-                                <option value="ws_bottles">🫙 Containers/Bottles</option>
-                                <option value="ws_chemicals">🧪 Treatment Chemicals</option>
-                                <option value="ws_maintenance">🔧 Equipment Maintenance</option>
-                            </optgroup>
-                            <optgroup label="📁 Other">
-                                <option value="payroll">👷 Payroll/Salaries</option>
-                                <option value="other">📝 Other</option>
-                            </optgroup>
-                        </select>
+                        <div style="position:relative;">
+                            <input type="text" id="expense-category-search" placeholder="🔍 Search category... (e.g. fuel, sss, food)"
+                                autocomplete="off"
+                                oninput="expCatSearch(this.value)"
+                                onfocus="expCatSearch(this.value)"
+                                style="width:100%;padding:10px 12px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);font-size:0.9rem;box-sizing:border-box;">
+                            <input type="hidden" id="expense-category" required>
+                            <div id="expense-cat-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#1e293b;border:1px solid #334155;border-radius:8px;z-index:9999;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.4);margin-top:2px;"></div>
+                        </div>
+                        <div id="expense-cat-selected" style="display:none;margin-top:4px;font-size:0.75rem;color:#10b981;font-weight:600;"></div>
                     </div>
                     <div class="form-group">
                         <label>Description</label>
@@ -12817,7 +12778,8 @@ async function recordTenantPayment(tenantId) {
                 window._pmWsCart = (window._pmWsCart||[]).filter(function(i){ return i.type !== 'big'; });
                 if (qty > 0) {
                     var gross = qty * price;
-                    var discount = (price === 35 && qty >= 3) ? Math.floor(qty/3) * 5 : 0;
+                    var noDiscount = document.getElementById('ws-no-discount')?.checked || false;
+                    var discount = (!noDiscount && price === 35 && qty >= 3) ? Math.floor(qty/3) * 5 : 0;
                     window._pmWsCart.push({ type:'big', bottleSize:'18L', qty:qty, price:price,
                         subtotal:Math.max(0,gross-discount), discount:discount, packageDeal:discount>0,
                         label:qty+' x Big(18L) @P'+price, containerType:'big' });
@@ -14314,14 +14276,16 @@ async function loadWaterCustomers() {
             if (type === 'big') {
                 var qty = parseInt((document.getElementById('ws-big-qty-input')||{}).value) || 0;
                 var price = window._wsSelectedBigPrice || 25;
+                var noDiscount = document.getElementById('ws-no-discount')?.checked || false;
                 // Remove existing big item from cart then re-add with new qty
                 window._wsCart = (window._wsCart||[]).filter(function(i){ return i.type !== 'big'; });
                 if (qty > 0) {
                     var gross = qty * price;
-                    var discount = (price === 35 && qty >= 3) ? Math.floor(qty/3) * 5 : 0;
+                    // Apply 3-for-100 discount only if price=35, qty>=3, AND no-discount is NOT checked
+                    var discount = (!noDiscount && price === 35 && qty >= 3) ? Math.floor(qty/3) * 5 : 0;
                     window._wsCart.push({ type:'big', bottleSize:'18L', qty:qty, price:price,
                         subtotal:Math.max(0,gross-discount), discount:discount, packageDeal:discount>0,
-                        label:qty+' x Big (18L) @ P'+price, containerType:'big' });
+                        label:qty+' x Big (18L) @ P'+price+(discount>0?' (bulk deal)':noDiscount?' (no disc.)':''), containerType:'big' });
                 }
             } else {
                 var qty = parseInt((document.getElementById('ws-small-qty-input')||{}).value) || 0;
@@ -18169,6 +18133,87 @@ async function showPayrollSummary() {
             document.getElementById('expense-photo-preview').classList.add('hidden');
         }
 
+        // ── Expense category searchable dropdown ──
+        const _expCatAll = [
+            {v:'electric',    l:'⚡ Electric Bill'},
+            {v:'water',       l:'💧 Water Bill'},
+            {v:'repairs',     l:'🔧 Repairs & Maintenance'},
+            {v:'taxes',       l:'📋 Taxes & Permits'},
+            {v:'insurance',   l:'🛡️ Insurance'},
+            {v:'fuel',        l:'⛽ Fuel / Gas'},
+            {v:'transport',   l:'🚌 Transportation'},
+            {v:'supplies',    l:'📦 Supplies & Materials'},
+            {v:'labor',       l:'👷 Labor / Services'},
+            {v:'personal_loan',l:'💳 Personal Loan'},
+            {v:'food',        l:'🍔 Food & Meals'},
+            {v:'communication',l:'📱 Communication / Internet'},
+            {v:'salaries',    l:'👔 Salaries / Payroll'},
+            {v:'sss',         l:'🏛️ SSS Contribution'},
+            {v:'philhealth',  l:'🏥 PhilHealth'},
+            {v:'pagibig',     l:'🏠 Pag-IBIG'},
+            {v:'bir',         l:'📋 BIR / Income Tax'},
+            {v:'accountant',  l:'👨‍💼 Accountant Fee'},
+            {v:'savings',     l:'🏦 Savings'},
+            {v:'investment',  l:'📈 Investment'},
+            {v:'capital_reserve',l:'🏠 Capital Reserve'},
+            {v:'owners_draw', l:'👤 Owner\'s Draw'},
+            {v:'hw_inventory',l:'📦 HW: Inventory Restocking'},
+            {v:'hw_cement',   l:'🧱 HW: Cement & Construction'},
+            {v:'hw_electrical',l:'⚡ HW: Electrical Supplies'},
+            {v:'hw_plumbing', l:'🔧 HW: Plumbing Materials'},
+            {v:'hw_tools',    l:'🛠️ HW: Tools & Equipment'},
+            {v:'hw_paint',    l:'🎨 HW: Paint & Finishing'},
+            {v:'hw_delivery', l:'🚚 HW: Delivery Costs'},
+            {v:'ws_filter',   l:'🔵 WS: Filter Replacement'},
+            {v:'ws_bottles',  l:'🫙 WS: Containers / Bottles'},
+            {v:'ws_chemicals',l:'🧪 WS: Treatment Chemicals'},
+            {v:'ws_maintenance',l:'🔧 WS: Equipment Maintenance'},
+            {v:'payroll',     l:'👷 Payroll / Salaries'},
+            {v:'other',       l:'📝 Other'},
+        ];
+
+        function expCatSearch(q) {
+            const dd = document.getElementById('expense-cat-dropdown');
+            if (!dd) return;
+            const query = (q||'').toLowerCase().trim();
+            const matches = query === ''
+                ? _expCatAll
+                : _expCatAll.filter(c => c.l.toLowerCase().includes(query) || c.v.toLowerCase().includes(query));
+            if (matches.length === 0) {
+                dd.innerHTML = '<div style="padding:10px;color:#64748b;font-size:0.82rem;">No category found</div>';
+            } else {
+                dd.innerHTML = matches.map(c =>
+                    '<div onclick="expCatSelect(\''+c.v+'\',\''+c.l+'\')" ' +
+                    'style="padding:9px 12px;cursor:pointer;font-size:0.88rem;border-bottom:1px solid rgba(255,255,255,0.05);transition:background 0.1s;" ' +
+                    'onmouseover="this.style.background=\'rgba(99,102,241,0.15)\'" ' +
+                    'onmouseout="this.style.background=\'\'">'+c.l+'</div>'
+                ).join('');
+            }
+            dd.style.display = 'block';
+        }
+        function expCatSelect(val, label) {
+            const hiddenEl = document.getElementById('expense-category');
+            const searchEl = document.getElementById('expense-category-search');
+            const dd       = document.getElementById('expense-cat-dropdown');
+            const selEl    = document.getElementById('expense-cat-selected');
+            if (hiddenEl) hiddenEl.value = val;
+            if (searchEl) searchEl.value = label;
+            if (dd)       dd.style.display = 'none';
+            if (selEl)    { selEl.textContent = '✅ Selected: '+label; selEl.style.display='block'; }
+            // trigger dependent functions
+            if (typeof expHistOnCategoryChange === 'function') expHistOnCategoryChange();
+        }
+        window.expCatSearch = expCatSearch;
+        window.expCatSelect = expCatSelect;
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            const dd = document.getElementById('expense-cat-dropdown');
+            const si = document.getElementById('expense-category-search');
+            if (dd && si && !si.contains(e.target) && !dd.contains(e.target)) {
+                dd.style.display = 'none';
+            }
+        });
+
         async function saveExpense(event) {
             event.preventDefault();
 
@@ -18206,6 +18251,13 @@ async function showPayrollSummary() {
                 // Reset form and photo
                 expensePhotoData = null;
                 document.getElementById('expense-form').reset();
+                // Clear category search display
+                const _csr = document.getElementById('expense-category-search');
+                if (_csr) _csr.value = '';
+                const _csl = document.getElementById('expense-cat-selected');
+                if (_csl) { _csl.textContent = ''; _csl.style.display='none'; }
+                const _cdd = document.getElementById('expense-cat-dropdown');
+                if (_cdd) _cdd.style.display = 'none';
                 clearExpensePhoto();
                 
                 hideModal('expense-modal');
@@ -19028,42 +19080,54 @@ async function showPayrollSummary() {
         }
         window.expCatDelete = expCatDelete;
 
+        function showAddExpenseModal() {
+            // Reset search field before opening
+            const _csr = document.getElementById('expense-category-search');
+            if (_csr) _csr.value = '';
+            const _csl = document.getElementById('expense-cat-selected');
+            if (_csl) { _csl.textContent=''; _csl.style.display='none'; }
+            const _cdd = document.getElementById('expense-cat-dropdown');
+            if (_cdd) _cdd.style.display='none';
+            const _hid = document.getElementById('expense-category');
+            if (_hid) _hid.value='';
+            const _frm = document.getElementById('expense-form');
+            if (_frm) _frm.reset();
+            const _dt = document.getElementById('expense-date');
+            if (_dt) _dt.value = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
+            populateExpensePropertyDropdown && populateExpensePropertyDropdown();
+            showModal('expense-modal');
+        }
+        window.showAddExpenseModal = showAddExpenseModal;
+
         async function openExpenseWithCategory(category) {
-            console.log('Opening expense with category:', category);
             try {
                 await populateExpensePropertyDropdown();
                 document.getElementById('expense-date').value = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
+
+                // Set hidden category value AND update search display
+                const catMatch = _expCatAll.find(c=>c.v===category);
+                const catDisplayLabel = catMatch ? catMatch.l : category;
                 document.getElementById('expense-category').value = category;
-                
+                const srch = document.getElementById('expense-category-search');
+                if (srch) srch.value = catDisplayLabel;
+                const selEl = document.getElementById('expense-cat-selected');
+                if (selEl) { selEl.textContent = '✅ Selected: '+catDisplayLabel; selEl.style.display='block'; }
+
                 // Set a helpful description based on category
                 const descriptions = {
-                    'electric': 'Electricity bill',
-                    'water': 'Water bill',
-                    'repairs': 'Repair/Maintenance',
-                    'taxes': 'Taxes/Permits',
-                    'insurance': 'Insurance payment',
-                    'fuel': 'Fuel/Gas',
-                    'transport': 'Transportation',
-                    'supplies': 'Supplies/Materials',
-                    'labor': 'Labor/Services',
-                    'personal_loan': 'Loan payment',
-                    'food': 'Food/Meals',
-                    'communication': 'Phone/Internet bill',
-                    'sss': 'SSS monthly contribution',
-                    'philhealth': 'PhilHealth contribution',
-                    'pagibig': 'Pag-IBIG contribution',
-                    'bir': 'BIR tax payment',
-                    'accountant': 'Accountant/Bookkeeper fee',
-                    'savings': 'Transfer to savings',
-                    'investment': 'Investment deposit',
-                    'capital_reserve': 'Capital reserve fund',
-                    'owners_draw': 'Owner withdrawal',
-                    'other': ''
+                    'electric':'Electricity bill','water':'Water bill','repairs':'Repair/Maintenance',
+                    'taxes':'Taxes/Permits','insurance':'Insurance payment','fuel':'Fuel/Gas',
+                    'transport':'Transportation','supplies':'Supplies/Materials','labor':'Labor/Services',
+                    'personal_loan':'Loan payment','food':'Food/Meals','communication':'Phone/Internet bill',
+                    'sss':'SSS monthly contribution','philhealth':'PhilHealth contribution',
+                    'pagibig':'Pag-IBIG contribution','bir':'BIR tax payment',
+                    'accountant':'Accountant/Bookkeeper fee','savings':'Transfer to savings',
+                    'investment':'Investment deposit','capital_reserve':'Capital reserve fund',
+                    'owners_draw':'Owner withdrawal','other':''
                 };
                 document.getElementById('expense-description').value = descriptions[category] || '';
-                
                 showModal('expense-modal');
-            } catch (error) {
+            } catch(error) {
                 console.error('Error opening expense modal:', error);
                 showToast('❌ Error: ' + error.message, 'error');
             }
@@ -24019,7 +24083,7 @@ async function clearAllData() {
                     rows += '<div style="border-top:2px solid rgba(239,68,68,0.4);margin-top:10px;padding-top:10px;display:flex;justify-content:space-between;font-weight:800;font-size:1rem;"><span>Total</span><span style="color:#ef4444;">₱'+total.toLocaleString()+'</span></div>';
                 }
                 rows += '<div style="display:flex;gap:8px;margin-top:14px;">' +
-                    '<button onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();showModal(\'expense-modal\');" ' +
+                    '<button onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();showAddExpenseModal();" ' +
                     'style="flex:1;padding:11px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.88rem;">💸 Add Expense</button>' +
                     '<button onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();showIncomeModal();" ' +
                     'style="flex:1;padding:11px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);color:#10b981;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.88rem;">💰 Add Income</button>' +
@@ -24138,7 +24202,7 @@ async function clearAllData() {
             rows += '<div style="display:flex;gap:8px;margin-top:14px;">' +
                 '<button onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();showIncomeModal();" ' +
                 'style="flex:1;padding:11px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);color:#10b981;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.88rem;">💰 Add Income</button>' +
-                '<button onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();showModal(\'expense-modal\');" ' +
+                '<button onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();showAddExpenseModal();" ' +
                 'style="flex:1;padding:11px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#f87171;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.88rem;">💸 Add Expense</button>' +
                 '</div>';
             _expShowModal('💰 Income — '+d.label, rows);
@@ -24169,7 +24233,7 @@ async function clearAllData() {
             rows += '<div style="display:flex;gap:8px;margin-top:14px;">' +
                 '<button onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();showIncomeModal();" ' +
                 'style="flex:1;padding:11px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);color:#10b981;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.88rem;">💰 Add Income</button>' +
-                '<button onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();showModal(\'expense-modal\');" ' +
+                '<button onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();showAddExpenseModal();" ' +
                 'style="flex:1;padding:11px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#f87171;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.88rem;">💸 Add Expense</button>' +
                 '</div>';
             _expShowModal((isGain?'📈':'📉')+' Net Summary — '+d.label, rows);
