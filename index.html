@@ -18798,41 +18798,192 @@ async function showPayrollSummary() {
         // Show category breakdown first, with option to add new expense
         async function showExpenseCategoryDetail(category) {
             try {
-                const now2 = new Date();
-                const thisMonth2 = now2.getFullYear()+'-'+String(now2.getMonth()+1).padStart(2,'0');
                 const allExp = await dbGetAll('expenses');
-                const catLabel = category.charAt(0).toUpperCase()+category.slice(1).replace('_',' ');
-                const catExp = allExp.filter(e=>e.date&&e.date.startsWith(thisMonth2)&&(e.category||'').toLowerCase()===category.toLowerCase());
-                const total = catExp.reduce((s,e)=>s+(e.amount||0),0);
-                let rows = '';
-                if (catExp.length === 0) {
-                    rows = `<div style="text-align:center;color:#64748b;padding:16px;">No ${catLabel} expenses this month.</div>`;
-                } else {
-                    catExp.sort((a,b)=>(b.date||'')>(a.date||'')?1:-1).forEach(e=>{
-                        rows += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg-primary);border-radius:8px;margin-bottom:5px;border-left:3px solid #ef4444;">
-                            <div><div style="font-weight:600;font-size:0.83rem;">${e.description||catLabel}</div><div style="font-size:0.7rem;color:#94a3b8;">${e.date||''}</div></div>
-                            <span style="font-weight:700;color:#ef4444;">-₱${(e.amount||0).toLocaleString()}</span>
-                        </div>`;
+                const catIcons = {
+                    electric:'⚡', water:'💧', fuel:'⛽', repairs:'🔧', taxes:'📋',
+                    insurance:'🛡️', transport:'🚌', supplies:'📦', labor:'👷',
+                    personal_loan:'💳', food:'🍔', communication:'📱', salaries:'👔',
+                    sss:'🏛️', philhealth:'🏥', pagibig:'🏠', bir:'📋',
+                    accountant:'👨‍💼', savings:'🏦', investment:'📈',
+                    capital_reserve:'🏠', owners_draw:'👤', other:'📝'
+                };
+                const icon = catIcons[category] || '📝';
+                const catLabel = icon + ' ' + (category.charAt(0).toUpperCase()+category.slice(1).replace(/_/g,' '));
+
+                // Use current expense range filter if available, else this month
+                let catExp;
+                const range = (typeof getExpenseDateRange === 'function') ? getExpenseDateRange() : null;
+                const rangeLabel = (typeof getExpenseRangeLabel === 'function') ? getExpenseRangeLabel() : 'This Month';
+                if (range) {
+                    catExp = allExp.filter(e => {
+                        const d = (e.date||'').substring(0,10);
+                        return d >= range.from && d <= range.to && (e.category||'').toLowerCase() === category.toLowerCase();
                     });
-                    rows += `<div style="border-top:2px solid rgba(239,68,68,0.3);margin-top:10px;padding-top:8px;display:flex;justify-content:space-between;font-weight:800;"><span>Total ${catLabel}</span><span style="color:#ef4444;">₱${total.toLocaleString()}</span></div>`;
+                } else {
+                    const now2 = new Date();
+                    const thisMonth2 = now2.getFullYear()+'-'+String(now2.getMonth()+1).padStart(2,'0');
+                    catExp = allExp.filter(e=>e.date&&e.date.startsWith(thisMonth2)&&(e.category||'').toLowerCase()===category.toLowerCase());
                 }
-                rows += `<button onclick="var m=document.getElementById('flashcard-modal');if(m)m.remove();openExpenseWithCategory('${category}');" style="width:100%;margin-top:14px;padding:10px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;">+ Add ${catLabel} Expense</button>`;
+                catExp.sort((a,b)=>(b.date||'')>(a.date||'')?1:-1);
+
+                const _render = async () => {
+                    const freshExp = await dbGetAll('expenses');
+                    let freshCat;
+                    if (range) {
+                        freshCat = freshExp.filter(e=>{
+                            const d=(e.date||'').substring(0,10);
+                            return d>=range.from&&d<=range.to&&(e.category||'').toLowerCase()===category.toLowerCase();
+                        });
+                    } else {
+                        const now3=new Date(), m3=now3.getFullYear()+'-'+String(now3.getMonth()+1).padStart(2,'0');
+                        freshCat = freshExp.filter(e=>e.date&&e.date.startsWith(m3)&&(e.category||'').toLowerCase()===category.toLowerCase());
+                    }
+                    freshCat.sort((a,b)=>(b.date||'')>(a.date||'')?1:-1);
+                    const total = freshCat.reduce((s,e)=>s+(e.amount||0),0);
+
+                    let rows = '';
+                    if (freshCat.length === 0) {
+                        rows = '<div style="text-align:center;color:#64748b;padding:20px;">No '+catLabel+' expenses for this period.</div>';
+                    } else {
+                        freshCat.forEach(e => {
+                            rows += `<div style="background:var(--bg-primary);border-radius:10px;margin-bottom:8px;border-left:3px solid #ef4444;overflow:hidden;">
+                                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;">
+                                    <div style="flex:1;min-width:0;">
+                                        <div style="font-weight:600;font-size:0.85rem;color:var(--text-primary);">${e.description||catLabel}</div>
+                                        <div style="font-size:0.7rem;color:#94a3b8;margin-top:2px;">${e.date||''}${e.property?' · '+e.property:''}</div>
+                                    </div>
+                                    <span style="font-weight:800;color:#ef4444;font-size:0.95rem;margin-left:10px;white-space:nowrap;">-₱${(e.amount||0).toLocaleString()}</span>
+                                </div>
+                                <div style="display:flex;gap:6px;padding:0 12px 10px;">
+                                    <button onclick="expCatEdit(${e.id},'${category}')" style="flex:1;padding:6px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:600;">✏️ Edit</button>
+                                    <button onclick="expCatDelete(${e.id},'${category}')" style="flex:1;padding:6px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#f87171;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:600;">🗑 Delete</button>
+                                </div>
+                            </div>`;
+                        });
+                        rows += `<div style="border-top:2px solid rgba(239,68,68,0.3);margin-top:4px;padding-top:10px;display:flex;justify-content:space-between;font-weight:800;font-size:0.95rem;">
+                            <span>Total ${catLabel}</span>
+                            <span style="color:#ef4444;">₱${total.toLocaleString()}</span>
+                        </div>`;
+                    }
+                    rows += `<button onclick="var m=document.getElementById('flashcard-modal');if(m)m.remove();openExpenseWithCategory('${category}');"
+                        style="width:100%;margin-top:12px;padding:11px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.88rem;">
+                        + Add ${catLabel} Expense
+                    </button>`;
+
+                    const body = document.getElementById('exp-cat-body');
+                    if (body) body.innerHTML = rows;
+                    const counter = document.getElementById('exp-cat-count');
+                    if (counter) counter.textContent = freshCat.length+' item(s) · '+rangeLabel;
+                };
+
+                // Build modal shell
                 const existing = document.getElementById('flashcard-modal');
                 if (existing) existing.remove();
                 const modal = document.createElement('div');
                 modal.id = 'flashcard-modal';
                 modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
                 modal.innerHTML =
-                    '<div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;">' +
-                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;position:sticky;top:0;background:#1e293b;padding-bottom:10px;border-bottom:1px solid #334155;">' +
-                    '<h3 style="margin:0;color:#f1f5f9;font-size:1rem;">⚡ '+catLabel+' — This Month</h3>' +
+                    '<div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;position:sticky;top:0;background:#1e293b;padding-bottom:10px;border-bottom:1px solid #334155;">' +
+                    '<div><h3 style="margin:0;color:#f1f5f9;font-size:1rem;">'+catLabel+' Expenses</h3>' +
+                    '<div id="exp-cat-count" style="font-size:0.7rem;color:#64748b;margin-top:2px;"></div></div>' +
                     '<button onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.3rem;padding:0 4px;">✕</button>' +
-                    '</div><div>'+rows+'</div></div>';
+                    '</div><div id="exp-cat-body" style="min-height:60px;"><div style="text-align:center;color:#64748b;padding:20px;">Loading...</div></div></div>';
                 document.body.appendChild(modal);
                 modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
-            } catch(e2) { openExpenseWithCategory(category); }
+                await _render();
+
+                // Expose re-render for CRUD callbacks
+                window._expCatRerender = _render;
+
+            } catch(e2) { console.error(e2); openExpenseWithCategory(category); }
         }
         window.showExpenseCategoryDetail = showExpenseCategoryDetail;
+
+        // Edit expense from category detail popup
+        async function expCatEdit(id, category) {
+            const e = await dbGet('expenses', id);
+            if (!e) { showToast('⚠️ Expense not found.','warning'); return; }
+
+            // Build inline edit modal on top
+            const editModal = document.createElement('div');
+            editModal.id = 'exp-cat-edit-modal';
+            editModal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:999999;display:flex;align-items:center;justify-content:center;padding:16px;';
+            const inp = 'width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:0.92rem;box-sizing:border-box;';
+            editModal.innerHTML = `
+                <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;width:100%;max-width:400px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #334155;">
+                        <h3 style="margin:0;color:#f1f5f9;font-size:1rem;">✏️ Edit Expense</h3>
+                        <button onclick="document.getElementById('exp-cat-edit-modal').remove()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.3rem;">✕</button>
+                    </div>
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label style="font-size:0.8rem;color:#94a3b8;display:block;margin-bottom:5px;">Description</label>
+                        <input type="text" id="ece-desc" value="${e.description||''}" style="${inp}">
+                    </div>
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label style="font-size:0.8rem;color:#94a3b8;display:block;margin-bottom:5px;">Amount (₱)</label>
+                        <input type="number" id="ece-amount" value="${e.amount||0}" min="0" style="${inp}font-size:1.1rem;font-weight:700;">
+                    </div>
+                    <div class="form-group" style="margin-bottom:12px;">
+                        <label style="font-size:0.8rem;color:#94a3b8;display:block;margin-bottom:5px;">Date</label>
+                        <input type="date" id="ece-date" value="${e.date||''}" style="${inp}">
+                    </div>
+                    <div class="form-group" style="margin-bottom:16px;">
+                        <label style="font-size:0.8rem;color:#94a3b8;display:block;margin-bottom:5px;">Notes</label>
+                        <textarea id="ece-notes" rows="2" style="${inp}resize:none;">${e.notes||''}</textarea>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button onclick="expCatSave(${id},'${category}')"
+                            style="flex:2;padding:11px;background:#10b981;border:none;border-radius:8px;color:white;font-weight:700;cursor:pointer;font-size:0.92rem;">
+                            💾 Save Changes
+                        </button>
+                        <button onclick="document.getElementById('exp-cat-edit-modal').remove()"
+                            style="flex:1;padding:11px;background:rgba(255,255,255,0.06);border:1px solid #334155;border-radius:8px;color:#94a3b8;cursor:pointer;">
+                            Cancel
+                        </button>
+                    </div>
+                </div>`;
+            document.body.appendChild(editModal);
+            editModal.addEventListener('click', ev=>{ if(ev.target===editModal) editModal.remove(); });
+        }
+        window.expCatEdit = expCatEdit;
+
+        async function expCatSave(id, category) {
+            const e = await dbGet('expenses', id);
+            if (!e) { showToast('⚠️ Not found.','warning'); return; }
+            const amount = parseFloat(document.getElementById('ece-amount')?.value)||0;
+            const date   = document.getElementById('ece-date')?.value||'';
+            const desc   = document.getElementById('ece-desc')?.value?.trim()||'';
+            const notes  = document.getElementById('ece-notes')?.value?.trim()||'';
+            if (amount <= 0) { showToast('⚠️ Amount must be greater than 0.','warning'); return; }
+            if (!date)       { showToast('⚠️ Date is required.','warning'); return; }
+            e.amount      = amount;
+            e.date        = date;
+            e.description = desc;
+            e.notes       = notes;
+            e.editedBy    = window.currentAppUser?.username||'admin';
+            e.editedAt    = new Date().toISOString();
+            await dbUpdate('expenses', e);
+            document.getElementById('exp-cat-edit-modal')?.remove();
+            showToast('✅ Expense updated!','success');
+            if (typeof window._expCatRerender === 'function') await window._expCatRerender();
+            loadExpenses();
+            loadDashboard();
+            try { await syncToFirebase(); } catch(err) { debouncedSync(); }
+        }
+        window.expCatSave = expCatSave;
+
+        async function expCatDelete(id, category) {
+            const confirmed = await showConfirm('Permanently delete this expense?','danger','🗑 Delete Expense','Yes, Delete','Cancel');
+            if (!confirmed) return;
+            await dbDelete('expenses', id);
+            showToast('🗑 Expense deleted.','success');
+            if (typeof window._expCatRerender === 'function') await window._expCatRerender();
+            loadExpenses();
+            loadDashboard();
+            try { await syncToFirebase(); } catch(err) { debouncedSync(); }
+        }
+        window.expCatDelete = expCatDelete;
 
         async function openExpenseWithCategory(category) {
             console.log('Opening expense with category:', category);
