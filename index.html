@@ -1787,14 +1787,14 @@
         /* Expense Summary Cards */
         .expense-summary-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 8px;
             margin-top: 12px;
         }
 
         .expense-summary-item {
             background: var(--gray-50);
-            padding: 10px;
+            padding: 10px 6px;
             border-radius: 8px;
             text-align: center;
             border: 1px solid var(--border-color);
@@ -2440,7 +2440,7 @@
 
             .expense-summary-grid {
                 grid-template-columns: repeat(3, 1fr);
-                gap: 6px;
+                gap: 5px;
             }
 
             .expense-summary-item {
@@ -4646,9 +4646,23 @@
             </div>
         
             <!-- nav-bottom-expenses -->
-            <div style="display:flex;gap:10px;margin-top:24px;padding:14px 0 4px;border-top:1px solid var(--border-color);">
-                <button class="btn btn-secondary" style="flex:1;font-size:0.82rem;" onclick="showSection('employees')">← Staff</button>
-                <button class="btn btn-primary" style="flex:1;font-size:0.82rem;" onclick="showSection('tasks')">✅ Tasks →</button>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:24px;padding:14px 0 4px;border-top:1px solid var(--border-color);">
+                <!-- Quick Action Buttons -->
+                <div style="display:flex;gap:8px;">
+                    <button class="btn btn-danger" style="flex:1;font-size:0.88rem;font-weight:700;padding:12px;"
+                        onclick="showModal('expense-modal')">
+                        💸 Add Expense
+                    </button>
+                    <button class="btn btn-success" style="flex:1;font-size:0.88rem;font-weight:700;padding:12px;"
+                        onclick="showIncomeModal()">
+                        💰 Add Income
+                    </button>
+                </div>
+                <!-- Section Nav -->
+                <div style="display:flex;gap:8px;">
+                    <button class="btn btn-secondary" style="flex:1;font-size:0.82rem;" onclick="showSection('employees')">← Staff</button>
+                    <button class="btn btn-primary" style="flex:1;font-size:0.82rem;" onclick="showSection('tasks')">✅ Tasks →</button>
+                </div>
             </div>
         </div>
 
@@ -4787,9 +4801,21 @@
             </div>
         
             <!-- nav-bottom-water -->
-            <div style="display:flex;gap:10px;margin-top:24px;padding:14px 0 4px;border-top:1px solid var(--border-color);">
-                <button class="btn btn-secondary" style="flex:1;font-size:0.82rem;" onclick="showSection('credits')">← Credits</button>
-                <button class="btn btn-primary" style="flex:1;font-size:0.82rem;" onclick="showSection('income')">💰 Income →</button>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:24px;padding:14px 0 4px;border-top:1px solid var(--border-color);">
+                <div style="display:flex;gap:8px;">
+                    <button class="btn btn-primary" style="flex:1;font-size:0.88rem;font-weight:700;padding:12px;"
+                        onclick="showWaterSaleModal()">
+                        💧 New Water Sale
+                    </button>
+                    <button class="btn" style="flex:1;font-size:0.88rem;font-weight:700;padding:12px;background:linear-gradient(135deg,#7c3aed,#6d28d9);border:none;color:white;"
+                        onclick="showWaterStoreItemModal()">
+                        🛒 Sell Item
+                    </button>
+                </div>
+                <div style="display:flex;gap:8px;">
+                    <button class="btn btn-secondary" style="flex:1;font-size:0.82rem;" onclick="showSection('credits')">← Credits</button>
+                    <button class="btn btn-primary" style="flex:1;font-size:0.82rem;" onclick="showSection('income')">💰 Income →</button>
+                </div>
             </div>
         </div>
 
@@ -5008,9 +5034,21 @@
             </div>
         
             <!-- nav-bottom-income -->
-            <div style="display:flex;gap:10px;margin-top:24px;padding:14px 0 4px;border-top:1px solid var(--border-color);">
-                <button class="btn btn-secondary" style="flex:1;font-size:0.82rem;" onclick="showSection('water')">← Water</button>
-                <button class="btn btn-primary" style="flex:1;font-size:0.82rem;" onclick="showSection('employees')">👷 Staff →</button>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:24px;padding:14px 0 4px;border-top:1px solid var(--border-color);">
+                <div style="display:flex;gap:8px;">
+                    <button class="btn btn-success" style="flex:1;font-size:0.88rem;font-weight:700;padding:12px;"
+                        onclick="showIncomeModal()">
+                        💰 Add Income
+                    </button>
+                    <button class="btn btn-danger" style="flex:1;font-size:0.88rem;font-weight:700;padding:12px;"
+                        onclick="showModal('expense-modal')">
+                        💸 Add Expense
+                    </button>
+                </div>
+                <div style="display:flex;gap:8px;">
+                    <button class="btn btn-secondary" style="flex:1;font-size:0.82rem;" onclick="showSection('water')">← Water</button>
+                    <button class="btn btn-primary" style="flex:1;font-size:0.82rem;" onclick="showSection('employees')">👷 Staff →</button>
+                </div>
             </div>
         </div>
 
@@ -5326,10 +5364,11 @@
                 
                 <!-- Status Filter Tabs -->
                 <div class="filter-buttons" style="margin-bottom: 15px;">
-                    <button class="filter-btn active" data-filter="all" onclick="setTaskStatusFilter('all')">All (0)</button>
-                    <button class="filter-btn" data-filter="pending" onclick="setTaskStatusFilter('pending')">Pending (0)</button>
-                    <button class="filter-btn" data-filter="in-progress" onclick="setTaskStatusFilter('in-progress')">In Progress (0)</button>
-                    <button class="filter-btn" data-filter="completed" onclick="setTaskStatusFilter('completed')">Completed (0)</button>
+                    <button class="filter-btn task-status-tab active" data-status="all" onclick="setTaskStatusFilter('all')">All (<span id="tab-count-all">0</span>)</button>
+                    <button class="filter-btn task-status-tab" data-status="pending" onclick="setTaskStatusFilter('pending')">Pending (<span id="tab-count-pending">0</span>)</button>
+                    <button class="filter-btn task-status-tab" data-status="in-progress" onclick="setTaskStatusFilter('in-progress')">In Progress (<span id="tab-count-inprogress">0</span>)</button>
+                    <button class="filter-btn task-status-tab" data-status="completed" onclick="setTaskStatusFilter('completed')">Completed (<span id="tab-count-completed">0</span>)</button>
+                    <button class="filter-btn task-status-tab" data-status="overdue" onclick="setTaskStatusFilter('overdue')" style="color:#ef4444;">🔴 Overdue (<span id="tab-count-overdue">0</span>)</button>
                 </div>
                 
                 <!-- Tasks List -->
@@ -18393,12 +18432,13 @@ async function showPayrollSummary() {
 
             // Update the 3 stat cards
             safeSet('stat-exp-range',       '\u20b1'+totalExp.toLocaleString());
-            safeSet('stat-exp-range-label', label);
+            const _shortLabel = label.length > 22 ? label.substring(0,20)+'…' : label;
+            safeSet('stat-exp-range-label', _shortLabel);
             safeSet('stat-exp-income',      '\u20b1'+totalInc.toLocaleString());
-            safeSet('stat-exp-income-label',label);
+            safeSet('stat-exp-income-label',_shortLabel);
             safeSet('stat-exp-net',         (isGain?'\u20b1':'-\u20b1')+Math.abs(net).toLocaleString());
             safeSet('stat-exp-net-lbl',     isGain ? '\ud83d\udcc8 Net Gain' : '\ud83d\udcc9 Net Loss');
-            safeSet('stat-exp-net-label',   label);
+            safeSet('stat-exp-net-label',   _shortLabel);
             safeSet('exp-period-label',     label);
 
             // Net card color
@@ -25557,11 +25597,18 @@ async function clearAllData() {
             try {
                 const now2 = new Date(); now2.setHours(0,0,0,0);
                 const safeTask = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
+                const overdueCount = tasks.filter(t=>t.status!=='completed'&&t.dueDate&&new Date(t.dueDate)<now2).length;
                 safeTask('stat-total-tasks',      tasks.length);
                 safeTask('stat-pending-tasks',    tasks.filter(t=>t.status==='pending').length);
                 safeTask('stat-inprogress-tasks', tasks.filter(t=>t.status==='in-progress').length);
                 safeTask('stat-completed-tasks',  tasks.filter(t=>t.status==='completed').length);
-                safeTask('stat-overdue-tasks',    tasks.filter(t=>t.status!=='completed'&&t.dueDate&&new Date(t.dueDate)<now2).length);
+                safeTask('stat-overdue-tasks',    overdueCount);
+                // Update filter tab counts
+                safeTask('tab-count-all',        tasks.length);
+                safeTask('tab-count-pending',    tasks.filter(t=>t.status==='pending').length);
+                safeTask('tab-count-inprogress', tasks.filter(t=>t.status==='in-progress').length);
+                safeTask('tab-count-completed',  tasks.filter(t=>t.status==='completed').length);
+                safeTask('tab-count-overdue',    overdueCount);
             } catch(e) {}
 
             const catFilter  = (document.getElementById('task-category-filter')||{}).value || 'all';
@@ -25571,7 +25618,13 @@ async function clearAllData() {
             let filtered = tasks.filter(t => {
                 const catOk  = catFilter  === 'all' || t.category === catFilter;
                 const priOk  = priFilter  === 'all' || t.priority === priFilter;
-                const statOk = statFilter === 'all' || t.status   === statFilter;
+                const now3   = new Date(); now3.setHours(0,0,0,0);
+                let statOk;
+                if (statFilter === 'overdue') {
+                    statOk = t.status !== 'completed' && t.dueDate && new Date(t.dueDate) < now3;
+                } else {
+                    statOk = statFilter === 'all' || t.status === statFilter;
+                }
                 return catOk && priOk && statOk;
             }).sort((a,b) => {
                 const priOrder = {high:0, medium:1, low:2};
@@ -25717,10 +25770,18 @@ async function clearAllData() {
 
         function setTaskStatusFilter(status) {
             _taskStatusFilter = status;
-            // Update tab buttons
+            // Update filter buttons
             document.querySelectorAll('.task-status-tab').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.status === status);
             });
+            // Also highlight the stat card for overdue
+            document.querySelectorAll('#tasks .stat-card').forEach(card => {
+                card.style.outline = '';
+            });
+            if (status === 'overdue') {
+                const oc = document.getElementById('stat-overdue-tasks')?.closest('.stat-card');
+                if (oc) oc.style.outline = '2px solid #ef4444';
+            }
             renderTasksList(_allTasksData);
         }
         window.setTaskStatusFilter = setTaskStatusFilter;
