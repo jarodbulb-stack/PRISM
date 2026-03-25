@@ -17830,59 +17830,62 @@ async function showPayrollSummary() {
         // INCOME & CHARGES FUNCTIONS
         // =====================
         async function showIncomeModal() {
-            // Populate linked-to dropdown with tenants, debtors, and regular customers
-            const tenants = await dbGetAll('tenants');
-            const credits = await dbGetAll('credits');
-            const pastIncomes = await dbGetAll('additionalIncome');
-            
-            // Get unique customer names from past incomes
-            const regularCustomers = new Set();
-            pastIncomes.forEach(inc => {
-                if (inc.customerName && inc.customerName.trim()) {
-                    regularCustomers.add(inc.customerName.trim());
-                }
-            });
-            
-            let options = '<option value="">Select customer (optional)</option>';
-            
-            // Regular customers from past transactions
-            if (regularCustomers.size > 0) {
-                options += '<optgroup label="👥 Regular Customers">';
-                regularCustomers.forEach(name => {
-                    options += `<option value="customer-${name}">${name}</option>`;
-                });
-                options += '</optgroup>';
+            // Reset the form safely
+            const form = document.getElementById('income-form');
+            if (form) form.reset();
+
+            // Set today's date
+            const dateEl = document.getElementById('income-date');
+            if (dateEl) dateEl.value = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
+
+            // Clear edit ID
+            const editId = document.getElementById('income-edit-id');
+            if (editId) editId.value = '';
+
+            // Hide delete button
+            const delBtn = document.getElementById('income-delete-btn');
+            if (delBtn) delBtn.style.display = 'none';
+
+            // Populate linked-to dropdown if it exists
+            const linkedTo = document.getElementById('income-linked-to');
+            if (linkedTo) {
+                try {
+                    const tenants = await dbGetAll('tenants');
+                    const credits = await dbGetAll('credits');
+                    const pastIncomes = await dbGetAll('additionalIncome');
+                    const regularCustomers = new Set();
+                    pastIncomes.forEach(inc => { if (inc.customerName?.trim()) regularCustomers.add(inc.customerName.trim()); });
+                    let options = '<option value="">Select customer (optional)</option>';
+                    if (regularCustomers.size > 0) {
+                        options += '<optgroup label="👥 Regular Customers">';
+                        regularCustomers.forEach(name => { options += `<option value="customer-${name}">${name}</option>`; });
+                        options += '</optgroup>';
+                    }
+                    if (tenants.length > 0) {
+                        options += '<optgroup label="🏠 Tenants">';
+                        tenants.forEach(t => { options += `<option value="tenant-${t.id}">${t.name} (Tenant)</option>`; });
+                        options += '</optgroup>';
+                    }
+                    if (credits.length > 0) {
+                        options += '<optgroup label="💳 Debtors">';
+                        credits.forEach(c => { options += `<option value="credit-${c.id}">${c.debtor} (Debtor)</option>`; });
+                        options += '</optgroup>';
+                    }
+                    linkedTo.innerHTML = options;
+                } catch(e) { console.warn('[showIncomeModal] linked-to populate failed:', e); }
             }
-            
-            // Tenants
-            if (tenants.length > 0) {
-                options += '<optgroup label="🏠 Tenants">';
-                tenants.forEach(t => {
-                    options += `<option value="tenant-${t.id}">${t.name} (Tenant)</option>`;
-                });
-                options += '</optgroup>';
-            }
-            
-            // Debtors
-            if (credits.length > 0) {
-                options += '<optgroup label="💳 Debtors">';
-                credits.forEach(c => {
-                    options += `<option value="credit-${c.id}">${c.debtor} (Debtor)</option>`;
-                });
-                options += '</optgroup>';
-            }
-            
-            document.getElementById('income-linked-to').innerHTML = options;
-            document.getElementById('income-date').value = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
-            document.getElementById('income-form').reset();
-            document.getElementById('income-date').value = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
-            document.getElementById('custom-source-group').style.display = 'none';
+
+            // Hide custom source group if exists
+            const customGroup = document.getElementById('custom-source-group');
+            if (customGroup) customGroup.style.display = 'none';
+
             showModal('income-modal');
         }
 
         function toggleCustomSource() {
-            const source = document.getElementById('income-source').value;
-            document.getElementById('custom-source-group').style.display = source === 'custom' ? 'block' : 'none';
+            const source = document.getElementById('income-source')?.value;
+            const customGroup = document.getElementById('custom-source-group');
+            if (customGroup) customGroup.style.display = source === 'custom' ? 'block' : 'none';
         }
 
         // [REMOVED: duplicate saveIncome - used wrong form field IDs]
@@ -24015,6 +24018,12 @@ async function clearAllData() {
                     });
                     rows += '<div style="border-top:2px solid rgba(239,68,68,0.4);margin-top:10px;padding-top:10px;display:flex;justify-content:space-between;font-weight:800;font-size:1rem;"><span>Total</span><span style="color:#ef4444;">₱'+total.toLocaleString()+'</span></div>';
                 }
+                rows += '<div style="display:flex;gap:8px;margin-top:14px;">' +
+                    '<button onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();showModal(\'expense-modal\');" ' +
+                    'style="flex:1;padding:11px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.88rem;">💸 Add Expense</button>' +
+                    '<button onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();showIncomeModal();" ' +
+                    'style="flex:1;padding:11px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);color:#10b981;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.88rem;">💰 Add Income</button>' +
+                    '</div>';
 
                 const body = document.getElementById('exp-range-body');
                 const counter = document.getElementById('exp-range-count');
@@ -24126,6 +24135,12 @@ async function clearAllData() {
                 });
                 rows += '<div style="border-top:2px solid rgba(16,185,129,0.3);margin-top:10px;padding-top:8px;display:flex;justify-content:space-between;font-weight:800;"><span>Total Income</span><span style="color:#10b981;">₱'+d.totalInc.toLocaleString()+'</span></div>';
             }
+            rows += '<div style="display:flex;gap:8px;margin-top:14px;">' +
+                '<button onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();showIncomeModal();" ' +
+                'style="flex:1;padding:11px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);color:#10b981;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.88rem;">💰 Add Income</button>' +
+                '<button onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();showModal(\'expense-modal\');" ' +
+                'style="flex:1;padding:11px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#f87171;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.88rem;">💸 Add Expense</button>' +
+                '</div>';
             _expShowModal('💰 Income — '+d.label, rows);
         }
         window.showExpensesIncomeDetail = showExpensesIncomeDetail;
@@ -24151,6 +24166,12 @@ async function clearAllData() {
                     rows+='<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border-color);font-size:0.82rem;"><span>'+cat+'</span><span style="color:#ef4444;font-weight:700;">-₱'+amt.toLocaleString()+'</span></div>';
                 });
             }
+            rows += '<div style="display:flex;gap:8px;margin-top:14px;">' +
+                '<button onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();showIncomeModal();" ' +
+                'style="flex:1;padding:11px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);color:#10b981;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.88rem;">💰 Add Income</button>' +
+                '<button onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();showModal(\'expense-modal\');" ' +
+                'style="flex:1;padding:11px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#f87171;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.88rem;">💸 Add Expense</button>' +
+                '</div>';
             _expShowModal((isGain?'📈':'📉')+' Net Summary — '+d.label, rows);
         }
         window.showExpensesNetDetail = showExpensesNetDetail;
