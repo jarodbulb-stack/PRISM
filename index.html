@@ -21518,6 +21518,34 @@ async function showPayrollSummary() {
     window.prismMakeCalCard  = prismMakeCalCard;
     window.prismMakeCheckCard = prismMakeCheckCard;
 
+    // Navigate to specific payable record from calendar
+    window.prismCalNavPayable = function(id) {
+        // Close calendar day modal
+        var calModal = document.getElementById('cal-day-modal');
+        if (calModal) calModal.style.display = 'none';
+        // Navigate to payables section
+        showSection('payables');
+        // Scroll to and highlight the specific payable after a short delay
+        setTimeout(function() {
+            var list = document.getElementById('payables-list');
+            if (!list) return;
+            // Find the item card by looking for the edit button with this id
+            var cards = list.querySelectorAll('[onclick*="editPayable(' + id + ')"]');
+            if (cards.length > 0) {
+                var card = cards[0].closest('div[style*="border-left"]') || cards[0].parentElement;
+                if (card) {
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    card.style.outline = '2px solid #f59e0b';
+                    card.style.transition = 'outline 0.3s';
+                    setTimeout(function() { card.style.outline = ''; }, 2500);
+                }
+            } else {
+                // Just open the edit modal directly
+                editPayable(id);
+            }
+        }, 400);
+    };
+
     // Toggle task/note done from calendar popup without closing it
     window.prismCalToggleCheck = async function(id, type, chkId) {
         try {
@@ -21726,20 +21754,34 @@ async function showPayrollSummary() {
             }
 
             // Payables due this day
-            var dayPay = payablesAll.filter(function(p) { return p.status !== 'paid' && p.dueDate === dateKey; });
+            // Include paid payables too so they show with strikethrough
+            var dayPay = payablesAll.filter(function(p) { return p.dueDate === dateKey; });
             if (dayPay.length > 0) {
-                var payTot = dayPay.reduce(function(s,p){ return s+(p.amount||0); }, 0);
+                var payUnpaidTot = dayPay.filter(function(p){ return p.status!=='paid'; }).reduce(function(s,p){ return s+(p.amount||0); }, 0);
                 var payCards = dayPay.map(function(p){
-                    return prismMakeCalCard(
-                        isPast?'239,68,68':'245,158,11',
-                        isPast?'#ef4444':'#f59e0b',
-                        'showSection(\'payables\')',
-                        '\ud83e\uddf3 '+(p.supplier||'Supplier')+(p.invoice?' \u00b7 '+p.invoice:''),
-                        '\u20b1'+(p.amount||0).toLocaleString()+' due'+(isPast?' \u2014 OVERDUE':''),
-                        ''
-                    );
+                    var isOverdue = isPast && p.status !== 'paid';
+                    var borderColor = p.status==='paid' ? '#10b981' : isOverdue ? '#ef4444' : '#f59e0b';
+                    var bgRgb = p.status==='paid' ? '16,185,129' : isOverdue ? '239,68,68' : '245,158,11';
+                    var isPaid = p.status === 'paid';
+                    var titleText = '🧾 ' + (p.supplier||'Supplier') + (p.invoice ? ' · ' + p.invoice : '');
+                    var subText = '₱'+(p.amount||0).toLocaleString()+' due' + (isOverdue?' — OVERDUE':'') + (isPaid?' — ✅ PAID '+(p.paidDate||''):'') + ' · Tap to manage →';
+                    var opacity = isPaid ? '0.55' : '1';
+                    var titleStyle = isPaid ? 'text-decoration:line-through;color:#64748b;' : 'color:var(--text-primary,#f1f5f9);';
+                    // Plain clickable card — NO check circle (manage only via Payables page)
+                    return '<div onclick="prismCalNavPayable(' + p.id + ')" style="padding:9px 12px;'
+                        + 'background:rgba(' + bgRgb + ',0.07);'
+                        + 'border:1px solid rgba(' + bgRgb + ',0.2);'
+                        + 'border-left:3px solid ' + borderColor + ';'
+                        + 'border-radius:9px;margin-bottom:6px;cursor:pointer;opacity:' + opacity + ';transition:opacity 0.15s;"'
+                        + ' onmouseenter="this.style.opacity=\'' + (isPaid?'0.4':'0.75') + '\'" onmouseleave="this.style.opacity=\'' + opacity + '\'">'
+                        + '<div style="font-size:0.85rem;font-weight:600;' + titleStyle + '">' + titleText + '</div>'
+                        + '<div style="font-size:0.73rem;color:#64748b;margin-top:2px;">' + subText + '</div>'
+                        + '</div>';
                 }).join('');
-                sections.push('<div style="margin-bottom:14px;"><div style="font-size:0.72rem;font-weight:700;color:#f59e0b;letter-spacing:0.08em;margin-bottom:7px;">\ud83e\uddf3 PAYABLES DUE (' + dayPay.length + ') \u2014 \u20b1'+payTot.toLocaleString()+'</div>' + payCards + '</div>');
+                var headerLabel = payUnpaidTot > 0
+                    ? '🧾 PAYABLES DUE (' + dayPay.length + ') — ₱' + payUnpaidTot.toLocaleString()
+                    : '🧾 PAYABLES (' + dayPay.length + ') — all paid ✅';
+                sections.push('<div style="margin-bottom:14px;"><div style="font-size:0.72rem;font-weight:700;color:#f59e0b;letter-spacing:0.08em;margin-bottom:7px;">' + headerLabel + '</div>' + payCards + '</div>');
             }
 
             body.innerHTML = sections.length
@@ -24772,6 +24814,8 @@ async function clearAllData() {
             renderPayableAlerts();
         }
         window.loadPayables = loadPayables;
+        window.updatePayableStats = updatePayableStats;
+        window.renderPayableAlerts = renderPayableAlerts;
 
         function updatePayableStats() {
             const today = _payToday();
