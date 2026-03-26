@@ -137,7 +137,7 @@
             --jarod-income-text: #1e3a8a;
             --jarod-expense-bg: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
             --jarod-expense-text: #92400e;
-            /* Aliases for legacy/shorthand var names */
+            /* Aliases */
             --bg-secondary: #e9ecef;
             --border: #e5e7eb;
             --card-bg: #ffffff;
@@ -176,7 +176,7 @@
             --jarod-income-text: #bfdbfe;
             --jarod-expense-bg: linear-gradient(135deg, #92400e 0%, #78350f 100%);
             --jarod-expense-text: #fef3c7;
-            /* Aliases for legacy/shorthand var names */
+            /* Aliases */
             --bg-secondary: #1f2937;
             --border: #374151;
             --card-bg: #1f2937;
@@ -4055,6 +4055,10 @@
                     <div class="stat-label">🟡 Payables Due Soon</div>
                     <span id="dash-pay-due-count" style="display:none;position:absolute;top:6px;right:8px;background:#f59e0b;color:white;font-size:0.6rem;font-weight:700;padding:1px 5px;border-radius:8px;"></span>
                 </div>
+                <div class="stat-card" style="cursor:pointer;border-left:3px solid #ef4444;" onclick="showFlashcardDetail('pay-total')">
+                    <div class="stat-value" id="stat-dash-pay-total" style="color:#ef4444;">₱0</div>
+                    <div class="stat-label">💼 Total Owed (Suppliers)</div>
+                </div>
             </div>
 
             <!-- Financial Summary -->
@@ -5317,17 +5321,6 @@
                 </div>
                 <div id="ai-overall-text" style="line-height: 1.6;">
                     <p style="color: var(--text-secondary);">Generate a report to see AI analysis...</p>
-                </div>
-            </div>
-
-            <!-- Detailed Transactions -->
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">📋 Detailed Transactions</div>
-                    <button class="btn btn-sm btn-secondary" onclick="toggleTransactionDetails()">Show/Hide</button>
-                </div>
-                <div id="transaction-details" style="display: none; max-height: 400px; overflow-y: auto;">
-                    <!-- Will be populated dynamically -->
                 </div>
             </div>
         </div>
@@ -20672,6 +20665,8 @@ async function showPayrollSummary() {
                 // New dual cards
                 safeSet('stat-dash-pay-overdue',  _payOverdue.length ? '₱'+_payOvAmt.toLocaleString() : '₱0');
                 safeSet('stat-dash-pay-due-soon', _payDueSoon.length ? '₱'+_payDsAmt.toLocaleString() : '₱0');
+                const _payTotalOwed = _payUnpaid.reduce((s,p)=>s+Math.max(0,(p.amount||0)-(p.paidAmount||0)),0);
+                safeSet('stat-dash-pay-total', '₱'+_payTotalOwed.toLocaleString());
                 safeBadge('dash-pay-overdue-count', _payOverdue.length, _payOverdue.length > 0);
                 safeBadge('dash-pay-due-count',     _payDueSoon.length, _payDueSoon.length > 0);
                 // Legacy badge
@@ -23646,23 +23641,6 @@ async function clearAllData() {
                 netCard.style.background = netProfit>=0 ? 'linear-gradient(135deg,rgba(16,185,129,0.2),rgba(5,150,105,0.1))' : 'linear-gradient(135deg,rgba(239,68,68,0.2),rgba(185,28,28,0.1))';
             }
 
-            // GAINING/LOSING banner
-            const isGain = netProfit >= 0;
-            const gainEl = document.getElementById('report-gain-status') || document.getElementById('report-verdict-banner');
-            if (gainEl) {
-                gainEl.style.display = 'block';
-                gainEl.innerHTML = '<div style="font-size:2.5rem;">' + (isGain?'📈':'📉') + '</div>' +
-                    '<h2 style="margin:8px 0;font-size:1.8rem;font-weight:900;color:' + (isGain?'#10b981':'#ef4444') + ';">' + (isGain?'GAINING':'LOSING') + '</h2>' +
-                    '<p style="color:var(--text-secondary);font-size:0.9rem;">The organization ' + (isGain?'gained':'lost') + ' <strong>₱' + Math.abs(netProfit).toLocaleString() + '</strong> in this period.</p>' +
-                    '<p style="color:#64748b;font-size:0.82rem;">' + rangeLabel + '</p>' +
-                    '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:10px;">' +
-                    '<span style="font-size:0.9rem;color:#10b981;font-weight:700;">₱'+totalIncome.toLocaleString()+' Income</span>' +
-                    '<span style="color:#475569;">vs</span>' +
-                    '<span style="font-size:0.9rem;color:#ef4444;font-weight:700;">₱'+totalExpenses.toLocaleString()+' Expenses</span>' +
-                    '<span style="font-size:0.9rem;color:#3b82f6;font-weight:700;">'+profitMargin+'% Margin</span>' +
-                    '</div>';
-            }
-
             // Expense breakdown
             const expByCategory = {};
             rangeExpenses.forEach(e => { expByCategory[e.category||'Other'] = (expByCategory[e.category||'Other']||0) + (e.amount||0); });
@@ -23673,32 +23651,6 @@ async function clearAllData() {
                     '<span style="font-size:0.85rem;">'+cat+'</span>' +
                     '<span style="font-weight:600;color:#ef4444;">₱'+amt.toLocaleString()+'</span></div>'
                 ).join('') || '<div style="color:var(--text-secondary);font-size:0.85rem;padding:8px 0;">No expenses in this period.</div>';
-            }
-
-            // Expense pie/doughnut chart
-            const pieCanvas = document.getElementById('expense-pie-chart');
-            const expCatEntries = Object.entries(expByCategory).sort((a,b)=>b[1]-a[1]);
-            if (pieCanvas && expCatEntries.length > 0 && typeof Chart !== 'undefined') {
-                if (pieCanvas._chartInstance) pieCanvas._chartInstance.destroy();
-                const pieColors = ['#ef4444','#f59e0b','#3b82f6','#8b5cf6','#10b981','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16'];
-                pieCanvas._chartInstance = new Chart(pieCanvas, {
-                    type: 'doughnut',
-                    data: {
-                        labels: expCatEntries.map(([cat])=>cat),
-                        datasets: [{ data: expCatEntries.map(([,amt])=>amt), backgroundColor: pieColors.slice(0,expCatEntries.length), borderWidth: 2, borderColor: 'rgba(0,0,0,0.15)' }]
-                    },
-                    options: {
-                        responsive: true, maintainAspectRatio: true,
-                        plugins: {
-                            legend: { position:'bottom', labels:{ color:'#94a3b8', font:{size:11}, padding:10 } },
-                            tooltip: { callbacks: { label: ctx => ctx.label+': ₱'+ctx.parsed.toLocaleString() } }
-                        }
-                    }
-                });
-                document.getElementById('expense-chart-container').style.display = 'block';
-            } else if (pieCanvas) {
-                if (pieCanvas._chartInstance) { pieCanvas._chartInstance.destroy(); pieCanvas._chartInstance = null; }
-                document.getElementById('expense-chart-container').style.display = 'none';
             }
 
             // AI Analysis banner
@@ -23717,7 +23669,6 @@ async function clearAllData() {
             }
 
             window._reportData = { totalIncome, totalExpenses, netProfit, profitMargin, rentIncome, creditIncome, waterIncome, storeIncome, otherIncome, rangeLabel };
-            // Store detailed breakdown for card click drill-downs
             window._reportBreakdown = {
                 fromDate: fromEl.value, toDate: toEl.value, shortRange,
                 income: [
@@ -23731,57 +23682,66 @@ async function clearAllData() {
                 net: netProfit, totalIncome, totalExpenses,
             };
 
-            // ── Jarod Income Analysis panel ──
-            const incAiEl = document.getElementById('ai-income-text');
-            if (incAiEl) {
-                const incNotes = [];
-                if (rentIncome > 0) incNotes.push('Rent collected: <strong>₱'+rentIncome.toLocaleString()+'</strong>');
-                if (waterIncome > 0) incNotes.push('Water sales: <strong>₱'+waterIncome.toLocaleString()+'</strong>');
-                if (storeIncome > 0) incNotes.push('Store sales: <strong>₱'+storeIncome.toLocaleString()+'</strong>');
-                if (creditIncome > 0) incNotes.push('Credit repayments: <strong>₱'+creditIncome.toLocaleString()+'</strong>');
-                if (otherIncome > 0) incNotes.push('Other income: <strong>₱'+otherIncome.toLocaleString()+'</strong>');
-                if (rentIncome < totalIncome * 0.5 && totalIncome > 0) incNotes.push('⚠️ Rent is below 50% of total income — consider a rate review.');
-                if (totalIncome === 0) incNotes.push('No income recorded in this period.');
-                incAiEl.innerHTML = '<div style="font-size:0.85rem;line-height:1.7;color:var(--jarod-income-text);">' +
-                    '<ul style="margin:0;padding-left:16px;">'+incNotes.map(n=>'<li>'+n+'</li>').join('')+'</ul></div>';
+            // ── Show verdict banner ──
+            const gainEl = document.getElementById('report-gain-status') || document.getElementById('report-verdict-banner');
+            if (gainEl) {
+                gainEl.style.display = 'block';
+                const isGain = netProfit >= 0;
+                gainEl.innerHTML = '<div style="font-size:2.5rem;">'+(isGain?'📈':'📉')+'</div>' +
+                    '<h2 style="margin:8px 0;font-size:1.8rem;font-weight:900;color:'+(isGain?'#10b981':'#ef4444')+'">'+(isGain?'GAINING':'LOSING')+'</h2>' +
+                    '<p style="color:var(--text-secondary);font-size:0.9rem;">The organization '+(isGain?'gained':'lost')+' <strong>₱'+Math.abs(netProfit).toLocaleString()+'</strong> this period.</p>' +
+                    '<p style="color:#64748b;font-size:0.82rem;">'+rangeLabel+'</p>' +
+                    '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:10px;">'+
+                    '<span style="font-size:0.9rem;color:#10b981;font-weight:700;">₱'+totalIncome.toLocaleString()+' Income</span>' +
+                    '<span style="color:#475569;">vs</span>' +
+                    '<span style="font-size:0.9rem;color:#ef4444;font-weight:700;">₱'+totalExpenses.toLocaleString()+' Expenses</span>' +
+                    '<span style="font-size:0.9rem;color:#3b82f6;font-weight:700;">'+profitMargin+'% Margin</span>' +
+                    '</div>';
             }
 
-            // ── Jarod Expense Analysis panel ──
+            // ── Jarod Income Analysis ──
+            const incAiEl = document.getElementById('ai-income-text');
+            if (incAiEl) {
+                const notes = [];
+                if (rentIncome > 0) notes.push('Rent collected: <strong>₱'+rentIncome.toLocaleString()+'</strong>');
+                if (waterIncome > 0) notes.push('Water sales: <strong>₱'+waterIncome.toLocaleString()+'</strong>');
+                if (storeIncome > 0) notes.push('Store sales: <strong>₱'+storeIncome.toLocaleString()+'</strong>');
+                if (creditIncome > 0) notes.push('Credit repayments: <strong>₱'+creditIncome.toLocaleString()+'</strong>');
+                if (otherIncome > 0) notes.push('Other income: <strong>₱'+otherIncome.toLocaleString()+'</strong>');
+                if (rentIncome < totalIncome*0.5 && totalIncome > 0) notes.push('⚠️ Rent is below 50% of total income — consider a rate review.');
+                if (totalIncome === 0) notes.push('No income recorded in this period.');
+                incAiEl.innerHTML = '<div style="font-size:0.85rem;line-height:1.7;color:var(--jarod-income-text);"><ul style="margin:0;padding-left:16px;">'+notes.map(n=>'<li>'+n+'</li>').join('')+'</ul></div>';
+            }
+
+            // ── Jarod Expense Analysis ──
             const expAiEl = document.getElementById('ai-expense-text');
             if (expAiEl) {
                 const topCats = Object.entries(expByCategory).sort((a,b)=>b[1]-a[1]).slice(0,3);
-                const expNotes = [];
-                if (topCats.length > 0) expNotes.push('Top expense: <strong>'+topCats[0][0]+'</strong> at ₱'+Math.round(topCats[0][1]).toLocaleString());
-                if (topCats.length > 1) expNotes.push('2nd: <strong>'+topCats[1][0]+'</strong> — ₱'+Math.round(topCats[1][1]).toLocaleString());
-                if (totalExpenses > totalIncome * 0.8 && totalIncome > 0) expNotes.push('⚠️ Expenses exceed 80% of income — review non-essential spending.');
-                if (totalExpenses === 0) expNotes.push('No expenses recorded in this period.');
-                else expNotes.push('Total expenses: <strong>₱'+totalExpenses.toLocaleString()+'</strong> over '+diffDays+' days.');
-                expAiEl.innerHTML = '<div style="font-size:0.85rem;line-height:1.7;color:var(--jarod-expense-text);">' +
-                    '<ul style="margin:0;padding-left:16px;">'+expNotes.map(n=>'<li>'+n+'</li>').join('')+'</ul></div>';
+                const enotes = [];
+                if (topCats.length > 0) enotes.push('Top expense: <strong>'+topCats[0][0]+'</strong> at ₱'+Math.round(topCats[0][1]).toLocaleString());
+                if (topCats.length > 1) enotes.push('2nd highest: <strong>'+topCats[1][0]+'</strong> — ₱'+Math.round(topCats[1][1]).toLocaleString());
+                if (totalExpenses > totalIncome*0.8 && totalIncome > 0) enotes.push('⚠️ Expenses exceed 80% of income — review non-essential spending.');
+                if (totalExpenses === 0) enotes.push('No expenses recorded in this period.');
+                else enotes.push('Total: <strong>₱'+totalExpenses.toLocaleString()+'</strong> over '+diffDays+' days');
+                expAiEl.innerHTML = '<div style="font-size:0.85rem;line-height:1.7;color:var(--jarod-expense-text);"><ul style="margin:0;padding-left:16px;">'+enotes.map(n=>'<li>'+n+'</li>').join('')+'</ul></div>';
             }
 
-            // ── Populate Detailed Transactions panel ──
-            const txnEl = document.getElementById('transaction-details');
-            if (txnEl) {
-                const allTxns = [
-                    ...rangePayments.map(p=>({date:p.date,label:'🏠 Rent — '+(p.tenantName||'Tenant'),amount:p.amount||0,type:'income'})),
-                    ...rangeCreditPayments.map(p=>({date:p.date,label:'💳 Credit — '+(p.debtorName||'Debtor'),amount:p.amount||0,type:'income'})),
-                    ...rangeWaterSales.map(p=>({date:p.date,label:'💧 Water — '+(p.customerName||'Customer'),amount:p.amountPaid||0,type:'income'})),
-                    ...filteredStoreSales.map(p=>({date:p.date,label:'🛒 Store — '+(p.customerName||'Customer'),amount:p.total||0,type:'income'})),
-                    ...rangeAdditionalIncome.filter(i=>!i.storeRef).map(p=>({date:p.date,label:'💰 '+(p.source||p.description||'Other Income'),amount:p.amount||0,type:'income'})),
-                    ...rangeExpenses.map(e=>({date:e.date,label:'💸 '+(e.category||'Expense')+(e.description?' — '+e.description:''),amount:e.amount||0,type:'expense'})),
-                ].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-                if (allTxns.length === 0) {
-                    txnEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-secondary);">No transactions in this period.</div>';
-                } else {
-                    txnEl.innerHTML = allTxns.map(t =>
-                        '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid var(--border-color);font-size:0.83rem;">' +
-                        '<div><div style="font-weight:600;">'+t.label+'</div><div style="font-size:0.72rem;color:#64748b;">'+t.date+'</div></div>' +
-                        '<span style="font-weight:700;color:'+(t.type==='income'?'#10b981':'#ef4444')+';white-space:nowrap;">'+(t.type==='income'?'+':'-')+'₱'+t.amount.toLocaleString()+'</span>' +
-                        '</div>'
-                    ).join('');
-                }
-                txnEl.style.display = 'none'; // Start hidden, Show/Hide button reveals it
+            // ── Expense pie/doughnut chart ──
+            const pieCanvas = document.getElementById('expense-pie-chart');
+            const expCatEntries = Object.entries(expByCategory).sort((a,b)=>b[1]-a[1]);
+            const expChartContainer = document.getElementById('expense-chart-container');
+            if (pieCanvas && expCatEntries.length > 0 && typeof Chart !== 'undefined') {
+                if (pieCanvas._chartInstance) pieCanvas._chartInstance.destroy();
+                const pieColors = ['#ef4444','#f59e0b','#3b82f6','#8b5cf6','#10b981','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16'];
+                pieCanvas._chartInstance = new Chart(pieCanvas, {
+                    type: 'doughnut',
+                    data: { labels: expCatEntries.map(([c])=>c), datasets:[{ data: expCatEntries.map(([,a])=>a), backgroundColor: pieColors.slice(0,expCatEntries.length), borderWidth:2, borderColor:'rgba(0,0,0,0.15)' }] },
+                    options: { responsive:true, maintainAspectRatio:true, plugins:{ legend:{ position:'bottom', labels:{ color:'#94a3b8', font:{size:11}, padding:10 } }, tooltip:{ callbacks:{ label: ctx => ctx.label+': ₱'+ctx.parsed.toLocaleString() } } } }
+                });
+                if (expChartContainer) expChartContainer.style.display = 'block';
+            } else if (expChartContainer) {
+                if (pieCanvas && pieCanvas._chartInstance) { pieCanvas._chartInstance.destroy(); pieCanvas._chartInstance = null; }
+                expChartContainer.style.display = 'none';
             }
 
             if (typeof generateDateRangeTrend === 'function') generateDateRangeTrend(fromDate, toDate, diffDays).catch(()=>{});
@@ -24299,14 +24259,66 @@ async function clearAllData() {
                     }
                     html += _navBtn('Notes','notes');
 
-                } else if (type==='pay-overdue' || type==='pay-due-soon' || type==='payables') {
+                } else if (type==='pay-overdue' || type==='pay-due-soon' || type==='payables' || type==='pay-total') {
                     const isOverdueCard = type==='pay-overdue';
                     const isDueSoonCard = type==='pay-due-soon';
-                    title = isOverdueCard ? '🔴 Payables — Overdue' : isDueSoonCard ? '🟡 Payables — Due Soon' : '🧾 Supplier Payables';
+                    const isTotalCard   = type==='pay-total';
+                    title = isOverdueCard ? '🔴 Payables — Overdue' : isDueSoonCard ? '🟡 Payables — Due Soon' : isTotalCard ? '💼 Total Owed — By Supplier' : '🧾 Supplier Payables';
 
                     const _payAll2 = await dbGetAll('payables').catch(()=>[]);
                     _allPayables = _payAll2;
                     const unpaid = _payAll2.filter(p=>p.status!=='paid'&&p.status!=='paid');
+
+                    // ── Total Owed view: grouped by supplier with direct ledger links ──
+                    if (isTotalCard) {
+                        const supplierMap = {};
+                        unpaid.forEach(p => {
+                            const name = (p.supplier||'Unknown').trim();
+                            if (!supplierMap[name]) supplierMap[name] = { total:0, invoices:0, oldest:'' };
+                            supplierMap[name].total += Math.max(0,(p.amount||0)-(p.paidAmount||0));
+                            supplierMap[name].invoices++;
+                            if (!supplierMap[name].oldest || (p.dueDate||'') < supplierMap[name].oldest) supplierMap[name].oldest = p.dueDate||'';
+                        });
+                        const supplierEntries = Object.entries(supplierMap).sort((a,b)=>b[1].total-a[1].total);
+                        const grandTotal = supplierEntries.reduce((s,[,v])=>s+v.total,0);
+
+                        if (supplierEntries.length === 0) {
+                            html = '<div style="text-align:center;color:#10b981;padding:20px;font-size:0.9rem;">✅ No outstanding balances!</div>';
+                        } else {
+                            html += '<div style="display:flex;justify-content:space-between;align-items:center;background:rgba(239,68,68,0.08);border-radius:8px;padding:10px 14px;margin-bottom:12px;border-left:3px solid #ef4444;">' +
+                                '<span style="font-size:0.82rem;color:#94a3b8;">'+supplierEntries.length+' supplier(s) with balance</span>' +
+                                '<span style="font-weight:900;color:#ef4444;font-size:1.1rem;">₱'+grandTotal.toLocaleString()+'</span></div>';
+
+                            // Load suppliers store for IDs
+                            const suppDir = await dbGetAll('suppliers').catch(()=>[]);
+                            supplierEntries.forEach(([name, data]) => {
+                                const suppRecord = suppDir.find(s=>(s.name||'').toLowerCase().trim()===name.toLowerCase().trim());
+                                const suppId = suppRecord ? suppRecord.id : null;
+                                const hasOverdue = unpaid.filter(p=>(p.supplier||'').trim()===name && _payStatus(p)==='overdue').length > 0;
+                                const color = hasOverdue ? '#ef4444' : '#f59e0b';
+                                const clickAct = suppId ? 'if(typeof loadSuppliers===\'function\')loadSuppliers();showSection(\'suppliers\');setTimeout(function(){viewSupplierLedger('+suppId+')},400);' : 'showSection(\'payables\');';
+                                html += '<div onclick="(function(){var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();'+clickAct+'})()\" ' +
+                                    'style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;' +
+                                    'background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-left:3px solid '+color+';' +
+                                    'border-radius:9px;margin-bottom:6px;cursor:pointer;" ' +
+                                    'onmouseover="this.style.background=\'rgba(99,102,241,0.08)\'" onmouseout="this.style.background=\'rgba(255,255,255,0.03)\'">' +
+                                    '<div><div style="font-weight:700;font-size:0.9rem;color:var(--text-primary);">🏭 '+_esc(name)+'</div>' +
+                                    '<div style="font-size:0.7rem;color:#64748b;">'+data.invoices+' invoice(s)'+(data.oldest?' · oldest due: '+data.oldest:'')+'</div>' +
+                                    (suppId ? '<div style="font-size:0.68rem;color:#818cf8;margin-top:2px;">Tap to view ledger →</div>' : '') +
+                                    '</div>' +
+                                    '<div style="text-align:right;"><div style="font-weight:800;color:'+color+';font-size:0.95rem;">₱'+data.total.toLocaleString()+'</div>' +
+                                    (hasOverdue ? '<div style="font-size:0.65rem;color:#ef4444;font-weight:700;">OVERDUE</div>' : '') +
+                                    '</div></div>';
+                            });
+                            html += '<div style="border-top:1px solid var(--border-color);margin-top:10px;padding-top:10px;display:flex;gap:8px;">' +
+                                '<button onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();showSection(\'payables\');" ' +
+                                'style="flex:1;padding:10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#f87171;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;">🧾 All Payables</button>' +
+                                '<button onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();showSection(\'suppliers\');" ' +
+                                'style="flex:1;padding:10px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);color:#818cf8;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;">🏭 Suppliers</button>' +
+                                '</div>';
+                        }
+                    } else {
+                    // ── Overdue / Due Soon / All view ──
 
                     // Sort: overdue → due-soon → partial → pending (by due date within each group)
                     const sortedAll = [...unpaid].sort((a,b)=>{
@@ -24353,16 +24365,7 @@ async function clearAllData() {
                                 lastStatus = st;
                             }
 
-                            html += '<div onclick="(function(){var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();' +
-                                'showSection(\'payables\');' +
-                                'setTimeout(function(){' +
-                                'var list=document.getElementById(\'payables-list\');' +
-                                'if(list){var cards=list.querySelectorAll(\'[onclick*="editPayable('+p.id+')"]\');' +
-                                'if(cards.length){var card=cards[0].closest(\'div[style*=border-left]\');' +
-                                'if(card){card.scrollIntoView({behavior:\'smooth\',block:\'center\'});' +
-                                'card.style.outline=\'2px solid '+color+'\';' +
-                                'setTimeout(function(){card.style.outline=\'\'},2500);}}' +
-                                '}},500);})()" ' +
+                            html += '<div onclick="(function(){var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();showSection(\'payables\');setTimeout(function(){var list=document.getElementById(\'payables-list\');if(list){var cards=list.querySelectorAll(\'[onclick*=&quot;editPayable('+p.id+')&quot;]\');if(cards.length){var card=cards[0].closest(\'div[style*=border-left]\');if(card){card.scrollIntoView({behavior:\'smooth\',block:\'center\'});card.style.outline=\'2px solid '+color+'\';setTimeout(function(){card.style.outline=\'\'},2500);}}}},500);})()" ' +
                                 'style="display:flex;justify-content:space-between;align-items:flex-start;padding:10px 12px;' +
                                 'background:'+bg+';border:1px solid rgba(255,255,255,0.05);border-left:3px solid '+color+';' +
                                 'border-radius:8px;margin-bottom:5px;cursor:pointer;transition:opacity 0.15s;" ' +
@@ -24387,6 +24390,7 @@ async function clearAllData() {
                             'style="flex:1;padding:10px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);color:#818cf8;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;">+ Add Invoice</button>' +
                             '</div>';
                     }
+                    } // end else (overdue/due-soon view)
 
                 } else {
                     html = '<div style="color:#64748b;padding:12px;text-align:center;">No data found.</div>';
@@ -24908,12 +24912,6 @@ async function clearAllData() {
         function showTenantsByStatus()       { showSection('tenants'); }
         function showCashierReports()        { showSection('reports'); }
         function toggleTransactionDetails(id) {
-            if (!id) {
-                // Called from Reports page header button — toggle the main transaction-details div
-                const el = document.getElementById('transaction-details');
-                if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
-                return;
-            }
             const el = document.getElementById('txn-detail-'+id);
             if (el) el.style.display = el.style.display==='none' ? 'block' : 'none';
         }
@@ -25072,34 +25070,44 @@ async function clearAllData() {
                 const totalExp = filteredExp.reduce((s,e)=>s+(e.amount||0),0);
                 const net      = totalInc - totalExp;
 
-                const rowHtml = (name, date, amount, isIn, sub) =>
-                    '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg-primary);border-radius:8px;margin-bottom:5px;border-left:3px solid '+(isIn?'#10b981':'#ef4444')+';">' +
-                    '<div><div style="font-weight:600;font-size:0.83rem;">'+(name||'—')+'</div>' +
-                    (sub ? '<div style="font-size:0.7rem;color:#64748b;">'+sub+'</div>' : '') +
-                    '<div style="font-size:0.7rem;color:#94a3b8;">'+(date||'')+'</div></div>' +
-                    '<span style="font-weight:700;color:'+(isIn?'#10b981':'#ef4444')+';">'+(isIn?'+':'-')+'₱'+Math.abs(amount).toLocaleString()+'</span></div>';
+                const rowHtml = (name, date, amount, isIn, sub, onClick) => {
+                    const nav = onClick || '';
+                    return '<div ' + (nav ? 'onclick="'+nav+'"' : '') + ' style="display:flex;justify-content:space-between;align-items:center;padding:9px 10px;background:var(--bg-primary);border-radius:8px;margin-bottom:5px;border-left:3px solid '+(isIn?'#10b981':'#ef4444')+';'+(nav?'cursor:pointer;':'')+'" '+(nav?'onmouseover="this.style.opacity=\'0.8\'" onmouseout="this.style.opacity=\'1\'"':'')+'>'+
+                        '<div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:0.83rem;overflow:hidden;text-overflow:ellipsis;">'+(name||'—')+'</div>'+
+                        (sub ? '<div style="font-size:0.7rem;color:#64748b;">'+sub+'</div>' : '')+
+                        '<div style="font-size:0.7rem;color:#94a3b8;">'+(date||'')+'</div></div>'+
+                        '<span style="font-weight:700;color:'+(isIn?'#10b981':'#ef4444')+';white-space:nowrap;margin-left:8px;">'+(isIn?'+':'-')+'₱'+Math.abs(amount).toLocaleString()+'</span>'+
+                        (nav?'<span style="color:#64748b;margin-left:4px;font-size:0.72rem;">›</span>':'')+
+                        '</div>';
+                };
+                const btnRow = (btns) => '<div style="display:flex;gap:8px;margin-top:14px;padding-top:10px;border-top:1px solid var(--border-color);">'+btns.map(b=>'<button onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();'+b.fn+'" style="flex:1;padding:9px 6px;background:'+b.bg+';border:'+b.border+';color:'+b.color+';border-radius:8px;cursor:pointer;font-weight:700;font-size:0.82rem;">'+b.label+'</button>').join('')+'</div>';
 
                 let title = '', rows = '';
 
                 if (type === 'income' || type === 'today-in') {
                     title = '💰 Income — ' + periodLabel;
                     const groups = [
-                        {label:'🏠 Rent', items: filteredRent.map(p=>({name:p.tenantName||'Tenant',amount:p.amount||0,date:p.date}))},
-                        {label:'💳 Credit Repayments', items: filteredCred.map(p=>({name:p.debtorName||'Debtor',amount:p.amount||0,date:p.date}))},
-                        {label:'💧 Water Sales', items: filteredWater.map(p=>({name:p.customerName||'Customer',amount:p.amountPaid||0,date:p.date}))},
-                        {label:'🛒 Store Sales', items: filteredStore.map(p=>({name:p.customerName||'Customer',amount:p.total||0,date:p.date}))},
-                        {label:'💰 Other Income', items: filteredOther.map(p=>({name:p.source||p.description||'Other',amount:p.amount||0,date:p.date}))},
+                        {label:'🏠 Rent', nav:"showSection('tenants')", items: filteredRent.map(p=>({name:p.tenantName||'Tenant',amount:p.amount||0,date:p.date,nav:"showSection('tenants')",sub:'Rent payment'}))},
+                        {label:'💳 Credit Repayments', nav:"showSection('credits')", items: filteredCred.map(p=>({name:p.debtorName||'Debtor',amount:p.amount||0,date:p.date,nav:"showSection('credits')",sub:'Credit repayment'}))},
+                        {label:'💧 Water Sales', nav:"showSection('water')", items: filteredWater.map(p=>({name:p.customerName||'Customer',amount:p.amountPaid||0,date:p.date,nav:"showSection('water')",sub:'Water sale'}))},
+                        {label:'🛒 Store Sales', nav:"showSection('water')", items: filteredStore.map(p=>({name:p.customerName||'Customer',amount:p.total||0,date:p.date,nav:"showSection('water')",sub:'Store sale'}))},
+                        {label:'💰 Other Income', nav:"showSection('income')", items: filteredOther.map(p=>({name:p.source||p.description||'Other',amount:p.amount||0,date:p.date,nav:"showSection('income')",sub:'Other income'}))},
                     ].filter(g=>g.items.length>0);
                     if (groups.length === 0) {
                         rows = '<div style="text-align:center;color:#64748b;padding:20px;">No income for this period.</div>';
                     } else {
                         groups.forEach(g => {
                             const gTotal = g.items.reduce((s,i)=>s+(i.amount||0),0);
-                            rows += '<div style="font-size:0.72rem;font-weight:700;color:#10b981;text-transform:uppercase;padding:8px 0 4px;">'+g.label+' — ₱'+gTotal.toLocaleString()+'</div>';
-                            g.items.forEach(i => { rows += rowHtml(i.name, i.date, i.amount, true, ''); });
+                            rows += '<div onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();'+g.nav+'" style="font-size:0.72rem;font-weight:700;color:#10b981;text-transform:uppercase;padding:8px 6px 4px;cursor:pointer;border-radius:4px;" onmouseover="this.style.background=\'rgba(16,185,129,0.08)\'" onmouseout="this.style.background=\'\'">' + g.label+' — ₱'+gTotal.toLocaleString()+' ›</div>';
+                            g.items.forEach(i => { rows += rowHtml(i.name, i.date, i.amount, true, i.sub, i.nav); });
                         });
                         rows += '<div style="border-top:2px solid rgba(16,185,129,0.3);margin-top:10px;padding-top:8px;display:flex;justify-content:space-between;font-weight:800;"><span>Total Income</span><span style="color:#10b981;">₱'+totalInc.toLocaleString()+'</span></div>';
                     }
+                    rows += btnRow([
+                        {fn:"showSection('income')",label:'+ Add Income',bg:'rgba(16,185,129,0.12)',border:'1px solid rgba(16,185,129,0.3)',color:'#10b981'},
+                        {fn:"showSection('tenants')",label:'🏠 Tenants',bg:'rgba(99,102,241,0.1)',border:'1px solid rgba(99,102,241,0.25)',color:'#818cf8'},
+                        {fn:"showSection('water')",label:'💧 Water',bg:'rgba(59,130,246,0.1)',border:'1px solid rgba(59,130,246,0.25)',color:'#60a5fa'},
+                    ]);
 
                 } else if (type === 'expense' || type === 'today-out') {
                     title = '💸 Expenses — ' + periodLabel;
@@ -25107,30 +25115,39 @@ async function clearAllData() {
                         rows = '<div style="text-align:center;color:#64748b;padding:20px;">No expenses for this period.</div>';
                     } else {
                         filteredExp.sort((a,b)=>(b.date||'')>(a.date||'')?1:-1)
-                            .forEach(e => { rows += rowHtml(e.category||'Expense', e.date, e.amount, false, e.description||''); });
+                            .forEach(e => { rows += rowHtml(e.category||'Expense', e.date, e.amount, false, e.description||'', "showSection('expenses')"); });
                         rows += '<div style="border-top:2px solid rgba(239,68,68,0.3);margin-top:10px;padding-top:8px;display:flex;justify-content:space-between;font-weight:800;"><span>Total Expenses</span><span style="color:#ef4444;">₱'+totalExp.toLocaleString()+'</span></div>';
                     }
+                    rows += btnRow([
+                        {fn:"showSection('expenses')",label:'+ Add Expense',bg:'rgba(239,68,68,0.12)',border:'1px solid rgba(239,68,68,0.3)',color:'#f87171'},
+                        {fn:"showSection('expenses')",label:'📊 All Expenses',bg:'rgba(100,116,139,0.1)',border:'1px solid rgba(100,116,139,0.25)',color:'#94a3b8'},
+                    ]);
 
                 } else if (type === 'net') {
                     title = '📊 Net Summary — ' + periodLabel;
                     const isPos = net >= 0;
-                    rows = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">' +
-                        '<div style="background:rgba(16,185,129,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#10b981;">₱'+totalInc.toLocaleString()+'</div><div style="font-size:0.7rem;color:#64748b;">Income</div></div>' +
-                        '<div style="background:rgba(239,68,68,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#ef4444;">₱'+totalExp.toLocaleString()+'</div><div style="font-size:0.7rem;color:#64748b;">Expenses</div></div>' +
-                        '<div style="background:rgba(99,102,241,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:'+(isPos?'#10b981':'#ef4444')+'">'+(isPos?'₱':'-₱')+Math.abs(net).toLocaleString()+'</div><div style="font-size:0.7rem;color:#64748b;">'+(isPos?'Profit':'Loss')+'</div></div>' +
+                    rows = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">'+
+                        '<div onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();showDashIeDetail(\'income\')" style="background:rgba(16,185,129,0.1);border-radius:8px;padding:10px;text-align:center;cursor:pointer;"><div style="font-weight:800;color:#10b981;">₱'+totalInc.toLocaleString()+'</div><div style="font-size:0.7rem;color:#64748b;">Income ›</div></div>'+
+                        '<div onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();showDashIeDetail(\'expense\')" style="background:rgba(239,68,68,0.1);border-radius:8px;padding:10px;text-align:center;cursor:pointer;"><div style="font-weight:800;color:#ef4444;">₱'+totalExp.toLocaleString()+'</div><div style="font-size:0.7rem;color:#64748b;">Expenses ›</div></div>'+
+                        '<div style="background:rgba(99,102,241,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:'+(isPos?'#10b981':'#ef4444')+'">'+(isPos?'₱':'-₱')+Math.abs(net).toLocaleString()+'</div><div style="font-size:0.7rem;color:#64748b;">'+(isPos?'Profit':'Loss')+'</div></div>'+
                         '</div>';
-                    const incGroups = [
-                        {label:'🏠 Rent', amt:rentInc},{label:'💳 Credits', amt:credInc},
-                        {label:'💧 Water', amt:waterInc},{label:'🛒 Store', amt:storeInc},{label:'💰 Other', amt:otherInc}
+                    const incGroups2 = [
+                        {label:'🏠 Rent', amt:rentInc, nav:"showSection('tenants')"},{label:'💳 Credits', amt:credInc, nav:"showSection('credits')"},
+                        {label:'💧 Water', amt:waterInc, nav:"showSection('water')"},{label:'🛒 Store', amt:storeInc, nav:"showSection('water')"},{label:'💰 Other', amt:otherInc, nav:"showSection('income')"}
                     ].filter(g=>g.amt>0);
-                    if (incGroups.length) {
+                    if (incGroups2.length) {
                         rows += '<div style="font-size:0.78rem;font-weight:700;color:#10b981;padding:6px 0;">Income Sources</div>';
-                        incGroups.forEach(g=>{ rows += '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border-color);font-size:0.82rem;"><span>'+g.label+'</span><span style="color:#10b981;font-weight:700;">+₱'+g.amt.toLocaleString()+'</span></div>'; });
+                        incGroups2.forEach(g=>{ rows+='<div onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();'+g.nav+'" style="display:flex;justify-content:space-between;padding:6px 8px;border-bottom:1px solid var(--border-color);font-size:0.82rem;cursor:pointer;border-radius:4px;" onmouseover="this.style.background=\'rgba(16,185,129,0.06)\'" onmouseout="this.style.background=\'\'">'+'<span>'+g.label+' ›</span><span style="color:#10b981;font-weight:700;">+₱'+g.amt.toLocaleString()+'</span></div>'; });
                     }
                     if (filteredExp.length) {
                         rows += '<div style="font-size:0.78rem;font-weight:700;color:#ef4444;padding:8px 0 6px;">Expenses</div>';
-                        filteredExp.forEach(e=>{ rows += '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border-color);font-size:0.82rem;"><span>'+(e.category||'Expense')+'</span><span style="color:#ef4444;font-weight:700;">-₱'+(e.amount||0).toLocaleString()+'</span></div>'; });
+                        filteredExp.forEach(e=>{ rows+='<div onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();showSection(\'expenses\')" style="display:flex;justify-content:space-between;padding:6px 8px;border-bottom:1px solid var(--border-color);font-size:0.82rem;cursor:pointer;border-radius:4px;" onmouseover="this.style.background=\'rgba(239,68,68,0.06)\'" onmouseout="this.style.background=\'\'"><span>'+(e.category||'Expense')+' ›</span><span style="color:#ef4444;font-weight:700;">-₱'+(e.amount||0).toLocaleString()+'</span></div>'; });
                     }
+                    rows += btnRow([
+                        {fn:"showSection('income')",label:'+ Income',bg:'rgba(16,185,129,0.12)',border:'1px solid rgba(16,185,129,0.3)',color:'#10b981'},
+                        {fn:"showSection('expenses')",label:'+ Expense',bg:'rgba(239,68,68,0.12)',border:'1px solid rgba(239,68,68,0.3)',color:'#f87171'},
+                        {fn:"showSection('reports')",label:'📊 Reports',bg:'rgba(99,102,241,0.1)',border:'1px solid rgba(99,102,241,0.25)',color:'#818cf8'},
+                    ]);
 
                 } else if (type === 'expenses-month') {
                     title = '💸 Expenses This Month';
@@ -25143,11 +25160,15 @@ async function clearAllData() {
                         const byCat = {};
                         allExp2.forEach(e=>{ const c=e.category||'Other'; byCat[c]=(byCat[c]||0)+(e.amount||0); });
                         rows += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">';
-                        Object.entries(byCat).forEach(([cat,amt])=>{ rows+='<div style="background:rgba(239,68,68,0.08);border-radius:8px;padding:8px;text-align:center;"><div style="font-weight:800;color:#ef4444;font-size:0.9rem;">₱'+amt.toLocaleString()+'</div><div style="font-size:0.7rem;color:#64748b;">'+cat+'</div></div>'; });
+                        Object.entries(byCat).forEach(([cat,amt])=>{ rows+='<div onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();showSection(\'expenses\')" style="background:rgba(239,68,68,0.08);border-radius:8px;padding:8px;text-align:center;cursor:pointer;" onmouseover="this.style.opacity=\'0.7\'" onmouseout="this.style.opacity=\'1\'"><div style="font-weight:800;color:#ef4444;font-size:0.9rem;">₱'+amt.toLocaleString()+'</div><div style="font-size:0.7rem;color:#64748b;">'+cat+' ›</div></div>'; });
                         rows += '</div>';
-                        allExp2.sort((a,b)=>(b.date||'')>(a.date||'')?1:-1).forEach(e=>{ rows += rowHtml(e.category||'Expense', e.date, e.amount, false, e.description||''); });
+                        allExp2.sort((a,b)=>(b.date||'')>(a.date||'')?1:-1).forEach(e=>{ rows += rowHtml(e.category||'Expense', e.date, e.amount, false, e.description||'', "showSection('expenses')"); });
                         rows += '<div style="border-top:2px solid rgba(239,68,68,0.3);margin-top:10px;padding-top:8px;display:flex;justify-content:space-between;font-weight:800;"><span>Total Spent</span><span style="color:#ef4444;">₱'+total2.toLocaleString()+'</span></div>';
                     }
+                    rows += btnRow([
+                        {fn:"showSection('expenses')",label:'+ Add Expense',bg:'rgba(239,68,68,0.12)',border:'1px solid rgba(239,68,68,0.3)',color:'#f87171'},
+                        {fn:"showSection('expenses')",label:'📊 All Expenses',bg:'rgba(100,116,139,0.1)',border:'1px solid rgba(100,116,139,0.25)',color:'#94a3b8'},
+                    ]);
                 }
 
                 // Update modal content
@@ -25223,10 +25244,26 @@ async function clearAllData() {
         let _allSuppliers = [];
 
         async function loadSuppliers() {
+            // Always refresh payables first so invoice counts and migration are accurate
+            _allPayables = await dbGetAll('payables').catch(()=>[]);
             _allSuppliers = await dbGetAll('suppliers').catch(()=>[]);
-            // Also refresh payables so invoice counts are accurate
-            if (!_allPayables || _allPayables.length === 0) {
-                _allPayables = await dbGetAll('payables').catch(()=>[]);
+
+            // ── One-time migration: auto-create supplier records for every unique payable supplier ──
+            const existingNames = new Set(_allSuppliers.map(s=>(s.name||'').toLowerCase().trim()));
+            const uniqueFromPayables = [...new Set(_allPayables.map(p=>(p.supplier||'').trim()).filter(Boolean))];
+            const toCreate = uniqueFromPayables.filter(n => !existingNames.has(n.toLowerCase().trim()));
+            if (toCreate.length > 0) {
+                for (const name of toCreate) {
+                    await dbAdd('suppliers', {
+                        name, contact:'', phone:'', address:'', email:'',
+                        category:'other', notes:'Auto-created from existing invoices.',
+                        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+                    }).catch(()=>{});
+                }
+                _allSuppliers = await dbGetAll('suppliers').catch(()=>[]);
+                // Sync new supplier records to Firebase
+                if (typeof syncToFirebase === 'function') syncToFirebase().catch(()=>{});
+                console.log('[PRISM] Migrated', toCreate.length, 'suppliers:', toCreate);
             }
             renderSuppliersList();
         }
@@ -25685,7 +25722,7 @@ async function clearAllData() {
             const today = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             document.getElementById('payable-invoice-date').value = today;
             document.getElementById('payable-due-date').value = '';
-            // Refresh supplier list so autocomplete is always current
+            // Always refresh supplier list so autocomplete is current
             dbGetAll('suppliers').catch(()=>[]).then(s => { _allSuppliers = s; });
             showModal('payable-modal');
         }
@@ -26286,13 +26323,20 @@ async function clearAllData() {
                     if (allTxns.length === 0) {
                         feedEl.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:16px;font-size:0.83rem;">No transactions for this period.</div>';
                     } else {
-                        feedEl.innerHTML = allTxns.slice(0,20).map(t =>
-                            '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border-color);">' +
+                        feedEl.innerHTML = allTxns.slice(0,20).map(t => {
+                            const navFn = t.src === 'expense' ? "showSection('expenses')"
+                                        : t.src === 'income'  ? "showSection('income')"
+                                        : t.src === 'rent'    ? "showSection('tenants')"
+                                        : t.src === 'credit'  ? "showSection('credits')"
+                                        : t.src === 'water'   ? "showSection('water')"
+                                        : t.src === 'store'   ? "showSection('water')"
+                                        : "showSection('income')";
+                            return '<div onclick="'+navFn+'" style="display:flex;justify-content:space-between;align-items:center;padding:7px 8px;border-bottom:1px solid var(--border-color);cursor:pointer;border-radius:6px;" onmouseover="this.style.background=\'rgba(99,102,241,0.06)\'" onmouseout="this.style.background=\'\'">' +
                             '<div><span style="font-size:0.8rem;font-weight:600;">' + t.type + ' — ' + t.name + '</span>' +
                             '<span style="font-size:0.7rem;color:#64748b;margin-left:6px;">' + (t.date||'') + '</span></div>' +
                             '<span style="font-weight:700;font-size:0.85rem;color:' + (t.in?'#10b981':'#ef4444') + ';">' + (t.in?'+':'-') + '₱' + t.amount.toLocaleString() + '</span>' +
-                            '</div>'
-                        ).join('') + (allTxns.length > 20 ? '<div style="text-align:center;color:#64748b;font-size:0.72rem;padding:6px;">Showing 20 of ' + allTxns.length + '</div>' : '');
+                            '</div>';
+                        }).join('') + (allTxns.length > 20 ? '<div style="text-align:center;color:#64748b;font-size:0.72rem;padding:6px;">Showing 20 of ' + allTxns.length + '</div>' : '');
                     }
                 }
             } catch(e) { console.error('[loadDashIncomeExpense]', e); }
