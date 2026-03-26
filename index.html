@@ -2997,6 +2997,7 @@
     background: #0f172a;
     color: #f8fafc;
     font-family: 'Segoe UI', system-ui, sans-serif;
+    position: relative;
 }
 #mt-superadmin.active { display: block; }
 
@@ -3658,7 +3659,23 @@
 
 <!-- ========== SUPER ADMIN PANEL ========== -->
 <div id="mt-superadmin">
-    <div class="mt-sa-header">
+    <!-- Loading overlay shown while Firebase data loads -->
+    <div id="sa-loading-overlay" style="position:absolute;inset:0;background:#0f172a;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;">
+        <div style="position:relative;width:64px;height:64px;">
+            <div style="position:absolute;inset:0;border-radius:50%;border:3px solid rgba(99,102,241,0.2);"></div>
+            <div style="position:absolute;inset:0;border-radius:50%;border:3px solid transparent;border-top-color:#6366f1;animation:spin 0.9s linear infinite;"></div>
+            <div style="position:absolute;inset:8px;border-radius:50%;border:3px solid transparent;border-top-color:#8b5cf6;animation:spin 0.7s linear infinite reverse;"></div>
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.4rem;">⚡</div>
+        </div>
+        <div style="text-align:center;">
+            <div style="font-size:1rem;font-weight:700;color:#f1f5f9;letter-spacing:0.08em;">SUPER ADMIN PANEL</div>
+            <div id="sa-loading-status" style="font-size:0.8rem;color:#6366f1;margin-top:6px;letter-spacing:0.05em;">Connecting to Firebase...</div>
+        </div>
+        <div style="width:220px;height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;">
+            <div id="sa-loading-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#6366f1,#8b5cf6);border-radius:2px;transition:width 0.5s ease;"></div>
+        </div>
+        <button id="sa-retry-btn" onclick="mtLoadSAData()" style="display:none;padding:8px 24px;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);color:#818cf8;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;">🔄 Retry</button>
+    </div>
         <div>
             <h1>⚡ SUPER ADMIN PANEL</h1>
             <div style="font-size:0.8rem;color:#94a3b8;margin-top:2px;">OMNIGRID ONLINE — PRISM Platform Management</div>
@@ -4258,8 +4275,20 @@
 
             <!-- Expenses This Month -->
             <div class="card">
-                <div class="card-header">
-                    <div class="card-title">Expenses This Month</div>
+                <div class="card-header" style="flex-wrap:wrap;gap:8px;">
+                    <div class="card-title" id="expenses-card-title">Expenses This Month</div>
+                    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                        <button onclick="setExpCardRange('month',this)" class="dash-range-btn active" data-exprange="month" style="padding:3px 10px;border-radius:6px;border:1px solid #6366f1;background:#6366f1;color:#fff;cursor:pointer;font-size:0.75rem;">Month</button>
+                        <button onclick="setExpCardRange('week',this)" class="dash-range-btn" data-exprange="week" style="padding:3px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;">Week</button>
+                        <button onclick="setExpCardRange('today',this)" class="dash-range-btn" data-exprange="today" style="padding:3px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;">Today</button>
+                        <button onclick="setExpCardRange('custom',this)" class="dash-range-btn" data-exprange="custom" style="padding:3px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;">Custom</button>
+                    </div>
+                </div>
+                <div id="exp-card-custom-range" style="display:none;gap:8px;align-items:center;padding:6px 0;flex-wrap:wrap;">
+                    <label style="font-size:0.78rem;color:var(--text-secondary);">From:</label>
+                    <input type="date" id="exp-card-from" onchange="loadExpCardData()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;">
+                    <label style="font-size:0.78rem;color:var(--text-secondary);">To:</label>
+                    <input type="date" id="exp-card-to" onchange="loadExpCardData()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;">
                 </div>
                 <div class="stats-grid" style="margin-bottom: 0;">
                     <div class="stat-card stat-card-danger" onclick="showTotalSpentDetails()" style="cursor: pointer;">
@@ -4473,7 +4502,25 @@
 
         <!-- Expenses Section -->
         <div id="expenses" class="section">
-            <!-- Date Range Filter — FIRST so it controls the cards below -->
+            <!-- ⚡ Quick Add Expense Bar -->
+            <div class="card" style="margin-bottom:8px;background:linear-gradient(135deg,rgba(239,68,68,0.08),rgba(239,68,68,0.03));border-left:3px solid #ef4444;">
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                    <span style="font-size:0.82rem;font-weight:700;color:#ef4444;white-space:nowrap;">⚡ Quick Add</span>
+                    <div style="position:relative;flex:1;min-width:160px;">
+                        <input type="text" id="quick-exp-cat" placeholder="Category (e.g. fuel, food, sss...)" autocomplete="off"
+                            oninput="quickExpCatSearch(this.value)" onfocus="quickExpCatSearch(this.value)"
+                            onblur="setTimeout(()=>{const d=document.getElementById('quick-exp-dd');if(d)d.style.display='none';},200)"
+                            style="width:100%;padding:8px 12px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);font-size:0.85rem;box-sizing:border-box;">
+                        <input type="hidden" id="quick-exp-cat-val">
+                        <div id="quick-exp-dd" style="display:none;position:absolute;top:100%;left:0;right:0;background:#1e293b;border:1px solid #334155;border-radius:8px;z-index:9999;max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.4);margin-top:2px;"></div>
+                    </div>
+                    <input type="text" id="quick-exp-desc" placeholder="Description" style="flex:1;min-width:120px;padding:8px 10px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);font-size:0.85rem;">
+                    <input type="number" id="quick-exp-amount" placeholder="₱ Amount" min="0" step="0.01" style="width:110px;padding:8px 10px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);font-size:0.85rem;"
+                        onkeydown="if(event.key==='Enter')quickExpSave()">
+                    <button onclick="quickExpSave()" style="padding:8px 16px;background:#ef4444;border:none;border-radius:8px;color:#fff;font-weight:700;cursor:pointer;font-size:0.85rem;white-space:nowrap;">+ Add</button>
+                </div>
+                <div id="quick-exp-status" style="font-size:0.72rem;color:#10b981;margin-top:4px;display:none;"></div>
+            </div>
             <div class="card" style="margin-bottom:10px;">
                 <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
                     <span style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);white-space:nowrap;">📅 Period:</span>
@@ -4902,6 +4949,8 @@
                                 <option value="09">September</option><option value="10">October</option>
                                 <option value="11">November</option><option value="12">December</option>
                             </select>
+                            <input type="date" id="credit-hist-from" onchange="loadCreditHistory()" placeholder="From" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;">
+                            <input type="date" id="credit-hist-to" onchange="loadCreditHistory()" placeholder="To" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;">
                             <input type="text" id="credit-hist-search" placeholder="🔍 Search debtor..." oninput="loadCreditHistory()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;width:130px;">
                         </div>
                     </div>
@@ -14854,12 +14903,14 @@ async function loadWaterCustomers() {
                 
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
                 <h4 style="margin:0;">📋 Transaction History</h4>
-                <div style="display:flex;gap:6px;">
+                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
                     <input type="text" id="water-hist-search-${id}" placeholder="🔍 Search..." oninput="filterWaterHistory(${id})" style="padding:4px 8px;font-size:0.75rem;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-card);color:var(--text-primary);width:100px;">
                     <select id="water-hist-year-${id}" onchange="filterWaterHistory(${id})" style="padding:4px 6px;font-size:0.75rem;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-card);color:var(--text-primary);">
                         <option value="">All Years</option>
                         ${[...new Set(customerSales.map(s=>s.date?.substring(0,4)).filter(Boolean))].sort().reverse().map(y=>`<option value="${y}">${y}</option>`).join('')}
                     </select>
+                    <input type="date" id="water-hist-from-${id}" onchange="filterWaterHistory(${id})" placeholder="From" style="padding:4px 6px;font-size:0.75rem;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-card);color:var(--text-primary);">
+                    <input type="date" id="water-hist-to-${id}" onchange="filterWaterHistory(${id})" placeholder="To" style="padding:4px 6px;font-size:0.75rem;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-card);color:var(--text-primary);">
                 </div>
             </div>
             <div style="font-size:0.72rem;color:#64748b;margin-bottom:6px;" id="water-hist-count-${id}">${customerSales.length} transaction(s) — all time</div>
@@ -16980,12 +17031,14 @@ async function showPayrollSummary() {
                 <div class="card mt-4">
                     <div class="card-header">
                         <div class="card-title">Transaction History</div>
-                        <div style="display:flex;gap:6px;align-items:center;">
-                            <input type="text" id="credit-ledger-search-${id}" placeholder="🔍 Search..." oninput="filterCreditLedger(${id})" style="padding:4px 8px;font-size:0.75rem;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-card);color:var(--text-primary);width:110px;">
+                        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                            <input type="text" id="credit-ledger-search-${id}" placeholder="🔍 Search..." oninput="filterCreditLedger(${id})" style="padding:4px 8px;font-size:0.75rem;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-card);color:var(--text-primary);width:100px;">
                             <select id="credit-ledger-year-${id}" onchange="filterCreditLedger(${id})" style="padding:4px 6px;font-size:0.75rem;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-card);color:var(--text-primary);">
                                 <option value="">All Years</option>
                                 ${[...new Set(payments.map(p=>p.date?.substring(0,4)).filter(Boolean))].sort().reverse().map(y=>`<option value="${y}">${y}</option>`).join('')}
                             </select>
+                            <input type="date" id="credit-ledger-from-${id}" onchange="filterCreditLedger(${id})" style="padding:4px 6px;font-size:0.72rem;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-card);color:var(--text-primary);">
+                            <input type="date" id="credit-ledger-to-${id}" onchange="filterCreditLedger(${id})" style="padding:4px 6px;font-size:0.72rem;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-card);color:var(--text-primary);">
                         </div>
                     </div>
                     <div style="font-size:0.72rem;color:#64748b;margin-bottom:6px;" id="credit-ledger-count-${id}">${payments.length} payment(s) — all time</div>
@@ -18570,7 +18623,67 @@ async function showPayrollSummary() {
         }
         window.expCatSearch = expCatSearch;
         window.expCatSelect = expCatSelect;
-        // Close dropdown when clicking outside
+
+        // ── Quick Expense Bar functions ──
+        function quickExpCatSearch(q) {
+            const dd = document.getElementById('quick-exp-dd');
+            if (!dd) return;
+            const query = (q||'').toLowerCase().trim();
+            const matches = query === '' ? _expCatAll : _expCatAll.filter(c => c.l.toLowerCase().includes(query) || c.v.toLowerCase().includes(query));
+            if (matches.length === 0) {
+                dd.innerHTML = '<div style="padding:10px;color:#64748b;font-size:0.82rem;">No category found</div>';
+            } else {
+                dd.innerHTML = matches.map(c =>
+                    '<div onmousedown="event.preventDefault()" onclick="quickExpCatSelect(\''+c.v+'\',\''+c.l+'\')" ' +
+                    'style="padding:9px 12px;cursor:pointer;font-size:0.88rem;border-bottom:1px solid rgba(255,255,255,0.05);" ' +
+                    'onmouseover="this.style.background=\'rgba(99,102,241,0.15)\'" onmouseout="this.style.background=\'\'">'+c.l+'</div>'
+                ).join('');
+            }
+            dd.style.display = 'block';
+        }
+        function quickExpCatSelect(val, label) {
+            const inp = document.getElementById('quick-exp-cat');
+            const hid = document.getElementById('quick-exp-cat-val');
+            const dd  = document.getElementById('quick-exp-dd');
+            if (inp) inp.value = label;
+            if (hid) hid.value = val;
+            if (dd)  dd.style.display = 'none';
+            // Focus amount next
+            const amtEl = document.getElementById('quick-exp-amount');
+            if (amtEl) amtEl.focus();
+        }
+        async function quickExpSave() {
+            const catVal  = (document.getElementById('quick-exp-cat-val')||{}).value || '';
+            const catLabel= (document.getElementById('quick-exp-cat')||{}).value || '';
+            const desc    = (document.getElementById('quick-exp-desc')||{}).value.trim();
+            const amtRaw  = (document.getElementById('quick-exp-amount')||{}).value;
+            const amount  = parseFloat(amtRaw) || 0;
+            const statusEl= document.getElementById('quick-exp-status');
+            if (!catVal) { showToast('⚠️ Select a category first.','warning'); return; }
+            if (amount <= 0) { showToast('⚠️ Enter a valid amount.','warning'); return; }
+            const today = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
+            const record = { category: catVal, description: desc || catLabel, amount, date: today, property: '', addedBy: currentAppUser?.username||'owner', createdAt: new Date().toISOString() };
+            try {
+                await dbAdd('expenses', record);
+                await syncToFirebase().catch(()=>{});
+                // Reset fields
+                const catEl = document.getElementById('quick-exp-cat');
+                const hidEl = document.getElementById('quick-exp-cat-val');
+                const descEl= document.getElementById('quick-exp-desc');
+                const amtEl = document.getElementById('quick-exp-amount');
+                if (catEl)  catEl.value = '';
+                if (hidEl)  hidEl.value = '';
+                if (descEl) descEl.value = '';
+                if (amtEl)  amtEl.value = '';
+                if (statusEl) { statusEl.textContent = '✅ Added: '+catLabel+' — ₱'+amount.toLocaleString(); statusEl.style.display='block'; setTimeout(()=>{ if(statusEl) statusEl.style.display='none'; },3000); }
+                showToast('✅ Expense added: ₱'+amount.toLocaleString(),'success');
+                if (typeof loadExpenses === 'function') loadExpenses();
+                if (typeof loadExpCardData === 'function') loadExpCardData();
+            } catch(e) { showToast('❌ Save failed: '+e.message,'error'); }
+        }
+        window.quickExpCatSearch = quickExpCatSearch;
+        window.quickExpCatSelect = quickExpCatSelect;
+        window.quickExpSave = quickExpSave;
         document.addEventListener('click', function(e) {
             const dd = document.getElementById('expense-cat-dropdown');
             const si = document.getElementById('expense-category-search');
@@ -20888,6 +21001,9 @@ async function showPayrollSummary() {
 
             // Render calendar with error handling
             // Load tasks and notes for calendar
+            // Refresh the Expenses card with the selected date range
+            if (typeof loadExpCardData === 'function') loadExpCardData();
+
             let calendarTasks = [], calendarNotes = [], calendarPayables = [];
             try { calendarTasks = await dbGetAll('tasks') || []; } catch(e) {}
             try { calendarNotes = await dbGetAll('customNotes') || []; } catch(e) {}
@@ -24297,7 +24413,7 @@ async function clearAllData() {
                                 const hasOverdue = unpaid.filter(p=>(p.supplier||'').trim()===name && _payStatus(p)==='overdue').length > 0;
                                 const color = hasOverdue ? '#ef4444' : '#f59e0b';
                                 const clickAct = suppId ? 'if(typeof loadSuppliers===\'function\')loadSuppliers();showSection(\'suppliers\');setTimeout(function(){viewSupplierLedger('+suppId+')},400);' : 'showSection(\'payables\');';
-                                html += '<div onclick="(function(){var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();'+clickAct+'})()\" ' +
+                                html += '<div onclick="(function(){var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();'+clickAct+'})()" ' +
                                     'style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;' +
                                     'background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-left:3px solid '+color+';' +
                                     'border-radius:9px;margin-bottom:6px;cursor:pointer;" ' +
@@ -24660,6 +24776,64 @@ async function clearAllData() {
         // ── Report detail modals (income/expense breakdown drilldowns) ──
         function showIncomeDetails()         { showReportDetail('income'); }
         function showNetIncomeDetails()      { showDashIeDetail('net'); }
+
+        // ── Expenses card date range picker ──
+        let _expCardRange = 'month';
+        function setExpCardRange(range, btn) {
+            _expCardRange = range;
+            document.querySelectorAll('[data-exprange]').forEach(b => {
+                b.style.background = 'var(--bg-card)'; b.style.color = 'var(--text-secondary)'; b.style.borderColor = 'var(--border-color)';
+            });
+            if (btn) { btn.style.background = '#6366f1'; btn.style.color = '#fff'; btn.style.borderColor = '#6366f1'; }
+            const customRow = document.getElementById('exp-card-custom-range');
+            if (customRow) customRow.style.display = range === 'custom' ? 'flex' : 'none';
+            loadExpCardData();
+        }
+        async function loadExpCardData() {
+            const today = new Date();
+            const fmt = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+            let fromStr, toStr, label;
+            if (_expCardRange === 'today') {
+                fromStr = toStr = fmt(today); label = 'Today';
+            } else if (_expCardRange === 'week') {
+                const d = new Date(today); d.setDate(d.getDate() - d.getDay());
+                fromStr = fmt(d); toStr = fmt(today); label = 'This Week';
+            } else if (_expCardRange === 'custom') {
+                fromStr = (document.getElementById('exp-card-from')||{}).value || fmt(new Date(today.getFullYear(), today.getMonth(), 1));
+                toStr   = (document.getElementById('exp-card-to')||{}).value   || fmt(today);
+                label = fromStr === toStr ? fromStr : fromStr + ' – ' + toStr;
+            } else {
+                fromStr = fmt(new Date(today.getFullYear(), today.getMonth(), 1));
+                toStr = fmt(today); label = 'This Month';
+            }
+            const titleEl = document.getElementById('expenses-card-title');
+            if (titleEl) titleEl.textContent = 'Expenses — ' + label;
+            try {
+                const [expenses, payments, creditPayments, waterSales, addIncome] = await Promise.all([
+                    dbGetAll('expenses'), dbGetAll('payments'), dbGetAll('creditPayments'), dbGetAll('waterSales'), dbGetAll('additionalIncome')
+                ]);
+                const storeSales = await dbGetAll('waterStoreSales').catch(()=>[]);
+                const inRange = e => { const d=(e.date||'').substring(0,10); return d>=fromStr && d<=toStr; };
+                const totalExp = expenses.filter(inRange).reduce((s,e)=>s+(e.amount||0),0);
+                const totalInc = payments.filter(p=>!p.voided&&inRange(p)).reduce((s,p)=>s+(p.amount||0),0)
+                    + creditPayments.filter(p=>!p.voided&&inRange(p)).reduce((s,p)=>s+(p.amount||0),0)
+                    + waterSales.filter(p=>!p.voided&&inRange(p)).reduce((s,p)=>s+(p.amountPaid||0),0)
+                    + storeSales.filter(p=>!p.voided&&inRange(p)).reduce((s,p)=>s+(p.total||0),0)
+                    + addIncome.filter(p=>!p.storeRef&&inRange(p)).reduce((s,p)=>s+(p.amount||0),0);
+                const netIncome = Math.round((totalInc - totalExp)*100)/100;
+                const safeSet = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+                safeSet('stat-expenses', '\u20b1' + totalExp.toLocaleString());
+                const netEl=document.getElementById('stat-net-income'), netCard=document.getElementById('stat-net-income-card'), netLabel=document.getElementById('stat-net-income-label');
+                if (netEl && netCard && netLabel) {
+                    netEl.textContent = '\u20b1' + Math.abs(netIncome).toLocaleString();
+                    netEl.style.color = netIncome>=0 ? '#065f46' : '#991b1b';
+                    netCard.style.background = netIncome>=0 ? 'linear-gradient(135deg,#d1fae5,#a7f3d0)' : 'linear-gradient(135deg,#fee2e2,#fecaca)';
+                    netLabel.textContent = netIncome>=0 ? '\ud83d\udcb0 Net Income' : '\ud83d\udcc9 Loss';
+                }
+            } catch(e) { console.error('[loadExpCardData]', e); }
+        }
+        window.setExpCardRange = setExpCardRange;
+        window.loadExpCardData = loadExpCardData;
         function showNetProfitDetails()      { showReportDetail('net'); }
         function showLentOutDetails()        { showSection('credits'); }
         function showRepaidDetails()         { showSection('credits'); }
@@ -25087,11 +25261,11 @@ async function clearAllData() {
                 if (type === 'income' || type === 'today-in') {
                     title = '💰 Income — ' + periodLabel;
                     const groups = [
-                        {label:'🏠 Rent', nav:"showSection('tenants')", items: filteredRent.map(p=>({name:p.tenantName||'Tenant',amount:p.amount||0,date:p.date,nav:"showSection('tenants')",sub:'Rent payment'}))},
-                        {label:'💳 Credit Repayments', nav:"showSection('credits')", items: filteredCred.map(p=>({name:p.debtorName||'Debtor',amount:p.amount||0,date:p.date,nav:"showSection('credits')",sub:'Credit repayment'}))},
-                        {label:'💧 Water Sales', nav:"showSection('water')", items: filteredWater.map(p=>({name:p.customerName||'Customer',amount:p.amountPaid||0,date:p.date,nav:"showSection('water')",sub:'Water sale'}))},
-                        {label:'🛒 Store Sales', nav:"showSection('water')", items: filteredStore.map(p=>({name:p.customerName||'Customer',amount:p.total||0,date:p.date,nav:"showSection('water')",sub:'Store sale'}))},
-                        {label:'💰 Other Income', nav:"showSection('income')", items: filteredOther.map(p=>({name:p.source||p.description||'Other',amount:p.amount||0,date:p.date,nav:"showSection('income')",sub:'Other income'}))},
+                        {label:'🏠 Rent', nav:"showSection('tenants')", items: filteredRent.map(p=>({name:p.tenantName||'Tenant',amount:p.amount||0,date:p.date,sub:'Rent payment',nav:p.tenantId?"showSection('tenants');setTimeout(function(){viewTenantDetails("+p.tenantId+");},350)":"showSection('tenants')"}))},
+                        {label:'💳 Credit Repayments', nav:"showSection('credits')", items: filteredCred.map(p=>({name:p.debtorName||'Debtor',amount:p.amount||0,date:p.date,sub:'Credit repayment',nav:p.creditId?"showSection('credits');setTimeout(function(){viewCreditDetails("+p.creditId+");},350)":"showSection('credits')"}))},
+                        {label:'💧 Water Sales', nav:"showSection('water')", items: filteredWater.map(p=>({name:p.customerName||'Customer',amount:p.amountPaid||0,date:p.date,sub:'Water sale',nav:p.customerId?"showSection('water');setTimeout(function(){viewWaterCustomerDetails("+p.customerId+");},350)":"showSection('water')"}))},
+                        {label:'🛒 Store Sales', nav:"showSection('water')", items: filteredStore.map(p=>({name:p.customerName||'Customer',amount:p.total||0,date:p.date,sub:'Store sale',nav:p.customerId?"showSection('water');setTimeout(function(){viewWaterCustomerDetails("+p.customerId+");},350)":"showSection('water')"}))},
+                        {label:'💰 Other Income', nav:"showSection('income')", items: filteredOther.map(p=>({name:p.source||p.description||'Other',amount:p.amount||0,date:p.date,sub:'Other income',nav:"showSection('income')"}))}
                     ].filter(g=>g.items.length>0);
                     if (groups.length === 0) {
                         rows = '<div style="text-align:center;color:#64748b;padding:20px;">No income for this period.</div>';
@@ -25115,7 +25289,10 @@ async function clearAllData() {
                         rows = '<div style="text-align:center;color:#64748b;padding:20px;">No expenses for this period.</div>';
                     } else {
                         filteredExp.sort((a,b)=>(b.date||'')>(a.date||'')?1:-1)
-                            .forEach(e => { rows += rowHtml(e.category||'Expense', e.date, e.amount, false, e.description||'', "showSection('expenses')"); });
+                            .forEach(e => {
+                                const navFn = e.id ? "showSection('expenses');setTimeout(function(){editExpense("+e.id+");},350);" : "showSection('expenses')";
+                                rows += rowHtml((e.category||'Expense'), e.date, e.amount, false, e.description||'', navFn);
+                            });
                         rows += '<div style="border-top:2px solid rgba(239,68,68,0.3);margin-top:10px;padding-top:8px;display:flex;justify-content:space-between;font-weight:800;"><span>Total Expenses</span><span style="color:#ef4444;">₱'+totalExp.toLocaleString()+'</span></div>';
                     }
                     rows += btnRow([
@@ -26308,14 +26485,14 @@ async function clearAllData() {
                     barEl.style.background = net >= 0 ? 'linear-gradient(90deg,#10b981,#34d399)' : 'linear-gradient(90deg,#ef4444,#f87171)';
                 }
 
-                // Transaction list
+                // Transaction list — with precise record IDs for navigation
                 const allTxns = [
-                    ...payments.filter(p=>!p.voided&&inRange(p)).map(p=>({type:'🏠 Rent',name:p.tenantName||'Tenant',amount:p.amount||0,date:p.date,in:true})),
-                    ...creditPayments.filter(p=>!p.voided&&inRange(p)).map(p=>({type:'💳 Credit',name:p.debtorName||'Debtor',amount:p.amount||0,date:p.date,in:true})),
-                    ...waterSales.filter(p=>!p.voided&&inRange(p)).map(p=>({type:'💧 Water',name:p.customerName||'Customer',amount:p.amountPaid||0,date:p.date,in:true})),
-                    ...storeSales.filter(p=>!p.voided&&inRange(p)).map(p=>({type:'🛒 Store',name:p.customerName||'Customer',amount:p.total||0,date:p.date,in:true})),
-                    ...addIncome.filter(p=>!p.storeRef&&inRange(p)).map(p=>({type:'💰 Income',name:p.source||'Other',amount:p.amount||0,date:p.date,in:true})),
-                    ...expenses.filter(e=>inRange(e)).map(e=>({type:'💸 Expense',name:e.category||'Expense',amount:e.amount||0,date:e.date,in:false})),
+                    ...payments.filter(p=>!p.voided&&inRange(p)).map(p=>({type:'🏠 Rent',name:p.tenantName||'Tenant',amount:p.amount||0,date:p.date,in:true,src:'rent',navId:p.tenantId})),
+                    ...creditPayments.filter(p=>!p.voided&&inRange(p)).map(p=>({type:'💳 Credit',name:p.debtorName||'Debtor',amount:p.amount||0,date:p.date,in:true,src:'credit',navId:p.creditId})),
+                    ...waterSales.filter(p=>!p.voided&&inRange(p)).map(p=>({type:'💧 Water',name:p.customerName||'Customer',amount:p.amountPaid||0,date:p.date,in:true,src:'water',navId:p.customerId})),
+                    ...storeSales.filter(p=>!p.voided&&inRange(p)).map(p=>({type:'🛒 Store',name:p.customerName||'Customer',amount:p.total||0,date:p.date,in:true,src:'store',navId:p.customerId})),
+                    ...addIncome.filter(p=>!p.storeRef&&inRange(p)).map(p=>({type:'💰 Income',name:p.source||'Other',amount:p.amount||0,date:p.date,in:true,src:'income'})),
+                    ...expenses.filter(e=>inRange(e)).map(e=>({type:'💸 Expense',name:e.category||'Expense',amount:e.amount||0,date:e.date,in:false,src:'expense',id:e.id})),
                 ].sort((a,b)=>(b.date||'')>(a.date||'')?1:-1);
 
                 const feedEl = document.getElementById('dash-ie-feed');
@@ -26324,17 +26501,17 @@ async function clearAllData() {
                         feedEl.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:16px;font-size:0.83rem;">No transactions for this period.</div>';
                     } else {
                         feedEl.innerHTML = allTxns.slice(0,20).map(t => {
-                            const navFn = t.src === 'expense' ? "showSection('expenses')"
-                                        : t.src === 'income'  ? "showSection('income')"
-                                        : t.src === 'rent'    ? "showSection('tenants')"
-                                        : t.src === 'credit'  ? "showSection('credits')"
-                                        : t.src === 'water'   ? "showSection('water')"
-                                        : t.src === 'store'   ? "showSection('water')"
-                                        : "showSection('income')";
+                            let navFn = '';
+                            if (t.src==='rent'    && t.navId) navFn = "showSection('tenants');setTimeout(function(){viewTenantDetails("+t.navId+");},350);";
+                            else if (t.src==='credit' && t.navId) navFn = "showSection('credits');setTimeout(function(){viewCreditDetails("+t.navId+");},350);";
+                            else if ((t.src==='water'||t.src==='store') && t.navId) navFn = "showSection('water');setTimeout(function(){viewWaterCustomerDetails("+t.navId+");},350);";
+                            else if (t.src==='expense' && t.id) navFn = "showSection('expenses');setTimeout(function(){editExpense("+t.id+");},350);";
+                            else if (t.src==='income')  navFn = "showSection('income');";
+                            else navFn = "showSection('"+(t.in?'income':'expenses')+"');";
                             return '<div onclick="'+navFn+'" style="display:flex;justify-content:space-between;align-items:center;padding:7px 8px;border-bottom:1px solid var(--border-color);cursor:pointer;border-radius:6px;" onmouseover="this.style.background=\'rgba(99,102,241,0.06)\'" onmouseout="this.style.background=\'\'">' +
-                            '<div><span style="font-size:0.8rem;font-weight:600;">' + t.type + ' — ' + t.name + '</span>' +
+                            '<div style="flex:1;min-width:0;"><span style="font-size:0.8rem;font-weight:600;">' + t.type + ' — ' + t.name + '</span>' +
                             '<span style="font-size:0.7rem;color:#64748b;margin-left:6px;">' + (t.date||'') + '</span></div>' +
-                            '<span style="font-weight:700;font-size:0.85rem;color:' + (t.in?'#10b981':'#ef4444') + ';">' + (t.in?'+':'-') + '₱' + t.amount.toLocaleString() + '</span>' +
+                            '<div style="display:flex;align-items:center;gap:3px;"><span style="font-weight:700;font-size:0.85rem;color:' + (t.in?'#10b981':'#ef4444') + ';">' + (t.in?'+':'-') + '₱' + t.amount.toLocaleString() + '</span><span style="color:#64748b;font-size:0.72rem;">›</span></div>' +
                             '</div>';
                         }).join('') + (allTxns.length > 20 ? '<div style="text-align:center;color:#64748b;font-size:0.72rem;padding:6px;">Showing 20 of ' + allTxns.length + '</div>' : '');
                     }
@@ -26368,29 +26545,37 @@ async function clearAllData() {
         window.filterTenantLedger = filterTenantLedger;
 
         function filterCreditLedger(creditId) {
-            const search = (document.getElementById('credit-ledger-search-' + creditId)||{}).value?.toLowerCase() || '';
-            const year   = (document.getElementById('credit-ledger-year-' + creditId)||{}).value || '';
-            const table  = document.querySelector('#credit-detail-content table') ||
-                           document.querySelector('.ledger-table');
+            const search   = (document.getElementById('credit-ledger-search-' + creditId)||{}).value?.toLowerCase() || '';
+            const year     = (document.getElementById('credit-ledger-year-' + creditId)||{}).value || '';
+            const fromDate = (document.getElementById('credit-ledger-from-' + creditId)||{}).value || '';
+            const toDate   = (document.getElementById('credit-ledger-to-' + creditId)||{}).value || '';
+            const table    = document.querySelector('#credit-detail-content table') ||
+                             document.querySelector('.ledger-table');
             if (!table) return;
             let visible = 0;
             table.querySelectorAll('tbody tr').forEach(row => {
                 const text = row.textContent.toLowerCase();
-                const rowYear = (row.querySelector('td')?.textContent || '').substring(0,4);
+                const rawDate = (row.querySelector('td')?.textContent || '').trim().substring(0,10);
+                const rowYear = rawDate.substring(0,4);
                 const matchSearch = !search || text.includes(search);
                 const matchYear   = !year   || rowYear === year;
-                const show = matchSearch && matchYear;
+                const matchFrom   = !fromDate || rawDate >= fromDate;
+                const matchTo     = !toDate   || rawDate <= toDate;
+                const show = matchSearch && matchYear && matchFrom && matchTo;
                 row.style.display = show ? '' : 'none';
                 if (show) visible++;
             });
+            const hasFilter = search || year || fromDate || toDate;
             const countEl = document.getElementById('credit-ledger-count-' + creditId);
-            if (countEl) countEl.textContent = visible + ' payment(s) shown' + (search||year ? ' (filtered)' : ' — all time');
+            if (countEl) countEl.textContent = visible + ' payment(s)' + (hasFilter ? ' (filtered)' : ' — all time');
         }
         window.filterCreditLedger = filterCreditLedger;
 
         function filterWaterHistory(customerId) {
-            const search = (document.getElementById('water-hist-search-' + customerId)||{}).value?.toLowerCase() || '';
-            const year   = (document.getElementById('water-hist-year-' + customerId)||{}).value || '';
+            const search   = (document.getElementById('water-hist-search-' + customerId)||{}).value?.toLowerCase() || '';
+            const year     = (document.getElementById('water-hist-year-' + customerId)||{}).value || '';
+            const fromDate = (document.getElementById('water-hist-from-' + customerId)||{}).value || '';
+            const toDate   = (document.getElementById('water-hist-to-' + customerId)||{}).value || '';
             const container = document.querySelector('#water-customer-modal .modal-body') ||
                               document.getElementById('water-detail-content');
             if (!container) return;
@@ -26398,15 +26583,19 @@ async function clearAllData() {
             container.querySelectorAll('.list-item').forEach(item => {
                 const text = item.textContent.toLowerCase();
                 const dateEl = item.querySelector('.list-item-subtitle, small, .text-muted');
-                const itemYear = dateEl ? dateEl.textContent.substring(0,4) : '';
+                const rawDate = dateEl ? (dateEl.textContent.match(/\d{4}-\d{2}-\d{2}/)||[''])[0] : '';
+                const itemYear = rawDate.substring(0,4);
                 const matchSearch = !search || text.includes(search);
                 const matchYear   = !year   || itemYear === year || text.includes(year);
-                const show = matchSearch && matchYear;
+                const matchFrom   = !fromDate || rawDate >= fromDate;
+                const matchTo     = !toDate   || rawDate <= toDate;
+                const show = matchSearch && matchYear && matchFrom && matchTo;
                 item.style.display = show ? '' : 'none';
                 if (show) visible++;
             });
+            const hasFilter = search || year || fromDate || toDate;
             const countEl = document.getElementById('water-hist-count-' + customerId);
-            if (countEl) countEl.textContent = visible + ' transaction(s) shown' + (search||year ? ' (filtered)' : ' — all time');
+            if (countEl) countEl.textContent = visible + ' transaction(s)' + (hasFilter ? ' (filtered)' : ' — all time');
         }
         window.filterWaterHistory = filterWaterHistory;
 
@@ -26817,6 +27006,8 @@ async function clearAllData() {
             const filterYear   = yearEl?.value  || '';
             const filterMonth  = monthEl?.value || '';
             const filterSearch = (searchEl?.value || '').toLowerCase();
+            const filterFrom   = (document.getElementById('credit-hist-from')||{}).value || '';
+            const filterTo     = (document.getElementById('credit-hist-to')||{}).value || '';
 
             const [credits, payments] = await Promise.all([
                 dbGetAll('credits'), dbGetAll('creditPayments')
@@ -26831,6 +27022,8 @@ async function clearAllData() {
                 if (!p.date) return false;
                 if (filterYear  && !p.date.startsWith(filterYear))  return false;
                 if (filterMonth && p.date.substring(5,7) !== filterMonth) return false;
+                if (filterFrom  && p.date < filterFrom) return false;
+                if (filterTo    && p.date > filterTo)   return false;
                 if (filterSearch && !(p.debtorName||'').toLowerCase().includes(filterSearch) &&
                     !credits.find(c=>c.id===p.creditId&&(c.debtor||'').toLowerCase().includes(filterSearch))) return false;
                 return true;
@@ -27371,10 +27564,10 @@ async function clearAllData() {
                     dbGetAll('expenses'), dbGetAll('additionalIncome')
                 ]);
                 const txns = [
-                    ...payments.filter(p=>p.date===today&&!p.voided).map(p=>({type:'🏠 Rent', name:p.tenantName||'Tenant', amount:p.amount||0, in:true, method:p.paymentMethod||'cash', id:p.id, src:'rent'})),
-                    ...creditPayments.filter(p=>p.date===today&&!p.voided).map(p=>({type:'💳 Credit', name:p.debtorName||'Debtor', amount:p.amount||0, in:true, method:p.paymentMethod||'cash', id:p.id, src:'credit'})),
-                    ...waterSales.filter(s=>s.date===today&&!s.voided).map(s=>({type:'💧 Water', name:s.customerName||'Customer', amount:s.amountPaid||0, in:true, gallons:s.gallons, id:s.id, src:'water'})),
-                    ...expenses.filter(e=>e.date===today).map(e=>({type:'💸 Expense', name:e.category||'Expense', amount:e.amount||0, in:false, id:e.id, src:'expense'})),
+                    ...payments.filter(p=>p.date===today&&!p.voided).map(p=>({type:'🏠 Rent', name:p.tenantName||'Tenant', amount:p.amount||0, in:true, method:p.paymentMethod||'cash', id:p.id, src:'rent', navId:p.tenantId})),
+                    ...creditPayments.filter(p=>p.date===today&&!p.voided).map(p=>({type:'💳 Credit', name:p.debtorName||'Debtor', amount:p.amount||0, in:true, method:p.paymentMethod||'cash', id:p.id, src:'credit', navId:p.creditId})),
+                    ...waterSales.filter(s=>s.date===today&&!s.voided).map(s=>({type:'💧 Water', name:s.customerName||'Customer', amount:s.amountPaid||0, in:true, gallons:s.gallons, id:s.id, src:'water', navId:s.customerId})),
+                    ...expenses.filter(e=>e.date===today).map(e=>({type:'💸 Expense', name:e.category||'Expense', amount:e.amount||0, in:false, id:e.id, src:'expense', desc:e.description||''})),
                     ...income.filter(i=>i.date===today).map(i=>({type:'💰 Income', name:i.source||'Other', amount:i.amount||0, in:true, id:i.id, src:'income'})),
                 ].sort((a,b) => (b.createdAt||'') > (a.createdAt||'') ? 1 : -1);
 
@@ -27385,6 +27578,16 @@ async function clearAllData() {
 
                 const totalIn  = txns.filter(t=>t.in).reduce((s,t)=>s+t.amount,0);
                 const totalOut = txns.filter(t=>!t.in).reduce((s,t)=>s+t.amount,0);
+
+                // Build clickable nav for each transaction type
+                const _navFn = (t) => {
+                    if (t.src === 'rent'    && t.navId) return `showSection('tenants');setTimeout(function(){viewTenantDetails(${t.navId});},350);`;
+                    if (t.src === 'credit'  && t.navId) return `showSection('credits');setTimeout(function(){viewCreditDetails(${t.navId});},350);`;
+                    if (t.src === 'water'   && t.navId) return `showSection('water');setTimeout(function(){viewWaterCustomerDetails(${t.navId});},350);`;
+                    if (t.src === 'expense') return `showSection('expenses');setTimeout(function(){editExpense(${t.id});},350);`;
+                    if (t.src === 'income')  return `showSection('income');`;
+                    return '';
+                };
 
                 el.innerHTML = `
                     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
@@ -27401,14 +27604,20 @@ async function clearAllData() {
                             <div style="font-size:0.7rem;color:var(--text-secondary);">Entries ↗</div>
                         </div>
                     </div>
-                    ${txns.map(t=>`
-                        <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 10px;background:var(--bg-primary);border-radius:8px;margin-bottom:6px;border-left:3px solid ${t.in?'#10b981':'#ef4444'};">
-                            <div>
+                    ${txns.map(t => {
+                        const nav = _navFn(t);
+                        return `<div ${nav ? `onclick="${nav}"` : ''} style="display:flex;justify-content:space-between;align-items:center;padding:9px 10px;background:var(--bg-primary);border-radius:8px;margin-bottom:6px;border-left:3px solid ${t.in?'#10b981':'#ef4444'};${nav?'cursor:pointer;':''}transition:opacity 0.15s;" ${nav ? 'onmouseover="this.style.opacity=\'0.8\'" onmouseout="this.style.opacity=\'1\'"' : ''}>
+                            <div style="flex:1;min-width:0;">
                                 <div style="font-weight:600;font-size:0.83rem;color:var(--text-primary);">${t.type} — ${t.name}</div>
                                 ${t.gallons ? `<div style="font-size:0.72rem;color:var(--text-secondary);">${t.gallons} gallons</div>` : ''}
+                                ${t.desc ? `<div style="font-size:0.7rem;color:#64748b;">${t.desc}</div>` : ''}
                             </div>
-                            <div style="font-weight:700;color:${t.in?'#10b981':'#ef4444'};">${t.in?'+':'-'}₱${t.amount.toLocaleString()}</div>
-                        </div>`).join('')}`;
+                            <div style="display:flex;align-items:center;gap:4px;">
+                                <div style="font-weight:700;color:${t.in?'#10b981':'#ef4444'};">${t.in?'+':'-'}₱${t.amount.toLocaleString()}</div>
+                                ${nav ? '<span style="color:#64748b;font-size:0.72rem;">›</span>' : ''}
+                            </div>
+                        </div>`;
+                    }).join('')}`;
             } catch(e) {
                 el.innerHTML = '<div style="color:#ef4444;padding:12px;font-size:0.82rem;">Could not load today&#39;s transactions.</div>';
             }
@@ -28543,18 +28752,11 @@ function _mtShowAppActual() {
 }
 
 function mtShowSuperAdmin() {
-    // Always show cinematic connecting screen first, then SA panel
-    if (typeof prismShowConnecting === 'function') {
-        prismShowConnecting(() => {
-            mtShowScreen('mt-superadmin');
-            document.getElementById('mt-sa-user-email').textContent = MT.currentUser?.email || '';
-            mtLoadSAData();
-        });
-    } else {
-        mtShowScreen('mt-superadmin');
-        document.getElementById('mt-sa-user-email').textContent = MT.currentUser?.email || '';
-        mtLoadSAData();
-    }
+    // Go directly to SA panel — the sa-loading-overlay inside it handles the Firebase wait
+    mtShowScreen('mt-superadmin');
+    const emailEl = document.getElementById('mt-sa-user-email');
+    if (emailEl) emailEl.textContent = MT.currentUser?.email || '';
+    mtLoadSAData();
 }
 
 // ---- Loading screen ----
@@ -29656,8 +29858,21 @@ function mtSATab(tab, btn) {
 }
 
 async function mtLoadSAData() {
+    // Show loading overlay
+    const overlay  = document.getElementById('sa-loading-overlay');
+    const statusEl = document.getElementById('sa-loading-status');
+    const barEl    = document.getElementById('sa-loading-bar');
+    const retryBtn = document.getElementById('sa-retry-btn');
+    const setStatus = (msg, pct) => {
+        if (statusEl) statusEl.textContent = msg;
+        if (barEl) barEl.style.width = pct + '%';
+    };
+    if (overlay)  { overlay.style.display = 'flex'; }
+    if (retryBtn) { retryBtn.style.display = 'none'; }
+    setStatus('Connecting to Firebase...', 10);
+
     if (!window.db) {
-        // Load from localStorage
+        setStatus('Loading from local cache...', 40);
         const orgs = JSON.parse(localStorage.getItem('mt_user_orgs') || '[]');
         mtRenderSAOrgs(orgs);
         document.getElementById('sa-total-orgs').textContent = orgs.length;
@@ -29666,34 +29881,56 @@ async function mtLoadSAData() {
         const planPrices = { basic: 299, standard: 599, enterprise: 999 };
         const revenue = orgs.reduce((sum, o) => sum + (planPrices[o.plan] || 299), 0);
         document.getElementById('sa-total-revenue').textContent = '₱' + revenue.toLocaleString();
+        setStatus('Loaded from cache.', 100);
+        if (overlay) setTimeout(() => { overlay.style.display = 'none'; }, 600);
         return;
     }
-    // Wait for Firebase auth to be ready before querying
-    const _waitForAuth = () => new Promise(res => {
+
+    // Wait for Firebase auth — with a 10s timeout
+    const _waitForAuth = () => new Promise((res, rej) => {
         if (window.auth && window.auth.currentUser) return res();
-        const unsub = window.auth.onAuthStateChanged(u => { unsub(); res(); });
+        const timeout = setTimeout(() => rej(new Error('Auth timeout — please check your connection.')), 10000);
+        const unsub = window.auth.onAuthStateChanged(u => {
+            clearTimeout(timeout);
+            unsub();
+            res();
+        });
     });
+
     try {
+        setStatus('Authenticating...', 25);
         await _waitForAuth();
-        const _uid = window.auth && window.auth.currentUser ? window.auth.currentUser.uid : 'none';
-        mtToast('🔍 Loading orgs for: ' + _uid.substring(0,8) + '...', 'info', 4000);
+        setStatus('Loading organizations...', 50);
+
         const orgsSnap = await window.db.collection(MT.ORGS_COL).get();
-        mtToast('📦 Found ' + orgsSnap.size + ' org(s) in Firestore', orgsSnap.size > 0 ? 'success' : 'warning', 5000);
         const orgs = orgsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         mtRenderSAOrgs(orgs);
         document.getElementById('sa-total-orgs').textContent = orgs.length;
         document.getElementById('sa-active-orgs').textContent = orgs.filter(o => o.status === 'active').length;
-        
+
+        setStatus('Loading users...', 75);
         const usersSnap = await window.db.collection(MT.ORG_MEMBERS_COL).get();
         document.getElementById('sa-total-users').textContent = usersSnap.size;
-        
+
         const planPrices = { basic: 299, standard: 599, enterprise: 999 };
         const revenue = orgs.reduce((sum, o) => sum + (planPrices[o.plan] || 299), 0);
         document.getElementById('sa-total-revenue').textContent = '₱' + revenue.toLocaleString();
+
+        setStatus('Ready!', 100);
+        if (overlay) setTimeout(() => { overlay.style.display = 'none'; }, 500);
+
+        // Also load allowlist badge
+        setTimeout(() => { if (typeof mtSALoadAllowlist === 'function') mtSALoadAllowlist(); }, 800);
+
     } catch (e) {
-        mtToast('❌ SA load error: ' + (e.message || e), 'error', 8000);
-        console.warn('SA data load error:', e);
-        setTimeout(() => mtLoadSAData(), 2000);
+        const isOffline = e.message && (e.message.includes('offline') || e.message.includes('network') || e.message.includes('timeout'));
+        const msg = isOffline ? '⚠️ Offline — tap Retry when connected' : '❌ ' + (e.message || 'Load failed');
+        setStatus(msg, 0);
+        if (barEl) barEl.style.background = '#ef4444';
+        if (retryBtn) retryBtn.style.display = 'inline-block';
+        console.warn('[SA] Data load error:', e);
+        // Auto-retry after 5s if offline
+        if (isOffline) setTimeout(() => { if (overlay && overlay.style.display !== 'none') mtLoadSAData(); }, 5000);
     }
 }
 
