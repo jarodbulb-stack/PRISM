@@ -2997,7 +2997,6 @@
     background: #0f172a;
     color: #f8fafc;
     font-family: 'Segoe UI', system-ui, sans-serif;
-    position: relative;
 }
 #mt-superadmin.active { display: block; }
 
@@ -3659,23 +3658,7 @@
 
 <!-- ========== SUPER ADMIN PANEL ========== -->
 <div id="mt-superadmin">
-    <!-- Loading overlay shown while Firebase data loads -->
-    <div id="sa-loading-overlay" style="position:absolute;inset:0;background:#0f172a;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;">
-        <div style="position:relative;width:64px;height:64px;">
-            <div style="position:absolute;inset:0;border-radius:50%;border:3px solid rgba(99,102,241,0.2);"></div>
-            <div style="position:absolute;inset:0;border-radius:50%;border:3px solid transparent;border-top-color:#6366f1;animation:spin 0.9s linear infinite;"></div>
-            <div style="position:absolute;inset:8px;border-radius:50%;border:3px solid transparent;border-top-color:#8b5cf6;animation:spin 0.7s linear infinite reverse;"></div>
-            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.4rem;">⚡</div>
-        </div>
-        <div style="text-align:center;">
-            <div style="font-size:1rem;font-weight:700;color:#f1f5f9;letter-spacing:0.08em;">SUPER ADMIN PANEL</div>
-            <div id="sa-loading-status" style="font-size:0.8rem;color:#6366f1;margin-top:6px;letter-spacing:0.05em;">Connecting to Firebase...</div>
-        </div>
-        <div style="width:220px;height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;">
-            <div id="sa-loading-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#6366f1,#8b5cf6);border-radius:2px;transition:width 0.5s ease;"></div>
-        </div>
-        <button id="sa-retry-btn" onclick="mtLoadSAData()" style="display:none;padding:8px 24px;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);color:#818cf8;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;">🔄 Retry</button>
-    </div>
+    <div class="mt-sa-header">
         <div>
             <h1>⚡ SUPER ADMIN PANEL</h1>
             <div style="font-size:0.8rem;color:#94a3b8;margin-top:2px;">OMNIGRID ONLINE — PRISM Platform Management</div>
@@ -28752,11 +28735,20 @@ function _mtShowAppActual() {
 }
 
 function mtShowSuperAdmin() {
-    // Go directly to SA panel — the sa-loading-overlay inside it handles the Firebase wait
-    mtShowScreen('mt-superadmin');
-    const emailEl = document.getElementById('mt-sa-user-email');
-    if (emailEl) emailEl.textContent = MT.currentUser?.email || '';
-    mtLoadSAData();
+    // Always show cinematic connecting screen first, then SA panel
+    if (typeof prismShowConnecting === 'function') {
+        prismShowConnecting(() => {
+            mtShowScreen('mt-superadmin');
+            const emailEl = document.getElementById('mt-sa-user-email');
+            if (emailEl) emailEl.textContent = MT.currentUser?.email || '';
+            mtLoadSAData();
+        });
+    } else {
+        mtShowScreen('mt-superadmin');
+        const emailEl = document.getElementById('mt-sa-user-email');
+        if (emailEl) emailEl.textContent = MT.currentUser?.email || '';
+        mtLoadSAData();
+    }
 }
 
 // ---- Loading screen ----
@@ -29858,21 +29850,8 @@ function mtSATab(tab, btn) {
 }
 
 async function mtLoadSAData() {
-    // Show loading overlay
-    const overlay  = document.getElementById('sa-loading-overlay');
-    const statusEl = document.getElementById('sa-loading-status');
-    const barEl    = document.getElementById('sa-loading-bar');
-    const retryBtn = document.getElementById('sa-retry-btn');
-    const setStatus = (msg, pct) => {
-        if (statusEl) statusEl.textContent = msg;
-        if (barEl) barEl.style.width = pct + '%';
-    };
-    if (overlay)  { overlay.style.display = 'flex'; }
-    if (retryBtn) { retryBtn.style.display = 'none'; }
-    setStatus('Connecting to Firebase...', 10);
-
     if (!window.db) {
-        setStatus('Loading from local cache...', 40);
+        // Load from localStorage cache
         const orgs = JSON.parse(localStorage.getItem('mt_user_orgs') || '[]');
         mtRenderSAOrgs(orgs);
         document.getElementById('sa-total-orgs').textContent = orgs.length;
@@ -29881,34 +29860,23 @@ async function mtLoadSAData() {
         const planPrices = { basic: 299, standard: 599, enterprise: 999 };
         const revenue = orgs.reduce((sum, o) => sum + (planPrices[o.plan] || 299), 0);
         document.getElementById('sa-total-revenue').textContent = '₱' + revenue.toLocaleString();
-        setStatus('Loaded from cache.', 100);
-        if (overlay) setTimeout(() => { overlay.style.display = 'none'; }, 600);
         return;
     }
 
-    // Wait for Firebase auth — with a 10s timeout
-    const _waitForAuth = () => new Promise((res, rej) => {
+    // Wait for Firebase auth to be ready before querying
+    const _waitForAuth = () => new Promise(res => {
         if (window.auth && window.auth.currentUser) return res();
-        const timeout = setTimeout(() => rej(new Error('Auth timeout — please check your connection.')), 10000);
-        const unsub = window.auth.onAuthStateChanged(u => {
-            clearTimeout(timeout);
-            unsub();
-            res();
-        });
+        const unsub = window.auth.onAuthStateChanged(u => { unsub(); res(); });
     });
 
     try {
-        setStatus('Authenticating...', 25);
         await _waitForAuth();
-        setStatus('Loading organizations...', 50);
-
         const orgsSnap = await window.db.collection(MT.ORGS_COL).get();
         const orgs = orgsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         mtRenderSAOrgs(orgs);
         document.getElementById('sa-total-orgs').textContent = orgs.length;
         document.getElementById('sa-active-orgs').textContent = orgs.filter(o => o.status === 'active').length;
 
-        setStatus('Loading users...', 75);
         const usersSnap = await window.db.collection(MT.ORG_MEMBERS_COL).get();
         document.getElementById('sa-total-users').textContent = usersSnap.size;
 
@@ -29916,21 +29884,15 @@ async function mtLoadSAData() {
         const revenue = orgs.reduce((sum, o) => sum + (planPrices[o.plan] || 299), 0);
         document.getElementById('sa-total-revenue').textContent = '₱' + revenue.toLocaleString();
 
-        setStatus('Ready!', 100);
-        if (overlay) setTimeout(() => { overlay.style.display = 'none'; }, 500);
-
-        // Also load allowlist badge
+        // Load allowlist badge in background
         setTimeout(() => { if (typeof mtSALoadAllowlist === 'function') mtSALoadAllowlist(); }, 800);
 
     } catch (e) {
-        const isOffline = e.message && (e.message.includes('offline') || e.message.includes('network') || e.message.includes('timeout'));
-        const msg = isOffline ? '⚠️ Offline — tap Retry when connected' : '❌ ' + (e.message || 'Load failed');
-        setStatus(msg, 0);
-        if (barEl) barEl.style.background = '#ef4444';
-        if (retryBtn) retryBtn.style.display = 'inline-block';
+        mtToast('❌ SA load error: ' + (e.message || e), 'error', 8000);
         console.warn('[SA] Data load error:', e);
-        // Auto-retry after 5s if offline
-        if (isOffline) setTimeout(() => { if (overlay && overlay.style.display !== 'none') mtLoadSAData(); }, 5000);
+        // Retry after 3s on network errors
+        const isNetErr = e.message && (e.message.includes('offline') || e.message.includes('network') || e.message.includes('Failed to'));
+        if (isNetErr) setTimeout(() => mtLoadSAData(), 3000);
     }
 }
 
