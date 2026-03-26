@@ -4033,10 +4033,15 @@
                     <div class="stat-value text-warning" id="stat-dash-overdue-notes">0</div>
                     <div class="stat-label">📝 Overdue Reminders</div>
                 </div>
-                <div class="stat-card stat-card-danger" style="cursor: pointer; position:relative;" onclick="showFlashcardDetail('payables')">
-                    <div class="stat-value text-danger" id="stat-dash-payables">₱0</div>
-                    <div class="stat-label">🧾 Supplier Payables</div>
-                    <span id="dash-pay-badge" style="display:none;position:absolute;top:6px;right:8px;background:#ef4444;color:white;font-size:0.6rem;font-weight:700;padding:1px 5px;border-radius:8px;"></span>
+                <div class="stat-card stat-card-danger" style="cursor: pointer; position:relative;" onclick="showFlashcardDetail('pay-overdue')">
+                    <div class="stat-value text-danger" id="stat-dash-pay-overdue">₱0</div>
+                    <div class="stat-label">🔴 Payables Overdue</div>
+                    <span id="dash-pay-overdue-count" style="display:none;position:absolute;top:6px;right:8px;background:#ef4444;color:white;font-size:0.6rem;font-weight:700;padding:1px 5px;border-radius:8px;"></span>
+                </div>
+                <div class="stat-card stat-card-warning" style="cursor: pointer; position:relative;" onclick="showFlashcardDetail('pay-due-soon')">
+                    <div class="stat-value text-warning" id="stat-dash-pay-due-soon">₱0</div>
+                    <div class="stat-label">🟡 Payables Due Soon</div>
+                    <span id="dash-pay-due-count" style="display:none;position:absolute;top:6px;right:8px;background:#f59e0b;color:white;font-size:0.6rem;font-weight:700;padding:1px 5px;border-radius:8px;"></span>
                 </div>
             </div>
 
@@ -20633,12 +20638,22 @@ async function showPayrollSummary() {
             try {
                 const _payAll = await dbGetAll('payables').catch(()=>[]);
                 _allPayables = _payAll; // keep in sync
-                const _payUnpaid = _payAll.filter(p=>p.status!=='paid');
+                const _payUnpaid  = _payAll.filter(p=>p.status!=='paid');
                 const _payOverdue = _payUnpaid.filter(p=>_payStatus(p)==='overdue');
                 const _payDueSoon = _payUnpaid.filter(p=>_payStatus(p)==='due-soon');
-                const _payTotal = _payUnpaid.reduce((s,p)=>s+(p.amount||0),0);
-                const _payEl = document.getElementById('stat-dash-payables');
-                if (_payEl) _payEl.textContent = '₱'+_payTotal.toLocaleString();
+                const _payOvAmt   = _payOverdue.reduce((s,p)=>s+Math.max(0,(p.amount||0)-(p.paidAmount||0)),0);
+                const _payDsAmt   = _payDueSoon.reduce((s,p)=>s+Math.max(0,(p.amount||0)-(p.paidAmount||0)),0);
+                const safeSet = (id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
+                const safeBadge = (id,n,show)=>{ const el=document.getElementById(id); if(el){ el.textContent=n||''; el.style.display=show?'flex':'none'; } };
+                // Old single card (keep for backwards compat)
+                const _oldCard = document.getElementById('stat-dash-payables');
+                if (_oldCard) _oldCard.textContent = '₱'+(_payOvAmt+_payDsAmt).toLocaleString();
+                // New dual cards
+                safeSet('stat-dash-pay-overdue',  _payOverdue.length ? '₱'+_payOvAmt.toLocaleString() : '₱0');
+                safeSet('stat-dash-pay-due-soon', _payDueSoon.length ? '₱'+_payDsAmt.toLocaleString() : '₱0');
+                safeBadge('dash-pay-overdue-count', _payOverdue.length, _payOverdue.length > 0);
+                safeBadge('dash-pay-due-count',     _payDueSoon.length, _payDueSoon.length > 0);
+                // Legacy badge
                 const _payBadge = document.getElementById('dash-pay-badge');
                 const _payAlert = _payOverdue.length + _payDueSoon.length;
                 if (_payBadge) { _payBadge.textContent = _payAlert||''; _payBadge.style.display = _payAlert?'flex':'none'; }
@@ -24182,12 +24197,93 @@ async function clearAllData() {
                     }
                     html += _navBtn('Notes','notes');
 
-                } else if (type==='payables') {
-                    title = '🧾 Supplier Payables';
-                    if (typeof window._payablesFlashcard === 'function') {
-                        html = await window._payablesFlashcard();
+                } else if (type==='pay-overdue' || type==='pay-due-soon' || type==='payables') {
+                    const isOverdueCard = type==='pay-overdue';
+                    const isDueSoonCard = type==='pay-due-soon';
+                    title = isOverdueCard ? '🔴 Payables — Overdue' : isDueSoonCard ? '🟡 Payables — Due Soon' : '🧾 Supplier Payables';
+
+                    const _payAll2 = await dbGetAll('payables').catch(()=>[]);
+                    _allPayables = _payAll2;
+                    const unpaid = _payAll2.filter(p=>p.status!=='paid'&&p.status!=='paid');
+
+                    // Sort: overdue → due-soon → partial → pending (by due date within each group)
+                    const sortedAll = [...unpaid].sort((a,b)=>{
+                        const order = {overdue:0,'due-soon':1,partial:2,pending:3};
+                        const sa = order[_payStatus(a)]??3, sb = order[_payStatus(b)]??3;
+                        if (sa!==sb) return sa-sb;
+                        return (a.dueDate||'')>(b.dueDate||'')?1:-1;
+                    });
+
+                    // Filter based on which card was clicked
+                    const toShow = isOverdueCard ? sortedAll.filter(p=>_payStatus(p)==='overdue')
+                                 : isDueSoonCard ? sortedAll.filter(p=>_payStatus(p)==='due-soon')
+                                 : sortedAll;
+                    // Pending goes at the bottom (show all when clicking combined card)
+                    const pending = isDueSoonCard || isOverdueCard ? [] : sortedAll.filter(p=>_payStatus(p)==='pending');
+                    const showList = isOverdueCard || isDueSoonCard ? toShow : sortedAll;
+
+                    const sc2 = {overdue:'#ef4444','due-soon':'#f59e0b',partial:'#3b82f6',pending:'#64748b'};
+                    const sl2 = {overdue:'🔴 Overdue','due-soon':'🟡 Due Soon',partial:'💸 Partial',pending:'⏳ Pending'};
+                    const bg2 = {overdue:'rgba(239,68,68,0.08)','due-soon':'rgba(245,158,11,0.08)',partial:'rgba(59,130,246,0.08)',pending:'rgba(100,116,139,0.05)'};
+
+                    if (showList.length === 0) {
+                        html = '<div style="text-align:center;color:#10b981;padding:20px;font-size:0.9rem;">✅ '+(isOverdueCard?'No overdue payables!':isDueSoonCard?'Nothing due soon!':'No unpaid payables!')+'</div>';
                     } else {
-                        html = '<div style="text-align:center;color:#64748b;padding:16px;">Loading payables...</div>';
+                        // Summary totals
+                        const totalAmt = showList.reduce((s,p)=>s+Math.max(0,(p.amount||0)-(p.paidAmount||0)),0);
+                        html += '<div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.04);border-radius:8px;padding:8px 12px;margin-bottom:12px;">' +
+                            '<span style="font-size:0.78rem;color:#94a3b8;">'+showList.length+' invoice(s)</span>' +
+                            '<span style="font-weight:800;color:'+(isOverdueCard?'#ef4444':isDueSoonCard?'#f59e0b':'#f1f5f9')+';font-size:1rem;">₱'+totalAmt.toLocaleString()+' total</span>' +
+                            '</div>';
+
+                        let lastStatus = null;
+                        showList.forEach(p => {
+                            const st = _payStatus(p);
+                            const color = sc2[st]||'#64748b';
+                            const label = sl2[st]||'Pending';
+                            const bg    = bg2[st]||'rgba(0,0,0,0.05)';
+                            const balance = Math.max(0,(p.amount||0)-(p.paidAmount||0));
+
+                            // Section header when status changes
+                            if (st !== lastStatus) {
+                                html += '<div style="font-size:0.68rem;font-weight:700;color:'+color+';text-transform:uppercase;letter-spacing:0.06em;padding:8px 0 4px;'+(lastStatus?'margin-top:6px;border-top:1px solid var(--border-color);':'')+'">' +
+                                    label + ' (' + showList.filter(x=>_payStatus(x)===st).length + ')</div>';
+                                lastStatus = st;
+                            }
+
+                            html += '<div onclick="(function(){var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();' +
+                                'showSection(\'payables\');' +
+                                'setTimeout(function(){' +
+                                'var list=document.getElementById(\'payables-list\');' +
+                                'if(list){var cards=list.querySelectorAll(\'[onclick*="editPayable('+p.id+')"]\');' +
+                                'if(cards.length){var card=cards[0].closest(\'div[style*=border-left]\');' +
+                                'if(card){card.scrollIntoView({behavior:\'smooth\',block:\'center\'});' +
+                                'card.style.outline=\'2px solid '+color+'\';' +
+                                'setTimeout(function(){card.style.outline=\'\'},2500);}}' +
+                                '}},500);})()" ' +
+                                'style="display:flex;justify-content:space-between;align-items:flex-start;padding:10px 12px;' +
+                                'background:'+bg+';border:1px solid rgba(255,255,255,0.05);border-left:3px solid '+color+';' +
+                                'border-radius:8px;margin-bottom:5px;cursor:pointer;transition:opacity 0.15s;" ' +
+                                'onmouseover="this.style.opacity=\'0.8\'" onmouseout="this.style.opacity=\'1\'">' +
+                                '<div style="flex:1;min-width:0;">' +
+                                '<div style="font-weight:700;font-size:0.88rem;color:var(--text-primary);">'+_esc(p.supplier||'Unknown')+'</div>' +
+                                (p.invoice?'<div style="font-size:0.7rem;color:#94a3b8;">Inv# '+_esc(p.invoice)+'</div>':'')+
+                                '<div style="font-size:0.7rem;color:#64748b;">'+_payDaysLabel(p)+(p.category?' · '+p.category:'')+'</div>' +
+                                '</div>' +
+                                '<div style="text-align:right;flex-shrink:0;margin-left:10px;">' +
+                                '<div style="font-weight:800;color:'+color+';font-size:0.92rem;">₱'+balance.toLocaleString()+'</div>' +
+                                '<div style="font-size:0.65rem;color:#64748b;">due '+( p.dueDate||'—')+'</div>' +
+                                (p.status==='partial'?'<div style="font-size:0.62rem;color:#3b82f6;">paid ₱'+(p.paidAmount||0).toLocaleString()+'</div>':'')+
+                                '</div>' +
+                                '</div>';
+                        });
+
+                        html += '<div style="border-top:1px solid var(--border-color);margin-top:10px;padding-top:10px;display:flex;gap:8px;">' +
+                            '<button onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();showSection(\'payables\');" ' +
+                            'style="flex:1;padding:10px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);color:#f59e0b;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;">🧾 Manage Payables</button>' +
+                            '<button onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();showAddPayableModal();" ' +
+                            'style="flex:1;padding:10px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);color:#818cf8;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;">+ Add Invoice</button>' +
+                            '</div>';
                     }
 
                 } else {
