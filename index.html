@@ -18451,11 +18451,12 @@ async function showPayrollSummary() {
             if (panel && panel.style.display !== 'none') {
                 loadExpenseHistory();
             } else {
-                // Update label even when collapsed
-                const cat = document.getElementById('expense-category');
-                const label = document.getElementById('exp-hist-label');
-                if (cat && label) {
-                    const txt = cat.options[cat.selectedIndex] ? cat.options[cat.selectedIndex].text.replace(/^[^\w]+/, '').trim() : 'Category';
+                // Update label even when collapsed — read from search display input
+                const catVal   = (document.getElementById('expense-category')?.value || '').trim();
+                const catLabel = document.getElementById('expense-category-search')?.value || catVal || 'Category';
+                const label    = document.getElementById('exp-hist-label');
+                if (label) {
+                    const txt = catLabel.replace(/^[^\w\u00C0-\u024F]+/, '').trim() || 'Category';
                     label.textContent = '\uD83D\uDCCB ' + txt.toUpperCase() + ' HISTORY';
                 }
             }
@@ -18479,8 +18480,8 @@ async function showPayrollSummary() {
             const labelEl = document.getElementById('exp-hist-label');
             if (!catEl || !rowsEl) return;
 
-            const catVal = catEl.value;
-            const catText = catEl.options[catEl.selectedIndex] ? catEl.options[catEl.selectedIndex].text.replace(/^[^\w]+/, '').trim() : 'Category';
+            const catVal  = catEl.value;
+            const catText = (document.getElementById('expense-category-search')?.value || catVal || 'Category').replace(/^[^\w\u00C0-\u024F]+/, '').trim();
             if (labelEl) labelEl.textContent = '\uD83D\uDCCB ' + catText.toUpperCase() + ' HISTORY';
 
             if (!catVal) {
