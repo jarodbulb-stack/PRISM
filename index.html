@@ -716,8 +716,8 @@
         /* Navigation */
         .nav {
             display: flex;
-            gap: 5px;
-            padding: 6px 12px;
+            gap: 3px;
+            padding: 6px 10px;
             background: var(--bg-card);
             border-bottom: 1px solid var(--border-color);
             overflow-x: auto;
@@ -730,12 +730,12 @@
         .nav::-webkit-scrollbar { display: none; }
 
         .nav-btn {
-            padding: 5px 12px;
+            padding: 5px 9px;
             border: none;
             background: var(--gray-100);
             color: var(--text-primary);
             border-radius: 20px;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             cursor: pointer;
             white-space: nowrap;
             transition: all 0.2s;
@@ -2397,13 +2397,15 @@
             }
 
             .nav {
-                gap: 4px;
-                padding: 8px 10px;
+                gap: 3px;
+                padding: 5px 8px;
+                scroll-snap-type: x proximity;
             }
 
             .nav-btn {
-                font-size: 0.7rem;
-                padding: 8px 10px;
+                font-size: 0.68rem;
+                padding: 5px 8px;
+                scroll-snap-align: start;
             }
 
             .stats-grid {
@@ -3883,7 +3885,7 @@
         <button class="nav-btn" data-section="notes">Notes</button>
         <button class="nav-btn" data-section="payables">🧾 Payables</button>
         <button class="nav-btn" data-section="suppliers">🏭 Suppliers</button>
-        <button class="nav-btn" data-section="settings">Settings</button>
+        <button class="nav-btn" data-section="settings">⚙️ Settings</button>
     </div>
 
     <!-- Main Content -->
@@ -5422,9 +5424,10 @@
                         <div class="card-title">🧾 Trade Payables</div>
                         <div class="card-subtitle">Supplier invoices &amp; accounts payable</div>
                     </div>
-                    <div style="display:flex;gap:6px;">
+                    <div style="display:flex;gap:6px;flex-shrink:0;">
                         <button class="btn btn-sm" onclick="showSection('suppliers')" style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#818cf8;font-size:0.78rem;padding:6px 10px;">🏭 Suppliers</button>
                         <button class="btn btn-sm btn-primary" onclick="showAddPayableModal()">+ Add Invoice</button>
+                    </div>
                 </div>
                 <div class="filter-buttons" style="margin-bottom:12px;">
                     <button class="filter-btn active pay-filter-btn" data-filter="all" onclick="filterPayables('all')">All</button>
@@ -10088,6 +10091,13 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             // Update nav buttons
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.section === sectionId);
+                // Scroll active button into view within the nav
+                if (btn.dataset.section === sectionId) {
+                    setTimeout(() => {
+                        const nav = btn.closest('.nav');
+                        if (nav) btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                    }, 50);
+                }
             });
             document.querySelectorAll('.bottom-nav-item').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.section === sectionId);
@@ -25116,6 +25126,10 @@ async function clearAllData() {
 
         async function loadSuppliers() {
             _allSuppliers = await dbGetAll('suppliers').catch(()=>[]);
+            // Also refresh payables so invoice counts are accurate
+            if (!_allPayables || _allPayables.length === 0) {
+                _allPayables = await dbGetAll('payables').catch(()=>[]);
+            }
             renderSuppliersList();
         }
         window.loadSuppliers = loadSuppliers;
