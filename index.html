@@ -13089,9 +13089,23 @@ async function recordTenantPayment(tenantId) {
             var netEl   = document.getElementById('cd-net-amount');
             var netDisp = document.getElementById('cd-net-display');
             var brkEl   = document.getElementById('cd-net-breakdown');
+            // Also update credit-pay-net-amount if present (modal uses different IDs)
+            var netEl2  = document.getElementById('credit-pay-net-amount');
+            var netDisp2= document.getElementById('credit-pay-net-display');
+            var brkEl2  = document.getElementById('credit-pay-breakdown');
             if (netDisp) netDisp.style.display = disc > 0 ? 'block' : 'none';
             if (brkEl)   brkEl.textContent     = 'Amount: ₱' + amt.toLocaleString() + ' − Waiver: ₱' + disc.toLocaleString();
             if (netEl)   netEl.textContent      = '₱' + net.toLocaleString();
+            if (netDisp2 && disc > 0) { netDisp2.style.display = 'block'; if (brkEl2) brkEl2.textContent = 'Amount: ₱' + amt.toLocaleString() + ' − Waiver: ₱' + disc.toLocaleString(); if (netEl2) netEl2.textContent = '₱' + net.toLocaleString(); }
+            else if (netDisp2) netDisp2.style.display = 'none';
+            // Show remaining balance indicator
+            var balIndicator = document.getElementById('credit-pay-remaining');
+            if (balIndicator && window._currentCreditBalance > 0) {
+                var remaining = Math.max(0, window._currentCreditBalance - net);
+                if (net <= 0) { balIndicator.style.display='none'; }
+                else if (remaining <= 0) { balIndicator.style.display='block'; balIndicator.innerHTML='<span style="color:#10b981;font-weight:700;">✅ Fully settled — clears outstanding balance</span>'; }
+                else { balIndicator.style.display='block'; balIndicator.innerHTML='<span style="color:#f59e0b;font-weight:700;">⚠️ Partial — ₱'+remaining.toLocaleString()+' remaining after this payment</span>'; }
+            }
         }
         window.calcCreditPayNet = calcCreditPayNet;
 
@@ -16993,6 +17007,17 @@ async function showPayrollSummary() {
             if (!credit) return;
 
             const now = new Date();
+            // Calculate and store current balance for partial indicator
+            let totalDue = credit.principal;
+            if (credit.interestType === 'simple' && credit.interestRate > 0) {
+                const mo = Math.max(1, Math.floor((now - new Date(credit.dateLent)) / (1000*60*60*24*30)));
+                totalDue += (credit.principal * credit.interestRate / 100) * mo;
+            } else if (credit.interestType === 'flat' && credit.interestRate > 0) {
+                totalDue += credit.interestRate;
+            }
+            const allPay = await dbGetAll('creditPayments').catch(()=>[]);
+            const prevPaid = allPay.filter(p=>p.creditId===creditId).reduce((s,p)=>s+(p.amount||0),0);
+            window._currentCreditBalance = Math.max(0, totalDue - prevPaid);
 
             hideModal('credit-detail-modal');
 
@@ -17005,6 +17030,7 @@ async function showPayrollSummary() {
                     <div class="form-group">
                         <label>Amount Paid (₱)</label>
                         <input type="text" id="credit-payment-amount" required placeholder="0" oninput="calcCreditPayNet()">
+                        <div id="credit-pay-remaining" style="display:none;margin-top:6px;padding:7px 10px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:6px;font-size:0.8rem;"></div>
                     </div>
 
                     <!-- Discount -->
