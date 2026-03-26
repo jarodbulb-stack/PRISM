@@ -4411,11 +4411,13 @@
             </div>
 
             <div class="card">
-                <div class="card-header">
+                <div class="card-header" style="flex-wrap:wrap;gap:8px;">
                     <div class="card-title">All Tenants</div>
-                    <button class="btn btn-primary btn-sm" onclick="showModal('tenant-modal')" style="font-size: 0.8rem;">
-                        + Add Tenant
-                    </button>
+                    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                        <input type="date" id="tenant-filter-from" onchange="filterTenants()" placeholder="From" style="padding:4px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.75rem;">
+                        <input type="date" id="tenant-filter-to" onchange="filterTenants()" placeholder="To" style="padding:4px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.75rem;">
+                        <button class="btn btn-primary btn-sm" onclick="showModal('tenant-modal')" style="font-size: 0.8rem;">+ Add Tenant</button>
+                    </div>
                 </div>
                 <div class="search-box">
                     <span class="search-icon">🔍</span>
@@ -4434,6 +4436,30 @@
                 </div>
             </div>
         
+            <!-- Rent Payment History — inline in Tenants section -->
+            <div class="card" style="margin-top:12px;">
+                <div class="card-header" style="cursor:pointer;" onclick="toggleSectionHistory('tenants-hist-body','tenants-hist-chevron',loadTenantSectionHistory)">
+                    <div class="card-title">🏠 Rent Payment History</div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span id="tenants-hist-chevron" style="color:var(--text-secondary);font-size:1.1rem;transition:transform 0.2s;">▶</span>
+                    </div>
+                </div>
+                <div id="tenants-hist-body" style="display:none;">
+                    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding-top:4px;">
+                        <select id="th-year" onchange="loadTenantSectionHistory()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;"><option value="">All Years</option></select>
+                        <select id="th-month" onchange="loadTenantSectionHistory()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;">
+                            <option value="">All Months</option>
+                            <option value="01">January</option><option value="02">February</option><option value="03">March</option><option value="04">April</option><option value="05">May</option><option value="06">June</option><option value="07">July</option><option value="08">August</option><option value="09">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option>
+                        </select>
+                        <input type="date" id="th-from" onchange="loadTenantSectionHistory()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;">
+                        <input type="date" id="th-to" onchange="loadTenantSectionHistory()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;">
+                        <input type="text" id="th-search" placeholder="🔍 Search tenant..." oninput="loadTenantSectionHistory()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;width:140px;">
+                    </div>
+                    <div id="th-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;"></div>
+                    <div id="th-content"><div style="text-align:center;padding:20px;color:#64748b;">Loading...</div></div>
+                </div>
+            </div>
+
             <!-- nav-bottom-tenants -->
             <div style="display:flex;gap:10px;margin-top:24px;padding:14px 0 4px;border-top:1px solid var(--border-color);">
                 <button class="btn btn-secondary" style="flex:1;font-size:0.82rem;" onclick="showSection('properties')">← Properties</button>
@@ -4456,8 +4482,12 @@
             </div>
 
             <div class="card">
-                <div class="card-header">
+                <div class="card-header" style="flex-wrap:wrap;gap:8px;">
                     <div class="card-title">Active Credits/Loans</div>
+                    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                        <input type="date" id="credit-filter-from" onchange="filterCredits()" placeholder="From" style="padding:4px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.75rem;">
+                        <input type="date" id="credit-filter-to" onchange="filterCredits()" placeholder="To" style="padding:4px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.75rem;">
+                    </div>
                 </div>
                 <div class="search-box">
                     <span class="search-icon">🔍</span>
@@ -4476,6 +4506,30 @@
                 </div>
             </div>
         
+            <!-- Credit Repayment History — inline in Credits section -->
+            <div class="card" style="margin-top:12px;">
+                <div class="card-header" style="cursor:pointer;" onclick="toggleSectionHistory('credits-hist-body','credits-hist-chevron',loadCreditSectionHistory)">
+                    <div class="card-title">💳 Credit Repayment History</div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span id="credits-hist-chevron" style="color:var(--text-secondary);font-size:1.1rem;transition:transform 0.2s;">▶</span>
+                    </div>
+                </div>
+                <div id="credits-hist-body" style="display:none;">
+                    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding-top:4px;">
+                        <select id="ch-year" onchange="loadCreditSectionHistory()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;"><option value="">All Years</option></select>
+                        <select id="ch-month" onchange="loadCreditSectionHistory()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;">
+                            <option value="">All Months</option>
+                            <option value="01">January</option><option value="02">February</option><option value="03">March</option><option value="04">April</option><option value="05">May</option><option value="06">June</option><option value="07">July</option><option value="08">August</option><option value="09">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option>
+                        </select>
+                        <input type="date" id="ch-from" onchange="loadCreditSectionHistory()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;">
+                        <input type="date" id="ch-to" onchange="loadCreditSectionHistory()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;">
+                        <input type="text" id="ch-search" placeholder="🔍 Search debtor..." oninput="loadCreditSectionHistory()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;width:140px;">
+                    </div>
+                    <div id="ch-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;"></div>
+                    <div id="ch-content"><div style="text-align:center;padding:20px;color:#64748b;">Loading...</div></div>
+                </div>
+            </div>
+
             <!-- nav-bottom-credits -->
             <div style="display:flex;gap:10px;margin-top:24px;padding:14px 0 4px;border-top:1px solid var(--border-color);">
                 <button class="btn btn-secondary" style="flex:1;font-size:0.82rem;" onclick="showSection('tenants')">← Tenants</button>
@@ -4845,6 +4899,7 @@
                     <button id="water-view-customers-btn" class="btn btn-sm btn-primary" onclick="setWaterView('customers')">👥 Customers</button>
                     <button id="water-view-sales-btn" class="btn btn-sm btn-secondary" onclick="setWaterView('sales')">🧾 All Sales</button>
                     <button id="water-view-store-btn" class="btn btn-sm btn-secondary" onclick="setWaterView('store')">🛒 Store</button>
+                    <button id="water-names-toggle-btn" class="btn btn-sm btn-secondary" onclick="toggleWaterCustomerNames()" title="Hide/show customer names">👁 Names</button>
                     <input type="text" id="water-search" placeholder="🔍 Search name..."
                         style="flex:1;min-width:130px;padding:6px 10px;border:1px solid var(--border-color);border-radius:7px;background:var(--bg-secondary);color:var(--text-primary);font-size:0.82rem;"
                         oninput="waterSearchAll()">
@@ -4858,6 +4913,30 @@
                 <div id="water-store-panel" style="display:none;"></div>
             </div>
         
+            <!-- Water Sales History — inline in Water section -->
+            <div class="card" style="margin-top:12px;">
+                <div class="card-header" style="cursor:pointer;" onclick="toggleSectionHistory('water-hist-body','water-hist-chevron',loadWaterSectionHistory)">
+                    <div class="card-title">💧 Water Sales History</div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span id="water-hist-chevron" style="color:var(--text-secondary);font-size:1.1rem;transition:transform 0.2s;">▶</span>
+                    </div>
+                </div>
+                <div id="water-hist-body" style="display:none;">
+                    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding-top:4px;">
+                        <select id="wh-year" onchange="loadWaterSectionHistory()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;"><option value="">All Years</option></select>
+                        <select id="wh-month" onchange="loadWaterSectionHistory()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;">
+                            <option value="">All Months</option>
+                            <option value="01">January</option><option value="02">February</option><option value="03">March</option><option value="04">April</option><option value="05">May</option><option value="06">June</option><option value="07">July</option><option value="08">August</option><option value="09">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option>
+                        </select>
+                        <input type="date" id="wh-from" onchange="loadWaterSectionHistory()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;">
+                        <input type="date" id="wh-to" onchange="loadWaterSectionHistory()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;">
+                        <input type="text" id="wh-search" placeholder="🔍 Search customer..." oninput="loadWaterSectionHistory()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;width:140px;">
+                    </div>
+                    <div id="wh-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;"></div>
+                    <div id="wh-content"><div style="text-align:center;padding:20px;color:#64748b;">Loading...</div></div>
+                </div>
+            </div>
+
             <!-- nav-bottom-water -->
             <div style="display:flex;flex-direction:column;gap:8px;margin-top:24px;padding:14px 0 4px;border-top:1px solid var(--border-color);">
                 <div style="display:flex;gap:8px;">
@@ -6695,7 +6774,7 @@
         <div class="modal" style="max-width:580px;">
             <div class="modal-header">
                 <h3 id="supplier-ledger-title">🏭 Supplier Ledger</h3>
-                <button class="modal-close" onclick="hideModal(\'supplier-ledger-modal\')">&times;</button>
+                <button class="modal-close" onclick="hideModal('supplier-ledger-modal')">&times;</button>
             </div>
             <div class="modal-body" id="supplier-ledger-body">
                 <div style="text-align:center;color:#64748b;padding:20px;">Loading...</div>
@@ -10966,20 +11045,34 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
 
         async function filterTenants() {
             const searchTerm = document.getElementById('tenant-search').value.toLowerCase();
+            const fromDate = (document.getElementById('tenant-filter-from')||{}).value || '';
+            const toDate   = (document.getElementById('tenant-filter-to')||{}).value   || '';
             const payments = await dbGetAll('payments');
             const properties = await dbGetAll('properties');
             
             const now = new Date();
             const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
+            // When date range is active, filter by move-in date or last payment date
+            const hasDateFilter = fromDate || toDate;
+
             let filtered = allTenantsData.filter(tenant => {
-                // Search filter
                 const matchesSearch = tenant.name.toLowerCase().includes(searchTerm) ||
                     (tenant.phone && tenant.phone.includes(searchTerm));
-                
                 if (!matchesSearch) return false;
 
-                // Status filter
+                // Date range filter — filter tenants who had payments in range, or moved in during range
+                if (hasDateFilter) {
+                    const tenantPayments = payments.filter(p => p.tenantId === tenant.id);
+                    const hasPaymentInRange = tenantPayments.some(p => {
+                        const d = (p.date||'').substring(0,10);
+                        return (!fromDate || d >= fromDate) && (!toDate || d <= toDate);
+                    });
+                    const moveInDate = (tenant.moveInDate||tenant.startDate||'').substring(0,10);
+                    const moveInInRange = moveInDate && (!fromDate || moveInDate >= fromDate) && (!toDate || moveInDate <= toDate);
+                    if (!hasPaymentInRange && !moveInInRange) return false;
+                }
+
                 const tenantPayments = payments.filter(p => p.tenantId === tenant.id && p.type === 'rent');
                 const paidThisMonth = tenantPayments.some(p => p.monthCovered === currentMonth && !p.voided);
                 const isOverdue = !paidThisMonth && now.getDate() > 5;
@@ -10987,7 +11080,6 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 if (tenantFilter === 'paid') return paidThisMonth;
                 if (tenantFilter === 'unpaid') return !paidThisMonth;
                 if (tenantFilter === 'overdue') return isOverdue;
-                
                 return true;
             });
 
@@ -10996,21 +11088,31 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
 
         async function filterCredits() {
             const searchTerm = document.getElementById('credit-search').value.toLowerCase();
+            const fromDate = (document.getElementById('credit-filter-from')||{}).value || '';
+            const toDate   = (document.getElementById('credit-filter-to')||{}).value   || '';
             const creditPayments = await dbGetAll('creditPayments');
             
             const now = new Date();
 
             let filtered = allCreditsData.filter(credit => {
-                // Search filter
                 const matchesSearch = credit.debtor.toLowerCase().includes(searchTerm) ||
                     (credit.phone && credit.phone.includes(searchTerm));
-                
                 if (!matchesSearch) return false;
 
-                // Calculate status
+                // Date range — filter by date lent or payment dates in range
+                if (fromDate || toDate) {
+                    const lentDate = (credit.dateLent||'').substring(0,10);
+                    const lentInRange = lentDate && (!fromDate || lentDate >= fromDate) && (!toDate || lentDate <= toDate);
+                    const payments = creditPayments.filter(p => p.creditId === credit.id);
+                    const hasPayInRange = payments.some(p => {
+                        const d = (p.date||'').substring(0,10);
+                        return (!fromDate || d >= fromDate) && (!toDate || d <= toDate);
+                    });
+                    if (!lentInRange && !hasPayInRange) return false;
+                }
+
                 const payments = creditPayments.filter(p => p.creditId === credit.id);
                 const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
-                
                 let totalDue = credit.principal;
                 if (credit.interestType === 'simple') {
                     const months = Math.ceil((now - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
@@ -11018,7 +11120,6 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 } else if (credit.interestType === 'flat') {
                     totalDue = credit.principal + credit.interestRate;
                 }
-
                 const fullyPaid = totalPaid >= totalDue;
                 const lastPayment = payments.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
                 const isOverdue = !fullyPaid && (!lastPayment || (now - new Date(lastPayment.date)) > 30 * 24 * 60 * 60 * 1000);
@@ -11026,7 +11127,6 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 if (creditFilter === 'active') return !fullyPaid;
                 if (creditFilter === 'paid') return fullyPaid;
                 if (creditFilter === 'overdue') return isOverdue;
-                
                 return true;
             });
 
@@ -14492,6 +14592,8 @@ async function loadWaterCustomers() {
                     </div>
                 </div>
             `).join('');
+            // Re-apply blur if names are currently hidden
+            if (typeof applyWaterNameBlur === 'function') applyWaterNameBlur();
         }
         window.deleteWaterSale = deleteWaterSale;
 
@@ -19095,24 +19197,22 @@ async function showPayrollSummary() {
 
             hideModal('expense-detail-modal');
 
+            // Build category options from the master list so all categories match
+            const catOptions = _expCatAll.map(c =>
+                `<option value="${c.v}" ${expense.category === c.v ? 'selected' : ''}>${c.l}</option>`
+            ).join('');
+
             document.getElementById('expense-detail-content').innerHTML = `
                 <form id="edit-expense-form" onsubmit="updateExpense(event, ${id})">
                     <div class="form-group">
                         <label>Category</label>
                         <select id="edit-expense-category" required>
-                            <option value="repairs" ${expense.category === 'repairs' ? 'selected' : ''}>Repairs & Maintenance</option>
-                            <option value="utilities" ${expense.category === 'utilities' ? 'selected' : ''}>Utilities</option>
-                            <option value="taxes" ${expense.category === 'taxes' ? 'selected' : ''}>Taxes & Permits</option>
-                            <option value="insurance" ${expense.category === 'insurance' ? 'selected' : ''}>Insurance</option>
-                            <option value="supplies" ${expense.category === 'supplies' ? 'selected' : ''}>Supplies & Materials</option>
-                            <option value="labor" ${expense.category === 'labor' ? 'selected' : ''}>Labor/Services</option>
-                            <option value="transport" ${expense.category === 'transport' ? 'selected' : ''}>Transportation</option>
-                            <option value="other" ${expense.category === 'other' ? 'selected' : ''}>Other</option>
+                            ${catOptions}
                         </select>
                     </div>
                     <div class="form-group">
                         <label>Description</label>
-                        <input type="text" id="edit-expense-description" value="${expense.description}" required>
+                        <input type="text" id="edit-expense-description" value="${expense.description || ''}" required>
                     </div>
                     <div class="form-group">
                         <label>Amount (₱)</label>
@@ -25244,10 +25344,10 @@ async function clearAllData() {
                 if (type === 'income' || type === 'today-in') {
                     title = '💰 Income — ' + periodLabel;
                     const groups = [
-                        {label:'🏠 Rent', nav:"showSection('tenants')", items: filteredRent.map(p=>({name:p.tenantName||'Tenant',amount:p.amount||0,date:p.date,sub:'Rent payment',nav:p.tenantId?"showSection('tenants');setTimeout(function(){viewTenantDetails("+p.tenantId+");},350)":"showSection('tenants')"}))},
-                        {label:'💳 Credit Repayments', nav:"showSection('credits')", items: filteredCred.map(p=>({name:p.debtorName||'Debtor',amount:p.amount||0,date:p.date,sub:'Credit repayment',nav:p.creditId?"showSection('credits');setTimeout(function(){viewCreditDetails("+p.creditId+");},350)":"showSection('credits')"}))},
-                        {label:'💧 Water Sales', nav:"showSection('water')", items: filteredWater.map(p=>({name:p.customerName||'Customer',amount:p.amountPaid||0,date:p.date,sub:'Water sale',nav:p.customerId?"showSection('water');setTimeout(function(){viewWaterCustomerDetails("+p.customerId+");},350)":"showSection('water')"}))},
-                        {label:'🛒 Store Sales', nav:"showSection('water')", items: filteredStore.map(p=>({name:p.customerName||'Customer',amount:p.total||0,date:p.date,sub:'Store sale',nav:p.customerId?"showSection('water');setTimeout(function(){viewWaterCustomerDetails("+p.customerId+");},350)":"showSection('water')"}))},
+                        {label:'🏠 Rent', nav:"showSection('tenants')", items: filteredRent.map(p=>({name:p.tenantName||'Tenant',amount:p.amount||0,date:p.date,sub:'Rent payment',nav:p.tenantId?"viewTenantDetails("+p.tenantId+");":"showSection('tenants')"}))},
+                        {label:'💳 Credit Repayments', nav:"showSection('credits')", items: filteredCred.map(p=>({name:p.debtorName||'Debtor',amount:p.amount||0,date:p.date,sub:'Credit repayment',nav:p.creditId?"viewCreditDetails("+p.creditId+");":"showSection('credits')"}))},
+                        {label:'💧 Water Sales', nav:"showSection('water')", items: filteredWater.map(p=>({name:p.customerName||'Customer',amount:p.amountPaid||0,date:p.date,sub:'Water sale',nav:p.customerId?"viewWaterCustomerDetails("+p.customerId+");":"showSection('water')"}))},
+                        {label:'🛒 Store Sales', nav:"showSection('water')", items: filteredStore.map(p=>({name:p.customerName||'Customer',amount:p.total||0,date:p.date,sub:'Store sale',nav:p.customerId?"viewWaterCustomerDetails("+p.customerId+");":"showSection('water')"}))},
                         {label:'💰 Other Income', nav:"showSection('income')", items: filteredOther.map(p=>({name:p.source||p.description||'Other',amount:p.amount||0,date:p.date,sub:'Other income',nav:"showSection('income')"}))}
                     ].filter(g=>g.items.length>0);
                     if (groups.length === 0) {
@@ -25273,7 +25373,7 @@ async function clearAllData() {
                     } else {
                         filteredExp.sort((a,b)=>(b.date||'')>(a.date||'')?1:-1)
                             .forEach(e => {
-                                const navFn = e.id ? "showSection('expenses');setTimeout(function(){editExpense("+e.id+");},350);" : "showSection('expenses')";
+                                const navFn = e.id ? "editExpense("+e.id+");" : "showSection('expenses')";
                                 rows += rowHtml((e.category||'Expense'), e.date, e.amount, false, e.description||'', navFn);
                             });
                         rows += '<div style="border-top:2px solid rgba(239,68,68,0.3);margin-top:10px;padding-top:8px;display:flex;justify-content:space-between;font-weight:800;"><span>Total Expenses</span><span style="color:#ef4444;">₱'+totalExp.toLocaleString()+'</span></div>';
@@ -26485,10 +26585,10 @@ async function clearAllData() {
                     } else {
                         feedEl.innerHTML = allTxns.slice(0,20).map(t => {
                             let navFn = '';
-                            if (t.src==='rent'    && t.navId) navFn = "showSection('tenants');setTimeout(function(){viewTenantDetails("+t.navId+");},350);";
-                            else if (t.src==='credit' && t.navId) navFn = "showSection('credits');setTimeout(function(){viewCreditDetails("+t.navId+");},350);";
-                            else if ((t.src==='water'||t.src==='store') && t.navId) navFn = "showSection('water');setTimeout(function(){viewWaterCustomerDetails("+t.navId+");},350);";
-                            else if (t.src==='expense' && t.id) navFn = "showSection('expenses');setTimeout(function(){editExpense("+t.id+");},350);";
+                            if (t.src==='rent'    && t.navId) navFn = "viewTenantDetails(\"+t.navId+\");";
+                            else if (t.src==='credit' && t.navId) navFn = "viewCreditDetails(\"+t.navId+\");";
+                            else if ((t.src==='water'||t.src==='store') && t.navId) navFn = "viewWaterCustomerDetails(\"+t.navId+\");";
+                            else if (t.src==='expense' && t.id) navFn = "editExpense(\"+t.id+\");";
                             else if (t.src==='income')  navFn = "showSection('income');";
                             else navFn = "showSection('"+(t.in?'income':'expenses')+"');";
                             return '<div onclick="'+navFn+'" style="display:flex;justify-content:space-between;align-items:center;padding:7px 8px;border-bottom:1px solid var(--border-color);cursor:pointer;border-radius:6px;" onmouseover="this.style.background=\'rgba(99,102,241,0.06)\'" onmouseout="this.style.background=\'\'">' +
@@ -27084,9 +27184,180 @@ async function clearAllData() {
         }
         window.loadCreditHistory = loadCreditHistory;
 
-        // ═══════════════════════════════════════════════════════
-        // OTHER INCOME HISTORY PAGE
-        // ═══════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════
+        // SECTION HISTORY PANELS — Tenants / Credits / Water
+        // ══════════════════════════════════════════════════════════
+
+        function toggleSectionHistory(bodyId, chevronId, loadFn) {
+            const body = document.getElementById(bodyId);
+            const chev = document.getElementById(chevronId);
+            if (!body) return;
+            const isOpen = body.style.display !== 'none';
+            body.style.display = isOpen ? 'none' : '';
+            if (chev) chev.style.transform = isOpen ? '' : 'rotate(90deg)';
+            if (!isOpen && typeof loadFn === 'function') loadFn();
+        }
+        window.toggleSectionHistory = toggleSectionHistory;
+
+        // ── Tenant Section: Rent Payment History ──
+        async function loadTenantSectionHistory() {
+            const contEl = document.getElementById('th-content');
+            const summEl = document.getElementById('th-summary');
+            if (!contEl) return;
+            contEl.innerHTML = '<div style="text-align:center;padding:20px;color:#64748b;">Loading...</div>';
+
+            const filterYear   = (document.getElementById('th-year')||{}).value || '';
+            const filterMonth  = (document.getElementById('th-month')||{}).value || '';
+            const filterFrom   = (document.getElementById('th-from')||{}).value  || '';
+            const filterTo     = (document.getElementById('th-to')||{}).value    || '';
+            const filterSearch = ((document.getElementById('th-search')||{}).value || '').toLowerCase();
+
+            const [tenants, payments, properties] = await Promise.all([
+                dbGetAll('tenants'), dbGetAll('payments'), dbGetAll('properties')
+            ]);
+            const years = [...new Set(payments.map(p=>p.date?.substring(0,4)).filter(Boolean))];
+            populateYearDropdown('th-year', years);
+
+            let filtered = payments.filter(p => {
+                if (!p.date || p.voided) return false;
+                if (filterYear  && !p.date.startsWith(filterYear)) return false;
+                if (filterMonth && p.date.substring(5,7) !== filterMonth) return false;
+                if (filterFrom  && p.date < filterFrom) return false;
+                if (filterTo    && p.date > filterTo)   return false;
+                if (filterSearch) {
+                    const t = tenants.find(t=>t.id===p.tenantId);
+                    if (!(p.tenantName||'').toLowerCase().includes(filterSearch) &&
+                        !(t&&(t.name||'').toLowerCase().includes(filterSearch))) return false;
+                }
+                return true;
+            }).sort((a,b)=>(b.date||'')>(a.date||'')?1:-1);
+
+            const totalRent = filtered.reduce((s,p)=>s+(p.amount||0),0);
+            const uniqueTenants = new Set(filtered.map(p=>p.tenantId)).size;
+            if (summEl) summEl.innerHTML =
+                `<div style="background:rgba(16,185,129,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#10b981;">₱${totalRent.toLocaleString()}</div><div style="font-size:0.7rem;color:#64748b;">Total Collected</div></div>` +
+                `<div style="background:rgba(99,102,241,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#818cf8;">${filtered.length}</div><div style="font-size:0.7rem;color:#64748b;">Payments</div></div>` +
+                `<div style="background:rgba(245,158,11,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#f59e0b;">${uniqueTenants}</div><div style="font-size:0.7rem;color:#64748b;">Tenants</div></div>`;
+
+            if (filtered.length === 0) {
+                contEl.innerHTML = '<div style="text-align:center;color:#64748b;padding:20px;">No payments found for this period.</div>';
+                return;
+            }
+            contEl.innerHTML = filtered.map(p => {
+                const t = tenants.find(t=>t.id===p.tenantId);
+                const prop = properties.find(pr=>pr.id===t?.propertyId);
+                return `<div onclick="viewTenantDetails(${p.tenantId})" style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:var(--bg-primary);border-radius:8px;margin-bottom:5px;border-left:3px solid #10b981;cursor:pointer;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                    <div><div style="font-weight:600;font-size:0.85rem;">${_esc(p.tenantName||t?.name||'Tenant')}</div>
+                    <div style="font-size:0.72rem;color:#64748b;">${p.date}${prop?' · '+_esc(prop.name):''}${p.paymentMethod?' · '+p.paymentMethod:''}</div></div>
+                    <div style="display:flex;align-items:center;gap:4px;"><span style="font-weight:700;color:#10b981;">+₱${(p.amount||0).toLocaleString()}</span><span style="color:#64748b;font-size:0.72rem;">›</span></div>
+                </div>`;
+            }).join('') + `<div style="border-top:2px solid rgba(16,185,129,0.3);margin-top:10px;padding-top:8px;display:flex;justify-content:space-between;font-weight:800;"><span style="color:#64748b;">Total</span><span style="color:#10b981;">₱${totalRent.toLocaleString()}</span></div>`;
+        }
+        window.loadTenantSectionHistory = loadTenantSectionHistory;
+
+        // ── Credits Section: Repayment History ──
+        async function loadCreditSectionHistory() {
+            const contEl = document.getElementById('ch-content');
+            const summEl = document.getElementById('ch-summary');
+            if (!contEl) return;
+            contEl.innerHTML = '<div style="text-align:center;padding:20px;color:#64748b;">Loading...</div>';
+
+            const filterYear   = (document.getElementById('ch-year')||{}).value  || '';
+            const filterMonth  = (document.getElementById('ch-month')||{}).value || '';
+            const filterFrom   = (document.getElementById('ch-from')||{}).value  || '';
+            const filterTo     = (document.getElementById('ch-to')||{}).value    || '';
+            const filterSearch = ((document.getElementById('ch-search')||{}).value || '').toLowerCase();
+
+            const [credits, payments] = await Promise.all([dbGetAll('credits'), dbGetAll('creditPayments')]);
+            const years = [...new Set(payments.map(p=>p.date?.substring(0,4)).filter(Boolean))];
+            populateYearDropdown('ch-year', years);
+
+            let filtered = payments.filter(p => {
+                if (!p.date || p.voided) return false;
+                if (filterYear  && !p.date.startsWith(filterYear)) return false;
+                if (filterMonth && p.date.substring(5,7) !== filterMonth) return false;
+                if (filterFrom  && p.date < filterFrom) return false;
+                if (filterTo    && p.date > filterTo)   return false;
+                if (filterSearch) {
+                    const c = credits.find(c=>c.id===p.creditId);
+                    if (!(p.debtorName||'').toLowerCase().includes(filterSearch) &&
+                        !(c&&(c.debtor||'').toLowerCase().includes(filterSearch))) return false;
+                }
+                return true;
+            }).sort((a,b)=>(b.date||'')>(a.date||'')?1:-1);
+
+            const totalPaid = filtered.reduce((s,p)=>s+(p.amount||0),0);
+            const uniqueDebtors = new Set(filtered.map(p=>p.creditId)).size;
+            if (summEl) summEl.innerHTML =
+                `<div style="background:rgba(16,185,129,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#10b981;">₱${totalPaid.toLocaleString()}</div><div style="font-size:0.7rem;color:#64748b;">Total Repaid</div></div>` +
+                `<div style="background:rgba(99,102,241,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#818cf8;">${filtered.length}</div><div style="font-size:0.7rem;color:#64748b;">Payments</div></div>` +
+                `<div style="background:rgba(245,158,11,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#f59e0b;">${uniqueDebtors}</div><div style="font-size:0.7rem;color:#64748b;">Debtors</div></div>`;
+
+            if (filtered.length === 0) {
+                contEl.innerHTML = '<div style="text-align:center;color:#64748b;padding:20px;">No repayments found for this period.</div>';
+                return;
+            }
+            contEl.innerHTML = filtered.map(p => {
+                const c = credits.find(c=>c.id===p.creditId);
+                return `<div onclick="viewCreditDetails(${p.creditId})" style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:var(--bg-primary);border-radius:8px;margin-bottom:5px;border-left:3px solid #10b981;cursor:pointer;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                    <div><div style="font-weight:600;font-size:0.85rem;">${_esc(p.debtorName||c?.debtor||'Debtor')}</div>
+                    <div style="font-size:0.72rem;color:#64748b;">${p.date}${p.paymentMethod?' · '+p.paymentMethod:''}</div></div>
+                    <div style="display:flex;align-items:center;gap:4px;"><span style="font-weight:700;color:#10b981;">+₱${(p.amount||0).toLocaleString()}</span><span style="color:#64748b;font-size:0.72rem;">›</span></div>
+                </div>`;
+            }).join('') + `<div style="border-top:2px solid rgba(16,185,129,0.3);margin-top:10px;padding-top:8px;display:flex;justify-content:space-between;font-weight:800;"><span style="color:#64748b;">Total</span><span style="color:#10b981;">₱${totalPaid.toLocaleString()}</span></div>`;
+        }
+        window.loadCreditSectionHistory = loadCreditSectionHistory;
+
+        // ── Water Section: Sales History ──
+        async function loadWaterSectionHistory() {
+            const contEl = document.getElementById('wh-content');
+            const summEl = document.getElementById('wh-summary');
+            if (!contEl) return;
+            contEl.innerHTML = '<div style="text-align:center;padding:20px;color:#64748b;">Loading...</div>';
+
+            const filterYear   = (document.getElementById('wh-year')||{}).value  || '';
+            const filterMonth  = (document.getElementById('wh-month')||{}).value || '';
+            const filterFrom   = (document.getElementById('wh-from')||{}).value  || '';
+            const filterTo     = (document.getElementById('wh-to')||{}).value    || '';
+            const filterSearch = ((document.getElementById('wh-search')||{}).value || '').toLowerCase();
+
+            const [sales, customers] = await Promise.all([dbGetAll('waterSales'), dbGetAll('waterCustomers')]);
+            const years = [...new Set(sales.map(s=>s.date?.substring(0,4)).filter(Boolean))];
+            populateYearDropdown('wh-year', years);
+
+            let filtered = sales.filter(s => {
+                if (!s.date || s.voided) return false;
+                if (filterYear  && !s.date.startsWith(filterYear)) return false;
+                if (filterMonth && s.date.substring(5,7) !== filterMonth) return false;
+                if (filterFrom  && s.date < filterFrom) return false;
+                if (filterTo    && s.date > filterTo)   return false;
+                if (filterSearch && !(s.customerName||'').toLowerCase().includes(filterSearch)) return false;
+                return true;
+            }).sort((a,b)=>(b.date||'')>(a.date||'')?1:-1);
+
+            const totalSales   = filtered.reduce((s,x)=>s+(x.total||0),0);
+            const totalPaid    = filtered.reduce((s,x)=>s+(x.amountPaid||0),0);
+            const totalGallons = filtered.reduce((s,x)=>s+(x.gallons||x.bottles||0),0);
+            const uniqueCust   = new Set(filtered.map(s=>s.customerId)).size;
+            if (summEl) summEl.innerHTML =
+                `<div style="background:rgba(59,130,246,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#3b82f6;">₱${totalPaid.toLocaleString()}</div><div style="font-size:0.7rem;color:#64748b;">Total Collected</div></div>` +
+                `<div style="background:rgba(16,185,129,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#10b981;">${filtered.length}</div><div style="font-size:0.7rem;color:#64748b;">Transactions</div></div>` +
+                `<div style="background:rgba(99,102,241,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#818cf8;">${totalGallons}</div><div style="font-size:0.7rem;color:#64748b;">Gallons/Bottles</div></div>`;
+
+            if (filtered.length === 0) {
+                contEl.innerHTML = '<div style="text-align:center;color:#64748b;padding:20px;">No water sales found for this period.</div>';
+                return;
+            }
+            contEl.innerHTML = filtered.map(s => {
+                const statusColor = s.status==='paid' ? '#10b981' : s.status==='credit' ? '#f59e0b' : '#3b82f6';
+                return `<div onclick="viewWaterCustomerDetails(${s.customerId})" style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:var(--bg-primary);border-radius:8px;margin-bottom:5px;border-left:3px solid ${statusColor};cursor:pointer;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                    <div><div style="font-weight:600;font-size:0.85rem;">💧 ${_esc(s.customerName||'Walk-in')}</div>
+                    <div style="font-size:0.72rem;color:#64748b;">${s.date} · ${s.gallons||s.bottles||0} gal${s.status?' · '+s.status:''}</div></div>
+                    <div style="display:flex;align-items:center;gap:4px;"><span style="font-weight:700;color:${statusColor};">₱${(s.amountPaid||0).toLocaleString()}</span><span style="color:#64748b;font-size:0.72rem;">›</span></div>
+                </div>`;
+            }).join('') + `<div style="border-top:2px solid rgba(59,130,246,0.3);margin-top:10px;padding-top:8px;display:flex;justify-content:space-between;font-weight:800;"><span style="color:#64748b;">Total Collected</span><span style="color:#3b82f6;">₱${totalPaid.toLocaleString()}</span></div>`;
+        }
+        window.loadWaterSectionHistory = loadWaterSectionHistory;
         async function loadOtherIncomeHistory() {
             const yearEl   = document.getElementById('other-hist-year');
             const monthEl  = document.getElementById('other-hist-month');
@@ -27564,10 +27835,10 @@ async function clearAllData() {
 
                 // Build clickable nav for each transaction type
                 const _navFn = (t) => {
-                    if (t.src === 'rent'    && t.navId) return `showSection('tenants');setTimeout(function(){viewTenantDetails(${t.navId});},350);`;
-                    if (t.src === 'credit'  && t.navId) return `showSection('credits');setTimeout(function(){viewCreditDetails(${t.navId});},350);`;
-                    if (t.src === 'water'   && t.navId) return `showSection('water');setTimeout(function(){viewWaterCustomerDetails(${t.navId});},350);`;
-                    if (t.src === 'expense') return `showSection('expenses');setTimeout(function(){editExpense(${t.id});},350);`;
+                    if (t.src === 'rent'    && t.navId) return `viewTenantDetails(${t.navId});`;
+                    if (t.src === 'credit'  && t.navId) return `viewCreditDetails(${t.navId});`;
+                    if (t.src === 'water'   && t.navId) return `viewWaterCustomerDetails(${t.navId});`;
+                    if (t.src === 'expense') return `editExpense(${t.id});`;
                     if (t.src === 'income')  return `showSection('income');`;
                     return '';
                 };
@@ -27651,9 +27922,34 @@ async function clearAllData() {
         }
         window.setWaterView = setWaterView;
 
-        // ═══════════════════════════════════════════════════
-        // WATER STORE — sell bottles, seals, stickers, custom items
-        // ═══════════════════════════════════════════════════
+        // ── Hide/Show customer names on water page ──
+        let _waterNamesHidden = false;
+        function toggleWaterCustomerNames() {
+            _waterNamesHidden = !_waterNamesHidden;
+            applyWaterNameBlur();
+            const btn = document.getElementById('water-names-toggle-btn');
+            if (btn) {
+                btn.style.background = _waterNamesHidden ? '#6366f1' : '';
+                btn.style.color = _waterNamesHidden ? '#fff' : '';
+                btn.style.borderColor = _waterNamesHidden ? '#6366f1' : '';
+                btn.textContent = _waterNamesHidden ? '🙈 Names' : '👁 Names';
+                btn.title = _waterNamesHidden ? 'Show customer names' : 'Hide customer names';
+            }
+        }
+        function applyWaterNameBlur() {
+            const list = document.getElementById('water-customers-list');
+            if (!list || !_waterNamesHidden) {
+                // Remove all blur when unhiding
+                if (list) list.querySelectorAll('.list-item-title').forEach(el => { el.style.filter = ''; el.style.userSelect = ''; });
+                return;
+            }
+            list.querySelectorAll('.list-item-title').forEach(el => {
+                el.style.filter = 'blur(6px)';
+                el.style.userSelect = 'none';
+            });
+        }
+        window.toggleWaterCustomerNames = toggleWaterCustomerNames;
+        window.applyWaterNameBlur = applyWaterNameBlur;
 
         // Default product catalog (editable by owner/admin)
         const _DEFAULT_STORE_PRODUCTS = [
@@ -28628,7 +28924,11 @@ function mtShowApp() {
     if (app && app.classList.contains('mt-active')) {
         _mtShowAppActual(); return;
     }
-    // Always show cinematic connecting screen then launch app
+    // Returning user (Google auto-restored session) — skip cinematic, go straight in
+    if (window._mtReturningUser && !window._mtManualLogin) {
+        _mtShowAppActual(); return;
+    }
+    // First-time / manual login — show cinematic connecting screen
     if (typeof prismShowConnecting === 'function') {
         prismShowConnecting(() => _mtShowAppActual());
     } else {
@@ -28735,7 +29035,15 @@ function _mtShowAppActual() {
 }
 
 function mtShowSuperAdmin() {
-    // Always show cinematic connecting screen first, then SA panel
+    // Returning user (Google auto-restored session) — skip cinematic, go straight in
+    if (window._mtReturningUser && !window._mtManualLogin) {
+        mtShowScreen('mt-superadmin');
+        const emailEl = document.getElementById('mt-sa-user-email');
+        if (emailEl) emailEl.textContent = MT.currentUser?.email || '';
+        mtLoadSAData();
+        return;
+    }
+    // First-time / manual login — show cinematic connecting screen first
     if (typeof prismShowConnecting === 'function') {
         prismShowConnecting(() => {
             mtShowScreen('mt-superadmin');
@@ -30919,6 +31227,14 @@ async function mtInit() {
         window.auth.onAuthStateChanged(async (user) => {
             // Cancel the safety fallback — auth has resolved
             if (window._mtInitFallbackTimer) { clearTimeout(window._mtInitFallbackTimer); window._mtInitFallbackTimer = null; }
+
+            // Returning user with active Google session — hide splash immediately, no click needed
+            if (user && !window._mtManualLogin) {
+                window._mtReturningUser = true;
+                // Hide splash right away so they don't see the "click to enter" screen
+                const splash = document.getElementById('prism-splash');
+                if (splash) splash.style.display = 'none';
+            }
 
             // Skip if app is already active from local login
             const appWrapper = document.querySelector('.prism-app-wrapper');
