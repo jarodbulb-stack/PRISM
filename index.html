@@ -5423,6 +5423,7 @@
                     <button class="filter-btn pay-filter-btn" data-filter="pending" onclick="filterPayables('pending')">⏳ Pending</button>
                     <button class="filter-btn pay-filter-btn" data-filter="due-soon" onclick="filterPayables('due-soon')">🟡 Due Soon</button>
                     <button class="filter-btn pay-filter-btn" data-filter="overdue" onclick="filterPayables('overdue')">🔴 Overdue</button>
+                    <button class="filter-btn pay-filter-btn" data-filter="partial" onclick="filterPayables('partial')">💸 Partial</button>
                     <button class="filter-btn pay-filter-btn" data-filter="paid" onclick="filterPayables('paid')">✅ Paid</button>
                 </div>
                 <div class="search-box" style="margin-bottom:10px;">
@@ -6228,7 +6229,7 @@
                     <div id="rent-payment-fields" class="hidden">
                         <div class="form-group">
                             <label>Tenant</label>
-                            <select id="payment-tenant">
+                            <select id="payment-tenant" onchange="pmSetExpectedRent()">
                                 <option value="">Select tenant</option>
                             </select>
                         </div>
@@ -6362,6 +6363,8 @@
                                 <span style="color:#10b981;" id="pm-net-amount"></span>
                             </div>
                         </div>
+                        <!-- Partial Payment Indicator -->
+                        <div id="pm-partial-indicator" style="display:none;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:0.82rem;"></div>
                         <!-- Balance Override (Admin/Owner only) -->
                         <div id="pm-override-group" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:10px 12px;margin-bottom:12px;">
                             <label style="color:#f59e0b;font-size:0.82rem;font-weight:700;">🔧 Balance Override (Admin Only)</label>
@@ -7199,6 +7202,20 @@
                     <div class="form-group">
                         <label>Payment Date</label>
                         <input type="date" id="salary-date" required>
+                    </div>
+                    <!-- Partial Payment Option -->
+                    <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:8px;padding:10px 12px;margin-bottom:12px;">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:0;">
+                            <input type="checkbox" id="salary-partial-check" onchange="toggleSalaryPartial()" style="width:15px;height:15px;accent-color:#6366f1;">
+                            <span style="font-size:0.85rem;color:#a5b4fc;font-weight:600;">💸 Pay partial amount only</span>
+                        </label>
+                        <div id="salary-partial-fields" style="display:none;margin-top:10px;">
+                            <label style="font-size:0.8rem;color:#94a3b8;">Amount to Pay Now (₱)</label>
+                            <input type="number" id="salary-partial-amount" min="1" placeholder="Enter partial amount"
+                                style="width:100%;padding:8px;background:#0f172a;border:1px solid #334155;border-radius:6px;color:#f1f5f9;font-size:1rem;font-weight:700;box-sizing:border-box;"
+                                oninput="calcSalaryPartial()">
+                            <div id="salary-partial-info" style="margin-top:6px;font-size:0.78rem;color:#94a3b8;"></div>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>Notes</label>
@@ -12679,6 +12696,21 @@ async function recordTenantPayment(tenantId) {
             } else {
                 if (nd) nd.style.display = 'none';
             }
+            // Partial payment indicator for rent
+            const payType = (document.getElementById('payment-type')||{}).value;
+            const partialEl = document.getElementById('pm-partial-indicator');
+            if (partialEl && payType === 'rent' && window._pmExpectedRent > 0) {
+                const shortfall = window._pmExpectedRent - net;
+                if (shortfall > 0 && net > 0) {
+                    partialEl.innerHTML = '<span style="color:#f59e0b;font-weight:700;">⚠️ Partial payment — ₱'+shortfall.toLocaleString()+' short of expected ₱'+window._pmExpectedRent.toLocaleString()+'</span>';
+                    partialEl.style.display = 'block';
+                } else if (net >= window._pmExpectedRent) {
+                    partialEl.innerHTML = '<span style="color:#10b981;font-weight:700;">✅ Full rent covered</span>';
+                    partialEl.style.display = 'block';
+                } else {
+                    partialEl.style.display = 'none';
+                }
+            } else if (partialEl) { partialEl.style.display = 'none'; }
         }
 
         function togglePmOverride() {
@@ -12986,6 +13018,20 @@ async function recordTenantPayment(tenantId) {
         window.pmWsSetType=pmWsSetType; window.pmWsSetBigPrice=pmWsSetBigPrice; window.pmWsSetSmallSize=pmWsSetSmallSize;
         window.pmWsCalcBig=pmWsCalcBig; window.pmWsCalcSmall=pmWsCalcSmall; window.pmWsShowSummary=pmWsShowSummary;
         window.calcPaymentModalNet  = calcPaymentModalNet;
+
+        async function pmSetExpectedRent() {
+            const tenantId = parseInt((document.getElementById('payment-tenant')||{}).value);
+            if (!tenantId || isNaN(tenantId)) { window._pmExpectedRent = 0; return; }
+            try {
+                const t = await dbGet('tenants', tenantId);
+                window._pmExpectedRent = t ? (t.rent || t.monthlyRent || 0) : 0;
+                // Pre-fill amount with expected rent
+                const amtEl = document.getElementById('payment-amount');
+                if (amtEl && window._pmExpectedRent > 0) amtEl.value = window._pmExpectedRent;
+                calcPaymentModalNet();
+            } catch(e) { window._pmExpectedRent = 0; }
+        }
+        window.pmSetExpectedRent = pmSetExpectedRent;
         window.togglePmOverride     = togglePmOverride;
 
         // ── Tenant Payment Discount ──
@@ -13120,6 +13166,9 @@ async function recordTenantPayment(tenantId) {
                         monthCovered,
                         amount: netAmount,
                         originalAmount: amount,
+                        expectedRent: tenant.rent || tenant.monthlyRent || 0,
+                        isPartial: netAmount < (tenant.rent || tenant.monthlyRent || 0),
+                        shortfall: Math.max(0, (tenant.rent || tenant.monthlyRent || 0) - netAmount),
                         discount: _pmDiscAmt,
                         discountType: _pmDiscType,
                         discountReason: _pmDiscReason,
@@ -24792,6 +24841,13 @@ async function clearAllData() {
         }
         function _payStatus(p) {
             if (p.status === 'paid') return 'paid';
+            if (p.status === 'partial') {
+                // Partial but check if overdue
+                const due = _payLocalDate(p.dueDate);
+                const today = _payToday();
+                const diff = Math.ceil((due - today) / 86400000);
+                return diff < 0 ? 'overdue' : diff <= 3 ? 'due-soon' : 'partial';
+            }
             const due = _payLocalDate(p.dueDate);
             const today = _payToday();
             const diff = Math.ceil((due - today) / 86400000);
@@ -24860,8 +24916,8 @@ async function clearAllData() {
             if (!el) return;
             const q = (document.getElementById('pay-search')?.value||'').toLowerCase();
             const catLabels = { supplies:'📦 Supplies', inventory:'🏪 Inventory', electric:'⚡ Electric', equipment:'🛠️ Equipment', rent:'🏠 Rent', service:'🔧 Services', loan:'💳 Loan', other:'📝 Other' };
-            const statusColors = { overdue:'#ef4444', 'due-soon':'#f59e0b', pending:'#64748b', paid:'#10b981' };
-            const statusLabels = { overdue:'🔴 OVERDUE', 'due-soon':'🟡 DUE SOON', pending:'⏳ Pending', paid:'✅ Paid' };
+            const statusColors = { overdue:'#ef4444', 'due-soon':'#f59e0b', pending:'#64748b', partial:'#3b82f6', paid:'#10b981' };
+            const statusLabels = { overdue:'🔴 OVERDUE', 'due-soon':'🟡 DUE SOON', pending:'⏳ Pending', partial:'💸 Partial', paid:'✅ Paid' };
 
             let filtered = _allPayables.filter(p=>{
                 const s = _payStatus(p);
@@ -24869,6 +24925,7 @@ async function clearAllData() {
                 if (_payablesFilter === 'due-soon' && s !== 'due-soon') return false;
                 if (_payablesFilter === 'pending' && s !== 'pending') return false;
                 if (_payablesFilter === 'paid' && p.status !== 'paid') return false;
+                if (_payablesFilter === 'partial' && p.status !== 'partial') return false;
                 if (q && !((p.supplier||'').toLowerCase().includes(q)||(p.invoice||'').toLowerCase().includes(q)||(p.notes||'').toLowerCase().includes(q))) return false;
                 return true;
             }).sort((a,b)=>{
@@ -24895,8 +24952,9 @@ async function clearAllData() {
                     '<div style="font-size:0.72rem;color:#94a3b8;margin-top:1px;">'+( catLabels[p.category]||p.category||'')+(p.dueDate?' · Due: '+p.dueDate:'')+'</div>' +
                     '</div>' +
                     '<div style="text-align:right;flex-shrink:0;margin-left:10px;">' +
-                    '<div style="font-weight:800;font-size:1rem;color:'+( p.status==='paid'?'#10b981':'#ef4444')+';white-space:nowrap;">₱'+(p.amount||0).toLocaleString()+'</div>' +
+                    '<div style="font-weight:800;font-size:1rem;color:'+( p.status==='paid'?'#10b981':p.status==='partial'?'#3b82f6':'#ef4444')+';white-space:nowrap;">₱'+(p.amount||0).toLocaleString()+'</div>' +
                     '<div style="font-size:0.7rem;font-weight:700;color:'+sc+';">'+sl+'</div>' +
+                    (p.status==='partial'?(() => { const _paid=p.paidAmount||0; const _total=p.amount||1; const _pct=Math.min(100,Math.round((_paid/_total)*100)); return '<div style="font-size:0.68rem;color:#3b82f6;font-weight:600;margin-bottom:3px;">Paid: ₱'+_paid.toLocaleString()+' ('+_pct+'%) · Bal: ₱'+Math.max(0,(p.amount||0)-_paid).toLocaleString()+'</div><div style="background:#1e293b;border-radius:4px;height:4px;overflow:hidden;"><div style="background:#3b82f6;height:100%;width:'+_pct+'%;transition:width 0.3s;"></div></div>'; })():'')+
                     (daysLbl?'<div style="font-size:0.68rem;color:#94a3b8;">'+daysLbl+'</div>':'')+
                     '</div></div>' +
                     (p.notes?'<div style="font-size:0.75rem;color:#64748b;border-top:1px solid var(--border-color);padding-top:6px;margin-top:4px;">'+_esc(p.notes)+'</div>':'')+
@@ -24991,15 +25049,25 @@ async function clearAllData() {
             const p = await dbGet('payables', id);
             if (!p) return;
             const today = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
+            const totalOwed = p.amount || 0;
+            const totalPaid = p.paidAmount || 0;
+            const remaining = Math.max(0, totalOwed - totalPaid);
+            const pctPaid   = totalOwed > 0 ? Math.round((totalPaid/totalOwed)*100) : 0;
             document.getElementById('payable-pay-id').value = id;
-            document.getElementById('payable-pay-amount').value = p.amount||0;
+            document.getElementById('payable-pay-amount').value = remaining;
             document.getElementById('payable-pay-date').value = today;
             document.getElementById('payable-pay-notes').value = '';
             document.getElementById('payable-pay-method').value = 'cash';
             document.getElementById('payable-pay-info').innerHTML =
-                '<div style="font-weight:700;color:var(--text-primary);margin-bottom:4px;">'+_esc(p.supplier||'')+'</div>'+
-                (p.invoice?'<div style="font-size:0.8rem;color:#94a3b8;">Invoice: '+_esc(p.invoice)+'</div>':'')+
-                '<div style="font-size:0.82rem;color:#f59e0b;margin-top:4px;">Due: '+( p.dueDate||'N/A')+' · Amount: ₱'+(p.amount||0).toLocaleString()+'</div>';
+                '<div style="font-weight:700;color:var(--text-primary);margin-bottom:6px;">'+_esc(p.supplier||'')+'</div>'+
+                (p.invoice?'<div style="font-size:0.78rem;color:#94a3b8;margin-bottom:4px;">Invoice: '+_esc(p.invoice)+'</div>':'')+
+                '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center;margin-top:4px;">'+
+                '<div style="background:rgba(239,68,68,0.1);border-radius:6px;padding:6px;"><div style="font-weight:800;color:#ef4444;font-size:0.95rem;">\u20b1'+totalOwed.toLocaleString()+'</div><div style="font-size:0.65rem;color:#94a3b8;">TOTAL</div></div>'+
+                '<div style="background:rgba(16,185,129,0.1);border-radius:6px;padding:6px;"><div style="font-weight:800;color:#10b981;font-size:0.95rem;">\u20b1'+totalPaid.toLocaleString()+'</div><div style="font-size:0.65rem;color:#94a3b8;">PAID ('+pctPaid+'%)</div></div>'+
+                '<div style="background:rgba(245,158,11,0.15);border-radius:6px;padding:6px;"><div style="font-weight:800;color:#f59e0b;font-size:0.95rem;">\u20b1'+remaining.toLocaleString()+'</div><div style="font-size:0.65rem;color:#94a3b8;">BALANCE</div></div>'+
+                '</div>'+
+                (totalPaid>0?'<div style="margin-top:6px;font-size:0.72rem;color:#64748b;">'+(p.paymentHistory||[]).length+' payment(s) recorded. Enter amount to pay now.</div>':
+                '<div style="margin-top:6px;font-size:0.72rem;color:#64748b;">Due: '+(p.dueDate||'N/A')+' \u00b7 Partial or full payment accepted.</div>');
             showModal('payable-pay-modal');
         }
         window.showPayPayableModal = showPayPayableModal;
@@ -25013,22 +25081,42 @@ async function clearAllData() {
             if (!id||amt<=0) { showToast('⚠️ Enter a valid amount.','warning'); return; }
             const p = await dbGet('payables', id);
             if (!p) return;
-            p.status    = 'paid';
-            p.paidDate  = dt;
-            p.paidAmount= amt;
-            p.paidMethod= mth;
-            p.paidNotes = nt;
-            p.paidBy    = currentAppUser?.username||'admin';
+
+            const totalOwed  = p.amount || 0;
+            const prevPaid   = p.paidAmount || 0;
+            const newPaid    = prevPaid + amt;
+            const remaining  = Math.max(0, totalOwed - newPaid);
+            const isFullyPaid = remaining <= 0;
+
+            // Build payment history log
+            const history = p.paymentHistory || [];
+            history.push({ amount:amt, date:dt, method:mth, notes:nt, by:currentAppUser?.username||'admin', recordedAt:new Date().toISOString() });
+
+            p.paidAmount     = newPaid;
+            p.remainingBalance = remaining;
+            p.status         = isFullyPaid ? 'paid' : 'partial';
+            p.paidDate       = isFullyPaid ? dt : (p.paidDate||'');
+            p.lastPaymentDate= dt;
+            p.lastPaymentMethod = mth;
+            p.paymentHistory = history;
+            p.paidBy         = currentAppUser?.username||'admin';
+
             await dbUpdate('payables', p);
-            // Record as expense automatically
+
+            // Record each payment as expense
             await dbAdd('expenses', {
                 category: p.category||'supplies',
-                description: 'Payment to '+p.supplier+(p.invoice?' ('+p.invoice+')':''),
+                description: (isFullyPaid?'Full':'Partial')+' payment to '+p.supplier+(p.invoice?' ('+p.invoice+')':''),
                 amount: amt, date: dt, notes: nt||'Supplier payment',
                 supplierRef: id, createdAt: new Date().toISOString()
             });
+
             hideModal('payable-pay-modal');
-            showToast('✅ Payment recorded! Added to expenses.','success');
+            if (isFullyPaid) {
+                showToast('✅ Fully paid! ₱'+newPaid.toLocaleString()+' total. Expense recorded.','success');
+            } else {
+                showToast('💸 Partial payment ₱'+amt.toLocaleString()+' recorded. Balance: ₱'+remaining.toLocaleString(),'info');
+            }
             await loadPayables();
             loadExpenses(); loadDashboard();
             try { await syncToFirebase(); } catch(err) { debouncedSync(); }
@@ -25270,32 +25358,68 @@ async function clearAllData() {
         async function saveSalaryPayment(event) {
             if (event) event.preventDefault();
             const empId  = (document.getElementById('salary-employee-id')||{}).value || '';
-            const amount = parseFloat((document.getElementById('salary-amount')||{}).value) || 0;
+            const netPay = parseFloat((document.getElementById('salary-net')||{}).value) || 0;
             const date   = (document.getElementById('salary-date')||{}).value || (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             const period = (document.getElementById('salary-period')||{}).value || '';
             const notes  = (document.getElementById('salary-notes')||{}).value?.trim() || '';
+            // Check partial
+            const isPartialChk = document.getElementById('salary-partial-check')?.checked;
+            const partialAmt   = parseFloat(document.getElementById('salary-partial-amount')?.value) || 0;
+            const amount       = isPartialChk && partialAmt > 0 ? partialAmt : netPay;
             if (!empId)    { showToast('⚠️ Please select an employee.','warning'); return; }
             if (amount<=0) { showToast('⚠️ Please enter a valid amount.','warning'); return; }
             const emp = await dbGet('employees', parseInt(empId)).catch(()=>null);
+            const remaining = netPay > 0 ? Math.max(0, netPay - amount) : 0;
             const record = {
                 employeeId: parseInt(empId),
                 employeeName: emp ? emp.name : 'Employee',
-                amount, date, period, notes,
+                amount, netPay, isPartial: isPartialChk && amount < netPay,
+                remainingBalance: remaining,
+                date, period, notes,
                 recordedBy: currentAppUser?.username||'unknown',
                 createdAt: new Date().toISOString()
             };
             await dbAdd('salaryPayments', record);
             // Record as expense
-            await dbAdd('expenses', { category:'Payroll', amount, date,
-                description:'Salary: '+(emp?emp.name:'Employee')+(period?' ('+period+')':''),
+            await dbAdd('expenses', { category:'salaries', amount, date,
+                description:(isPartialChk && amount < netPay ? 'Partial salary: ' : 'Salary: ')+(emp?emp.name:'Employee')+(period?' ('+period+')':''),
                 recordedBy: currentAppUser?.username||'unknown', createdAt: new Date().toISOString() });
             hideModal('give-salary-modal');
+            // Reset partial checkbox
+            const pchk = document.getElementById('salary-partial-check');
+            if (pchk) { pchk.checked = false; toggleSalaryPartial(); }
             debouncedSync();
             if (typeof loadEmployees === 'function') loadEmployees();
             if (typeof loadPayrollSummary === 'function') loadPayrollSummary();
-            showToast('✅ Salary payment recorded.','success');
+            if (isPartialChk && amount < netPay) {
+                showToast('💸 Partial salary ₱'+amount.toLocaleString()+' paid. Balance: ₱'+remaining.toLocaleString(),'info');
+            } else {
+                showToast('✅ Salary payment recorded.','success');
+            }
         }
         window.saveSalaryPayment = saveSalaryPayment;
+
+        function toggleSalaryPartial() {
+            const chk = document.getElementById('salary-partial-check');
+            const flds = document.getElementById('salary-partial-fields');
+            if (flds) flds.style.display = chk?.checked ? 'block' : 'none';
+            if (chk?.checked) calcSalaryPartial();
+        }
+        function calcSalaryPartial() {
+            const netPay = parseFloat(document.getElementById('salary-net')?.value) || 0;
+            const partial = parseFloat(document.getElementById('salary-partial-amount')?.value) || 0;
+            const infoEl = document.getElementById('salary-partial-info');
+            if (!infoEl) return;
+            if (partial <= 0) { infoEl.textContent = ''; return; }
+            const remaining = Math.max(0, netPay - partial);
+            if (partial >= netPay) {
+                infoEl.innerHTML = '<span style="color:#10b981;font-weight:600;">✅ Full salary covered</span>';
+            } else {
+                infoEl.innerHTML = '<span style="color:#f59e0b;font-weight:600;">⚠️ Partial — ₱'+remaining.toLocaleString()+' will remain unpaid</span>';
+            }
+        }
+        window.toggleSalaryPartial = toggleSalaryPartial;
+        window.calcSalaryPartial   = calcSalaryPartial;
 
         async function editSalaryPayment(id) {
             const rec = await dbGet('salaryPayments', id);
