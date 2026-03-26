@@ -3882,6 +3882,7 @@
         <button class="nav-btn" data-section="reports">📊 Reports</button>
         <button class="nav-btn" data-section="notes">Notes</button>
         <button class="nav-btn" data-section="payables">🧾 Payables</button>
+        <button class="nav-btn" data-section="suppliers">🏭 Suppliers</button>
         <button class="nav-btn" data-section="settings">Settings</button>
     </div>
 
@@ -5416,7 +5417,9 @@
                         <div class="card-title">🧾 Trade Payables</div>
                         <div class="card-subtitle">Supplier invoices &amp; accounts payable</div>
                     </div>
-                    <button class="btn btn-sm btn-primary" onclick="showAddPayableModal()">+ Add Invoice</button>
+                    <div style="display:flex;gap:6px;">
+                        <button class="btn btn-sm" onclick="showSection('suppliers')" style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#818cf8;font-size:0.78rem;padding:6px 10px;">🏭 Suppliers</button>
+                        <button class="btn btn-sm btn-primary" onclick="showAddPayableModal()">+ Add Invoice</button>
                 </div>
                 <div class="filter-buttons" style="margin-bottom:12px;">
                     <button class="filter-btn active pay-filter-btn" data-filter="all" onclick="filterPayables('all')">All</button>
@@ -5441,6 +5444,36 @@
             <div style="display:flex;gap:8px;margin-top:16px;padding:14px 0 4px;border-top:1px solid var(--border-color);">
                 <button class="btn btn-secondary" style="flex:1;font-size:0.82rem;" onclick="showSection('notes')">← Notes</button>
                 <button class="btn btn-primary" style="flex:1;font-size:0.82rem;" onclick="showSection('expenses')">💸 Expenses →</button>
+            </div>
+        </div>
+
+        <!-- Suppliers Section -->
+        <div id="suppliers" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title">🏭 Suppliers Directory</div>
+                        <div class="card-subtitle">Supplier &amp; vendor contact ledger</div>
+                    </div>
+                    <button class="btn btn-sm btn-primary" onclick="showAddSupplierModal()">+ Add Supplier</button>
+                </div>
+                <!-- Search -->
+                <div class="search-box" style="margin-bottom:10px;">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="supplier-search" placeholder="Search supplier name, contact..." oninput="renderSuppliersList()">
+                </div>
+                <!-- List -->
+                <div id="suppliers-list">
+                    <div style="text-align:center;color:var(--text-secondary);padding:30px;">
+                        <div style="font-size:2rem;margin-bottom:8px;">🏭</div>
+                        <div>No suppliers yet. Suppliers are auto-created when you add invoices.</div>
+                        <button class="btn btn-primary" onclick="showAddSupplierModal()" style="margin-top:12px;">+ Add Supplier</button>
+                    </div>
+                </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:16px;padding:14px 0 4px;border-top:1px solid var(--border-color);">
+                <button class="btn btn-secondary" style="flex:1;font-size:0.82rem;" onclick="showSection('payables')">← Payables</button>
+                <button class="btn btn-primary" style="flex:1;font-size:0.82rem;" onclick="showSection('settings')">⚙️ Settings →</button>
             </div>
         </div>
 
@@ -6554,6 +6587,78 @@
         </div>
     </div>
 
+    <!-- Supplier Ledger Modal -->
+    <div class="modal-overlay" id="supplier-modal">
+        <div class="modal" style="max-width:520px;">
+            <div class="modal-header">
+                <h3 id="supplier-modal-title">🏭 Supplier Profile</h3>
+                <button class="modal-close" onclick="hideModal('supplier-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="supplier-form" onsubmit="saveSupplier(event)">
+                    <input type="hidden" id="supplier-edit-id">
+                    <div class="form-group">
+                        <label>Company / Supplier Name *</label>
+                        <input type="text" id="supplier-name" required placeholder="e.g., OTRIBOR Hardware, Sheridan Supply">
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        <div class="form-group">
+                            <label>Contact Person</label>
+                            <input type="text" id="supplier-contact" placeholder="e.g., Juan dela Cruz">
+                        </div>
+                        <div class="form-group">
+                            <label>Phone / Mobile</label>
+                            <input type="text" id="supplier-phone" placeholder="e.g., 09XX-XXX-XXXX">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Address</label>
+                        <input type="text" id="supplier-address" placeholder="Street, City, Province">
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        <div class="form-group">
+                            <label>Email (Optional)</label>
+                            <input type="email" id="supplier-email" placeholder="supplier@email.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Category</label>
+                            <select id="supplier-category">
+                                <option value="hardware">🔨 Hardware / Construction</option>
+                                <option value="supplies">📦 Office / Supplies</option>
+                                <option value="food">🍔 Food / Groceries</option>
+                                <option value="utilities">⚡ Utilities</option>
+                                <option value="services">🔧 Services / Labor</option>
+                                <option value="transport">🚚 Transport / Logistics</option>
+                                <option value="other">📝 Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Terms / Notes</label>
+                        <textarea id="supplier-notes" rows="2" placeholder="Payment terms, credit limit, special conditions..."></textarea>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button type="submit" class="btn btn-primary" style="flex:2;">💾 Save Supplier</button>
+                        <button type="button" id="supplier-delete-btn" class="btn btn-danger" style="flex:1;display:none;" onclick="deleteSupplierById()">🗑 Delete</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Supplier Ledger Detail Modal -->
+    <div class="modal-overlay" id="supplier-ledger-modal">
+        <div class="modal" style="max-width:580px;">
+            <div class="modal-header">
+                <h3 id="supplier-ledger-title">🏭 Supplier Ledger</h3>
+                <button class="modal-close" onclick="hideModal(\'supplier-ledger-modal\')">&times;</button>
+            </div>
+            <div class="modal-body" id="supplier-ledger-body">
+                <div style="text-align:center;color:#64748b;padding:20px;">Loading...</div>
+            </div>
+        </div>
+    </div>
+
     <!-- Trade Payables Modal -->
     <div class="modal-overlay" id="payable-modal">
         <div class="modal">
@@ -6566,7 +6671,11 @@
                     <input type="hidden" id="payable-edit-id">
                     <div class="form-group">
                         <label>Supplier / Vendor *</label>
-                        <input type="text" id="payable-supplier" required placeholder="e.g., OTRIBOR, Sheridan, Techno-Trade">
+                        <div style="position:relative;">
+                        <input type="text" id="payable-supplier" required placeholder="e.g., OTRIBOR, Sheridan, Techno-Trade"
+                            autocomplete="off" oninput="payableSupplierSearch(this.value)" onblur="setTimeout(()=>{const d=document.getElementById('payable-supplier-dd');if(d)d.style.display='none';},200)">
+                        <div id="payable-supplier-dd" style="display:none;position:absolute;background:#1e293b;border:1px solid #334155;border-radius:8px;z-index:9999;width:100%;max-height:160px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.4);margin-top:2px;"></div>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>Invoice # (Optional)</label>
@@ -8564,6 +8673,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     timeRecords: await getAllFromStore('timeRecords'),
                     tasks: await getAllFromStore('tasks'),
                     payables: await getAllFromStore('payables'),
+                    suppliers: await getAllFromStore('suppliers'),
                     // App users (admin, cashier accounts) — sync across devices
                     appUsers: JSON.parse(localStorage.getItem('prism_app_users') || '[]'),
                     lastSync: new Date().toISOString(),
@@ -8664,7 +8774,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     const stores = ['properties','tenants','payments','credits','creditPayments',
                         'expenses','customNotes','additionalIncome','clientCharges',
                         'waterCustomers','waterSales','employees','cashAdvances',
-                        'salaryPayments','timeRecords','tasks','payables'];
+                        'salaryPayments','timeRecords','tasks','payables','suppliers'];
                     for (const s of stores) {
                         const cloudArr = Array.isArray(data[s]) ? data[s] : [];
                         // Only do authoritative (clear+replace) if Firebase actually has records
@@ -8779,6 +8889,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             await loadEmployees();
             await loadTasks();
             await loadPayables();
+            await loadSuppliers();
             await loadDashboard();
         }
 
@@ -9608,7 +9719,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             return 'PrismDB_' + orgId;
         }
         let DB_NAME = getMTDbName();
-        const DB_VERSION = 11; // v11: Added Trade Payables (supplier invoices)
+        const DB_VERSION = 12; // v12: Added Suppliers ledger
         let db = null;
         let dbReady = false;
         // Global promise that resolves when IndexedDB is ready — sync functions wait on this
@@ -9808,6 +9919,12 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                         payStore.createIndex('status', 'status', { unique: false });
                         payStore.createIndex('supplier', 'supplier', { unique: false });
                     }
+                    // Suppliers — company/supplier ledger
+                    if (!database.objectStoreNames.contains('suppliers')) {
+                        const supStore = database.createObjectStore('suppliers', { keyPath: 'id', autoIncrement: true });
+                        supStore.createIndex('name', 'name', { unique: false });
+                        supStore.createIndex('createdAt', 'createdAt', { unique: false });
+                    }
                 };
 
                 request.onblocked = () => {
@@ -10003,6 +10120,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             if (sectionId === 'tasks')      _safeLoad('tasks',      loadTasks);
             if (sectionId === 'notes')      _safeLoad('notes',      loadNotes);
             if (sectionId === 'payables')   _safeLoad('payables',   loadPayables);
+            if (sectionId === 'suppliers')  _safeLoad('suppliers',  loadSuppliers);
             if (sectionId === 'reports') {
                 _safeLoad('reports', async () => { initReportsPage(); generateReports(); });
             }
@@ -12234,13 +12352,8 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
 
         // Open tenant ledger then immediately show payment form — used from Unpaid/Overdue filter
         async function viewTenantLedgerAndPay(id) {
+            // Just open the ledger — user will click Pay from there
             await viewTenantDetails(id);
-            // Short delay to let the modal render fully, then trigger payment
-            setTimeout(() => {
-                if (typeof recordTenantPayment === 'function') {
-                    recordTenantPayment(id);
-                }
-            }, 350);
         }
         window.viewTenantLedgerAndPay = viewTenantLedgerAndPay;
 
@@ -23078,7 +23191,7 @@ async function clearAllData() {
 
         // Update delete section stats
         async function updateDeleteStats() {
-            const stores = ['properties', 'tenants', 'payments', 'credits', 'creditPayments', 'expenses', 'customNotes', 'tasks', 'additionalIncome', 'clientCharges', 'waterStoreSales', 'waterStoreProducts', 'payables'];
+            const stores = ['properties', 'tenants', 'payments', 'credits', 'creditPayments', 'expenses', 'customNotes', 'tasks', 'additionalIncome', 'clientCharges', 'waterStoreSales', 'waterStoreProducts', 'payables', 'suppliers'];
             
             for (const store of stores) {
                 try {
@@ -23230,7 +23343,7 @@ async function clearAllData() {
                 const STORES = ['properties','tenants','payments','credits','creditPayments',
                     'expenses','customNotes','additionalIncome','clientCharges',
                     'waterCustomers','waterSales','waterStoreSales','waterStoreProducts',
-                    'employees','cashAdvances','salaryPayments','timeRecords','tasks','payables'];
+                    'employees','cashAdvances','salaryPayments','timeRecords','tasks','payables','suppliers'];
                 const backup = {
                     version: '1.0', exportedAt: new Date().toISOString(),
                     orgId: (MT && MT.currentOrg && MT.currentOrg.id) || 'unknown',
@@ -24900,6 +25013,365 @@ async function clearAllData() {
         window.updatePayableStats = updatePayableStats;
         window.renderPayableAlerts = renderPayableAlerts;
 
+        // ═══════════════════════════════════════════════════════
+        // SUPPLIERS MODULE — Vendor / Company Ledger
+        // ═══════════════════════════════════════════════════════
+        let _allSuppliers = [];
+
+        async function loadSuppliers() {
+            _allSuppliers = await dbGetAll('suppliers').catch(()=>[]);
+            renderSuppliersList();
+        }
+        window.loadSuppliers = loadSuppliers;
+
+        function renderSuppliersList() {
+            const el = document.getElementById('suppliers-list');
+            if (!el) return;
+            const q = (document.getElementById('supplier-search')?.value||'').toLowerCase();
+            const catIcons = { hardware:'🔨', supplies:'📦', food:'🍔', utilities:'⚡', services:'🔧', transport:'🚚', other:'📝' };
+
+            let list = _allSuppliers.filter(s => {
+                if (!q) return true;
+                return (s.name||'').toLowerCase().includes(q) ||
+                       (s.contact||'').toLowerCase().includes(q) ||
+                       (s.phone||'').toLowerCase().includes(q) ||
+                       (s.address||'').toLowerCase().includes(q);
+            }).sort((a,b) => (a.name||'').localeCompare(b.name||''));
+
+            if (list.length === 0) {
+                el.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:24px;"><div style="font-size:2rem;margin-bottom:8px;">🏭</div><div>'+(q?'No suppliers found.':'No suppliers yet.')+'</div></div>';
+                return;
+            }
+
+            el.innerHTML = list.map(s => {
+                const icon = catIcons[s.category||'other'] || '📝';
+                // Count their invoices
+                const invoiceCount = _allPayables.filter(p => (p.supplier||'').toLowerCase().trim() === (s.name||'').toLowerCase().trim()).length;
+                const unpaidTotal  = _allPayables.filter(p => (p.supplier||'').toLowerCase().trim() === (s.name||'').toLowerCase().trim() && p.status !== 'paid').reduce((sum,p)=>sum+(p.amount||0),0);
+                return '<div style="background:var(--bg-primary);border-radius:12px;margin-bottom:8px;border-left:4px solid #6366f1;overflow:hidden;">' +
+                    '<div style="padding:12px 14px;cursor:pointer;" onclick="viewSupplierLedger('+s.id+')">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:flex-start;">' +
+                    '<div style="flex:1;">' +
+                    '<div style="font-weight:700;font-size:0.95rem;">'+icon+' '+_esc(s.name||'')+'</div>' +
+                    (s.contact?'<div style="font-size:0.75rem;color:#94a3b8;margin-top:2px;">👤 '+_esc(s.contact)+'</div>':'')+
+                    (s.phone?'<div style="font-size:0.75rem;color:#94a3b8;">📞 '+_esc(s.phone)+'</div>':'')+
+                    (s.address?'<div style="font-size:0.72rem;color:#64748b;margin-top:1px;">📍 '+_esc(s.address)+'</div>':'')+
+                    '</div>' +
+                    '<div style="text-align:right;flex-shrink:0;margin-left:10px;">' +
+                    (unpaidTotal>0?'<div style="font-weight:800;color:#ef4444;font-size:0.9rem;">₱'+unpaidTotal.toLocaleString()+'</div><div style="font-size:0.65rem;color:#94a3b8;">outstanding</div>':'<div style="font-size:0.75rem;color:#10b981;font-weight:600;">✅ No balance</div>')+
+                    (invoiceCount?'<div style="font-size:0.65rem;color:#64748b;margin-top:2px;">'+invoiceCount+' invoice(s)</div>':'')+
+                    '</div></div>' +
+                    '</div>' +
+                    '<div style="display:flex;gap:0;border-top:1px solid var(--border-color);">' +
+                    '<button onclick="viewSupplierLedger('+s.id+')" style="flex:2;padding:7px;background:rgba(99,102,241,0.08);border:none;color:#818cf8;cursor:pointer;font-size:0.78rem;font-weight:600;border-right:1px solid var(--border-color);">📋 View Ledger</button>' +
+                    '<button onclick="editSupplier('+s.id+')" style="flex:1;padding:7px;background:rgba(16,185,129,0.07);border:none;color:#10b981;cursor:pointer;font-size:0.78rem;font-weight:600;border-right:1px solid var(--border-color);">✏️ Edit</button>' +
+                    '<button onclick="deleteSupplierById('+s.id+')" style="flex:1;padding:7px;background:rgba(239,68,68,0.06);border:none;color:#f87171;cursor:pointer;font-size:0.78rem;font-weight:600;">🗑</button>' +
+                    '</div></div>';
+            }).join('');
+        }
+        window.renderSuppliersList = renderSuppliersList;
+
+        function showAddSupplierModal(prefillName) {
+            document.getElementById('supplier-form').reset();
+            document.getElementById('supplier-edit-id').value = '';
+            document.getElementById('supplier-modal-title').textContent = '🏭 Add Supplier';
+            document.getElementById('supplier-delete-btn').style.display = 'none';
+            if (prefillName) document.getElementById('supplier-name').value = prefillName;
+            showModal('supplier-modal');
+        }
+        window.showAddSupplierModal = showAddSupplierModal;
+
+        async function editSupplier(id) {
+            const s = await dbGet('suppliers', id);
+            if (!s) return;
+            document.getElementById('supplier-edit-id').value = id;
+            document.getElementById('supplier-name').value    = s.name||'';
+            document.getElementById('supplier-contact').value = s.contact||'';
+            document.getElementById('supplier-phone').value   = s.phone||'';
+            document.getElementById('supplier-address').value = s.address||'';
+            document.getElementById('supplier-email').value   = s.email||'';
+            document.getElementById('supplier-category').value= s.category||'other';
+            document.getElementById('supplier-notes').value   = s.notes||'';
+            document.getElementById('supplier-modal-title').textContent = '✏️ Edit — '+_esc(s.name||'');
+            document.getElementById('supplier-delete-btn').style.display = 'inline-block';
+            showModal('supplier-modal');
+        }
+        window.editSupplier = editSupplier;
+
+        async function saveSupplier(e) {
+            e.preventDefault();
+            const id   = parseInt(document.getElementById('supplier-edit-id').value)||null;
+            const name = document.getElementById('supplier-name').value.trim();
+            if (!name) { showToast('⚠️ Supplier name is required.','warning'); return; }
+            // Duplicate check — prevent same name on new save or rename to existing
+            const allSup = await dbGetAll('suppliers').catch(()=>[]);
+            const dupCheck = allSup.find(s => (s.name||'').toLowerCase().trim() === name.toLowerCase().trim() && s.id !== id);
+            if (dupCheck) {
+                showToast('⚠️ Supplier "'+name+'" already exists. Edit the existing record instead.','warning');
+                return;
+            }
+            const record = {
+                name,
+                contact:  document.getElementById('supplier-contact').value.trim(),
+                phone:    document.getElementById('supplier-phone').value.trim(),
+                address:  document.getElementById('supplier-address').value.trim(),
+                email:    document.getElementById('supplier-email').value.trim(),
+                category: document.getElementById('supplier-category').value,
+                notes:    document.getElementById('supplier-notes').value.trim(),
+                updatedAt: new Date().toISOString()
+            };
+            if (id) {
+                const old = await dbGet('suppliers', id);
+                record.id = id;
+                record.createdAt = old?.createdAt || new Date().toISOString();
+                await dbUpdate('suppliers', record);
+            } else {
+                record.createdAt = new Date().toISOString();
+                await dbAdd('suppliers', record);
+            }
+            hideModal('supplier-modal');
+            showToast('✅ Supplier saved!','success');
+            await loadSuppliers();
+            try { await syncToFirebase(); } catch(e2) { debouncedSync(); }
+        }
+        window.saveSupplier = saveSupplier;
+
+        async function deleteSupplierById(id) {
+            const rid = id || parseInt(document.getElementById('supplier-edit-id')?.value)||null;
+            if (!rid) return;
+            const ok = await showConfirm('Delete this supplier? Their invoices will remain.','danger','🗑 Delete Supplier','Yes, Delete','Cancel');
+            if (!ok) return;
+            await dbDelete('suppliers', rid);
+            hideModal('supplier-modal');
+            showToast('🗑 Supplier deleted.','success');
+            await loadSuppliers();
+            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
+        }
+        window.deleteSupplierById = deleteSupplierById;
+
+        async function viewSupplierLedger(id, fromDate, toDate) {
+            const s = await dbGet('suppliers', id);
+            if (!s) return;
+
+            // Default date range — this month
+            const todayStr = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
+            const firstOfMonth = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-01';})(new Date());
+            const _from = fromDate || firstOfMonth;
+            const _to   = toDate   || todayStr;
+
+            // All invoices for this supplier
+            const allInvoices = _allPayables.filter(p =>
+                (p.supplier||'').toLowerCase().trim() === (s.name||'').toLowerCase().trim()
+            );
+
+            // Filtered invoices — by invoice date OR due date falling in range
+            const filteredInvoices = allInvoices.filter(p => {
+                const d = p.invoiceDate || p.dueDate || '';
+                return d >= _from && d <= _to;
+            }).sort((a,b)=>((b.invoiceDate||b.dueDate||'')>(a.invoiceDate||a.dueDate||''))?1:-1);
+
+            // All payments across all invoices (in range)
+            const allPayments = [];
+            allInvoices.forEach(p => {
+                (p.paymentHistory||[]).forEach(ph => {
+                    if (ph.date >= _from && ph.date <= _to) {
+                        allPayments.push({ ...ph, invoiceId: p.id, invoiceRef: p.invoice||'', supplier: p.supplier, category: p.category });
+                    }
+                });
+                // Legacy single payment
+                if (!p.paymentHistory && p.paidDate && p.paidDate >= _from && p.paidDate <= _to && p.status === 'paid') {
+                    allPayments.push({ date: p.paidDate, amount: p.paidAmount||p.amount||0, method: p.lastPaymentMethod||'cash', invoiceId: p.id, invoiceRef: p.invoice||'' });
+                }
+            });
+            allPayments.sort((a,b)=>(b.date||'')>(a.date||'')?1:-1);
+
+            // Totals
+            const totalInvoiced = filteredInvoices.reduce((s,p)=>s+(p.amount||0),0);
+            const totalPaidAll  = allPayments.reduce((s,p)=>s+(p.amount||0),0);
+            const totalUnpaid   = allInvoices.filter(p=>p.status!=='paid').reduce((s,p)=>s+Math.max(0,(p.amount||0)-(p.paidAmount||0)),0);
+            const catIcon = {hardware:'🔨',supplies:'📦',food:'🍔',utilities:'⚡',services:'🔧',transport:'🚚',other:'📝'}[s.category||'other']||'📝';
+
+            const statusColor = { paid:'#10b981', partial:'#3b82f6', 'due-soon':'#f59e0b', overdue:'#ef4444', pending:'#64748b' };
+            const statusLabel = { paid:'✅ Paid', partial:'💸 Partial', 'due-soon':'🟡 Due Soon', overdue:'🔴 Overdue', pending:'⏳ Pending' };
+
+            let html =
+                // ── Profile header ──
+                '<div style="margin-bottom:14px;">' +
+                '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">' +
+                '<div>' +
+                '<div style="font-size:1.05rem;font-weight:800;color:var(--text-primary);">'+catIcon+' '+_esc(s.name||'')+'</div>' +
+                (s.contact?'<div style="font-size:0.78rem;color:#94a3b8;margin-top:2px;">👤 '+_esc(s.contact)+'</div>':'')+
+                (s.phone?'<div style="font-size:0.78rem;color:#94a3b8;">📞 '+_esc(s.phone)+'</div>':'')+
+                (s.address?'<div style="font-size:0.75rem;color:#64748b;">📍 '+_esc(s.address)+'</div>':'')+
+                (s.email?'<div style="font-size:0.75rem;color:#64748b;">✉️ '+_esc(s.email)+'</div>':'')+
+                '</div>' +
+                '<button onclick="editSupplier('+id+');hideModal(\'supplier-ledger-modal\');" style="padding:5px 10px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:7px;cursor:pointer;font-size:0.75rem;font-weight:600;">✏️ Edit</button>' +
+                '</div>' +
+
+                // ── Overall balance summary (all time) ──
+                '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px;">' +
+                '<div style="background:rgba(239,68,68,0.1);border-radius:8px;padding:8px;text-align:center;"><div style="font-weight:800;color:#ef4444;font-size:0.95rem;">₱'+totalUnpaid.toLocaleString()+'</div><div style="font-size:0.62rem;color:#94a3b8;">OUTSTANDING</div></div>' +
+                '<div style="background:rgba(16,185,129,0.1);border-radius:8px;padding:8px;text-align:center;"><div style="font-weight:800;color:#10b981;font-size:0.95rem;">₱'+totalPaidAll.toLocaleString()+'</div><div style="font-size:0.62rem;color:#94a3b8;">PAID (RANGE)</div></div>' +
+                '<div style="background:rgba(99,102,241,0.1);border-radius:8px;padding:8px;text-align:center;"><div style="font-weight:800;color:#818cf8;font-size:0.95rem;">'+allInvoices.length+'</div><div style="font-size:0.62rem;color:#94a3b8;">TOTAL INV.</div></div>' +
+                '</div>' +
+                (s.notes?'<div style="font-size:0.75rem;color:#64748b;background:rgba(255,255,255,0.03);border-radius:6px;padding:7px 10px;margin-bottom:10px;">📝 '+_esc(s.notes)+'</div>':'')+
+                '</div>' +
+
+                // ── Date Range Filter ──
+                '<div style="background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.15);border-radius:10px;padding:12px;margin-bottom:14px;">' +
+                '<div style="font-size:0.72rem;font-weight:700;color:#818cf8;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em;">📅 Filter Period</div>' +
+                '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">' +
+                ['This Month','Last Month','3 Months','This Year','All Time'].map((lbl,i)=> {
+                    const ranges = [
+                        [firstOfMonth, todayStr],
+                        [(function(){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-01';})(),
+                         (function(){const d=new Date();d.setDate(0);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})()],
+                        [(function(){const d=new Date();d.setMonth(d.getMonth()-3);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-01';})(), todayStr],
+                        [new Date().getFullYear()+'-01-01', todayStr],
+                        ['2000-01-01', todayStr]
+                    ];
+                    const isActive = ranges[i][0]===_from && ranges[i][1]===_to;
+                                        return '<button onclick="viewSupplierLedger('+id+',\''+ranges[i][0]+'\',\''+ranges[i][1]+'\')" ' +
+                        'style="padding:4px 10px;border-radius:6px;border:1px solid '+(isActive?'#6366f1':'#334155')+';background:'+(isActive?'rgba(99,102,241,0.2)':'transparent')+';color:'+(isActive?'#a5b4fc':'#64748b')+';cursor:pointer;font-size:0.72rem;font-weight:600;">'+lbl+'</button>';
+                }).join('') +
+                '</div>' +
+                '<div style="display:flex;gap:6px;align-items:center;">' +
+                '<span style="font-size:0.72rem;color:#64748b;">From</span>' +
+                '<input type="date" id="sup-ledger-from" value="'+_from+'" style="flex:1;padding:5px 8px;background:#0f172a;border:1px solid #334155;border-radius:6px;color:#f1f5f9;font-size:0.78rem;">' +
+                '<span style="font-size:0.72rem;color:#64748b;">To</span>' +
+                '<input type="date" id="sup-ledger-to" value="'+_to+'" style="flex:1;padding:5px 8px;background:#0f172a;border:1px solid #334155;border-radius:6px;color:#f1f5f9;font-size:0.78rem;">' +
+                '<button onclick="viewSupplierLedger('+id+',document.getElementById(\'sup-ledger-from\').value,document.getElementById(\'sup-ledger-to\').value)" '+
+                'style="padding:5px 10px;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:700;">Go</button>' +
+                '</div>' +
+                '</div>';
+
+            // ── Payments Timeline ──
+            if (allPayments.length > 0) {
+                html += '<div style="font-size:0.72rem;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">💸 Payments ('+allPayments.length+')</div>';
+                html += allPayments.map(ph =>
+                    '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(16,185,129,0.06);border-radius:8px;margin-bottom:4px;border-left:3px solid #10b981;">' +
+                    '<div><div style="font-weight:600;font-size:0.82rem;color:#10b981;">+₱'+(ph.amount||0).toLocaleString()+'</div>' +
+                    '<div style="font-size:0.7rem;color:#64748b;">'+(ph.date||'')+(ph.method?' · '+ph.method:'')+(ph.invoiceRef?' · Inv#'+_esc(ph.invoiceRef):'')+  '</div></div>' +
+                    '<div style="font-size:0.68rem;color:#94a3b8;text-align:right;">'+(ph.by||'')+(ph.notes?'<div>'+_esc(ph.notes)+'</div>':'')+  '</div>' +
+                    '</div>'
+                ).join('');
+                html += '<div style="border-top:1px solid rgba(16,185,129,0.2);margin:8px 0 12px;padding-top:6px;display:flex;justify-content:space-between;font-size:0.82rem;font-weight:700;"><span style="color:#64748b;">Total paid this period</span><span style="color:#10b981;">₱'+totalPaidAll.toLocaleString()+'</span></div>';
+            }
+
+            // ── Invoices in Range ──
+            html += '<div style="font-size:0.72rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">🧾 Invoices in Range ('+(filteredInvoices.length)+')</div>';
+            if (filteredInvoices.length === 0) {
+                html += '<div style="text-align:center;color:#64748b;padding:12px;font-size:0.85rem;">No invoices in this date range.</div>';
+            } else {
+                html += filteredInvoices.map(p => {
+                    const st = _payStatus(p);
+                    const sc = statusColor[st]||'#64748b';
+                    const sl = statusLabel[st]||'Pending';
+                    const balance = Math.max(0,(p.amount||0)-(p.paidAmount||0));
+                    const pct = p.amount > 0 ? Math.min(100,Math.round(((p.paidAmount||0)/p.amount)*100)) : 0;
+                    return '<div style="background:var(--bg-primary);border-radius:10px;margin-bottom:6px;border-left:3px solid '+sc+';overflow:hidden;">' +
+                        '<div style="padding:10px 12px;cursor:pointer;" onclick="showPayPayableModal('+p.id+');hideModal(\'supplier-ledger-modal\');">' +
+                        '<div style="display:flex;justify-content:space-between;align-items:flex-start;">' +
+                        '<div><div style="font-weight:600;font-size:0.85rem;">'+(p.invoice?'Invoice #'+_esc(p.invoice):'No Invoice #')+(p.category?' · '+p.category:'')+'</div>' +
+                        '<div style="font-size:0.7rem;color:#94a3b8;">Due: '+(p.dueDate||'—')+(p.invoiceDate?' · Issued: '+p.invoiceDate:'')+  '</div>' +
+                        (p.notes?'<div style="font-size:0.68rem;color:#64748b;margin-top:1px;">'+_esc(p.notes)+'</div>':'')+
+                        '</div>' +
+                        '<div style="text-align:right;flex-shrink:0;margin-left:8px;">' +
+                        '<div style="font-weight:800;color:'+(p.status==='paid'?'#10b981':'#ef4444')+';font-size:0.9rem;">₱'+(p.amount||0).toLocaleString()+'</div>' +
+                        '<div style="font-size:0.68rem;font-weight:700;color:'+sc+';">'+sl+'</div>' +
+                        (p.status==='partial'?'<div style="font-size:0.65rem;color:#3b82f6;">Bal: ₱'+balance.toLocaleString()+'</div>':'')+
+                        '</div></div>' +
+                        // Progress bar for partial
+                        (p.status==='partial'?'<div style="background:#1e293b;border-radius:0 0 0 0;height:3px;margin-top:4px;"><div style="background:#3b82f6;height:100%;width:'+pct+'%;"></div></div>':'')+
+                        '</div>' +
+                        // Payment sub-history
+                        ((p.paymentHistory||[]).length > 0 ?
+                            '<div style="background:rgba(0,0,0,0.2);padding:6px 12px;">' +
+                            (p.paymentHistory||[]).map(ph=>
+                                '<div style="display:flex;justify-content:space-between;font-size:0.68rem;color:#64748b;padding:2px 0;">' +
+                                '<span>'+(ph.date||'')+(ph.method?' · '+ph.method:'')+'</span>' +
+                                '<span style="color:#10b981;font-weight:600;">+₱'+(ph.amount||0).toLocaleString()+'</span></div>'
+                            ).join('') +
+                            '</div>' : '') +
+                        '</div>';
+                }).join('');
+            }
+
+            // ── Total invoiced in range ──
+            if (filteredInvoices.length > 0) {
+                html += '<div style="border-top:1px solid rgba(239,68,68,0.2);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;font-size:0.85rem;font-weight:700;"><span style="color:#64748b;">Total invoiced (range)</span><span style="color:#ef4444;">₱'+totalInvoiced.toLocaleString()+'</span></div>';
+            }
+
+            // ── Action buttons ──
+            html += '<div style="display:flex;gap:8px;margin-top:14px;">' +
+                '<button onclick="hideModal(\'supplier-ledger-modal\');_prefillSupplierInvoice(\''+_esc(s.name||'')+'\')" style="flex:1;padding:10px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;">+ Add Invoice</button>' +
+                '<button onclick="hideModal(\'supplier-ledger-modal\');showSection(\'payables\')" style="flex:1;padding:10px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);color:#10b981;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;">🧾 All Payables</button>' +
+                '</div>';
+
+            document.getElementById('supplier-ledger-title').textContent = '🏭 '+(s.name||'Supplier')+' — Ledger';
+            document.getElementById('supplier-ledger-body').innerHTML = html;
+            showModal('supplier-ledger-modal');
+        }
+        window.viewSupplierLedger = viewSupplierLedger;
+
+        // Pre-fill supplier name when adding invoice from ledger
+        function _prefillSupplierInvoice(supplierName) {
+            showAddPayableModal();
+            setTimeout(() => {
+                const el = document.getElementById('payable-supplier');
+                if (el) el.value = supplierName;
+            }, 100);
+        }
+        window._prefillSupplierInvoice = _prefillSupplierInvoice;
+
+        // Supplier autocomplete in payable modal
+        function payableSupplierSearch(q) {
+            const dd = document.getElementById('payable-supplier-dd');
+            if (!dd) return;
+            const query = (q||'').toLowerCase().trim();
+            const matches = _allSuppliers.filter(s => !query || (s.name||'').toLowerCase().includes(query));
+            if (matches.length === 0) { dd.style.display='none'; return; }
+            dd.innerHTML = matches.map(s =>
+                '<div onclick="payableSupplierSelect(\''+s.name.replace(/'/g,"\\'")+'\')" ' +
+                'style="padding:9px 12px;cursor:pointer;font-size:0.88rem;border-bottom:1px solid rgba(255,255,255,0.05);" ' +
+                'onmousedown="event.preventDefault()" ' +
+                'onmouseover="this.style.background=\'rgba(99,102,241,0.15)\'" ' +
+                'onmouseout="this.style.background=\'\'">' +
+                '🏭 ' + _esc(s.name) +
+                (s.phone ? '<span style="font-size:0.72rem;color:#64748b;margin-left:8px;">'+_esc(s.phone)+'</span>' : '') +
+                '</div>'
+            ).join('') +
+            (query && !_allSuppliers.some(s=>(s.name||'').toLowerCase()===query) ?
+                '<div onmousedown="event.preventDefault()" onclick="payableSupplierSelect(\''+q.replace(/'/g,"\\'")+'\')" ' +
+                'style="padding:9px 12px;cursor:pointer;font-size:0.85rem;color:#10b981;border-top:1px solid rgba(255,255,255,0.05);" ' +
+                'onmouseover="this.style.background=\'rgba(16,185,129,0.1)\'" onmouseout="this.style.background=\'\'">✨ Add new: <strong>'+_esc(q)+'</strong></div>' : '');
+            dd.style.display = 'block';
+        }
+        function payableSupplierSelect(name) {
+            const inp = document.getElementById('payable-supplier');
+            const dd  = document.getElementById('payable-supplier-dd');
+            if (inp) inp.value = name;
+            if (dd)  dd.style.display = 'none';
+        }
+        window.payableSupplierSearch = payableSupplierSearch;
+        window.payableSupplierSelect = payableSupplierSelect;
+
+        // Auto-create supplier when a new invoice is saved (if not already in directory)
+        async function _ensureSupplierExists(supplierName) {
+            if (!supplierName) return;
+            const all = await dbGetAll('suppliers').catch(()=>[]);
+            const exists = all.some(s => (s.name||'').toLowerCase().trim() === supplierName.toLowerCase().trim());
+            if (!exists) {
+                await dbAdd('suppliers', {
+                    name: supplierName, contact:'', phone:'', address:'',
+                    email:'', category:'other', notes:'Auto-created from invoice.',
+                    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+                });
+                _allSuppliers = await dbGetAll('suppliers').catch(()=>[]);
+            }
+        }
+        window._ensureSupplierExists = _ensureSupplierExists;
+
         function updatePayableStats() {
             const today = _payToday();
             const unpaid = _allPayables.filter(p=>p.status!=='paid');
@@ -25048,7 +25520,9 @@ async function clearAllData() {
             }
             hideModal('payable-modal');
             showToast('✅ Invoice saved!','success');
+            await _ensureSupplierExists(supplier);
             await loadPayables();
+            await loadSuppliers();
             try { await syncToFirebase(); } catch(err) { debouncedSync(); }
         }
         window.savePayable = savePayable;
@@ -31320,7 +31794,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     const tables = ['properties','tenants','payments','credits','creditPayments',
                         'expenses','customNotes','additionalIncome','clientCharges',
                         'waterCustomers','waterSales','employees','cashAdvances',
-                        'salaryPayments','timeRecords','tasks','payables'];
+                        'salaryPayments','timeRecords','tasks','payables','suppliers'];
 
                     // Always authoritative — realtime cloud changes always win
                     for (const t of tables) {
