@@ -3881,6 +3881,7 @@
         <button class="nav-btn" data-section="tasks">✅ Tasks</button>
         <button class="nav-btn" data-section="reports">📊 Reports</button>
         <button class="nav-btn" data-section="notes">Notes</button>
+        <button class="nav-btn" data-section="payables">🧾 Payables</button>
         <button class="nav-btn" data-section="settings">Settings</button>
     </div>
 
@@ -4030,6 +4031,11 @@
                 <div class="stat-card stat-card-warning" style="cursor: pointer;" onclick="showFlashcardDetail('overdue-notes')">
                     <div class="stat-value text-warning" id="stat-dash-overdue-notes">0</div>
                     <div class="stat-label">📝 Overdue Reminders</div>
+                </div>
+                <div class="stat-card stat-card-danger" style="cursor: pointer; position:relative;" onclick="showFlashcardDetail('payables')">
+                    <div class="stat-value text-danger" id="stat-dash-payables">₱0</div>
+                    <div class="stat-label">🧾 Supplier Payables</div>
+                    <span id="dash-pay-badge" style="display:none;position:absolute;top:6px;right:8px;background:#ef4444;color:white;font-size:0.6rem;font-weight:700;padding:1px 5px;border-radius:8px;"></span>
                 </div>
             </div>
 
@@ -5386,9 +5392,59 @@
             </div>
         </div>
 
+        <!-- Trade Payables Section -->
+        <div id="payables" class="section">
+            <!-- Summary Stats -->
+            <div class="stats-grid" style="margin-bottom:10px;">
+                <div class="stat-card stat-card-danger" onclick="filterPayables('overdue')" style="cursor:pointer;">
+                    <div class="stat-value text-danger" id="pay-stat-overdue">₱0</div>
+                    <div class="stat-label">🔴 Overdue</div>
+                </div>
+                <div class="stat-card stat-card-warning" onclick="filterPayables('due-soon')" style="cursor:pointer;">
+                    <div class="stat-value text-warning" id="pay-stat-due-soon">₱0</div>
+                    <div class="stat-label">🟡 Due in 3 Days</div>
+                </div>
+                <div class="stat-card" onclick="filterPayables('all')" style="cursor:pointer;">
+                    <div class="stat-value" id="pay-stat-total">₱0</div>
+                    <div class="stat-label">💼 Total Owed</div>
+                </div>
+            </div>
+            <div id="pay-alerts" style="margin-bottom:10px;"></div>
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title">🧾 Trade Payables</div>
+                        <div class="card-subtitle">Supplier invoices &amp; accounts payable</div>
+                    </div>
+                    <button class="btn btn-sm btn-primary" onclick="showAddPayableModal()">+ Add Invoice</button>
+                </div>
+                <div class="filter-buttons" style="margin-bottom:12px;">
+                    <button class="filter-btn active pay-filter-btn" data-filter="all" onclick="filterPayables('all')">All</button>
+                    <button class="filter-btn pay-filter-btn" data-filter="pending" onclick="filterPayables('pending')">⏳ Pending</button>
+                    <button class="filter-btn pay-filter-btn" data-filter="due-soon" onclick="filterPayables('due-soon')">🟡 Due Soon</button>
+                    <button class="filter-btn pay-filter-btn" data-filter="overdue" onclick="filterPayables('overdue')">🔴 Overdue</button>
+                    <button class="filter-btn pay-filter-btn" data-filter="paid" onclick="filterPayables('paid')">✅ Paid</button>
+                </div>
+                <div class="search-box" style="margin-bottom:10px;">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="pay-search" placeholder="Search supplier, invoice..." oninput="renderPayablesList()">
+                </div>
+                <div id="payables-list">
+                    <div style="text-align:center;color:var(--text-secondary);padding:30px;">
+                        <div style="font-size:2rem;margin-bottom:8px;">🧾</div>
+                        <div>No payables recorded yet.</div>
+                        <button class="btn btn-primary" onclick="showAddPayableModal()" style="margin-top:12px;">+ Add First Invoice</button>
+                    </div>
+                </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:16px;padding:14px 0 4px;border-top:1px solid var(--border-color);">
+                <button class="btn btn-secondary" style="flex:1;font-size:0.82rem;" onclick="showSection('notes')">← Notes</button>
+                <button class="btn btn-primary" style="flex:1;font-size:0.82rem;" onclick="showSection('expenses')">💸 Expenses →</button>
+            </div>
+        </div>
+
         <!-- Settings Section -->
         <div id="settings" class="section">
-            <!-- Sample Data Card -->
             <div class="card" style="border: 2px dashed var(--primary); background: linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(124, 58, 237, 0.05) 100%);">
                 <div class="card-header">
                     <div class="card-title">🎯 Sample Data (For Testing)</div>
@@ -6491,6 +6547,98 @@
                         <button type="button" class="btn btn-danger" onclick="deleteIncome()" id="income-delete-btn" style="display: none;"></button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trade Payables Modal -->
+    <div class="modal-overlay" id="payable-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="payable-modal-title">Add Supplier Invoice</h3>
+                <button class="modal-close" onclick="hideModal('payable-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="payable-form" onsubmit="savePayable(event)">
+                    <input type="hidden" id="payable-edit-id">
+                    <div class="form-group">
+                        <label>Supplier / Vendor *</label>
+                        <input type="text" id="payable-supplier" required placeholder="e.g., OTRIBOR, Sheridan, Techno-Trade">
+                    </div>
+                    <div class="form-group">
+                        <label>Invoice # (Optional)</label>
+                        <input type="text" id="payable-invoice" placeholder="e.g., INV-2026-001">
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="payable-category">
+                            <option value="supplies">📦 Supplies & Materials</option>
+                            <option value="inventory">🏪 Inventory / Stock</option>
+                            <option value="electric">⚡ Electric / Utilities</option>
+                            <option value="equipment">🛠️ Equipment</option>
+                            <option value="rent">🏠 Rent / Lease</option>
+                            <option value="service">🔧 Services / Labor</option>
+                            <option value="loan">💳 Loan Payment</option>
+                            <option value="other">📝 Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Amount Owed (₱) *</label>
+                        <input type="number" id="payable-amount" required placeholder="0" min="0" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>Due Date *</label>
+                        <input type="date" id="payable-due-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Invoice Date</label>
+                        <input type="date" id="payable-invoice-date">
+                    </div>
+                    <div class="form-group">
+                        <label>Notes (Optional)</label>
+                        <textarea id="payable-notes" rows="2" placeholder="Payment terms, reference, etc."></textarea>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button type="submit" class="btn btn-primary" style="flex:2;">💾 Save Invoice</button>
+                        <button type="button" id="payable-delete-btn" class="btn btn-danger" style="flex:1;display:none;" onclick="deletePayable()">🗑 Delete</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payable Payment Modal -->
+    <div class="modal-overlay" id="payable-pay-modal">
+        <div class="modal" style="max-width:400px;">
+            <div class="modal-header">
+                <h3>💵 Record Payment</h3>
+                <button class="modal-close" onclick="hideModal('payable-pay-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="payable-pay-info" style="background:rgba(245,158,11,0.1);border-radius:8px;padding:12px;margin-bottom:14px;font-size:0.88rem;"></div>
+                <div class="form-group">
+                    <label>Payment Amount (₱)</label>
+                    <input type="number" id="payable-pay-amount" min="1" style="font-size:1.1rem;font-weight:700;text-align:center;">
+                </div>
+                <div class="form-group">
+                    <label>Payment Date</label>
+                    <input type="date" id="payable-pay-date">
+                </div>
+                <div class="form-group">
+                    <label>Payment Method</label>
+                    <select id="payable-pay-method">
+                        <option value="cash">💵 Cash</option>
+                        <option value="gcash">GCash</option>
+                        <option value="bank">Bank Transfer</option>
+                        <option value="check">Check</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <input type="text" id="payable-pay-notes" placeholder="Reference number, etc.">
+                </div>
+                <input type="hidden" id="payable-pay-id">
+                <button class="btn btn-success" onclick="confirmPayablePayment()" style="width:100%;padding:12px;font-weight:700;">✅ Confirm Payment</button>
             </div>
         </div>
     </div>
@@ -8398,6 +8546,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     salaryPayments: await getAllFromStore('salaryPayments'),
                     timeRecords: await getAllFromStore('timeRecords'),
                     tasks: await getAllFromStore('tasks'),
+                    payables: await getAllFromStore('payables'),
                     // App users (admin, cashier accounts) — sync across devices
                     appUsers: JSON.parse(localStorage.getItem('prism_app_users') || '[]'),
                     lastSync: new Date().toISOString(),
@@ -8498,7 +8647,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     const stores = ['properties','tenants','payments','credits','creditPayments',
                         'expenses','customNotes','additionalIncome','clientCharges',
                         'waterCustomers','waterSales','employees','cashAdvances',
-                        'salaryPayments','timeRecords','tasks'];
+                        'salaryPayments','timeRecords','tasks','payables'];
                     for (const s of stores) {
                         const cloudArr = Array.isArray(data[s]) ? data[s] : [];
                         // Only do authoritative (clear+replace) if Firebase actually has records
@@ -8612,6 +8761,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             await loadWaterCustomers();
             await loadEmployees();
             await loadTasks();
+            await loadPayables();
             await loadDashboard();
         }
 
@@ -9441,7 +9591,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             return 'PrismDB_' + orgId;
         }
         let DB_NAME = getMTDbName();
-        const DB_VERSION = 10; // v10: Added Water Store (products + sales)
+        const DB_VERSION = 11; // v11: Added Trade Payables (supplier invoices)
         let db = null;
         let dbReady = false;
         // Global promise that resolves when IndexedDB is ready — sync functions wait on this
@@ -9633,6 +9783,13 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     }
                     if (!database.objectStoreNames.contains('waterStoreProducts')) {
                         database.createObjectStore('waterStoreProducts', { keyPath: 'id' });
+                    }
+                    // Trade Payables — supplier invoices / accounts payable
+                    if (!database.objectStoreNames.contains('payables')) {
+                        const payStore = database.createObjectStore('payables', { keyPath: 'id', autoIncrement: true });
+                        payStore.createIndex('dueDate', 'dueDate', { unique: false });
+                        payStore.createIndex('status', 'status', { unique: false });
+                        payStore.createIndex('supplier', 'supplier', { unique: false });
                     }
                 };
 
@@ -9828,6 +9985,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             }
             if (sectionId === 'tasks')      _safeLoad('tasks',      loadTasks);
             if (sectionId === 'notes')      _safeLoad('notes',      loadNotes);
+            if (sectionId === 'payables')   _safeLoad('payables',   loadPayables);
             if (sectionId === 'reports') {
                 _safeLoad('reports', async () => { initReportsPage(); generateReports(); });
             }
@@ -20282,6 +20440,24 @@ async function showPayrollSummary() {
                 if (_elON) _elON.textContent = _overdueNoteCount;
             } catch(e) {}
 
+            // Payables dashboard stat
+            try {
+                const _payAll = await dbGetAll('payables').catch(()=>[]);
+                _allPayables = _payAll; // keep in sync
+                const _payUnpaid = _payAll.filter(p=>p.status!=='paid');
+                const _payOverdue = _payUnpaid.filter(p=>_payStatus(p)==='overdue');
+                const _payDueSoon = _payUnpaid.filter(p=>_payStatus(p)==='due-soon');
+                const _payTotal = _payUnpaid.reduce((s,p)=>s+(p.amount||0),0);
+                const _payEl = document.getElementById('stat-dash-payables');
+                if (_payEl) _payEl.textContent = '₱'+_payTotal.toLocaleString();
+                const _payBadge = document.getElementById('dash-pay-badge');
+                const _payAlert = _payOverdue.length + _payDueSoon.length;
+                if (_payBadge) { _payBadge.textContent = _payAlert||''; _payBadge.style.display = _payAlert?'flex':'none'; }
+                // Update payables page if visible
+                updatePayableStats && updatePayableStats();
+                renderPayableAlerts && renderPayableAlerts();
+            } catch(e) {}
+
             // Show notifications banner if there are any
             renderNotificationsBanner();
 
@@ -20492,9 +20668,10 @@ async function showPayrollSummary() {
 
             // Render calendar with error handling
             // Load tasks and notes for calendar
-            let calendarTasks = [], calendarNotes = [];
+            let calendarTasks = [], calendarNotes = [], calendarPayables = [];
             try { calendarTasks = await dbGetAll('tasks') || []; } catch(e) {}
             try { calendarNotes = await dbGetAll('customNotes') || []; } catch(e) {}
+            try { calendarPayables = await dbGetAll('payables') || []; } catch(e) {}
 
             // ── Task Stats ──
             try {
@@ -20513,7 +20690,7 @@ async function showPayrollSummary() {
             } catch(e) {}
 
             try {
-                await renderCalendar(tenants, credits, payments, creditPayments, calendarTasks, calendarNotes, employees, waterSales, salaryPayments);
+                await renderCalendar(tenants, credits, payments, creditPayments, calendarTasks, calendarNotes, employees, waterSales, salaryPayments, calendarPayables);
             } catch (error) {
                 console.error('Error rendering calendar:', error);
             }
@@ -20978,7 +21155,7 @@ async function showPayrollSummary() {
             loadDashboard();
         }
 
-        async function renderCalendar(tenants, credits, payments, creditPayments, tasks, notes, employees, waterSales, salaryPayments) {
+        async function renderCalendar(tenants, credits, payments, creditPayments, tasks, notes, employees, waterSales, salaryPayments, payables) {
             tasks = tasks || []; notes = notes || [];
             const calendar = document.getElementById('collection-calendar');
             const monthLabel = document.getElementById('calendar-month-label');
@@ -21001,8 +21178,23 @@ async function showPayrollSummary() {
             // Build per-day schedule
             const scheduleData = {};
             function getDay(d) {
-                if (!scheduleData[d]) scheduleData[d] = { tenants:[], debtors:[], overdue:[], tasks:[], notes:[] };
+                if (!scheduleData[d]) scheduleData[d] = { tenants:[], debtors:[], overdue:[], tasks:[], notes:[], payroll:[], water:[], payables:[] };
                 return scheduleData[d];
+            }
+
+            // ── PAYABLES due on their due date ──
+            if (Array.isArray(payables)) {
+                payables.filter(p=>p.status!=='paid'&&p.dueDate).forEach(p => {
+                    try {
+                        const pd = new Date(p.dueDate+'T00:00:00');
+                        if (pd.getFullYear()===year && pd.getMonth()===month) {
+                            const d = pd.getDate();
+                            const sd = getDay(d);
+                            const isOverdue = pd < new Date(year, month, today.getDate());
+                            sd.payables.push({ type:'payable', label:'🧾 '+( p.supplier||'Supplier'), sub:'₱'+(p.amount||0).toLocaleString()+' due', amount:p.amount||0, overdue:isOverdue, id:p.id });
+                        }
+                    } catch(e) {}
+                });
             }
 
             // ── TENANTS due on 5th ──
@@ -21207,7 +21399,7 @@ async function showPayrollSummary() {
                 const sd       = scheduleData[day] || { tenants:[], debtors:[], overdue:[], tasks:[], notes:[], payroll:[], water:[] };
                 const hasTask  = sd.tasks.length > 0;
                 const hasNote  = sd.notes.length > 0;
-                const allItems = [...(sd.overdue||[]), ...(sd.tenants||[]), ...(sd.debtors||[]), ...(sd.tasks||[]), ...(sd.notes||[]), ...(sd.payroll||[]), ...(sd.water||[])];
+                const allItems = [...(sd.overdue||[]), ...(sd.tenants||[]), ...(sd.debtors||[]), ...(sd.tasks||[]), ...(sd.notes||[]), ...(sd.payroll||[]), ...(sd.water||[]), ...(sd.payables||[])];
 
                 let dayClass = 'calendar-day';
                 if (isToday) dayClass += ' today';
@@ -21229,13 +21421,14 @@ async function showPayrollSummary() {
                 if (hasPlainNote) dots += '<span class="cal-dot dot-note"></span>';
         if (sd.payroll && sd.payroll.length > 0) dots += '<span class="cal-dot" style="background:#06b6d4;" title="Payroll"></span>';
         if (sd.water   && sd.water.length   > 0) dots += '<span class="cal-dot" style="background:#8b5cf6;" title="Water Sales"></span>';
+        if (sd.payables && sd.payables.length > 0) dots += '<span class="cal-dot" style="background:#f59e0b;" title="Supplier Payment Due"></span>';
 
                 // Tooltip items
                 let tooltip = '';
                 if (allItems.length > 0) {
                     tooltip = `<div class="cal-tooltip"><div class="cal-tooltip-date">${day} ${calendarDate.toLocaleString('default',{month:'short'})}</div>`;
                     allItems.slice(0,6).forEach(item => {
-                        const cls = item.type==='payroll'?'cal-tt-payroll':item.type==='water'?'cal-tt-water':item.type==='task'?'cal-tt-task':item.type==='reminder'?'cal-tt-reminder':item.type==='note'?'cal-tt-note':item.type==='debtor'?'cal-tt-debtor':'cal-tt-tenant';
+                        const cls = item.type==='payroll'?'cal-tt-payroll':item.type==='water'?'cal-tt-water':item.type==='task'?'cal-tt-task':item.type==='reminder'?'cal-tt-reminder':item.type==='note'?'cal-tt-note':item.type==='debtor'?'cal-tt-debtor':item.type==='payable'?'cal-tt-payable':'cal-tt-tenant';
                         tooltip += `<div class="cal-tt-item ${cls}"><div class="cal-tt-label">${item.label}</div><div class="cal-tt-sub">${item.sub||''}</div></div>`;
                     });
                     if (allItems.length > 6) tooltip += `<div class="cal-tt-more">+${allItems.length-6} more</div>`;
@@ -21277,6 +21470,7 @@ async function showPayrollSummary() {
                     .cal-tt-reminder { background:rgba(245,158,11,0.08); border-left:2px solid #f59e0b; }
         .cal-tt-payroll { background:rgba(6,182,212,0.08); border-left:2px solid #06b6d4; }
         .cal-tt-water   { background:rgba(139,92,246,0.08); border-left:2px solid #8b5cf6; }
+        .cal-tt-payable { background:rgba(245,158,11,0.08); border-left:2px solid #f59e0b; }
                     .cal-tt-more   { font-size:0.7rem; color:#64748b; text-align:center; margin-top:4px; }
                 `;
                 document.head.appendChild(style);
@@ -21409,11 +21603,12 @@ async function showPayrollSummary() {
             dbGetAll('payments').catch(function() { return []; }),
             dbGetAll('creditPayments').catch(function() { return []; }),
             dbGetAll('employees').catch(function() { return []; }),
-            dbGetAll('waterSales').catch(function() { return []; })
+            dbGetAll('waterSales').catch(function() { return []; }),
+            dbGetAll('payables').catch(function() { return []; })
         ]).then(function(res) {
             var tasks = res[0] || [], notes = res[1] || [], tenants = res[2] || [],
                 credits = res[3] || [], payments = res[4] || [], creditPayments = res[5] || [],
-                employees = res[6] || [], waterSales = res[7] || [];
+                employees = res[6] || [], waterSales = res[7] || [], payablesAll = res[8] || [];
             var sections = [];
             var P = '\u20b1';
 
@@ -21525,9 +21720,26 @@ async function showPayrollSummary() {
             if (dayW.length) {
                 var wTot = dayW.reduce(function(s, ws) { return s + prismSafeNumber(ws.amountPaid || ws.total); }, 0);
                 sections.push('<div style="margin-bottom:14px;"><div style="font-size:0.72rem;font-weight:700;color:#8b5cf6;letter-spacing:0.08em;margin-bottom:7px;">WATER SALES (' + dayW.length + ')</div>'
-                    + prismMakeCalCard('139,92,246', '#8b5cf6', 'showSection("water")',
+                    + prismMakeCalCard('139,92,246', '#8b5cf6', 'showSection(\"water\")',
                         dayW.length + ' sale' + (dayW.length > 1 ? 's' : '') + ' \u00b7 ' + P + wTot.toLocaleString(),
                         'Tap to open Water Station', '') + '</div>');
+            }
+
+            // Payables due this day
+            var dayPay = payablesAll.filter(function(p) { return p.status !== 'paid' && p.dueDate === dateKey; });
+            if (dayPay.length > 0) {
+                var payTot = dayPay.reduce(function(s,p){ return s+(p.amount||0); }, 0);
+                var payCards = dayPay.map(function(p){
+                    return prismMakeCalCard(
+                        isPast?'239,68,68':'245,158,11',
+                        isPast?'#ef4444':'#f59e0b',
+                        'showSection(\'payables\')',
+                        '\ud83e\uddf3 '+(p.supplier||'Supplier')+(p.invoice?' \u00b7 '+p.invoice:''),
+                        '\u20b1'+(p.amount||0).toLocaleString()+' due'+(isPast?' \u2014 OVERDUE':''),
+                        ''
+                    );
+                }).join('');
+                sections.push('<div style="margin-bottom:14px;"><div style="font-size:0.72rem;font-weight:700;color:#f59e0b;letter-spacing:0.08em;margin-bottom:7px;">\ud83e\uddf3 PAYABLES DUE (' + dayPay.length + ') \u2014 \u20b1'+payTot.toLocaleString()+'</div>' + payCards + '</div>');
             }
 
             body.innerHTML = sections.length
@@ -22748,7 +22960,7 @@ async function clearAllData() {
 
         // Update delete section stats
         async function updateDeleteStats() {
-            const stores = ['properties', 'tenants', 'payments', 'credits', 'creditPayments', 'expenses', 'customNotes', 'tasks', 'additionalIncome', 'clientCharges', 'waterStoreSales', 'waterStoreProducts'];
+            const stores = ['properties', 'tenants', 'payments', 'credits', 'creditPayments', 'expenses', 'customNotes', 'tasks', 'additionalIncome', 'clientCharges', 'waterStoreSales', 'waterStoreProducts', 'payables'];
             
             for (const store of stores) {
                 try {
@@ -22900,7 +23112,7 @@ async function clearAllData() {
                 const STORES = ['properties','tenants','payments','credits','creditPayments',
                     'expenses','customNotes','additionalIncome','clientCharges',
                     'waterCustomers','waterSales','waterStoreSales','waterStoreProducts',
-                    'employees','cashAdvances','salaryPayments','timeRecords','tasks'];
+                    'employees','cashAdvances','salaryPayments','timeRecords','tasks','payables'];
                 const backup = {
                     version: '1.0', exportedAt: new Date().toISOString(),
                     orgId: (MT && MT.currentOrg && MT.currentOrg.id) || 'unknown',
@@ -23739,6 +23951,14 @@ async function clearAllData() {
                     }
                     html += _navBtn('Notes','notes');
 
+                } else if (type==='payables') {
+                    title = '🧾 Supplier Payables';
+                    if (typeof window._payablesFlashcard === 'function') {
+                        html = await window._payablesFlashcard();
+                    } else {
+                        html = '<div style="text-align:center;color:#64748b;padding:16px;">Loading payables...</div>';
+                    }
+
                 } else {
                     html = '<div style="color:#64748b;padding:12px;text-align:center;">No data found.</div>';
                 }
@@ -24511,6 +24731,284 @@ async function clearAllData() {
             }
         }
         window.showDashIeDetail = showDashIeDetail;
+
+        // ═══════════════════════════════════════════════════════
+        // TRADE PAYABLES MODULE — Supplier Invoice Management
+        // ═══════════════════════════════════════════════════════
+        let _payablesFilter = 'all';
+        let _allPayables = [];
+
+        function _payLocalDate(str) {
+            // Parse YYYY-MM-DD as local date (no UTC shift)
+            if (!str) return new Date(9999,0,1);
+            const [y,m,d] = str.split('-').map(Number);
+            return new Date(y, m-1, d);
+        }
+        function _payToday() {
+            const d = new Date(); d.setHours(0,0,0,0); return d;
+        }
+        function _payStatus(p) {
+            if (p.status === 'paid') return 'paid';
+            const due = _payLocalDate(p.dueDate);
+            const today = _payToday();
+            const diff = Math.ceil((due - today) / 86400000);
+            if (diff < 0) return 'overdue';
+            if (diff <= 3) return 'due-soon';
+            return 'pending';
+        }
+        function _payDaysLabel(p) {
+            const due = _payLocalDate(p.dueDate);
+            const diff = Math.ceil((due - _payToday()) / 86400000);
+            if (diff < 0) return Math.abs(diff) + ' day' + (Math.abs(diff)!==1?'s':'') + ' overdue';
+            if (diff === 0) return 'Due TODAY';
+            if (diff === 1) return 'Due tomorrow';
+            return 'Due in ' + diff + ' days';
+        }
+
+        async function loadPayables() {
+            _allPayables = await dbGetAll('payables').catch(()=>[]);
+            renderPayablesList();
+            updatePayableStats();
+            renderPayableAlerts();
+        }
+        window.loadPayables = loadPayables;
+
+        function updatePayableStats() {
+            const today = _payToday();
+            const unpaid = _allPayables.filter(p=>p.status!=='paid');
+            const overdue  = unpaid.filter(p=>_payStatus(p)==='overdue');
+            const dueSoon  = unpaid.filter(p=>_payStatus(p)==='due-soon');
+            const totalOwed= unpaid.reduce((s,p)=>s+(p.amount||0),0);
+            const safeSet = (id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
+            safeSet('pay-stat-overdue',  '₱'+overdue.reduce((s,p)=>s+(p.amount||0),0).toLocaleString());
+            safeSet('pay-stat-due-soon', '₱'+dueSoon.reduce((s,p)=>s+(p.amount||0),0).toLocaleString());
+            safeSet('pay-stat-total',    '₱'+totalOwed.toLocaleString());
+            // Dashboard badge
+            const dbEl = document.getElementById('dash-pay-badge');
+            if (dbEl) { dbEl.textContent = (overdue.length+dueSoon.length)||''; dbEl.style.display=(overdue.length+dueSoon.length)?'flex':'none'; }
+        }
+
+        function renderPayableAlerts() {
+            const el = document.getElementById('pay-alerts');
+            if (!el) return;
+            const overdue = _allPayables.filter(p=>p.status!=='paid'&&_payStatus(p)==='overdue');
+            const dueSoon = _allPayables.filter(p=>p.status!=='paid'&&_payStatus(p)==='due-soon');
+            const dueToday = dueSoon.filter(p=>{ const d=_payLocalDate(p.dueDate); const t=_payToday(); return d.getTime()===t.getTime(); });
+            let html = '';
+            if (overdue.length) html += '<div style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:10px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;"><span style="color:#f87171;font-weight:700;">🔴 '+overdue.length+' invoice'+( overdue.length!==1?'s':'')+' OVERDUE — ₱'+overdue.reduce((s,p)=>s+(p.amount||0),0).toLocaleString()+' total</span><button onclick="filterPayables(\'overdue\')" style="background:rgba(239,68,68,0.2);border:none;color:#f87171;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:0.78rem;font-weight:700;">View</button></div>';
+            if (dueToday.length) html += '<div style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);border-radius:10px;padding:10px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;"><span style="color:#fbbf24;font-weight:700;">🟠 '+dueToday.length+' invoice'+( dueToday.length!==1?'s':'')+' due TODAY — ₱'+dueToday.reduce((s,p)=>s+(p.amount||0),0).toLocaleString()+'</span><button onclick="filterPayables(\'due-soon\')" style="background:rgba(245,158,11,0.2);border:none;color:#fbbf24;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:0.78rem;font-weight:700;">View</button></div>';
+            else if (dueSoon.length) html += '<div style="background:rgba(234,179,8,0.1);border:1px solid rgba(234,179,8,0.25);border-radius:10px;padding:10px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;"><span style="color:#eab308;font-weight:700;">🟡 '+dueSoon.length+' invoice'+( dueSoon.length!==1?'s':'')+' due within 3 days — ₱'+dueSoon.reduce((s,p)=>s+(p.amount||0),0).toLocaleString()+'</span><button onclick="filterPayables(\'due-soon\')" style="background:rgba(234,179,8,0.15);border:none;color:#eab308;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:0.78rem;font-weight:700;">View</button></div>';
+            el.innerHTML = html;
+        }
+
+        function filterPayables(filter) {
+            _payablesFilter = filter;
+            document.querySelectorAll('.pay-filter-btn').forEach(b=>{
+                b.classList.toggle('active', b.dataset.filter===filter);
+            });
+            renderPayablesList();
+        }
+        window.filterPayables = filterPayables;
+
+        function renderPayablesList() {
+            const el = document.getElementById('payables-list');
+            if (!el) return;
+            const q = (document.getElementById('pay-search')?.value||'').toLowerCase();
+            const catLabels = { supplies:'📦 Supplies', inventory:'🏪 Inventory', electric:'⚡ Electric', equipment:'🛠️ Equipment', rent:'🏠 Rent', service:'🔧 Services', loan:'💳 Loan', other:'📝 Other' };
+            const statusColors = { overdue:'#ef4444', 'due-soon':'#f59e0b', pending:'#64748b', paid:'#10b981' };
+            const statusLabels = { overdue:'🔴 OVERDUE', 'due-soon':'🟡 DUE SOON', pending:'⏳ Pending', paid:'✅ Paid' };
+
+            let filtered = _allPayables.filter(p=>{
+                const s = _payStatus(p);
+                if (_payablesFilter === 'overdue' && s !== 'overdue') return false;
+                if (_payablesFilter === 'due-soon' && s !== 'due-soon') return false;
+                if (_payablesFilter === 'pending' && s !== 'pending') return false;
+                if (_payablesFilter === 'paid' && p.status !== 'paid') return false;
+                if (q && !((p.supplier||'').toLowerCase().includes(q)||(p.invoice||'').toLowerCase().includes(q)||(p.notes||'').toLowerCase().includes(q))) return false;
+                return true;
+            }).sort((a,b)=>{
+                if (a.status==='paid' && b.status!=='paid') return 1;
+                if (a.status!=='paid' && b.status==='paid') return -1;
+                return _payLocalDate(a.dueDate) - _payLocalDate(b.dueDate);
+            });
+
+            if (filtered.length === 0) {
+                el.innerHTML = '<div style="text-align:center;color:var(--text-secondary);padding:24px;"><div style="font-size:2rem;margin-bottom:8px;">🧾</div><div>'+(q?'No results found.':'No payables for this filter.')+'</div></div>';
+                return;
+            }
+            el.innerHTML = filtered.map(p=>{
+                const s = _payStatus(p);
+                const sc = statusColors[s];
+                const sl = statusLabels[s];
+                const daysLbl = p.status==='paid' ? '' : _payDaysLabel(p);
+                return '<div style="background:var(--bg-primary);border-radius:12px;margin-bottom:8px;border-left:4px solid '+sc+';overflow:hidden;">' +
+                    '<div style="padding:12px 14px;">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">' +
+                    '<div style="flex:1;min-width:0;">' +
+                    '<div style="font-weight:700;font-size:0.95rem;color:var(--text-primary);">'+_esc(p.supplier||'Unknown Supplier')+'</div>' +
+                    (p.invoice?'<div style="font-size:0.72rem;color:#94a3b8;margin-top:1px;">Invoice: '+_esc(p.invoice)+'</div>':'')+
+                    '<div style="font-size:0.72rem;color:#94a3b8;margin-top:1px;">'+( catLabels[p.category]||p.category||'')+(p.dueDate?' · Due: '+p.dueDate:'')+'</div>' +
+                    '</div>' +
+                    '<div style="text-align:right;flex-shrink:0;margin-left:10px;">' +
+                    '<div style="font-weight:800;font-size:1rem;color:'+( p.status==='paid'?'#10b981':'#ef4444')+';white-space:nowrap;">₱'+(p.amount||0).toLocaleString()+'</div>' +
+                    '<div style="font-size:0.7rem;font-weight:700;color:'+sc+';">'+sl+'</div>' +
+                    (daysLbl?'<div style="font-size:0.68rem;color:#94a3b8;">'+daysLbl+'</div>':'')+
+                    '</div></div>' +
+                    (p.notes?'<div style="font-size:0.75rem;color:#64748b;border-top:1px solid var(--border-color);padding-top:6px;margin-top:4px;">'+_esc(p.notes)+'</div>':'')+
+                    '</div>' +
+                    '<div style="display:flex;gap:0;border-top:1px solid var(--border-color);">' +
+                    (p.status!=='paid'?'<button onclick="showPayPayableModal('+p.id+')" style="flex:2;padding:8px;background:rgba(16,185,129,0.1);border:none;color:#10b981;cursor:pointer;font-size:0.78rem;font-weight:700;border-right:1px solid var(--border-color);">💵 Pay</button>':
+                    '<div style="flex:2;padding:8px;text-align:center;font-size:0.78rem;color:#10b981;font-weight:700;">✅ Paid '+(p.paidDate||'')+'</div>')+
+                    '<button onclick="editPayable('+p.id+')" style="flex:1;padding:8px;background:rgba(99,102,241,0.08);border:none;color:#818cf8;cursor:pointer;font-size:0.78rem;font-weight:600;border-right:1px solid var(--border-color);">✏️ Edit</button>' +
+                    '<button onclick="deletePayableById('+p.id+')" style="flex:1;padding:8px;background:rgba(239,68,68,0.08);border:none;color:#f87171;cursor:pointer;font-size:0.78rem;font-weight:600;">🗑</button>' +
+                    '</div></div>';
+            }).join('');
+        }
+        window.renderPayablesList = renderPayablesList;
+
+        function _esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+        function showAddPayableModal() {
+            document.getElementById('payable-form').reset();
+            document.getElementById('payable-edit-id').value = '';
+            document.getElementById('payable-modal-title').textContent = 'Add Supplier Invoice';
+            document.getElementById('payable-delete-btn').style.display = 'none';
+            const today = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
+            document.getElementById('payable-invoice-date').value = today;
+            document.getElementById('payable-due-date').value = '';
+            showModal('payable-modal');
+        }
+        window.showAddPayableModal = showAddPayableModal;
+
+        async function editPayable(id) {
+            const p = await dbGet('payables', id);
+            if (!p) { showToast('⚠️ Not found.','warning'); return; }
+            document.getElementById('payable-edit-id').value = id;
+            document.getElementById('payable-supplier').value = p.supplier||'';
+            document.getElementById('payable-invoice').value = p.invoice||'';
+            document.getElementById('payable-category').value = p.category||'supplies';
+            document.getElementById('payable-amount').value = p.amount||0;
+            document.getElementById('payable-due-date').value = p.dueDate||'';
+            document.getElementById('payable-invoice-date').value = p.invoiceDate||'';
+            document.getElementById('payable-notes').value = p.notes||'';
+            document.getElementById('payable-modal-title').textContent = 'Edit Invoice — '+(p.supplier||'');
+            document.getElementById('payable-delete-btn').style.display = 'inline-block';
+            showModal('payable-modal');
+        }
+        window.editPayable = editPayable;
+
+        async function savePayable(e) {
+            e.preventDefault();
+            const id = parseInt(document.getElementById('payable-edit-id').value)||null;
+            const supplier = document.getElementById('payable-supplier').value.trim();
+            const invoice  = document.getElementById('payable-invoice').value.trim();
+            const category = document.getElementById('payable-category').value;
+            const amount   = parseFloat(document.getElementById('payable-amount').value)||0;
+            const dueDate  = document.getElementById('payable-due-date').value;
+            const invDate  = document.getElementById('payable-invoice-date').value;
+            const notes    = document.getElementById('payable-notes').value.trim();
+            if (!supplier||amount<=0||!dueDate) { showToast('⚠️ Supplier, amount and due date are required.','warning'); return; }
+            const record = { supplier, invoice, category, amount, dueDate, invoiceDate:invDate, notes,
+                status:'pending', createdAt:new Date().toISOString(), createdBy:currentAppUser?.username||'admin' };
+            if (id) {
+                const old = await dbGet('payables',id);
+                Object.assign(record, { id, status:old.status||'pending', paidDate:old.paidDate||'', paidAmount:old.paidAmount||0 });
+                await dbUpdate('payables', record);
+            } else {
+                await dbAdd('payables', record);
+            }
+            hideModal('payable-modal');
+            showToast('✅ Invoice saved!','success');
+            await loadPayables();
+            try { await syncToFirebase(); } catch(err) { debouncedSync(); }
+        }
+        window.savePayable = savePayable;
+
+        async function deletePayable() {
+            const id = parseInt(document.getElementById('payable-edit-id').value)||null;
+            if (!id) return;
+            await deletePayableById(id);
+            hideModal('payable-modal');
+        }
+        window.deletePayable = deletePayable;
+
+        async function deletePayableById(id) {
+            const ok = await showConfirm('Delete this supplier invoice?','danger','🗑 Delete','Yes, Delete','Cancel');
+            if (!ok) return;
+            await dbDelete('payables', id);
+            showToast('🗑 Invoice deleted.','success');
+            await loadPayables();
+            try { await syncToFirebase(); } catch(err) { debouncedSync(); }
+        }
+        window.deletePayableById = deletePayableById;
+
+        async function showPayPayableModal(id) {
+            const p = await dbGet('payables', id);
+            if (!p) return;
+            const today = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
+            document.getElementById('payable-pay-id').value = id;
+            document.getElementById('payable-pay-amount').value = p.amount||0;
+            document.getElementById('payable-pay-date').value = today;
+            document.getElementById('payable-pay-notes').value = '';
+            document.getElementById('payable-pay-method').value = 'cash';
+            document.getElementById('payable-pay-info').innerHTML =
+                '<div style="font-weight:700;color:var(--text-primary);margin-bottom:4px;">'+_esc(p.supplier||'')+'</div>'+
+                (p.invoice?'<div style="font-size:0.8rem;color:#94a3b8;">Invoice: '+_esc(p.invoice)+'</div>':'')+
+                '<div style="font-size:0.82rem;color:#f59e0b;margin-top:4px;">Due: '+( p.dueDate||'N/A')+' · Amount: ₱'+(p.amount||0).toLocaleString()+'</div>';
+            showModal('payable-pay-modal');
+        }
+        window.showPayPayableModal = showPayPayableModal;
+
+        async function confirmPayablePayment() {
+            const id  = parseInt(document.getElementById('payable-pay-id').value)||null;
+            const amt = parseFloat(document.getElementById('payable-pay-amount').value)||0;
+            const dt  = document.getElementById('payable-pay-date').value;
+            const mth = document.getElementById('payable-pay-method').value;
+            const nt  = document.getElementById('payable-pay-notes').value.trim();
+            if (!id||amt<=0) { showToast('⚠️ Enter a valid amount.','warning'); return; }
+            const p = await dbGet('payables', id);
+            if (!p) return;
+            p.status    = 'paid';
+            p.paidDate  = dt;
+            p.paidAmount= amt;
+            p.paidMethod= mth;
+            p.paidNotes = nt;
+            p.paidBy    = currentAppUser?.username||'admin';
+            await dbUpdate('payables', p);
+            // Record as expense automatically
+            await dbAdd('expenses', {
+                category: p.category||'supplies',
+                description: 'Payment to '+p.supplier+(p.invoice?' ('+p.invoice+')':''),
+                amount: amt, date: dt, notes: nt||'Supplier payment',
+                supplierRef: id, createdAt: new Date().toISOString()
+            });
+            hideModal('payable-pay-modal');
+            showToast('✅ Payment recorded! Added to expenses.','success');
+            await loadPayables();
+            loadExpenses(); loadDashboard();
+            try { await syncToFirebase(); } catch(err) { debouncedSync(); }
+        }
+        window.confirmPayablePayment = confirmPayablePayment;
+
+        // ── Flashcard integration ──
+        // Add 'payables' case to showFlashcardDetail
+        window._payablesFlashcard = async function() {
+            const today = _payToday();
+            const overdue = _allPayables.filter(p=>p.status!=='paid'&&_payStatus(p)==='overdue');
+            const dueSoon = _allPayables.filter(p=>p.status!=='paid'&&_payStatus(p)==='due-soon');
+            let rows = '';
+            if (overdue.length) {
+                rows += '<div style="font-size:0.72rem;font-weight:700;color:#f87171;text-transform:uppercase;padding:6px 0 4px;">🔴 Overdue ('+overdue.length+')</div>';
+                rows += overdue.map(p=>'<div onclick="showSection(\'payables\')" style="display:flex;justify-content:space-between;padding:9px 8px;border-bottom:1px solid var(--border-color);cursor:pointer;border-radius:6px;" onmouseover="this.style.background=\'rgba(239,68,68,0.08)\'" onmouseout="this.style.background=\'\'"><div><div style="font-weight:600;font-size:0.85rem;">'+_esc(p.supplier||'')+'</div><div style="font-size:0.7rem;color:#94a3b8;">'+_payDaysLabel(p)+'</div></div><span style="color:#ef4444;font-weight:700;white-space:nowrap;">₱'+(p.amount||0).toLocaleString()+'</span></div>').join('');
+            }
+            if (dueSoon.length) {
+                rows += '<div style="font-size:0.72rem;font-weight:700;color:#f59e0b;text-transform:uppercase;padding:8px 0 4px;">🟡 Due Soon ('+dueSoon.length+')</div>';
+                rows += dueSoon.map(p=>'<div onclick="showSection(\'payables\')" style="display:flex;justify-content:space-between;padding:9px 8px;border-bottom:1px solid var(--border-color);cursor:pointer;border-radius:6px;" onmouseover="this.style.background=\'rgba(245,158,11,0.08)\'" onmouseout="this.style.background=\'\'"><div><div style="font-weight:600;font-size:0.85rem;">'+_esc(p.supplier||'')+'</div><div style="font-size:0.7rem;color:#94a3b8;">'+_payDaysLabel(p)+'</div></div><span style="color:#f59e0b;font-weight:700;white-space:nowrap;">₱'+(p.amount||0).toLocaleString()+'</span></div>').join('');
+            }
+            if (!rows) rows = '<div style="text-align:center;color:#10b981;padding:16px;">✅ No payables due soon!</div>';
+            rows += '<button onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();showSection(\'payables\');" style="width:100%;margin-top:12px;padding:10px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:#f59e0b;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;">🧾 Go to Payables</button>';
+            return rows;
+        };
         window.showIncomeDetails        = showIncomeDetails;
         window.showNetIncomeDetails     = showNetIncomeDetails;
         window.showNetProfitDetails     = showNetProfitDetails;
@@ -30627,7 +31125,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     const tables = ['properties','tenants','payments','credits','creditPayments',
                         'expenses','customNotes','additionalIncome','clientCharges',
                         'waterCustomers','waterSales','employees','cashAdvances',
-                        'salaryPayments','timeRecords','tasks'];
+                        'salaryPayments','timeRecords','tasks','payables'];
 
                     // Always authoritative — realtime cloud changes always win
                     for (const t of tables) {
