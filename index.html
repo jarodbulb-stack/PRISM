@@ -2584,6 +2584,35 @@
             color: #c7d2fe;
         }
     </style>
+    <!-- PRISM: Early auth cover — prevents any content flash for returning users -->
+    <!-- This runs SYNCHRONOUSLY before body renders -->
+    <script>
+        (function(){
+            // Check if user has a cached Google/Firebase session
+            var hasSession = false;
+            try {
+                // Firebase stores auth user in localStorage under this key pattern
+                var keys = Object.keys(localStorage);
+                for (var i = 0; i < keys.length; i++) {
+                    if (keys[i].indexOf('firebase:authUser') !== -1 ||
+                        keys[i].indexOf('firebaseLocalStorageDb') !== -1 ||
+                        keys[i] === 'mt_returning_user') {
+                        var val = localStorage.getItem(keys[i]);
+                        if (val && val !== 'null' && val.length > 10) {
+                            hasSession = true;
+                            break;
+                        }
+                    }
+                }
+            } catch(e) {}
+            if (hasSession) {
+                // Write inline style to document BEFORE body renders
+                document.write('<style>body::before{content:"";position:fixed;inset:0;background:#0f172a;z-index:2147483647;}</style>');
+                // Set flag so onAuthStateChanged knows cover is already applied
+                window._earlyAuthCoverActive = true;
+            }
+        })();
+    </script>
 </head>
 
 <body>
@@ -6210,12 +6239,8 @@
                         <p style="font-size: 1.1rem; font-weight: 600; color: var(--gray-900);">OMNIGRID</p>
                         <div style="margin-top:15px;padding:14px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;">
                             <p style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:10px;font-weight:600;">📧 Contact Us</p>
-                            <a href="/cdn-cgi/l/email-protection#85efe4f7eae1e7f0e9e7c5e2e8e4ece9abe6eae8" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;margin-bottom:6px;font-weight:500;">
-                                ✉️ <span class="__cf_email__" data-cfemail="6e040f1c010a0c1b020c2e09030f0702400d0103">[email&#160;protected]</span>
-                            </a>
-                            <a href="/cdn-cgi/l/email-protection#0460656a6b69656a606569447d656c6b6b2a676b69" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;font-weight:500;">
-                                ✉️ <span class="__cf_email__" data-cfemail="7115101f1e1c101f15101c310810191e1e5f121e1c">[email&#160;protected]</span>
-                            </a>
+                            <a href="mailto:jarodbulb@gmail.com" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;margin-bottom:6px;font-weight:500;">✉️ jarodbulb@gmail.com</a>
+                            <a href="mailto:danomandam@yahoo.com" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;font-weight:500;">✉️ danomandam@yahoo.com</a>
                             <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-color);">
                                 <p style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:6px;font-weight:600;">🌐 For licensing & inquiries:</p>
                                 <p style="font-size:0.78rem;color:var(--text-secondary);">PRISM is available for other rental businesses, hardware stores, and water stations. Contact us to get your own copy.</p>
@@ -8167,7 +8192,7 @@
         </div>
     </div>
 
-    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+    <script>
         // =====================
         // TOAST NOTIFICATION (must be first)
         // =====================
@@ -29290,9 +29315,17 @@ function mtShowApp() {
 }
 
 function _mtShowAppActual() {
-    // Remove auth cover if present
+    // Remove auth cover if present (both early CSS cover and JS cover)
     const _cover = document.getElementById('_prism_auth_cover');
     if (_cover) _cover.remove();
+    if (window._earlyAuthCoverActive) {
+        // Remove the body::before cover by injecting override style
+        const _s = document.createElement('style');
+        _s.id = '_prism_early_cover_off';
+        _s.textContent = 'body::before{display:none!important;}';
+        document.head.appendChild(_s);
+        window._earlyAuthCoverActive = false;
+    }
     // Hide all MT screens
     ['mt-landing','mt-auth','mt-setup','mt-superadmin'].forEach(s => {
         const el = document.getElementById(s);
@@ -29391,9 +29424,16 @@ function _mtShowAppActual() {
 }
 
 function mtShowSuperAdmin() {
-    // Remove auth cover if present
+    // Remove auth cover if present (both early CSS cover and JS cover)
     const _cover = document.getElementById('_prism_auth_cover');
     if (_cover) _cover.remove();
+    if (window._earlyAuthCoverActive) {
+        const _s = document.createElement('style');
+        _s.id = '_prism_early_cover_off';
+        _s.textContent = 'body::before{display:none!important;}';
+        document.head.appendChild(_s);
+        window._earlyAuthCoverActive = false;
+    }
     // Returning user (Google auto-restored session) — skip cinematic, go straight in
     if (window._mtReturningUser && !window._mtManualLogin) {
         mtShowScreen('mt-superadmin');
@@ -29428,9 +29468,16 @@ function mtShowLoading(text = 'Loading...') {
 function mtHideLoading() {
     const el = document.getElementById('mt-loading');
     if (el) el.classList.remove('active');
-    // Also remove auth cover if still present
+    // Remove both auth covers
     const _cover = document.getElementById('_prism_auth_cover');
     if (_cover) _cover.remove();
+    if (window._earlyAuthCoverActive) {
+        const _s = document.createElement('style');
+        _s.id = '_prism_early_cover_off';
+        _s.textContent = 'body::before{display:none!important;}';
+        if (!document.getElementById('_prism_early_cover_off')) document.head.appendChild(_s);
+        window._earlyAuthCoverActive = false;
+    }
 }
 
 // ---- Auth tabs ----
@@ -31588,8 +31635,17 @@ async function mtInit() {
         }
         if (_fbAuthListenerSet) return;
         _fbAuthListenerSet = true;
-        // Safety: always remove auth cover within 5s even if routing fails
-        setTimeout(() => { const c=document.getElementById('_prism_auth_cover'); if(c)c.remove(); }, 5000);
+        // Safety: always remove auth covers within 5s even if routing fails
+        setTimeout(() => {
+            const c = document.getElementById('_prism_auth_cover');
+            if (c) c.remove();
+            if (window._earlyAuthCoverActive) {
+                const s = document.createElement('style');
+                s.textContent = 'body::before{display:none!important;}';
+                if (!document.getElementById('_prism_early_cover_off')) document.head.appendChild(s);
+                window._earlyAuthCoverActive = false;
+            }
+        }, 5000);
 
         window.auth.onAuthStateChanged(async (user) => {
             // Cancel the safety fallback — auth has resolved
