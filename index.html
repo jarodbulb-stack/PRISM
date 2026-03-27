@@ -4899,7 +4899,7 @@
                     <button id="water-view-customers-btn" class="btn btn-sm btn-primary" onclick="setWaterView('customers')">👥 Customers</button>
                     <button id="water-view-sales-btn" class="btn btn-sm btn-secondary" onclick="setWaterView('sales')">🧾 All Sales</button>
                     <button id="water-view-store-btn" class="btn btn-sm btn-secondary" onclick="setWaterView('store')">🛒 Store</button>
-                    <button id="water-names-toggle-btn" class="btn btn-sm btn-secondary" onclick="toggleWaterCustomerNames()" title="Hide/show customer names">👁 Names</button>
+                    <button id="water-names-toggle-btn" class="btn btn-sm btn-secondary" onclick="toggleWaterCustomerNames()" title="Show customer names" style="background:#6366f1;color:#fff;border-color:#6366f1;">🙈 Names</button>
                     <input type="text" id="water-search" placeholder="🔍 Search name..."
                         style="flex:1;min-width:130px;padding:6px 10px;border:1px solid var(--border-color);border-radius:7px;background:var(--bg-secondary);color:var(--text-primary);font-size:0.82rem;"
                         oninput="waterSearchAll()">
@@ -11085,6 +11085,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
 
             renderTenantsList(filtered, properties, payments);
         }
+        window.filterTenants = filterTenants;
 
         async function filterCredits() {
             const searchTerm = document.getElementById('credit-search').value.toLowerCase();
@@ -11132,6 +11133,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
 
             renderCreditsList(filtered, creditPayments);
         }
+        window.filterCredits = filterCredits;
 
         async function filterExpenses() {
             const searchTerm = document.getElementById('expense-search').value.toLowerCase();
@@ -24062,7 +24064,8 @@ async function clearAllData() {
                     const tPaid = tPmts.reduce((s,p)=>s+(p.amount||0),0);
                     const status = tPaid >= (t.rent||0) ? '✅ PAID' : tPaid > 0 ? '⚠️ PARTIAL' : '🔴 UNPAID';
                     const statusColor = tPaid >= (t.rent||0) ? '#10b981' : tPaid > 0 ? '#f59e0b' : '#ef4444';
-                    html += '<div style="border:1px solid var(--border-color);border-radius:8px;padding:10px;margin-bottom:8px;">';
+                    // Entire card is clickable → open ledger
+                    html += '<div onclick="viewTenantFullLedger('+t.id+')" style="border:1px solid var(--border-color);border-radius:8px;padding:10px;margin-bottom:8px;cursor:pointer;transition:border-color 0.15s;" onmouseover="this.style.borderColor=\'#6366f1\'" onmouseout="this.style.borderColor=\'\'">'; 
                     html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">';
                     html += '<div><div style="font-weight:700;font-size:0.88rem;">'+t.name+'</div>';
                     html += '<div style="font-size:0.72rem;color:#64748b;">₱'+(t.rent||0).toLocaleString()+'/mo · Due day '+(t.dueDay||5)+'</div></div>';
@@ -24076,7 +24079,7 @@ async function clearAllData() {
                             html += '<span style="color:#10b981;font-weight:600;">+₱'+p.amount.toLocaleString()+'</span></div>';
                         });
                     }
-                    // Payment history summary (last 6 months)
+                    // Payment history summary (last 6 months) — each pill clickable
                     html += '<div style="margin-top:6px;"><div style="font-size:0.7rem;color:#64748b;margin-bottom:4px;">Last 6 months:</div>';
                     html += '<div style="display:flex;gap:4px;flex-wrap:wrap;">';
                     for (let i=5; i>=0; i--) {
@@ -24086,14 +24089,13 @@ async function clearAllData() {
                         const mPaid = payments.filter(p=>p.tenantId===t.id&&!p.voided&&p.date&&p.date.startsWith(m)).reduce((s,p)=>s+(p.amount||0),0);
                         const mColor = mPaid>=(t.rent||0)?'#10b981':mPaid>0?'#f59e0b':'#ef4444';
                         const mBg = mPaid>=(t.rent||0)?'rgba(16,185,129,0.15)':mPaid>0?'rgba(245,158,11,0.15)':'rgba(239,68,68,0.1)';
-                        html += '<div style="background:'+mBg+';color:'+mColor+';padding:2px 7px;border-radius:4px;font-size:0.68rem;font-weight:700;" title="'+m+': ₱'+mPaid.toLocaleString()+'">'+mLabel+'<br>'+( mPaid>0?'₱'+mPaid.toLocaleString():'—')+'</div>';
+                        html += '<div style="background:'+mBg+';color:'+mColor+';padding:2px 7px;border-radius:4px;font-size:0.68rem;font-weight:700;cursor:default;" title="'+m+': ₱'+mPaid.toLocaleString()+(mPaid===0?'\n(no payment recorded)':'')+'">'+mLabel+'<br>'+(mPaid>0?'₱'+mPaid.toLocaleString():'—')+'</div>';
                     }
-                    // View Full Ledger button
-                    if (isAdmin) {
-                        html += '<div style="margin-top:8px;">';
-                        html += '<button onclick="viewTenantFullLedger(' + t.id + ')" style="width:100%;padding:6px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:600;">📋 View Full Ledger →</button>';
-                        html += '</div>';
-                    }
+                    html += '</div>';
+                    // View Full Ledger button — visible to ALL roles (cashier, viewer, admin)
+                    html += '<div style="margin-top:8px;" onclick="event.stopPropagation()">';
+                    html += '<button onclick="viewTenantFullLedger('+t.id+')" style="width:100%;padding:6px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:600;">📋 View Full Ledger →</button>';
+                    html += '</div>';
                     html += '</div></div></div>';
                 });
 
@@ -26704,12 +26706,12 @@ async function clearAllData() {
 
                 // ── View Full Ledger from dashboard rent card ──
         function viewTenantFullLedger(tenantId) {
-            // Close any open overlay modal
-            const overlays = document.querySelectorAll('div[style*="position:fixed"]');
-            overlays.forEach(el => {
-                if (el.style.zIndex >= 99999) el.remove();
-            });
-            // Open tenant detail
+            // Close the flashcard modal (dynamic, created with id='flashcard-modal')
+            const fm = document.getElementById('flashcard-modal');
+            if (fm) fm.remove();
+            // Also close static flashcard-detail-modal if open
+            hideModal('flashcard-detail-modal');
+            // Open tenant personal ledger
             if (typeof viewTenantDetails === 'function') viewTenantDetails(tenantId);
         }
         window.viewTenantFullLedger = viewTenantFullLedger;
@@ -27923,7 +27925,7 @@ async function clearAllData() {
         window.setWaterView = setWaterView;
 
         // ── Hide/Show customer names on water page ──
-        let _waterNamesHidden = false;
+        let _waterNamesHidden = true;  // hidden by default
         function toggleWaterCustomerNames() {
             _waterNamesHidden = !_waterNamesHidden;
             applyWaterNameBlur();
