@@ -4367,8 +4367,13 @@
                         oninput="filterProperties(this.value)"
                         style="width:100%;padding:10px 12px 10px 36px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;color:var(--text-primary);font-size:0.88rem;box-sizing:border-box;outline:none;"
                         onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='var(--border-color)'">
+                    <div id="properties-search-dd" class="prism-ac-dd" style="display:none;"></div>
                 </div>
-                <div id="properties-list">
+                <div id="toggle-properties-list" onclick="prismToggleList('properties-list','chev-properties-list','count-properties-list')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(59,130,246,0.08);border-radius:8px;cursor:pointer;margin-bottom:6px;user-select:none;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                    <span style="font-weight:700;font-size:0.85rem;">🏠 Properties <span id="count-properties-list" style="color:#64748b;font-weight:400;font-size:0.78rem;"></span></span>
+                    <span id="chev-properties-list" style="color:#64748b;font-size:1rem;transition:transform 0.2s;">▶</span>
+                </div>
+                <div id="properties-list" style="display:none;"
                     <div class="empty-state">
                         <p>No properties yet. Add your first property!</p>
                     </div>
@@ -4422,6 +4427,7 @@
                 <div class="search-box">
                     <span class="search-icon">🔍</span>
                     <input type="text" id="tenant-search" placeholder="Search tenants..." oninput="filterTenants()">
+                    <div id="tenant-search-dd" class="prism-ac-dd" style="display:none;"></div>
                 </div>
                 <div class="filter-buttons" id="tenant-filters">
                     <button class="filter-btn active" data-filter="all" onclick="setTenantFilter('all')">All</button>
@@ -4429,7 +4435,11 @@
                     <button class="filter-btn" data-filter="unpaid" onclick="showTenantsByStatus('unpaid')">Unpaid</button>
                     <button class="filter-btn" data-filter="overdue" onclick="showTenantsByStatus('overdue')">Overdue</button>
                 </div>
-                <div id="tenants-list">
+                <div id="toggle-tenants-list" onclick="prismToggleList('tenants-list','chev-tenants-list','count-tenants-list')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(16,185,129,0.08);border-radius:8px;cursor:pointer;margin-bottom:6px;user-select:none;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                    <span style="font-weight:700;font-size:0.85rem;">🏠 Tenants <span id="count-tenants-list" style="color:#64748b;font-weight:400;font-size:0.78rem;"></span></span>
+                    <span id="chev-tenants-list" style="color:#64748b;font-size:1rem;transition:transform 0.2s;">▶</span>
+                </div>
+                <div id="tenants-list" style="display:none;"
                     <div class="empty-state">
                         <p>No tenants yet. Add your first tenant!</p>
                     </div>
@@ -4492,6 +4502,7 @@
                 <div class="search-box">
                     <span class="search-icon">🔍</span>
                     <input type="text" id="credit-search" placeholder="Search debtors..." oninput="filterCredits()">
+                    <div id="credit-search-dd" class="prism-ac-dd" style="display:none;"></div>
                 </div>
                 <div class="filter-buttons" id="credit-filters">
                     <button class="filter-btn active" data-filter="all" onclick="setCreditFilter('all')">All</button>
@@ -4499,7 +4510,11 @@
                     <button class="filter-btn" data-filter="paid" onclick="showCreditsByStatus('paid')">Fully Paid</button>
                     <button class="filter-btn" data-filter="overdue" onclick="showCreditsByStatus('overdue')">Overdue</button>
                 </div>
-                <div id="credits-list">
+                <div id="toggle-credits-list" onclick="prismToggleList('credits-list','chev-credits-list','count-credits-list')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(245,158,11,0.08);border-radius:8px;cursor:pointer;margin-bottom:6px;user-select:none;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                    <span style="font-weight:700;font-size:0.85rem;">💳 Credits / Loans <span id="count-credits-list" style="color:#64748b;font-weight:400;font-size:0.78rem;"></span></span>
+                    <span id="chev-credits-list" style="color:#64748b;font-size:1rem;transition:transform 0.2s;">▶</span>
+                </div>
+                <div id="credits-list" style="display:none;"
                     <div class="empty-state">
                         <p>No active credits. Add a new credit/loan!</p>
                     </div>
@@ -4724,6 +4739,7 @@
                 <div class="search-box">
                     <span class="search-icon">🔍</span>
                     <input type="text" id="expense-search" placeholder="Search expenses..." oninput="filterExpenses()">
+                    <div id="expense-search-dd" class="prism-ac-dd" style="display:none;"></div>
                 </div>
                 <div class="filter-buttons" id="expense-filters" style="flex-wrap: wrap;">
                     <button class="filter-btn active" data-filter="all" onclick="setExpenseFilter('all')" title="Show all expenses">All</button>
@@ -4750,7 +4766,11 @@
                     <button class="filter-btn" data-filter="owners_draw" onclick="setExpenseFilter('owners_draw')" title="Owner's Draw">👤</button>
                     <button class="filter-btn" data-filter="other" onclick="setExpenseFilter('other')" title="Other Expenses">📝</button>
                 </div>
-                <div id="expenses-list">
+                <div id="toggle-expenses-list" onclick="prismToggleList('expenses-list','chev-expenses-list','count-expenses-list')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:8px;cursor:pointer;margin-bottom:6px;user-select:none;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                    <span style="font-weight:700;font-size:0.85rem;">💸 Expense Entries <span id="count-expenses-list" style="color:#64748b;font-weight:400;font-size:0.78rem;"></span></span>
+                    <span id="chev-expenses-list" style="color:#64748b;font-size:1rem;transition:transform 0.2s;">▶</span>
+                </div>
+                <div id="expenses-list" style="display:none;"
                     <div class="empty-state">
                         <p>No expenses recorded. Track your property expenses!</p>
                     </div>
@@ -4788,6 +4808,7 @@
                 <div class="search-box">
                     <span class="search-icon">🔍</span>
                     <input type="text" id="note-search" placeholder="Search notes..." oninput="filterNotes()">
+                    <div id="note-search-dd" class="prism-ac-dd" style="display:none;"></div>
                 </div>
                 <div class="filter-buttons" id="note-filters">
                     <button class="filter-btn active" data-filter="all" onclick="setNoteFilter('all')">All</button>
@@ -4796,7 +4817,11 @@
                     <button class="filter-btn" data-filter="reminder" onclick="setNoteFilter('reminder')">⏰ Reminder</button>
                     <button class="filter-btn" data-filter="general" onclick="setNoteFilter('general')">📋 General</button>
                 </div>
-                <div id="notes-list">
+                <div id="toggle-notes-list" onclick="prismToggleList('notes-list','chev-notes-list','count-notes-list')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(99,102,241,0.08);border-radius:8px;cursor:pointer;margin-bottom:6px;user-select:none;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                    <span style="font-weight:700;font-size:0.85rem;">📝 Notes <span id="count-notes-list" style="color:#64748b;font-weight:400;font-size:0.78rem;"></span></span>
+                    <span id="chev-notes-list" style="color:#64748b;font-size:1rem;transition:transform 0.2s;">▶</span>
+                </div>
+                <div id="notes-list" style="display:none;"
                     <div class="empty-state">
                         <p>No notes yet. Add your first note!</p>
                     </div>
@@ -4903,9 +4928,14 @@
                     <input type="text" id="water-search" placeholder="🔍 Search name..."
                         style="flex:1;min-width:130px;padding:6px 10px;border:1px solid var(--border-color);border-radius:7px;background:var(--bg-secondary);color:var(--text-primary);font-size:0.82rem;"
                         oninput="waterSearchAll()">
+                    <div id="water-search-dd" class="prism-ac-dd" style="display:none;"></div>
                 </div>
 
-                <div id="water-customers-list">
+                <div id="toggle-water-customers-list" onclick="prismToggleList('water-customers-list','chev-water-customers-list','count-water-customers-list')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(59,130,246,0.08);border-radius:8px;cursor:pointer;margin-bottom:6px;user-select:none;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                    <span style="font-weight:700;font-size:0.85rem;">💧 Customers <span id="count-water-customers-list" style="color:#64748b;font-weight:400;font-size:0.78rem;"></span></span>
+                    <span id="chev-water-customers-list" style="color:#64748b;font-size:1rem;transition:transform 0.2s;">▶</span>
+                </div>
+                <div id="water-customers-list" style="display:none;"
                     <div class="empty-state"><p>No water customers yet. Add your first customer!</p></div>
                 </div>
 
@@ -5161,10 +5191,15 @@
                 <!-- Search/Filter -->
                 <div style="margin-bottom: 15px;">
                     <input type="text" id="income-search-filter" oninput="filterIncome()" placeholder="🔍 Search by category or description..." style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-card); color: var(--text-primary);">
+                    <div id="income-search-dd" class="prism-ac-dd" style="display:none;"></div>
                 </div>
                 
                 <!-- Income List -->
-                <div id="income-list">
+                <div id="toggle-income-list" onclick="prismToggleList('income-list','chev-income-list','count-income-list')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(16,185,129,0.08);border-radius:8px;cursor:pointer;margin-bottom:6px;user-select:none;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                    <span style="font-weight:700;font-size:0.85rem;">💰 Income Entries <span id="count-income-list" style="color:#64748b;font-weight:400;font-size:0.78rem;"></span></span>
+                    <span id="chev-income-list" style="color:#64748b;font-size:1rem;transition:transform 0.2s;">▶</span>
+                </div>
+                <div id="income-list" style="display:none;"
                     <div class="empty-state">
                         <p>No other income recorded yet.</p>
                         <p style="font-size: 0.85rem; margin-top: 5px;">Main income sources (Rent, Credits, Water) are in their respective sections</p>
@@ -5286,8 +5321,13 @@
                 </div>
 
                 <input type="text" id="employee-search" placeholder="🔍 Search employee..." style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 15px; background: var(--card-bg); color: var(--text-primary);" oninput="filterEmployees()">
+                    <div id="employee-search-dd" class="prism-ac-dd" style="display:none;"></div>
 
-                <div id="employees-list">
+                <div id="toggle-employees-list" onclick="prismToggleList('employees-list','chev-employees-list','count-employees-list')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(99,102,241,0.08);border-radius:8px;cursor:pointer;margin-bottom:6px;user-select:none;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                    <span style="font-weight:700;font-size:0.85rem;">👥 Employees <span id="count-employees-list" style="color:#64748b;font-weight:400;font-size:0.78rem;"></span></span>
+                    <span id="chev-employees-list" style="color:#64748b;font-size:1rem;transition:transform 0.2s;">▶</span>
+                </div>
+                <div id="employees-list" style="display:none;"
                     <div class="empty-state"><p>No employees yet. Add your first employee!</p></div>
                 </div>
             </div>
@@ -5394,7 +5434,11 @@
                 <div class="card-header">
                     <div class="card-title">💸 Expense Breakdown</div>
                 </div>
-                <div id="expense-breakdown-content">
+                <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:2px 0 10px;" onclick="prismToggleList('expense-breakdown-content','chev-fin-overview')">
+                    <span style="font-weight:600;font-size:0.88rem;color:var(--text-secondary);">▾ Financial Summary (click to expand/collapse)</span>
+                    <span id="chev-fin-overview" style="color:#64748b;font-size:1rem;transition:transform 0.2s;transform:rotate(90deg);">▶</span>
+                </div>
+                <div id="expense-breakdown-content" style="display:none;">
                     <div class="empty-state"><p>No expense data for this period</p></div>
                 </div>
                 <!-- Expense Chart -->
@@ -5443,6 +5487,7 @@
                     <div class="card-title">✅ Task Management</div>
                     <div style="display:flex;gap:6px;align-items:center;">
                         <input type="text" id="tasks-search-input" placeholder="🔍 Search tasks..." oninput="filterTasksList()" style="padding:5px 8px;font-size:0.78rem;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-card);color:var(--text-primary);width:150px;">
+                    <div id="tasks-search-dd" class="prism-ac-dd" style="display:none;"></div>
                         <button class="btn btn-sm btn-primary" onclick="showAddTaskModal()">+ New Task</button>
                     </div>
                 </div>
@@ -5501,7 +5546,11 @@
                 </div>
                 
                 <!-- Tasks List -->
-                <div id="tasks-list">
+                <div id="toggle-tasks-list" onclick="prismToggleList('tasks-list','chev-tasks-list','count-tasks-list')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(245,158,11,0.08);border-radius:8px;cursor:pointer;margin-bottom:6px;user-select:none;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                    <span style="font-weight:700;font-size:0.85rem;">✅ Tasks <span id="count-tasks-list" style="color:#64748b;font-weight:400;font-size:0.78rem;"></span></span>
+                    <span id="chev-tasks-list" style="color:#64748b;font-size:1rem;transition:transform 0.2s;">▶</span>
+                </div>
+                <div id="tasks-list" style="display:none;"
                     <div class="empty-state">
                         <p>No tasks yet. Create your first task!</p>
                     </div>
@@ -5555,8 +5604,13 @@
                 <div class="search-box" style="margin-bottom:10px;">
                     <span class="search-icon">🔍</span>
                     <input type="text" id="pay-search" placeholder="Search supplier, invoice..." oninput="renderPayablesList()">
+                    <div id="pay-search-dd" class="prism-ac-dd" style="display:none;"></div>
                 </div>
-                <div id="payables-list">
+                <div id="toggle-payables-list" onclick="prismToggleList('payables-list','chev-payables-list','count-payables-list')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(239,68,68,0.08);border-radius:8px;cursor:pointer;margin-bottom:6px;user-select:none;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                    <span style="font-weight:700;font-size:0.85rem;">🧾 Invoices / Payables <span id="count-payables-list" style="color:#64748b;font-weight:400;font-size:0.78rem;"></span></span>
+                    <span id="chev-payables-list" style="color:#64748b;font-size:1rem;transition:transform 0.2s;">▶</span>
+                </div>
+                <div id="payables-list" style="display:none;"
                     <div style="text-align:center;color:var(--text-secondary);padding:30px;">
                         <div style="font-size:2rem;margin-bottom:8px;">🧾</div>
                         <div>No payables recorded yet.</div>
@@ -5584,9 +5638,14 @@
                 <div class="search-box" style="margin-bottom:10px;">
                     <span class="search-icon">🔍</span>
                     <input type="text" id="supplier-search" placeholder="Search supplier name, contact..." oninput="renderSuppliersList()">
+                    <div id="supplier-search-dd" class="prism-ac-dd" style="display:none;"></div>
                 </div>
                 <!-- List -->
-                <div id="suppliers-list">
+                <div id="toggle-suppliers-list" onclick="prismToggleList('suppliers-list','chev-suppliers-list','count-suppliers-list')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(99,102,241,0.08);border-radius:8px;cursor:pointer;margin-bottom:6px;user-select:none;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                    <span style="font-weight:700;font-size:0.85rem;">🏭 Suppliers <span id="count-suppliers-list" style="color:#64748b;font-weight:400;font-size:0.78rem;"></span></span>
+                    <span id="chev-suppliers-list" style="color:#64748b;font-size:1rem;transition:transform 0.2s;">▶</span>
+                </div>
+                <div id="suppliers-list" style="display:none;"
                     <div style="text-align:center;color:var(--text-secondary);padding:30px;">
                         <div style="font-size:2rem;margin-bottom:8px;">🏭</div>
                         <div>No suppliers yet. Suppliers are auto-created when you add invoices.</div>
@@ -5759,7 +5818,11 @@
                     
                     <!-- GOVERNMENT CONTRIBUTIONS -->
                     <div style="background: #fdf4ff; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
-                        <h4 style="color: #86198f; margin: 0 0 12px 0; font-size: 0.9rem;">🏛️ GOVERNMENT</h4>
+                        <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="prismToggleList('fin-govt-body','chev-fin-govt')">
+                            <h4 style="color: #86198f; margin: 0; font-size: 0.9rem;">🏛️ GOVERNMENT</h4>
+                            <span id="chev-fin-govt" style="color:#86198f;font-size:0.9rem;transition:transform 0.2s;">▶</span>
+                        </div>
+                        <div id="fin-govt-body" style="display:none;margin-top:12px;">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                             <span style="color: #374151;">SSS</span>
                             <span style="font-weight: 600;" id="fin-sss">₱0</span>
@@ -5780,6 +5843,7 @@
                             <span style="color: #374151;">Accountant</span>
                             <span style="font-weight: 600;" id="fin-accountant">₱0</span>
                         </div>
+                        </div><!-- fin-govt-body -->
                         <div style="border-top: 2px solid #a855f7; margin-top: 10px; padding-top: 10px; display: flex; justify-content: space-between;">
                             <span style="color: #86198f; font-weight: 700;">TOTAL GOV'T</span>
                             <span style="color: #86198f; font-weight: 700; font-size: 1.1rem;" id="fin-total-govt">₱0</span>
@@ -5788,7 +5852,11 @@
                     
                     <!-- MONEY SET ASIDE -->
                     <div style="background: #eff6ff; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
-                        <h4 style="color: #1e40af; margin: 0 0 12px 0; font-size: 0.9rem;">🏦 SET ASIDE</h4>
+                        <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="prismToggleList('fin-aside-body','chev-fin-aside')">
+                            <h4 style="color: #1e40af; margin: 0; font-size: 0.9rem;">🏦 SET ASIDE</h4>
+                            <span id="chev-fin-aside" style="color:#1e40af;font-size:0.9rem;transition:transform 0.2s;">▶</span>
+                        </div>
+                        <div id="fin-aside-body" style="display:none;margin-top:12px;">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                             <span style="color: #374151;">Savings</span>
                             <span style="font-weight: 600;" id="fin-savings">₱0</span>
@@ -5805,6 +5873,7 @@
                             <span style="color: #374151;">Owner's Draw</span>
                             <span style="font-weight: 600;" id="fin-owners-draw">₱0</span>
                         </div>
+                        </div><!-- fin-aside-body -->
                         <div style="border-top: 2px solid #3b82f6; margin-top: 10px; padding-top: 10px; display: flex; justify-content: space-between;">
                             <span style="color: #1e40af; font-weight: 700;">TOTAL SET ASIDE</span>
                             <span style="color: #1e40af; font-weight: 700; font-size: 1.1rem;" id="fin-total-allocated">₱0</span>
@@ -5856,7 +5925,11 @@
                 <div class="card-header">
                     <div class="card-title">🎯 Delete Specific Data</div>
                 </div>
-                <p style="color: var(--text-secondary); padding: 0 15px 10px; font-size: 0.85rem;">Delete specific category (clears from all devices)</p>
+                <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:2px 15px 10px;" onclick="prismToggleList('del-specific-body','chev-del-specific')">
+                    <span style="font-weight:600;font-size:0.85rem;color:var(--text-secondary);">Delete specific category (clears from all devices) — click to expand</span>
+                    <span id="chev-del-specific" style="color:#64748b;font-size:1rem;transition:transform 0.2s;">▶</span>
+                </div>
+                <div id="del-specific-body" style="display:none;">
                 <div class="settings-item">
                     <div class="settings-info">
                         <h4>🏠 Properties</h4>
@@ -5941,13 +6014,18 @@
                     </div>
                     <button class="btn btn-sm btn-danger" onclick="clearSpecificData('waterStoreProducts')">Delete</button>
                 </div>
+                </div><!-- end del-specific-body -->
             </div>
 
             <div class="card mt-4">
                 <div class="card-header">
                     <div class="card-title">Statistics</div>
                 </div>
-                <div id="settings-stats">
+                <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:2px 0 10px;" onclick="prismToggleList('settings-stats','chev-settings-stats')">
+                    <span style="font-weight:600;font-size:0.88rem;color:var(--text-secondary);">▾ Record counts (click to expand/collapse)</span>
+                    <span id="chev-settings-stats" style="color:#64748b;font-size:1rem;transition:transform 0.2s;transform:rotate(90deg);">▶</span>
+                </div>
+                <div id="settings-stats" style="display:none;">
                     <div class="settings-item">
                         <div class="settings-info">
                             <h4>Total Properties</h4>
@@ -6132,11 +6210,11 @@
                         <p style="font-size: 1.1rem; font-weight: 600; color: var(--gray-900);">OMNIGRID</p>
                         <div style="margin-top:15px;padding:14px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;">
                             <p style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:10px;font-weight:600;">📧 Contact Us</p>
-                            <a href="/cdn-cgi/l/email-protection#1c767d6e73787e69707e5c7b717d7570327f7371" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;margin-bottom:6px;font-weight:500;">
-                                ✉️ <span class="__cf_email__" data-cfemail="c5afa4b7aaa1a7b0a9a785a2a8a4aca9eba6aaa8">[email&#160;protected]</span>
+                            <a href="mailto:jarodbulb@gmail.com" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;margin-bottom:6px;font-weight:500;">
+                                ✉️ jarodbulb@gmail.com
                             </a>
-                            <a href="/cdn-cgi/l/email-protection#7115101f1e1c101f15101c310810191e1e5f121e1c" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;font-weight:500;">
-                                ✉️ <span class="__cf_email__" data-cfemail="680c0906070509060c0905281109000707460b0705">[email&#160;protected]</span>
+                            <a href="mailto:danomandam@yahoo.com" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;font-weight:500;">
+                                ✉️ danomandam@yahoo.com
                             </a>
                             <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-color);">
                                 <p style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:6px;font-weight:600;">🌐 For licensing & inquiries:</p>
@@ -10257,6 +10335,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             if (sectionId === 'settings') {
                 refreshStats();
                 updateDeleteStats();
+                refreshFinancialOverview();
                 // Clear login fields for security
                 clearLoginFields();
             }
@@ -11086,6 +11165,171 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             renderTenantsList(filtered, properties, payments);
         }
         window.filterTenants = filterTenants;
+
+        // ═══════════════════════════════════════════════════════════════
+        // PRISM AUTOCOMPLETE SEARCH — universal dropdown for all search bars
+        // ═══════════════════════════════════════════════════════════════
+        (function injectAcStyle() {
+            if (document.getElementById('prism-ac-style')) return;
+            const s = document.createElement('style');
+            s.id = 'prism-ac-style';
+            s.textContent = [
+                '.prism-ac-dd{position:absolute;top:100%;left:0;right:0;background:#1e293b;border:1px solid #334155;',
+                'border-radius:8px;z-index:9999;max-height:260px;overflow-y:auto;',
+                'box-shadow:0 8px 24px rgba(0,0,0,0.45);margin-top:3px;display:none;}',
+                '.prism-ac-item:hover,.prism-ac-hover{background:rgba(99,102,241,0.18)!important;}',
+                '.prism-ac-item:first-child{border-radius:8px 8px 0 0;}',
+                '.prism-ac-item:last-child{border-radius:0 0 8px 8px;border-bottom:none!important;}'
+            ].join('');
+            document.head.appendChild(s);
+        })();
+
+        function prismSearch(inputId, dropdownId, getItems, labelFn, filterFn, onSelect) {
+            const inp = document.getElementById(inputId);
+            const dd  = document.getElementById(dropdownId);
+            if (!inp || !dd) return;
+            dd.style.position = 'absolute';
+            dd.className = 'prism-ac-dd';
+
+            const showDropdown = (items) => {
+                if (!items || items.length === 0) { dd.style.display = 'none'; return; }
+                dd.innerHTML = items.slice(0, 12).map((item, idx) =>
+                    `<div class="prism-ac-item" onmousedown="event.preventDefault()" 
+                     onclick="prismAcSelect('${inputId}','${dropdownId}',${idx})"
+                     style="padding:8px 12px;cursor:pointer;font-size:0.85rem;border-bottom:1px solid rgba(255,255,255,0.04);">
+                        ${labelFn(item)}
+                     </div>`
+                ).join('');
+                dd._acItems = items.slice(0, 12);
+                dd._acOnSelect = onSelect;
+                dd.style.display = 'block';
+            };
+
+            inp.addEventListener('input', () => {
+                const q = inp.value.toLowerCase().trim();
+                const all = getItems();
+                showDropdown(q === '' ? all.slice(0, 10) : all.filter(i => filterFn(i, q)));
+            });
+            inp.addEventListener('focus', () => {
+                const q = inp.value.toLowerCase().trim();
+                const all = getItems();
+                const filtered = q === '' ? all.slice(0, 10) : all.filter(i => filterFn(i, q));
+                if (filtered.length > 0) showDropdown(filtered);
+            });
+            inp.addEventListener('blur', () => setTimeout(() => { if (dd) dd.style.display = 'none'; }, 200));
+            inp.addEventListener('keydown', e => {
+                if (e.key === 'Escape' || e.key === 'Enter') dd.style.display = 'none';
+            });
+        }
+        window.prismSearch = prismSearch;
+
+        function prismAcSelect(inputId, dropdownId, idx) {
+            const inp = document.getElementById(inputId);
+            const dd  = document.getElementById(dropdownId);
+            if (!dd || !dd._acItems) return;
+            const item = dd._acItems[idx];
+            if (dd._acOnSelect && inp) dd._acOnSelect(item, inp);
+            dd.style.display = 'none';
+        }
+        window.prismAcSelect = prismAcSelect;
+
+        // ── Per-section autocomplete init functions ──
+        function initTenantSearch() {
+            prismSearch('tenant-search','tenant-search-dd',
+                () => allTenantsData||[],
+                t => `<strong>${_esc(t.name||'')}</strong><span style="color:#64748b;font-size:0.78rem;margin-left:8px;">${_esc(t.unit||t.address||'')}</span>`,
+                (t,q) => (t.name||'').toLowerCase().includes(q)||(t.phone||'').includes(q),
+                (t,inp) => { inp.value = t.name; filterTenants(); }
+            );
+        }
+        function initCreditSearch() {
+            prismSearch('credit-search','credit-search-dd',
+                () => allCreditsData||[],
+                c => `<strong>${_esc(c.debtor||'')}</strong><span style="color:#64748b;font-size:0.78rem;margin-left:8px;">₱${(c.principal||0).toLocaleString()}</span>`,
+                (c,q) => (c.debtor||'').toLowerCase().includes(q)||(c.phone||'').includes(q),
+                (c,inp) => { inp.value = c.debtor; filterCredits(); }
+            );
+        }
+        function initExpenseSearch() {
+            prismSearch('expense-search','expense-search-dd',
+                () => {
+                    const cats = (_expCatAll||[]).map(c=>({_type:'cat',name:c.l,val:c.v}));
+                    const descs = [...new Set((allExpensesData||[]).map(e=>e.description).filter(Boolean))].slice(0,8).map(d=>({_type:'desc',name:d,val:d}));
+                    return [...cats,...descs];
+                },
+                i => i._type==='cat'
+                    ? `<span style="color:#f59e0b;font-size:0.7rem;margin-right:5px;background:rgba(245,158,11,0.1);padding:1px 5px;border-radius:3px;">cat</span>${_esc(i.name)}`
+                    : `<span style="color:#64748b;font-size:0.7rem;margin-right:5px;background:rgba(100,116,139,0.1);padding:1px 5px;border-radius:3px;">desc</span>${_esc(i.name)}`,
+                (i,q) => (i.name||'').toLowerCase().includes(q)||(i.val||'').toLowerCase().includes(q),
+                (i,inp) => { inp.value = i.name; filterExpenses(); }
+            );
+        }
+        function initNoteSearch() {
+            prismSearch('note-search','note-search-dd',
+                () => allNotesData||[],
+                n => `<strong>${_esc(n.title||n.subject||'')}</strong><span style="color:#64748b;font-size:0.78rem;margin-left:8px;">${_esc(n.category||'')}</span>`,
+                (n,q) => (n.title||n.subject||'').toLowerCase().includes(q)||(n.category||'').toLowerCase().includes(q),
+                (n,inp) => { inp.value = n.title||n.subject||''; filterNotes(); }
+            );
+        }
+        function initWaterSearch() {
+            prismSearch('water-search','water-search-dd',
+                () => allWaterCustomersData||[],
+                c => `<strong>${_esc(c.name||'')}</strong><span style="color:#64748b;font-size:0.78rem;margin-left:8px;">${_esc(c.address||c.phone||'')}</span>`,
+                (c,q) => (c.name||'').toLowerCase().includes(q)||(c.phone||'').includes(q),
+                (c,inp) => { inp.value = c.name; waterSearchAll(); }
+            );
+        }
+        function initEmployeeSearch() {
+            prismSearch('employee-search','employee-search-dd',
+                () => allEmployeesData||[],
+                e => `<strong>${_esc(e.name||'')}</strong><span style="color:#64748b;font-size:0.78rem;margin-left:8px;">${_esc(e.position||e.role||'')}</span>`,
+                (e,q) => (e.name||'').toLowerCase().includes(q)||(e.position||'').toLowerCase().includes(q),
+                (e,inp) => { inp.value = e.name; filterEmployees(); }
+            );
+        }
+        function initTaskSearch() {
+            prismSearch('tasks-search-input','tasks-search-dd',
+                () => window._allTasksCache||[],
+                t => `<strong>${_esc(t.title||t.task||'')}</strong><span style="color:#64748b;font-size:0.78rem;margin-left:8px;">${_esc(t.priority||t.status||'')}</span>`,
+                (t,q) => (t.title||t.task||'').toLowerCase().includes(q)||(t.notes||'').toLowerCase().includes(q),
+                (t,inp) => { inp.value = t.title||t.task||''; filterTasksList(); }
+            );
+        }
+        function initPayableSearch() {
+            prismSearch('pay-search','pay-search-dd',
+                () => window._allPayablesCache||[],
+                p => `<strong>${_esc(p.supplier||'')}</strong><span style="color:#64748b;font-size:0.78rem;margin-left:8px;">₱${(p.amount||0).toLocaleString()} · ${_esc(p.dueDate||'')}</span>`,
+                (p,q) => (p.supplier||'').toLowerCase().includes(q)||(p.description||p.category||'').toLowerCase().includes(q),
+                (p,inp) => { inp.value = p.supplier; renderPayablesList(); }
+            );
+        }
+        function initSupplierSearch() {
+            prismSearch('supplier-search','supplier-search-dd',
+                () => window._allSuppliersCache||[],
+                s => `<strong>${_esc(s.name||'')}</strong><span style="color:#64748b;font-size:0.78rem;margin-left:8px;">${_esc(s.phone||s.address||'')}</span>`,
+                (s,q) => (s.name||'').toLowerCase().includes(q)||(s.phone||'').includes(q),
+                (s,inp) => { inp.value = s.name; renderSuppliersList(); }
+            );
+        }
+        function initPropertySearch() {
+            prismSearch('properties-search','properties-search-dd',
+                () => window._allPropertiesCache||[],
+                p => `<strong>${_esc(p.name||'')}</strong><span style="color:#64748b;font-size:0.78rem;margin-left:8px;">${_esc(p.address||p.type||'')}</span>`,
+                (p,q) => (p.name||'').toLowerCase().includes(q)||(p.address||'').toLowerCase().includes(q),
+                (p,inp) => { inp.value = p.name; filterProperties(p.name); }
+            );
+        }
+        window.initTenantSearch   = initTenantSearch;
+        window.initCreditSearch   = initCreditSearch;
+        window.initExpenseSearch  = initExpenseSearch;
+        window.initNoteSearch     = initNoteSearch;
+        window.initWaterSearch    = initWaterSearch;
+        window.initEmployeeSearch = initEmployeeSearch;
+        window.initTaskSearch     = initTaskSearch;
+        window.initPayableSearch  = initPayableSearch;
+        window.initSupplierSearch = initSupplierSearch;
+        window.initPropertySearch = initPropertySearch;
 
         async function filterCredits() {
             const searchTerm = document.getElementById('credit-search').value.toLowerCase();
@@ -11950,6 +12194,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             
             // Store for filtering
             allTenantsData = tenants;
+            if(typeof initTenantSearch==='function')initTenantSearch();
             
             // Reset search and filter
             const searchInput = document.getElementById('tenant-search');
@@ -11971,6 +12216,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
 
             if (tenants.length === 0) {
                 container.innerHTML = '<div class="empty-state"><p>No tenants found.</p></div>';
+            if(typeof prismUpdateListCount==='function')prismUpdateListCount('tenants-list');
                 return;
             }
 
@@ -14502,6 +14748,7 @@ async function loadWaterCustomers() {
             const sales = await dbGetAll('waterSales');
             
             allWaterCustomersData = customers;
+            if(typeof initWaterSearch==='function')initWaterSearch();
             
             // Calculate stats
             let totalCredits = 0;
@@ -15252,6 +15499,7 @@ async function loadWaterCustomers() {
             const timeRecords = await dbGetAll('timeRecords');
             
             allEmployeesData = employees;
+            if(typeof initEmployeeSearch==='function')initEmployeeSearch();
             
             // Calculate stats
             let totalAdvances = 0;
@@ -15297,11 +15545,14 @@ async function loadWaterCustomers() {
             renderEmployeesList(filtered);
         }
 
+        window.filterEmployees = filterEmployees;
+
         function renderEmployeesList(employees) {
             const container = document.getElementById('employees-list');
             
             if (employees.length === 0) {
                 container.innerHTML = '<div class="empty-state"><p>No employees found.</p></div>';
+            if(typeof prismUpdateListCount==='function')prismUpdateListCount('employees-list');
                 return;
             }
 
@@ -16688,6 +16939,7 @@ async function showPayrollSummary() {
 
             // Store for filtering
             allCreditsData = credits;
+            if(typeof initCreditSearch==='function')initCreditSearch();
             
             // Reset search and filter
             const searchInput = document.getElementById('credit-search');
@@ -16709,6 +16961,7 @@ async function showPayrollSummary() {
 
             if (credits.length === 0) {
                 container.innerHTML = `
+            if(typeof prismUpdateListCount==='function')prismUpdateListCount('credits-list');
                     <div class="empty-state">
                         <p>No credits/loans found.</p>
                         <button class="btn btn-primary" onclick="showModal('credit-modal')" style="margin-top: 15px;">
@@ -17921,6 +18174,7 @@ async function showPayrollSummary() {
                 
                 const notes = await dbGetAll('customNotes');
                 allNotesData = notes || [];
+            if(typeof initNoteSearch==='function')initNoteSearch();
 
                 // Update stats
                 document.getElementById('stat-notes-total').textContent = allNotesData.length;
@@ -17965,6 +18219,7 @@ async function showPayrollSummary() {
 
             if (notes.length === 0) {
                 container.innerHTML = '<div class="empty-state"><p>No notes found.</p></div>';
+            if(typeof prismUpdateListCount==='function')prismUpdateListCount('notes-list');
                 return;
             }
 
@@ -18150,6 +18405,7 @@ async function showPayrollSummary() {
 
             renderNotesList(filtered);
         }
+        window.filterNotes = filterNotes;
 
         async function viewNoteDetails(id) {
             try {
@@ -19072,6 +19328,7 @@ async function showPayrollSummary() {
 
             // Store breakdown for drill-downs
             allExpensesData = rangeExpenses;
+            if(typeof initExpenseSearch==='function')initExpenseSearch();
             window._expPageBreakdown = {
                 label, range, totalExp, totalInc, net,
                 expenses: rangeExpenses,
@@ -19133,6 +19390,7 @@ async function showPayrollSummary() {
                     </div>
                 `;
             }).join('');
+            if(typeof prismUpdateListCount==='function') prismUpdateListCount('expenses-list');
         }
 
         async function viewExpenseDetails(id) {
@@ -20438,6 +20696,13 @@ async function showPayrollSummary() {
                         </div>
                     </div>
                 `).join('');
+            if(typeof prismUpdateListCount==='function') prismUpdateListCount('income-list');
+            // Auto-open list when it has items
+            const _incList = document.getElementById('income-list');
+            const _incToggle = document.getElementById('toggle-income-list');
+            if (_incList && _incList.style.display === 'none' && filtered.length > 0) {
+                // Keep collapsed - user must click to open
+            }
         }
         
         function filterIncome() {
@@ -24022,6 +24287,66 @@ async function clearAllData() {
                 safeSet('fin-net-profit',      '₱'+netIncome.toLocaleString());
                 safeSet('stat-total-lent',     '₱'+totalLent.toLocaleString());
                 safeSet('stat-total-repaid',   '₱'+totalRepaid.toLocaleString());
+
+                // ── Government contributions breakdown ──
+                const catSum = (cat) => expenses.filter(e=>e.category===cat).reduce((s,e)=>s+(e.amount||0),0);
+                const sss         = catSum('sss');
+                const philhealth  = catSum('philhealth');
+                const pagibig     = catSum('pagibig');
+                const bir         = catSum('bir');
+                const accountant  = catSum('accountant');
+                const salaries    = catSum('salaries');
+                const totalGovt   = sss + philhealth + pagibig + bir + accountant;
+
+                safeSet('fin-sss',         '₱'+sss.toLocaleString());
+                safeSet('fin-philhealth',  '₱'+philhealth.toLocaleString());
+                safeSet('fin-pagibig',     '₱'+pagibig.toLocaleString());
+                safeSet('fin-bir',         '₱'+bir.toLocaleString());
+                safeSet('fin-accountant',  '₱'+accountant.toLocaleString());
+                safeSet('fin-salaries',    '₱'+salaries.toLocaleString());
+                safeSet('fin-total-govt',  '₱'+totalGovt.toLocaleString());
+
+                // ── Set aside / savings breakdown ──
+                const savings       = catSum('savings');
+                const investment    = catSum('investment');
+                const capitalRes    = catSum('capital_reserve');
+                const ownersDraw    = catSum('owners_draw');
+                const totalSetAside = savings + investment + capitalRes + ownersDraw;
+
+                safeSet('fin-savings',          '₱'+savings.toLocaleString());
+                safeSet('fin-investment',        '₱'+investment.toLocaleString());
+                safeSet('fin-capital-reserve',   '₱'+capitalRes.toLocaleString());
+                safeSet('fin-owners-draw',       '₱'+ownersDraw.toLocaleString());
+                safeSet('fin-total-allocated',   '₱'+totalSetAside.toLocaleString());
+
+                // ── Common expense breakdown (electric, water, fuel, repairs etc.) ──
+                safeSet('fin-electric',   '₱'+catSum('electric').toLocaleString());
+                safeSet('fin-water-exp',  '₱'+catSum('water').toLocaleString());
+                safeSet('fin-fuel',       '₱'+catSum('fuel').toLocaleString());
+                safeSet('fin-repairs',    '₱'+catSum('repairs').toLocaleString());
+                safeSet('fin-supplies',   '₱'+catSum('supplies').toLocaleString());
+                safeSet('fin-food',       '₱'+catSum('food').toLocaleString());
+                safeSet('fin-transport',  '₱'+catSum('transport').toLocaleString());
+                safeSet('fin-insurance',  '₱'+catSum('insurance').toLocaleString());
+                safeSet('fin-taxes',      '₱'+catSum('taxes').toLocaleString());
+                safeSet('fin-personal-loan', '₱'+catSum('personal_loan').toLocaleString());
+
+                // ── Net cash after govt + set aside ──
+                const trueNet = Math.round((totalIncome - totalExpenses)*100)/100;
+                const netEl = document.getElementById('fin-net-profit');
+                if (netEl) {
+                    netEl.textContent = '₱' + Math.abs(trueNet).toLocaleString();
+                    const container = document.getElementById('fin-net-container');
+                    if (container) {
+                        container.style.background = trueNet >= 0
+                            ? 'linear-gradient(135deg,#10b981,#059669)'
+                            : 'linear-gradient(135deg,#ef4444,#dc2626)';
+                    }
+                    // Label net as profit or loss
+                    const netLabel = document.querySelector('#fin-net-container small:first-child');
+                    if (netLabel) netLabel.textContent = trueNet >= 0 ? 'NET PROFIT' : 'NET LOSS';
+                }
+
             } catch(e) { console.error('[refreshFinancialOverview]', e); }
         }
         window.refreshFinancialOverview = refreshFinancialOverview;
@@ -25492,6 +25817,8 @@ async function clearAllData() {
 
         async function loadPayables() {
             _allPayables = await dbGetAll('payables').catch(()=>[]);
+            window._allPayablesCache = _allPayables;
+            if(typeof initPayableSearch==='function')initPayableSearch();
             renderPayablesList();
             updatePayableStats();
             renderPayableAlerts();
@@ -27201,6 +27528,28 @@ async function clearAllData() {
         }
         window.toggleSectionHistory = toggleSectionHistory;
 
+        // ── Universal List Collapse/Expand ──
+        function prismToggleList(listId, chevronId, countId) {
+            const list = document.getElementById(listId);
+            const chev = document.getElementById(chevronId);
+            if (!list) return;
+            const isOpen = list.style.display !== 'none';
+            list.style.display = isOpen ? 'none' : '';
+            if (chev) chev.style.transform = isOpen ? '' : 'rotate(90deg)';
+        }
+        window.prismToggleList = prismToggleList;
+
+        // Call after any list renders to update the item count badge
+        function prismUpdateListCount(listId, countId, label) {
+            const list = document.getElementById(listId);
+            const countEl = document.getElementById(countId || 'count-' + listId);
+            if (!list || !countEl) return;
+            const items = list.querySelectorAll('.list-item, [class*="list-item"], .card-item, tr[data-id]');
+            const n = items.length;
+            countEl.textContent = n > 0 ? `(${n})` : '';
+        }
+        window.prismUpdateListCount = prismUpdateListCount;
+
         // ── Tenant Section: Rent Payment History ──
         async function loadTenantSectionHistory() {
             const contEl = document.getElementById('th-content');
@@ -27536,6 +27885,8 @@ async function clearAllData() {
             try {
                 await ensureTasksStore();
                 _allTasksData = await dbGetAll('tasks');
+                window._allTasksCache = _allTasksData;
+                if(typeof initTaskSearch==='function')initTaskSearch();
                 renderTasksList(_allTasksData);
             } catch(e) {
                 console.error('[loadTasks]', e);
@@ -30646,6 +30997,9 @@ function renderSentEndorsements() {
 
     if (todaySent.length === 0) {
         container.innerHTML = '<div style="text-align:center;color:var(--text-secondary);font-size:0.85rem;padding:20px;">No endorsements sent today</div>';
+            if(typeof prismUpdateListCount==='function')prismUpdateListCount('tasks-list');
+            if(typeof prismUpdateListCount==='function')prismUpdateListCount('payables-list');
+            if(typeof prismUpdateListCount==='function')prismUpdateListCount('suppliers-list');
         return;
     }
 
