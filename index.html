@@ -6210,11 +6210,11 @@
                         <p style="font-size: 1.1rem; font-weight: 600; color: var(--gray-900);">OMNIGRID</p>
                         <div style="margin-top:15px;padding:14px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;">
                             <p style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:10px;font-weight:600;">📧 Contact Us</p>
-                            <a href="mailto:jarodbulb@gmail.com" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;margin-bottom:6px;font-weight:500;">
-                                ✉️ jarodbulb@gmail.com
+                            <a href="/cdn-cgi/l/email-protection#85efe4f7eae1e7f0e9e7c5e2e8e4ece9abe6eae8" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;margin-bottom:6px;font-weight:500;">
+                                ✉️ <span class="__cf_email__" data-cfemail="6e040f1c010a0c1b020c2e09030f0702400d0103">[email&#160;protected]</span>
                             </a>
-                            <a href="mailto:danomandam@yahoo.com" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;font-weight:500;">
-                                ✉️ danomandam@yahoo.com
+                            <a href="/cdn-cgi/l/email-protection#0460656a6b69656a606569447d656c6b6b2a676b69" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;font-weight:500;">
+                                ✉️ <span class="__cf_email__" data-cfemail="7115101f1e1c101f15101c310810191e1e5f121e1c">[email&#160;protected]</span>
                             </a>
                             <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-color);">
                                 <p style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:6px;font-weight:600;">🌐 For licensing & inquiries:</p>
@@ -8167,7 +8167,7 @@
         </div>
     </div>
 
-    <script>
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
         // =====================
         // TOAST NOTIFICATION (must be first)
         // =====================
@@ -29290,6 +29290,9 @@ function mtShowApp() {
 }
 
 function _mtShowAppActual() {
+    // Remove auth cover if present
+    const _cover = document.getElementById('_prism_auth_cover');
+    if (_cover) _cover.remove();
     // Hide all MT screens
     ['mt-landing','mt-auth','mt-setup','mt-superadmin'].forEach(s => {
         const el = document.getElementById(s);
@@ -29388,6 +29391,9 @@ function _mtShowAppActual() {
 }
 
 function mtShowSuperAdmin() {
+    // Remove auth cover if present
+    const _cover = document.getElementById('_prism_auth_cover');
+    if (_cover) _cover.remove();
     // Returning user (Google auto-restored session) — skip cinematic, go straight in
     if (window._mtReturningUser && !window._mtManualLogin) {
         mtShowScreen('mt-superadmin');
@@ -29422,6 +29428,9 @@ function mtShowLoading(text = 'Loading...') {
 function mtHideLoading() {
     const el = document.getElementById('mt-loading');
     if (el) el.classList.remove('active');
+    // Also remove auth cover if still present
+    const _cover = document.getElementById('_prism_auth_cover');
+    if (_cover) _cover.remove();
 }
 
 // ---- Auth tabs ----
@@ -31579,15 +31588,28 @@ async function mtInit() {
         }
         if (_fbAuthListenerSet) return;
         _fbAuthListenerSet = true;
+        // Safety: always remove auth cover within 5s even if routing fails
+        setTimeout(() => { const c=document.getElementById('_prism_auth_cover'); if(c)c.remove(); }, 5000);
 
         window.auth.onAuthStateChanged(async (user) => {
             // Cancel the safety fallback — auth has resolved
             if (window._mtInitFallbackTimer) { clearTimeout(window._mtInitFallbackTimer); window._mtInitFallbackTimer = null; }
 
-            // Returning user with active Google session — hide splash immediately, no click needed
+            // Returning user with active Google session — cover the splash with a solid overlay
+            // instead of hiding it immediately (which causes a white/content flash)
             if (user && !window._mtManualLogin) {
                 window._mtReturningUser = true;
-                // Hide splash right away so they don't see the "click to enter" screen
+                // Cover splash with an opaque overlay to prevent any content flash
+                // while auth routing completes (allowlist check, org lookup etc.)
+                let _cover = document.getElementById('_prism_auth_cover');
+                if (!_cover) {
+                    _cover = document.createElement('div');
+                    _cover.id = '_prism_auth_cover';
+                    _cover.style.cssText = 'position:fixed;inset:0;background:#0f172a;z-index:999999;display:flex;align-items:center;justify-content:center;';
+                    _cover.innerHTML = '<div style="width:36px;height:36px;border:3px solid rgba(99,102,241,0.3);border-top-color:#6366f1;border-radius:50%;animation:spin 0.8s linear infinite;"></div>';
+                    document.body.appendChild(_cover);
+                }
+                // Also hide the splash underneath
                 const splash = document.getElementById('prism-splash');
                 if (splash) splash.style.display = 'none';
             }
@@ -33061,16 +33083,4 @@ window.addEventListener('DOMContentLoaded', () => {
       onfocus="this.style.borderColor='#f59e0b'" onblur="this.style.borderColor='#334155'"
       onkeydown="if(event.key==='Enter')prismTypeConfirmSubmit()">
     <button onclick="prismTypeConfirmSubmit()"
-      style="width:100%;padding:11px;background:linear-gradient(135deg,#ef4444,#b91c1c);border:none;border-radius:9px;color:white;font-weight:700;cursor:pointer;font-size:0.95rem;margin-bottom:8px;">
-      Confirm Delete
-    </button>
-    <button onclick="prismTypeConfirmCancel()"
-      style="width:100%;padding:9px;background:rgba(255,255,255,0.05);border:1px solid #334155;border-radius:9px;color:#94a3b8;cursor:pointer;font-size:0.9rem;">
-      Cancel
-    </button>
-  </div>
-</div>
-<!-- ========== END TYPE-TO-CONFIRM MODAL ========== -->
-
-</body>
-</html>
+      style="width:100%;padding:11px;background:linear-gradient(135deg,#ef4444,#b91c1c);border:none;border-radius:9px;color:white;font-weight:700;cursor:pointer;font-size:0.95rem;m
