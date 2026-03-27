@@ -2,11 +2,6 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <!-- PRISM: Body starts dark to prevent flash — removed by JS once auth routes -->
-    <style id="_prism_body_cover">
-        body { background-color: #0f172a !important; }
-        body.prism-ready { background-color: var(--bg-body, #0f172a); }
-    </style>
     <!-- CSP handled at server level via Firebase/GitHub Pages headers -->
     <!-- Firebase Performance: DNS prefetch + preconnect -->
     <link rel="dns-prefetch" href="//www.gstatic.com">
@@ -221,7 +216,7 @@
             border-bottom-color: var(--border-color) !important;
         }
         /* ══ PRISM CINEMATIC SCREENS ══ */
-        #mt-landing { display:none; position:fixed; inset:0; z-index:10000; }
+        #mt-landing { display:none; position:fixed; inset:0; z-index:10000; background:#0f172a; }
         #mt-landing.active { display:block; }
 
         .prism-screen {
@@ -6217,8 +6212,8 @@
                         <p style="font-size: 1.1rem; font-weight: 600; color: var(--gray-900);">OMNIGRID</p>
                         <div style="margin-top:15px;padding:14px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;">
                             <p style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:10px;font-weight:600;">📧 Contact Us</p>
-                            <a href="/cdn-cgi/l/email-protection#5c363d2e33383e29303e1c3b313d3530723f3331" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;margin-bottom:6px;font-weight:500;">✉️ <span class="__cf_email__" data-cfemail="fb919a89949f998e9799bb9c969a9297d5989496">[email&#160;protected]</span></a>
-                            <a href="/cdn-cgi/l/email-protection#1c787d7273717d72787d715c657d747373327f7371" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;font-weight:500;">✉️ <span class="__cf_email__" data-cfemail="3c585d5253515d52585d517c455d545353125f5351">[email&#160;protected]</span></a>
+                            <a href="mailto:danomandam@yahoo.com" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;font-weight:500;">✉️ danomandam@yahoo.com</a>
+                            <a href="mailto:danomandam@yahoo.com" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;font-weight:500;">✉️ danomandam@yahoo.com</a>
                             <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-color);">
                                 <p style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:6px;font-weight:600;">🌐 For licensing & inquiries:</p>
                                 <p style="font-size:0.78rem;color:var(--text-secondary);">PRISM is available for other rental businesses, hardware stores, and water stations. Contact us to get your own copy.</p>
@@ -29293,13 +29288,6 @@ function mtShowApp() {
 }
 
 function _mtShowAppActual() {
-    // Remove startup body cover & auth cover
-    const _bc = document.getElementById('_prism_body_cover');
-    if (_bc) _bc.remove();
-    document.body.classList.add('prism-ready');
-    const _cover = document.getElementById('_prism_auth_cover');
-    if (_cover) _cover.remove();
-    try { localStorage.setItem('prism_has_session','1'); } catch(e) {}
     // Hide all MT screens
     ['mt-landing','mt-auth','mt-setup','mt-superadmin'].forEach(s => {
         const el = document.getElementById(s);
@@ -29398,13 +29386,6 @@ function _mtShowAppActual() {
 }
 
 function mtShowSuperAdmin() {
-    // Remove startup body cover & auth cover
-    const _bc = document.getElementById('_prism_body_cover');
-    if (_bc) _bc.remove();
-    document.body.classList.add('prism-ready');
-    const _cover = document.getElementById('_prism_auth_cover');
-    if (_cover) _cover.remove();
-    try { localStorage.setItem('prism_has_session','1'); } catch(e) {}
     // Returning user (Google auto-restored session) — skip cinematic, go straight in
     if (window._mtReturningUser && !window._mtManualLogin) {
         mtShowScreen('mt-superadmin');
@@ -29439,11 +29420,6 @@ function mtShowLoading(text = 'Loading...') {
 function mtHideLoading() {
     const el = document.getElementById('mt-loading');
     if (el) el.classList.remove('active');
-    const _bc = document.getElementById('_prism_body_cover');
-    if (_bc) _bc.remove();
-    document.body.classList.add('prism-ready');
-    const _cover = document.getElementById('_prism_auth_cover');
-    if (_cover) _cover.remove();
 }
 
 // ---- Auth tabs ----
@@ -29743,8 +29719,7 @@ async function _mtWaitForAuth(maxMs = 20000) {
         }
         window.mtShowOrgPicker = mtShowOrgPicker;
         window.mtPickOrg       = mtPickOrg;
-
-                window.prismSubmitAccessRequest = prismSubmitAccessRequest;
+        window.prismSubmitAccessRequest = prismSubmitAccessRequest;
 
         // ── STAFF REGISTER ──
         async function prismSubmitStaffRegister() {
@@ -31555,11 +31530,6 @@ async function mtInit() {
     // New users: splash stays visible so they can click Enter → login
     mtShowScreen('mt-landing');
     prismScreen('prism-splash');
-    // Remove startup body cover — splash is now showing, content visible
-    const _bc0 = document.getElementById('_prism_body_cover');
-    if (_bc0) _bc0.remove();
-    document.body.classList.add('prism-ready');
-
     // Check for saved session
     const savedUser = localStorage.getItem('carent_current_user');
     const savedOrg  = localStorage.getItem('mt_current_org');
@@ -31605,14 +31575,6 @@ async function mtInit() {
         }
         if (_fbAuthListenerSet) return;
         _fbAuthListenerSet = true;
-        // Safety: always remove auth covers within 5s even if routing fails
-        setTimeout(() => {
-            const c  = document.getElementById('_prism_auth_cover');
-            if (c) c.remove();
-            const bc = document.getElementById('_prism_body_cover');
-            if (bc) bc.remove();
-            document.body.classList.add('prism-ready');
-        }, 5000);
 
         window.auth.onAuthStateChanged(async (user) => {
             // Cancel the safety fallback — auth has resolved
@@ -31622,19 +31584,9 @@ async function mtInit() {
             // instead of hiding it immediately (which causes a white/content flash)
             if (user && !window._mtManualLogin) {
                 window._mtReturningUser = true;
-                // Cover splash with an opaque overlay to prevent any content flash
-                // while auth routing completes (allowlist check, org lookup etc.)
-                let _cover = document.getElementById('_prism_auth_cover');
-                if (!_cover) {
-                    _cover = document.createElement('div');
-                    _cover.id = '_prism_auth_cover';
-                    _cover.style.cssText = 'position:fixed;inset:0;background:#0f172a;z-index:999999;display:flex;align-items:center;justify-content:center;';
-                    _cover.innerHTML = '<div style="width:36px;height:36px;border:3px solid rgba(99,102,241,0.3);border-top-color:#6366f1;border-radius:50%;animation:spin 0.8s linear infinite;"></div>';
-                    document.body.appendChild(_cover);
-                }
-                // Also hide the splash underneath
-                const splash = document.getElementById('prism-splash');
-                if (splash) splash.style.display = 'none';
+                // Hide splash for returning users
+                const _splash = document.getElementById('prism-splash');
+                if (_splash) _splash.style.display = 'none';
             }
 
             // Skip if app is already active from local login
