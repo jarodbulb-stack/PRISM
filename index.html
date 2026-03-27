@@ -2,6 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <!-- PRISM: Body starts dark to prevent flash — removed by JS once auth routes -->
+    <style id="_prism_body_cover">
+        body { background-color: #0f172a !important; }
+        body.prism-ready { background-color: var(--bg-body, #0f172a); }
+    </style>
     <!-- CSP handled at server level via Firebase/GitHub Pages headers -->
     <!-- Firebase Performance: DNS prefetch + preconnect -->
     <link rel="dns-prefetch" href="//www.gstatic.com">
@@ -26,7 +31,7 @@
     <meta name="keywords" content="rental management, credit management, payroll, water refilling, Philippines, PWA">
     
     <!-- PWA Manifest -->
-    <script>
+    <script data-cfasync="false">
     // Inline manifest to avoid CORS errors when running from file:// protocol
     if (location.protocol !== 'file:') {
         const link = document.createElement('link');
@@ -45,7 +50,7 @@
     <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
     
     <!-- Firebase SDK + Chart.js - loaded with error handling -->
-    <script>
+    <script data-cfasync="false">
     // OPTIMIZED Firebase loading - preload all 3 scripts in parallel, then init in order
     (function() {
         var FIREBASE_VER = '10.7.1';
@@ -2586,33 +2591,6 @@
     </style>
     <!-- PRISM: Early auth cover — prevents any content flash for returning users -->
     <!-- This runs SYNCHRONOUSLY before body renders -->
-    <script>
-        (function(){
-            // Check if user has a cached Google/Firebase session
-            var hasSession = false;
-            try {
-                // Firebase stores auth user in localStorage under this key pattern
-                var keys = Object.keys(localStorage);
-                for (var i = 0; i < keys.length; i++) {
-                    if (keys[i].indexOf('firebase:authUser') !== -1 ||
-                        keys[i].indexOf('firebaseLocalStorageDb') !== -1 ||
-                        keys[i] === 'mt_returning_user') {
-                        var val = localStorage.getItem(keys[i]);
-                        if (val && val !== 'null' && val.length > 10) {
-                            hasSession = true;
-                            break;
-                        }
-                    }
-                }
-            } catch(e) {}
-            if (hasSession) {
-                // Write inline style to document BEFORE body renders
-                document.write('<style>body::before{content:"";position:fixed;inset:0;background:#0f172a;z-index:2147483647;}</style>');
-                // Set flag so onAuthStateChanged knows cover is already applied
-                window._earlyAuthCoverActive = true;
-            }
-        })();
-    </script>
 </head>
 
 <body>
@@ -6239,8 +6217,8 @@
                         <p style="font-size: 1.1rem; font-weight: 600; color: var(--gray-900);">OMNIGRID</p>
                         <div style="margin-top:15px;padding:14px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;">
                             <p style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:10px;font-weight:600;">📧 Contact Us</p>
-                            <a href="mailto:jarodbulb@gmail.com" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;margin-bottom:6px;font-weight:500;">✉️ jarodbulb@gmail.com</a>
-                            <a href="mailto:danomandam@yahoo.com" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;font-weight:500;">✉️ danomandam@yahoo.com</a>
+                            <a href="/cdn-cgi/l/email-protection#5c363d2e33383e29303e1c3b313d3530723f3331" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;margin-bottom:6px;font-weight:500;">✉️ <span class="__cf_email__" data-cfemail="fb919a89949f998e9799bb9c969a9297d5989496">[email&#160;protected]</span></a>
+                            <a href="/cdn-cgi/l/email-protection#1c787d7273717d72787d715c657d747373327f7371" style="display:flex;align-items:center;gap:8px;color:var(--primary);text-decoration:none;font-size:0.85rem;font-weight:500;">✉️ <span class="__cf_email__" data-cfemail="3c585d5253515d52585d517c455d545353125f5351">[email&#160;protected]</span></a>
                             <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-color);">
                                 <p style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:6px;font-weight:600;">🌐 For licensing & inquiries:</p>
                                 <p style="font-size:0.78rem;color:var(--text-secondary);">PRISM is available for other rental businesses, hardware stores, and water stations. Contact us to get your own copy.</p>
@@ -8192,7 +8170,7 @@
         </div>
     </div>
 
-    <script>
+    <script data-cfasync="false">
         // =====================
         // TOAST NOTIFICATION (must be first)
         // =====================
@@ -29221,7 +29199,7 @@ async function clearAllData() {
   </div>
 </div>
 </div><!-- /prism-app-wrapper -->
-<script>
+<script data-cfasync="false">
 // ================================================================
 // PRISM MULTI-TENANT LAYER
 // ================================================================
@@ -29315,17 +29293,13 @@ function mtShowApp() {
 }
 
 function _mtShowAppActual() {
-    // Remove auth cover if present (both early CSS cover and JS cover)
+    // Remove startup body cover & auth cover
+    const _bc = document.getElementById('_prism_body_cover');
+    if (_bc) _bc.remove();
+    document.body.classList.add('prism-ready');
     const _cover = document.getElementById('_prism_auth_cover');
     if (_cover) _cover.remove();
-    if (window._earlyAuthCoverActive) {
-        // Remove the body::before cover by injecting override style
-        const _s = document.createElement('style');
-        _s.id = '_prism_early_cover_off';
-        _s.textContent = 'body::before{display:none!important;}';
-        document.head.appendChild(_s);
-        window._earlyAuthCoverActive = false;
-    }
+    try { localStorage.setItem('prism_has_session','1'); } catch(e) {}
     // Hide all MT screens
     ['mt-landing','mt-auth','mt-setup','mt-superadmin'].forEach(s => {
         const el = document.getElementById(s);
@@ -29424,16 +29398,13 @@ function _mtShowAppActual() {
 }
 
 function mtShowSuperAdmin() {
-    // Remove auth cover if present (both early CSS cover and JS cover)
+    // Remove startup body cover & auth cover
+    const _bc = document.getElementById('_prism_body_cover');
+    if (_bc) _bc.remove();
+    document.body.classList.add('prism-ready');
     const _cover = document.getElementById('_prism_auth_cover');
     if (_cover) _cover.remove();
-    if (window._earlyAuthCoverActive) {
-        const _s = document.createElement('style');
-        _s.id = '_prism_early_cover_off';
-        _s.textContent = 'body::before{display:none!important;}';
-        document.head.appendChild(_s);
-        window._earlyAuthCoverActive = false;
-    }
+    try { localStorage.setItem('prism_has_session','1'); } catch(e) {}
     // Returning user (Google auto-restored session) — skip cinematic, go straight in
     if (window._mtReturningUser && !window._mtManualLogin) {
         mtShowScreen('mt-superadmin');
@@ -29468,16 +29439,11 @@ function mtShowLoading(text = 'Loading...') {
 function mtHideLoading() {
     const el = document.getElementById('mt-loading');
     if (el) el.classList.remove('active');
-    // Remove both auth covers
+    const _bc = document.getElementById('_prism_body_cover');
+    if (_bc) _bc.remove();
+    document.body.classList.add('prism-ready');
     const _cover = document.getElementById('_prism_auth_cover');
     if (_cover) _cover.remove();
-    if (window._earlyAuthCoverActive) {
-        const _s = document.createElement('style');
-        _s.id = '_prism_early_cover_off';
-        _s.textContent = 'body::before{display:none!important;}';
-        if (!document.getElementById('_prism_early_cover_off')) document.head.appendChild(_s);
-        window._earlyAuthCoverActive = false;
-    }
 }
 
 // ---- Auth tabs ----
@@ -31589,6 +31555,10 @@ async function mtInit() {
     // New users: splash stays visible so they can click Enter → login
     mtShowScreen('mt-landing');
     prismScreen('prism-splash');
+    // Remove startup body cover — splash is now showing, content visible
+    const _bc0 = document.getElementById('_prism_body_cover');
+    if (_bc0) _bc0.remove();
+    document.body.classList.add('prism-ready');
 
     // Check for saved session
     const savedUser = localStorage.getItem('carent_current_user');
@@ -31637,14 +31607,11 @@ async function mtInit() {
         _fbAuthListenerSet = true;
         // Safety: always remove auth covers within 5s even if routing fails
         setTimeout(() => {
-            const c = document.getElementById('_prism_auth_cover');
+            const c  = document.getElementById('_prism_auth_cover');
             if (c) c.remove();
-            if (window._earlyAuthCoverActive) {
-                const s = document.createElement('style');
-                s.textContent = 'body::before{display:none!important;}';
-                if (!document.getElementById('_prism_early_cover_off')) document.head.appendChild(s);
-                window._earlyAuthCoverActive = false;
-            }
+            const bc = document.getElementById('_prism_body_cover');
+            if (bc) bc.remove();
+            document.body.classList.add('prism-ready');
         }, 5000);
 
         window.auth.onAuthStateChanged(async (user) => {
@@ -33136,7 +33103,4 @@ window.addEventListener('DOMContentLoaded', () => {
     <input id="prism-type-confirm-input" type="text" autocomplete="off"
       placeholder="Type DELETE ALL here..."
       style="width:100%;padding:11px 14px;background:#0f172a;border:1px solid #334155;border-radius:9px;color:#f1f5f9;font-size:0.95rem;margin-bottom:14px;box-sizing:border-box;letter-spacing:0.05em;"
-      onfocus="this.style.borderColor='#f59e0b'" onblur="this.style.borderColor='#334155'"
-      onkeydown="if(event.key==='Enter')prismTypeConfirmSubmit()">
-    <button onclick="prismTypeConfirmSubmit()"
-      style="width:100%;padding:11px;background:linear-gradient(135deg,#ef4444,#b91c1c);border:none;border-radius:9px;color:white;font-weight:700;cursor:pointer;font-size:0.95rem;m
+     
