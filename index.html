@@ -26,7 +26,7 @@
     <meta name="keywords" content="rental management, credit management, payroll, water refilling, Philippines, PWA">
     
     <!-- PWA Manifest -->
-    <script data-cfasync="false">
+    <script>
     // Inline manifest to avoid CORS errors when running from file:// protocol
     if (location.protocol !== 'file:') {
         const link = document.createElement('link');
@@ -45,7 +45,7 @@
     <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
     
     <!-- Firebase SDK + Chart.js - loaded with error handling -->
-    <script data-cfasync="false">
+    <script>
     // OPTIMIZED Firebase loading - preload all 3 scripts in parallel, then init in order
     (function() {
         var FIREBASE_VER = '10.7.1';
@@ -4001,6 +4001,9 @@
             <div id="reminders-banner" class="hidden">
                 <!-- Reminder notifications loaded by prismCheckReminders() -->
             </div>
+            <div style="display:flex;justify-content:flex-end;margin-bottom:4px;">
+                <button class="prism-refresh-btn btn btn-sm btn-secondary" data-section="dashboard" onclick="prismRefreshSection('dashboard')" style="padding:3px 8px;font-size:0.75rem;border-radius:6px;" title="Refresh dashboard">🔄 Refresh</button>
+            </div>
 
             <div class="stats-grid">
                 <div class="stat-card" style="cursor: pointer;" onclick="showFlashcardDetail('properties')">
@@ -4360,7 +4363,9 @@
         <div id="properties" class="section">
             <div class="card">
                 <div class="card-header">
-                    <div class="card-title">My Properties</div>
+                    <div class="card-title">My Properties
+                    <button class="prism-refresh-btn btn btn-sm btn-secondary" style="padding:3px 8px;font-size:0.75rem;min-width:32px;border-radius:6px;" title="Refresh this section" data-section="properties" onclick="prismRefreshSection('properties')">🔄</button>
+                </div>
                 </div>
                 <!-- Search bar -->
                 <div style="position:relative;margin-bottom:12px;">
@@ -4394,7 +4399,9 @@
             <!-- Quick Add Tenant Cards -->
             <div class="card">
                 <div class="card-header">
-                    <div class="card-title">Quick Add Tenant</div>
+                    <div class="card-title">Quick Add Tenant
+                    <button class="prism-refresh-btn btn btn-sm btn-secondary" style="padding:3px 8px;font-size:0.75rem;min-width:32px;border-radius:6px;" title="Refresh this section" data-section="tenants" onclick="prismRefreshSection('tenants')">🔄</button>
+                </div>
                 </div>
                 <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 10px;">Choose how to add a tenant:</p>
                 <div class="expense-summary-grid">
@@ -4620,7 +4627,11 @@
             <!-- Quick Add Expense by Category -->
             <div class="card">
                 <div class="card-header">
-                    <div class="card-title">Quick Add Expense</div>
+                    <div class="card-title">Quick Add Expense
+                    <button class="prism-refresh-btn btn btn-sm btn-secondary" style="padding:3px 8px;font-size:0.75rem;min-width:32px;border-radius:6px;" title="Refresh this section" data-section="credits" onclick="prismRefreshSection('credits')">🔄</button>
+                
+                    <button class="prism-refresh-btn btn btn-sm btn-secondary" style="padding:3px 8px;font-size:0.75rem;min-width:32px;border-radius:6px;" title="Refresh this section" data-section="expenses" onclick="prismRefreshSection('expenses')">🔄</button>
+                </div>
                 </div>
                 <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 10px;">Tap a category to quickly add an expense:</p>
                 
@@ -4804,7 +4815,9 @@
         <div id="notes" class="section">
             <div class="card">
                 <div class="card-header">
-                    <div class="card-title">📝 Custom Notes</div>
+                    <div class="card-title">📝 Custom Notes
+                    <button class="prism-refresh-btn btn btn-sm btn-secondary" style="padding:3px 8px;font-size:0.75rem;min-width:32px;border-radius:6px;" title="Refresh this section" data-section="notes" onclick="prismRefreshSection('notes')">🔄</button>
+                </div>
                     <button class="btn btn-sm btn-primary" onclick="showAddNoteModal()">+ Add Note</button>
                 </div>
                 <div class="search-box">
@@ -4906,7 +4919,9 @@
 
             <div class="card">
                 <div class="card-header">
-                    <div class="card-title">💧 Water Refilling Station</div>
+                    <div class="card-title">💧 Water Refilling Station
+                    <button class="prism-refresh-btn btn btn-sm btn-secondary" style="padding:3px 8px;font-size:0.75rem;min-width:32px;border-radius:6px;" title="Refresh this section" data-section="water" onclick="prismRefreshSection('water')">🔄</button>
+                </div>
                     <div style="display: flex; gap: 6px; flex-wrap:wrap;">
                         <button class="btn btn-sm btn-primary" onclick="showModal('water-customer-modal')">+ Customer</button>
                         <button class="btn btn-sm btn-success" onclick="showWaterSaleModal()">+ Sale</button>
@@ -5082,7 +5097,9 @@
             <!-- Today's Transaction Summary -->
             <div class="card" id="income-today-card">
                 <div class="card-header">
-                    <div class="card-title">📋 Transactions</div>
+                    <div class="card-title">📋 Transactions
+                    <button class="prism-refresh-btn btn btn-sm btn-secondary" style="padding:3px 8px;font-size:0.75rem;min-width:32px;border-radius:6px;" title="Refresh this section" data-section="income" onclick="prismRefreshSection('income')">🔄</button>
+                </div>
                     <div style="display:flex;gap:6px;">
                         <button class="btn btn-sm btn-secondary" onclick="loadIncomeTodayFeed()" title="Refresh">↺</button>
                         <button class="btn btn-sm btn-success" onclick="exportTransactionsTxt()" title="Export to text file">📄 Export</button>
@@ -5309,7 +5326,9 @@
 
             <div class="card">
                 <div class="card-header">
-                    <div class="card-title">👷 Employee Management</div>
+                    <div class="card-title">👷 Employee Management
+                    <button class="prism-refresh-btn btn btn-sm btn-secondary" style="padding:3px 8px;font-size:0.75rem;min-width:32px;border-radius:6px;" title="Refresh this section" data-section="employees" onclick="prismRefreshSection('employees')">🔄</button>
+                </div>
                     <button id="void-requests-btn" onclick="showVoidRequests()" style="display:none;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#ef4444;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:0.8rem;font-weight:700;">
                         ⚠️ Void Requests <span id="void-req-count" style="background:#ef4444;color:white;border-radius:10px;padding:1px 7px;margin-left:4px;font-size:0.75rem;">0</span>
                     </button>
@@ -5486,7 +5505,9 @@
         <div id="tasks" class="section">
             <div class="card">
                 <div class="card-header">
-                    <div class="card-title">✅ Task Management</div>
+                    <div class="card-title">✅ Task Management
+                    <button class="prism-refresh-btn btn btn-sm btn-secondary" style="padding:3px 8px;font-size:0.75rem;min-width:32px;border-radius:6px;" title="Refresh this section" data-section="tasks" onclick="prismRefreshSection('tasks')">🔄</button>
+                </div>
                     <div style="display:flex;gap:6px;align-items:center;">
                         <input type="text" id="tasks-search-input" placeholder="🔍 Search tasks..." oninput="filterTasksList()" style="padding:5px 8px;font-size:0.78rem;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-card);color:var(--text-primary);width:150px;">
                     <div id="tasks-search-dd" class="prism-ac-dd" style="display:none;"></div>
@@ -5587,7 +5608,9 @@
             <div class="card">
                 <div class="card-header">
                     <div>
-                        <div class="card-title">🧾 Trade Payables</div>
+                        <div class="card-title">🧾 Trade Payables
+                    <button class="prism-refresh-btn btn btn-sm btn-secondary" style="padding:3px 8px;font-size:0.75rem;min-width:32px;border-radius:6px;" title="Refresh this section" data-section="payables" onclick="prismRefreshSection('payables')">🔄</button>
+                </div>
                         <div class="card-subtitle">Supplier invoices &amp; accounts payable</div>
                     </div>
                     <div style="display:flex;gap:6px;flex-shrink:0;">
@@ -5626,12 +5649,32 @@
             </div>
         </div>
 
+
+            <!-- nav-bottom-payables -->
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:24px;padding:14px 0 4px;border-top:1px solid var(--border-color);">
+                <div style="display:flex;gap:8px;">
+                    <button class="btn btn-danger" style="flex:1;font-size:0.88rem;font-weight:700;padding:12px;" onclick="showAddPayableModal()">
+                        🧾 Add Payable
+                    </button>
+                    <button class="btn btn-secondary" style="flex:1;font-size:0.88rem;font-weight:700;padding:12px;" onclick="showAddSupplierModal()">
+                        🏭 Add Supplier
+                    </button>
+                </div>
+                <div style="display:flex;gap:8px;">
+                    <button class="btn btn-secondary" style="flex:1;font-size:0.82rem;" onclick="showSection('tasks')">← Tasks</button>
+                    <button class="btn btn-primary" style="flex:1;font-size:0.82rem;" onclick="showSection('suppliers')">🏭 Suppliers →</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Suppliers Section -->
         <div id="suppliers" class="section">
             <div class="card">
                 <div class="card-header">
                     <div>
-                        <div class="card-title">🏭 Suppliers Directory</div>
+                        <div class="card-title">🏭 Suppliers Directory
+                    <button class="prism-refresh-btn btn btn-sm btn-secondary" style="padding:3px 8px;font-size:0.75rem;min-width:32px;border-radius:6px;" title="Refresh this section" data-section="suppliers" onclick="prismRefreshSection('suppliers')">🔄</button>
+                </div>
                         <div class="card-subtitle">Supplier &amp; vendor contact ledger</div>
                     </div>
                     <button class="btn btn-sm btn-primary" onclick="showAddSupplierModal()">+ Add Supplier</button>
@@ -5659,9 +5702,26 @@
                 <button class="btn btn-secondary" style="flex:1;font-size:0.82rem;" onclick="showSection('payables')">← Payables</button>
                 <button class="btn btn-primary" style="flex:1;font-size:0.82rem;" onclick="showSection('settings')">⚙️ Settings →</button>
             </div>
+        
+
+            <!-- nav-bottom-suppliers -->
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:24px;padding:14px 0 4px;border-top:1px solid var(--border-color);">
+                <div style="display:flex;gap:8px;">
+                    <button class="btn btn-primary" style="flex:1;font-size:0.88rem;font-weight:700;padding:12px;" onclick="showAddSupplierModal()">
+                        🏭 Add Supplier
+                    </button>
+                    <button class="btn btn-danger" style="flex:1;font-size:0.88rem;font-weight:700;padding:12px;" onclick="showAddPayableModal()">
+                        🧾 Add Payable
+                    </button>
+                </div>
+                <div style="display:flex;gap:8px;">
+                    <button class="btn btn-secondary" style="flex:1;font-size:0.82rem;" onclick="showSection('payables')">← Payables</button>
+                    <button class="btn btn-primary" style="flex:1;font-size:0.82rem;" onclick="showSection('settings')">⚙️ Settings →</button>
+                </div>
+            </div>
         </div>
 
-        <!-- Settings Section -->
+                <!-- Settings Section -->
         <div id="settings" class="section">
             <div class="card" style="border: 2px dashed var(--primary); background: linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(124, 58, 237, 0.05) 100%);">
                 <div class="card-header">
@@ -6213,7 +6273,7 @@
                         <div style="margin-top:15px;padding:14px;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;">
                             <p style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:10px;font-weight:600;">📧 Contact Us</p>
                             <div id="_prism_contacts"></div>
-                            <script data-cfasync="false">
+                            <script>
                             (function(){
                                 var e1='jarodbulb'+'@'+'gmail.com';
                                 var e2='danomandam'+'@'+'yahoo.com';
@@ -8173,7 +8233,7 @@
         </div>
     </div>
 
-    <script data-cfasync="false">
+    <script>
         // =====================
         // TOAST NOTIFICATION (must be first)
         // =====================
@@ -8527,7 +8587,8 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
         window.addEventListener('online', () => {
             isOnline = true;
             updateSyncStatus('online');
-            debouncedSync();
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
         });
 
         window.addEventListener('offline', () => {
@@ -8812,6 +8873,17 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             if (_syncDebounceTimer) clearTimeout(_syncDebounceTimer);
             _syncDebounceTimer = setTimeout(() => syncToFirebase(), 2000);
         }
+
+        // Auto-refresh current visible section after any save
+        function prismAutoRefreshCurrent() {
+            const active = document.querySelector('.section.active');
+            if (!active) return;
+            const sid = active.id;
+            if (sid && typeof prismRefreshSection === 'function') {
+                setTimeout(() => prismRefreshSection(sid), 350);
+            }
+        }
+        window.prismAutoRefreshCurrent = prismAutoRefreshCurrent;
 
         async function syncToFirebase() {
             // STARTUP FIX: Wait for IndexedDB to be ready before syncing
@@ -11682,7 +11754,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     html += '<div style="color:#64748b;font-size:0.83rem;text-align:center;padding:8px;">No tenants assigned.</div>';
                 } else {
                     propTenants.forEach(t => {
-                        const tPaid = allPayments.filter(p=>p.tenantId===t.id&&!p.voided).reduce((s,p)=>s+(p.amount||0),0);
+                        const tPaid = allPayments.filter(p=>p.tenantId===t.id&&!p.voided).reduce((s,p)=>s+Math.max(0,(p.amount||0)-(p.discount||0)),0);
                         html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color);">';
                         html += '<div><div style="font-weight:600;font-size:0.85rem;">' + t.name + '</div>';
                         html += '<div style="color:#64748b;font-size:0.75rem;">₱' + (t.rent||0).toLocaleString() + '/mo · since ' + (t.startDate||'') + '</div></div>';
@@ -12349,7 +12421,8 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             const modal = document.getElementById('flashcard-modal') || document.querySelector('.modal-overlay.show');
             if (modal) modal.remove();
 
-            debouncedSync();
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
             loadTenants();
             loadDashboard();
             showToast(`✅ ${tenant.name} reactivated successfully!`, 'success');
@@ -12386,7 +12459,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             const moveInDate = new Date(tenant.moveIn);
             const monthsDiff = (now.getFullYear() - moveInDate.getFullYear()) * 12 + (now.getMonth() - moveInDate.getMonth()) + 1;
             const expectedTotal = monthsDiff * tenant.rent;
-            const paidTotal = payments.reduce((sum, p) => sum + p.amount, 0);
+            const paidTotal = payments.reduce((sum, p) => sum + Math.max(0, p.amount - (p.discount || 0)), 0);
             const balance = expectedTotal - paidTotal;
 
             // Calculate due date and late fees
@@ -12487,7 +12560,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                                         <td>${p.date}</td>
                                         <td>${p.monthCovered || (p.type === 'advance' ? 'Advance' : 'N/A')}</td>
                                         <td><span class="payment-method ${methodClass}">${methodLabel}</span></td>
-                                        <td class="text-success">₱${p.amount.toLocaleString()}${p.discount > 0 ? `<span title="Discount: ₱${p.discount} — ${p.discountReason||''}" style="font-size:0.65rem;background:rgba(16,185,129,0.15);color:#10b981;padding:1px 5px;border-radius:4px;margin-left:3px;">−₱${p.discount}</span>` : ''}${p.balanceOverride ? `<span title="Balance override — ${p.overrideReason||''}" style="font-size:0.65rem;background:rgba(245,158,11,0.15);color:#f59e0b;padding:1px 5px;border-radius:4px;margin-left:3px;">🔧</span>` : ''}</td>
+                                        <td class="text-success">${(function(){const net=p.amount-(p.discount||0);if(p.discount>0){return '<span style="text-decoration:line-through;color:#94a3b8;font-size:0.82rem;">₱'+p.amount.toLocaleString()+'</span> <span style="color:#10b981;font-weight:700;">₱'+net.toLocaleString()+'</span><span title="Discount: ₱'+p.discount+' — '+(p.discountReason||'')+'" style="font-size:0.65rem;background:rgba(16,185,129,0.15);color:#10b981;padding:1px 5px;border-radius:4px;margin-left:3px;">−₱'+p.discount.toLocaleString()+'</span>';}return '₱'+p.amount.toLocaleString()+(p.balanceOverride?'<span title="Balance override" style="font-size:0.65rem;background:rgba(245,158,11,0.15);color:#f59e0b;padding:1px 5px;border-radius:4px;margin-left:3px;">🔧</span>':'');})()} </td>
                                         <td>
                                             <button class="btn btn-sm btn-secondary" onclick="showReceipt(${p.id}, 'rent')" title="View Receipt">📄</button>
                                             ${currentAppUser && currentAppUser.role === 'cashier'
@@ -12614,7 +12687,8 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             showToast('⏳ Updating deposit...', 'info');
                 await dbUpdate('tenants', tenant);
             await viewTenantDetails(tenantId);
-            debouncedSync();
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
         }
 
         // Edit Tenant
@@ -12749,7 +12823,8 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             await viewTenantDetails(id);
             loadTenants();
             loadDashboard();
-            debouncedSync();
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
         }
 
         // Record payment for specific tenant
@@ -12925,7 +13000,8 @@ async function recordTenantPayment(tenantId) {
             loadTenants();
             loadDashboard();
             if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
-            debouncedSync();
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
             showToast('✅ Payment recorded successfully!', 'success');
             if (currentAppUser && currentAppUser.role === 'cashier' && typeof loadCashierDashboard === 'function') {
                 setTimeout(loadCashierDashboard, 400);
@@ -12955,7 +13031,8 @@ async function recordTenantPayment(tenantId) {
                 loadCredits();
             }
             loadDashboard();
-            debouncedSync();
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
         }
 
         // ── PAYMENT EDIT / VOID FUNCTIONS (Owner/Admin only) ──
@@ -12976,7 +13053,8 @@ async function recordTenantPayment(tenantId) {
             p.voidedAt = new Date().toISOString();
             p.amount = 0;
             await dbUpdate('payments', p);
-            debouncedSync(); loadDashboard();
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync(); loadDashboard();
             showToast('🚫 Payment voided.', 'success');
             await viewTenantDetails(tenantId);
         }
@@ -12997,7 +13075,8 @@ async function recordTenantPayment(tenantId) {
             p.voidedAt = new Date().toISOString();
             p.amount = 0;
             await dbUpdate('creditPayments', p);
-            debouncedSync(); loadDashboard();
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync(); loadDashboard();
             showToast('🚫 Credit payment voided.', 'success');
             await viewCreditDetails(creditId);
         }
@@ -13019,7 +13098,8 @@ async function recordTenantPayment(tenantId) {
             s.voidedBy = currentAppUser.fullname || currentAppUser.username;
             s.voidedAt = new Date().toISOString();
             await dbUpdate('waterSales', s);
-            debouncedSync(); loadWaterCustomers();
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync(); loadWaterCustomers();
             showToast('🚫 Water sale voided.', 'success');
             await viewWaterCustomerDetails(customerId);
         }
@@ -13040,7 +13120,8 @@ async function recordTenantPayment(tenantId) {
             s.editedBy = currentAppUser.fullname || currentAppUser.username;
             s.editedAt = new Date().toISOString();
             await dbUpdate('salaryPayments', s);
-            debouncedSync();
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
             showToast('✅ Salary record updated.', 'success');
             await viewEmployeeDetails(employeeId);
         }
@@ -13464,7 +13545,9 @@ async function recordTenantPayment(tenantId) {
                 });
 
                 document.getElementById('quick-sell-modal')?.remove();
-                debouncedSync();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
                 if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
                 if (typeof loadDashboard        === 'function') loadDashboard();
                 if (typeof loadIncome           === 'function') loadIncome();
@@ -13810,7 +13893,9 @@ async function recordTenantPayment(tenantId) {
                 loadCredits();
                 if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
                 // Sync to Firebase
-                debouncedSync();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
 
             } catch (error) {
                 PrismGuardian.log('ERROR', 'Payment save failed', error);
@@ -13900,7 +13985,7 @@ async function recordTenantPayment(tenantId) {
                 // Calculate balance info for credit
                 if (credit) {
                     const creditPayments = allCreditPayments.filter(p => p.creditId === credit.id);
-                    const totalPaid = creditPayments.reduce((sum, p) => sum + p.amount, 0);
+                    const totalPaid = creditPayments.reduce((sum, p) => sum + Math.max(0, p.amount - (p.discount || 0)), 0);
                     
                     // Calculate with interest
                     let totalDue = credit.principal;
@@ -14382,7 +14467,7 @@ async function recordTenantPayment(tenantId) {
                                     <td>${p.date}</td>
                                     <td>${p.monthCovered || (p.type === 'advance' ? 'Advance' : 'N/A')}</td>
                                     <td>${p.paymentMethod || 'N/A'}</td>
-                                    <td class="text-success">₱${p.amount.toLocaleString()}</td>
+                                    <td class="text-success">${p.discount>0?'₱'+(p.amount-p.discount).toLocaleString()+' <small style="color:#10b981;">(−₱'+p.discount.toLocaleString()+')</small>':'₱'+p.amount.toLocaleString()}</td>
                                 </tr>
                             `).join('')}
                         </tbody>
@@ -14889,7 +14974,9 @@ async function loadWaterCustomers() {
                 document.getElementById('water-customer-form').reset();
                 document.getElementById('water-customer-edit-id').value = '';
                 loadWaterCustomers();
-                debouncedSync();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
             } catch (error) {
                 console.error('Error saving water customer:', error);
                 showToast('❌ Error: ' + error.message, 'error');
@@ -15177,7 +15264,9 @@ async function loadWaterCustomers() {
                 hideModal('water-sale-modal');
                 loadWaterCustomers();
                 if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
-                debouncedSync();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
 
                 // Toast with order summary
                 const bigLine   = bigBottles   ? bigBottles   + ' Big'   : '';
@@ -15685,7 +15774,9 @@ async function loadWaterCustomers() {
                 ['mon','tue','wed','thu','fri','sat'].forEach(d => document.getElementById('work-'+d).checked = true);
                 document.getElementById('work-sun').checked = false;
                 loadEmployees();
-                debouncedSync();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
             } catch (error) {
                 console.error('Error saving employee:', error);
                 showToast('❌ Error: ' + error.message, 'error');
@@ -15930,7 +16021,9 @@ async function loadWaterCustomers() {
                 hideModal('time-record-modal');
                 loadEmployees();
                 viewEmployeeDetails(employeeId);
-                debouncedSync();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
                 showToast('Attendance recorded!', 'success');
             } catch (error) {
                 console.error('Error saving time record:', error);
@@ -16033,7 +16126,8 @@ async function showQuickAttendance() {
             
             loadQuickAttendance();
             loadEmployees();
-            debouncedSync();
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
         }
 
         // ============================================================
@@ -16071,7 +16165,8 @@ async function showQuickAttendance() {
 
             await dbAdd('timeRecords', record);
             loadEmployees();
-            debouncedSync();
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
             showToast(`✅ Attendance recorded for ${employeeName}`, 'success');
         }
 
@@ -16553,7 +16648,9 @@ async function showPayrollSummary() {
                 
                 hideModal('give-salary-modal');
                 loadEmployees();
-                debouncedSync();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
                 
                 showToast(`✅ Salary of ₱${netPay.toLocaleString()} paid to ${employee.name}! — Records reset for next pay period.`, 'success');
                 
@@ -16606,7 +16703,9 @@ async function showPayrollSummary() {
                 hideModal('advance-modal');
                 loadEmployees();
                 viewEmployeeDetails(employeeId);
-                debouncedSync();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
                 showToast('Cash advance recorded!', 'success');
                 if (currentAppUser && currentAppUser.role === 'cashier' && typeof loadCashierDashboard === 'function') {
                     setTimeout(loadCashierDashboard, 400);
@@ -16797,7 +16896,9 @@ async function showPayrollSummary() {
                 hideModal('salary-modal');
                 loadEmployees();
                 viewEmployeeDetails(employeeId);
-                debouncedSync();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
                 showToast(`✅ Salary paid! ${unpaidRecords.length} days marked as paid`, 'success');
             } catch (error) {
                 console.error('Error paying salary:', error);
@@ -17406,7 +17507,7 @@ async function showPayrollSummary() {
                                     <tr>
                                         <td>${p.date}</td>
                                         <td><span class="payment-method ${methodClass}">${methodLabel}</span></td>
-                                        <td class="text-success">₱${p.amount.toLocaleString()}</td>
+                                        <td class="text-success">${(function(){const net=p.amount-(p.discount||0);if(p.discount>0){return '<span style="text-decoration:line-through;color:#94a3b8;font-size:0.82rem;">₱'+p.amount.toLocaleString()+'</span> <span style="color:#10b981;font-weight:700;">₱'+net.toLocaleString()+'</span><span title="Discount: ₱'+p.discount+' — '+(p.discountReason||'')+'" style="font-size:0.65rem;background:rgba(16,185,129,0.15);color:#10b981;padding:1px 5px;border-radius:4px;margin-left:3px;">−₱'+p.discount.toLocaleString()+'</span>';}return '₱'+p.amount.toLocaleString();})()} </td>
                                         <td>
                                             <button class="btn btn-sm btn-secondary" onclick="showReceipt(${p.id}, 'credit')" title="View Receipt">📄</button>
                                             ${currentAppUser && currentAppUser.role === 'cashier'
@@ -17529,7 +17630,8 @@ async function showPayrollSummary() {
             await viewCreditDetails(id);
             loadCredits();
             loadDashboard();
-            debouncedSync();
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
         }
 
         // Record payment for specific credit
@@ -17687,7 +17789,7 @@ async function showPayrollSummary() {
             const credit = await dbGet('credits', creditId);
             const allPayments = await dbGetAll('creditPayments');
             const creditPayments = allPayments.filter(p => p.creditId === creditId);
-            const totalPaid = creditPayments.reduce((sum, p) => sum + p.amount, 0);
+            const totalPaid = creditPayments.reduce((sum, p) => sum + Math.max(0, p.amount - (p.discount || 0)), 0);
             
             // Calculate total due (principal + interest)
             let totalDue = credit.principal;
@@ -17716,7 +17818,8 @@ async function showPayrollSummary() {
             loadDashboard();
             if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
             // Sync to Firebase
-            debouncedSync();
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
 
             // Cashier: auto-endorse credit payment to admin
             if (currentAppUser && currentAppUser.role === 'cashier') {
@@ -17989,7 +18092,9 @@ async function showPayrollSummary() {
                 loadNotes();
         try { if (typeof loadDashboard === 'function') loadDashboard(); } catch(e) {}
                 // Sync to Firebase
-                debouncedSync();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
             } catch (error) {
                 console.error('Error saving note:', error);
                 showToast('❌ Error saving note: ' + error.message, 'error');
@@ -18731,7 +18836,8 @@ async function showPayrollSummary() {
             }
 
             // Sync to Firebase
-            debouncedSync();
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
             showToast('✅ Expense saved successfully!', 'success');
         }
 
@@ -18791,7 +18897,8 @@ async function showPayrollSummary() {
             } else {
                 await viewCreditDetails(clientId);
             }
-            debouncedSync();
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
         }
 
         // Add notes to client
@@ -18815,7 +18922,8 @@ async function showPayrollSummary() {
                 await dbUpdate('credits', client);
                 await viewCreditDetails(id);
             }
-            debouncedSync();
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
         }
 
         async function deleteClientNote(type, id, noteIndex) {
@@ -18831,7 +18939,8 @@ async function showPayrollSummary() {
                 await dbUpdate('credits', client);
                 await viewCreditDetails(id);
             }
-            debouncedSync();
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
         }
 
         // =====================
@@ -19096,7 +19205,9 @@ async function showPayrollSummary() {
                 loadExpenses();
                 loadDashboard();
                 // Sync to Firebase
-                debouncedSync();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
                 showToast('Expense saved successfully!', 'success');
 
                 if (currentAppUser && currentAppUser.role === 'cashier' && typeof loadCashierDashboard === 'function') {
@@ -19554,7 +19665,8 @@ async function showPayrollSummary() {
             hideModal('expense-detail-modal');
             loadExpenses();
             loadDashboard();
-            debouncedSync();
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
         }
     window.deleteExpense = deleteExpense;
 
@@ -19623,6 +19735,7 @@ async function showPayrollSummary() {
         if (!await showConfirm('Delete this expense record permanently?', 'danger', 'Delete Expense', 'Yes, Delete')) return;
         await dbDelete('expenses', id);
         showToast('Expense deleted.', 'success');
+        if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
         debouncedSync();
         // Refresh the modal with updated data
         if (modalToClose === 'financial-details-modal') {
@@ -20602,7 +20715,8 @@ async function showPayrollSummary() {
             }
 
             document.getElementById('ife-modal')?.remove();
-            debouncedSync();
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
             loadDashboard();
             if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
             if (typeof renderWaterAllSales === 'function' && src === 'water') renderWaterAllSales();
@@ -20777,7 +20891,9 @@ async function showPayrollSummary() {
                 hideModal('income-modal');
                 await loadIncome();
                 await loadDashboard();
-                debouncedSync();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
 
                 // Cashier: auto-endorse income entry to admin
                 if (currentAppUser && currentAppUser.role === 'cashier' && !id) {
@@ -20826,14 +20942,64 @@ async function showPayrollSummary() {
                 await loadDashboard();
                 showToast('Income deleted', 'success');
                 
-                debouncedSync();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
             } catch (error) {
                 console.error('Error deleting income:', error);
                 showToast('❌ Error deleting income: ' + error.message, 'error');
             }
         }
 
-        async function showIncomeDetail(type) {
+
+        // ── Universal Section Refresh ──
+        async function prismRefreshSection(sectionId) {
+            const btn = document.querySelector(`.prism-refresh-btn[data-section="${sectionId}"]`);
+            if (btn) { btn.style.animation = 'spin 0.6s linear'; btn.textContent = '⟳'; }
+            try {
+                const map = {
+                    'tenants':    () => loadTenants(),
+                    'credits':    () => loadCredits(),
+                    'expenses':   () => loadExpenses(),
+                    'income':     () => loadIncome(),
+                    'water':      () => loadWaterCustomers(),
+                    'employees':  () => loadEmployees(),
+                    'tasks':      () => loadTasks(),
+                    'notes':      () => loadNotes(),
+                    'payables':   () => loadPayables(),
+                    'suppliers':  () => loadSuppliers(),
+                    'properties': () => loadProperties(),
+                    'dashboard':  () => loadDashboard(),
+                    'reports':    () => initReportsPage(),
+                };
+                if (map[sectionId]) await map[sectionId]();
+                showToast('✅ Refreshed', 'success', 1200);
+            } catch(e) { showToast('Refresh failed', 'error'); }
+            finally {
+                if (btn) { btn.style.animation = ''; btn.textContent = '🔄'; }
+            }
+        }
+        window.prismRefreshSection = prismRefreshSection;
+
+        // Inline delete income from detail modal
+        async function prismDeleteIncome(id, el) {
+            if (currentAppUser && currentAppUser.role === 'cashier') {
+                showToast('⛔ Cashiers cannot delete income records.', 'error'); return;
+            }
+            if (!await showConfirm('Delete this income record?', 'danger', '🗑️ Delete Income', 'Yes, Delete')) return;
+            try {
+                await dbDelete('additionalIncome', id);
+                if (el) el.remove();
+                loadIncome(); loadDashboard(); debouncedSync();
+                showToast('✅ Income deleted', 'success');
+            } catch(e) { showToast('❌ Error: ' + e.message, 'error'); }
+        }
+        window.prismDeleteIncome = prismDeleteIncome;
+        window.showIncomeDetail  = showIncomeDetail;
+        window.editIncome        = editIncome;
+        window.deleteIncome      = deleteIncome;
+
+        async function showIncomeDetail(type, _fromDate, _toDate) {
             const additionalIncome = await dbGetAll('additionalIncome');
             const now = new Date();
             const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -20841,22 +21007,28 @@ async function showPayrollSummary() {
             let filteredIncome = [];
             let titleText = '';
             let summaryText = '';
+            let _rangeFrom = _fromDate || '';
+            let _rangeTo   = _toDate   || '';
             
             if (type === 'month') {
                 filteredIncome = additionalIncome.filter(i => i.date && i.date.startsWith(currentMonth));
                 titleText = '💰 This Month\'s Other Income';
-                const total = filteredIncome.reduce((sum, i) => sum + (i.amount || 0), 0);
-                summaryText = `Total for ${now.toLocaleString('default', { month: 'long', year: 'numeric' })}: ₱${total.toLocaleString()}`;
             } else if (type === 'total') {
                 filteredIncome = additionalIncome;
                 titleText = '💰 All Other Income';
-                const total = filteredIncome.reduce((sum, i) => sum + (i.amount || 0), 0);
-                summaryText = `Total from all time: ₱${total.toLocaleString()}`;
             } else {
                 filteredIncome = additionalIncome;
                 titleText = '💰 All Income Transactions';
-                summaryText = `Total ${filteredIncome.length} transactions`;
             }
+            // Apply custom date range if set
+            if (_rangeFrom) filteredIncome = filteredIncome.filter(i => i.date >= _rangeFrom);
+            if (_rangeTo)   filteredIncome = filteredIncome.filter(i => i.date <= _rangeTo);
+            const total = filteredIncome.reduce((sum, i) => sum + (i.amount || 0), 0);
+            summaryText = _rangeFrom || _rangeTo
+                ? `₱${total.toLocaleString()} (${_rangeFrom||'start'} → ${_rangeTo||'today'})`
+                : type === 'month'
+                    ? `Total for ${now.toLocaleString('default', { month: 'long', year: 'numeric' })}: ₱${total.toLocaleString()}`
+                    : `Total from all time: ₱${total.toLocaleString()}`;
             
             // Group by category
             const byCategory = {};
@@ -20872,9 +21044,20 @@ async function showPayrollSummary() {
             
             // Build content
             let content = `
-                <div style="background: var(--bg-primary); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                    <h4 style="margin: 0 0 10px 0; color: var(--text-primary);">📊 Summary</h4>
-                    <p style="font-size: 1.1rem; margin: 0;"><strong>${summaryText}</strong></p>
+                <div style="background:var(--bg-primary);padding:12px;border-radius:8px;margin-bottom:12px;">
+                    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+                        <input type="date" id="_inc_from" value="${_rangeFrom}" 
+                            style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;"
+                            onchange="showIncomeDetail('${type}',this.value,document.getElementById('_inc_to').value)">
+                        <span style="color:var(--text-secondary);font-size:0.78rem;">to</span>
+                        <input type="date" id="_inc_to" value="${_rangeTo}"
+                            style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;"
+                            onchange="showIncomeDetail('${type}',document.getElementById('_inc_from').value,this.value)">
+                        <button onclick="showIncomeDetail('${type}','','')" 
+                            style="padding:5px 10px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-secondary);cursor:pointer;font-size:0.75rem;">Clear</button>
+                    </div>
+                    <h4 style="margin:0 0 4px;color:var(--text-primary);font-size:0.88rem;">📊 Summary</h4>
+                    <p style="font-size:1.05rem;margin:0;font-weight:700;color:#10b981;">${summaryText}</p>
                 </div>
             `;
             
@@ -20898,15 +21081,22 @@ async function showPayrollSummary() {
                 content += `<div style="max-height: 300px; overflow-y: auto;">`;
                 
                 filteredIncome.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(income => {
+                    const _isCashier = currentAppUser && currentAppUser.role === 'cashier';
                     content += `
-                        <div class="list-item" onclick="editIncome(${income.id}); hideModal('flashcard-detail-modal');" style="cursor: pointer; margin-bottom: 8px;">
-                            <div class="item-info">
-                                <h4>💰 ${income.description}</h4>
-                                <p>${income.date} • ${income.category}</p>
+                        <div class="list-item" style="margin-bottom:8px;border-radius:8px;border:1px solid var(--border-color);padding:10px 12px;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                                <div>
+                                    <div style="font-weight:600;font-size:0.9rem;">💰 ${income.description}</div>
+                                    <div style="font-size:0.78rem;color:var(--text-secondary);">${income.date} • ${income.category}</div>
+                                </div>
+                                <div style="font-weight:700;color:#10b981;font-size:1rem;">+₱${income.amount.toLocaleString()}</div>
                             </div>
-                            <div class="item-amount">
-                                <div class="amount collected">+₱${income.amount.toLocaleString()}</div>
-                            </div>
+                            ${!_isCashier ? `<div style="display:flex;gap:6px;">
+                                <button onclick="hideModal('flashcard-detail-modal');editIncome(${income.id});" 
+                                    style="flex:1;padding:5px 8px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:6px;color:#818cf8;cursor:pointer;font-size:0.78rem;font-weight:600;">✏️ Edit</button>
+                                <button onclick="prismDeleteIncome(${income.id}, this.closest('.list-item'));" 
+                                    style="flex:1;padding:5px 8px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:6px;color:#ef4444;cursor:pointer;font-size:0.78rem;font-weight:600;">🗑️ Delete</button>
+                            </div>` : ''}
                         </div>
                     `;
                 });
@@ -22789,7 +22979,9 @@ async function showPayrollSummary() {
                 }
 
                 // Sync to Firebase after restore
-                debouncedSync();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
 
                 showToast('✅ Data restored successfully!', 'success');
                 loadDashboard();
@@ -26662,7 +26854,8 @@ async function clearAllData() {
                 showToast('✅ Income recorded.','success');
             }
             hideModal('income-modal');
-            debouncedSync();
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
             if (typeof loadIncome === 'function') loadIncome();
             if (typeof loadDashboard === 'function') loadDashboard();
             if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
@@ -26730,7 +26923,8 @@ async function clearAllData() {
             // Reset partial checkbox
             const pchk = document.getElementById('salary-partial-check');
             if (pchk) { pchk.checked = false; toggleSalaryPartial(); }
-            debouncedSync();
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
             if (typeof loadEmployees === 'function') loadEmployees();
             if (typeof loadPayrollSummary === 'function') loadPayrollSummary();
             if (isPartialChk && amount < netPay) {
@@ -27091,7 +27285,9 @@ async function clearAllData() {
                     s.voidedBy = currentAppUser.fullname || currentAppUser.username;
                     await dbUpdate('waterStoreSales', s);
                 }
-                debouncedSync();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
                 if (typeof loadDashboard === 'function') loadDashboard();
                 if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
                 quickEndorse('void', '🚫 VOID EXECUTED\nType: ' + type + '\nID: ' + id + '\nReason: ' + voidReason + '\nBy: ' + (currentAppUser.fullname||currentAppUser.username));
@@ -28028,7 +28224,9 @@ async function clearAllData() {
                 document.getElementById('task-form').reset();
                 document.getElementById('task-edit-id').value = '';
                 await loadTasks();
-                debouncedSync();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
             } catch(e) { showToast('❌ Error: ' + e.message, 'error'); }
         }
         window.saveTask = saveTask;
@@ -28073,7 +28271,8 @@ async function clearAllData() {
             if (nextStatus === 'completed') task.completedAt = new Date().toISOString();
             await dbUpdate('tasks', task);
             await loadTasks();
-            debouncedSync();
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
             showToast('✅ Task marked ' + nextStatus + '.', 'success');
         }
         window.toggleTaskStatus = toggleTaskStatus;
@@ -28635,7 +28834,9 @@ async function clearAllData() {
                 });
 
                 document.getElementById('water-store-sell-modal')?.remove();
-                debouncedSync();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
                 renderWaterStore();
                 if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
                 if (typeof loadDashboard === 'function') loadDashboard();
@@ -28663,7 +28864,8 @@ async function clearAllData() {
                     if (linked) await dbDelete('additionalIncome', linked.id);
                 } catch(e) {}
             }
-            debouncedSync();
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
             if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
             if (typeof loadDashboard === 'function') loadDashboard();
             renderWaterStore();
@@ -28754,7 +28956,8 @@ async function clearAllData() {
                 else await dbAdd('waterStoreProducts', p);
             }
 
-            debouncedSync();
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
             document.getElementById('ws-manage-products-modal')?.remove();
             showManageStoreProducts();
             renderWaterStore();
@@ -28775,7 +28978,8 @@ async function clearAllData() {
                 }
                 await dbDelete('waterStoreProducts', productId).catch(()=>{});
             } catch(e) {}
-            debouncedSync();
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
             document.getElementById('ws-manage-products-modal')?.remove();
             showManageStoreProducts();
             renderWaterStore();
@@ -28855,7 +29059,8 @@ async function clearAllData() {
                     else    await dbAdd('waterStoreProducts', p);
                 } catch(e) {}
             }
-            debouncedSync();
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
             document.getElementById('ws-manage-products-modal')?.remove();
             renderWaterStore();
             showToast('✅ ' + icon + ' ' + name + ' updated — ₱' + price + '/' + unit, 'success');
@@ -28875,7 +29080,8 @@ async function clearAllData() {
                 if (ex) await dbUpdate('waterStoreProducts', products[idx]);
                 else    await dbAdd('waterStoreProducts', products[idx]);
             } catch(e) {}
-            debouncedSync();
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
             showToast('✅ Price updated to ₱' + newPrice + '/' + products[idx].unit, 'success');
         }
         window.updateStoreProductPrice = updateStoreProductPrice;
@@ -29080,7 +29286,8 @@ async function clearAllData() {
 
             await dbUpdate('waterSales', sale);
             document.getElementById('ws-quick-edit-modal')?.remove();
-            debouncedSync();
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
             loadWaterCustomers();
             showToast('✅ Sale updated successfully!', 'success');
             // Refresh the flashcard if open
@@ -29106,7 +29313,8 @@ async function clearAllData() {
             sale.voidReason   = reason || 'Voided by admin';
             sale.amountPaid   = 0;
             await dbUpdate('waterSales', sale);
-            debouncedSync();
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+        debouncedSync();
             loadWaterCustomers();
             showToast('🚫 Sale voided.', 'info');
             showWaterFlashcardDetail('today-sales');
@@ -29195,7 +29403,7 @@ async function clearAllData() {
   </div>
 </div>
 </div><!-- /prism-app-wrapper -->
-<script data-cfasync="false">
+<script>
 // ================================================================
 // PRISM MULTI-TENANT LAYER
 // ================================================================
