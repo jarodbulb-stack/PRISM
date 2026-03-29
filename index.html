@@ -4348,10 +4348,11 @@
 
             <!-- Recent Activity -->
             <div class="card">
-                <div class="card-header">
+                <div class="card-header" style="cursor:pointer;" onclick="prismToggleList('recent-payments','chev-recent-pay','')">
                     <div class="card-title">Recent Payments</div>
+                    <span id="chev-recent-pay" style="color:var(--text-secondary);font-size:1.1rem;transition:transform 0.2s;">▶</span>
                 </div>
-                <div id="recent-payments">
+                <div id="recent-payments" style="display:none;">
                     <div class="empty-state">
                         <p>No recent payments</p>
                     </div>
@@ -5643,15 +5644,8 @@
                     </div>
                 </div>
             </div>
-            <div style="display:flex;gap:8px;margin-top:16px;padding:14px 0 4px;border-top:1px solid var(--border-color);">
-                <button class="btn btn-secondary" style="flex:1;font-size:0.82rem;" onclick="showSection('notes')">← Notes</button>
-                <button class="btn btn-primary" style="flex:1;font-size:0.82rem;" onclick="showSection('expenses')">💸 Expenses →</button>
-            </div>
-        </div>
-
-
             <!-- nav-bottom-payables -->
-            <div style="display:flex;flex-direction:column;gap:8px;margin-top:24px;padding:14px 0 4px;border-top:1px solid var(--border-color);">
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px;padding:14px 0 4px;border-top:1px solid var(--border-color);">
                 <div style="display:flex;gap:8px;">
                     <button class="btn btn-danger" style="flex:1;font-size:0.88rem;font-weight:700;padding:12px;" onclick="showAddPayableModal()">
                         🧾 Add Payable
@@ -6141,9 +6135,11 @@
             </div>
 
             <div class="card mt-4">
-                <div class="card-header">
+                <div class="card-header" style="cursor:pointer;" onclick="prismToggleList('export-opts-body','chev-export-opts','')">
                     <div class="card-title">Export Options</div>
+                    <span id="chev-export-opts" style="color:var(--text-secondary);font-size:1.1rem;transition:transform 0.2s;">▶</span>
                 </div>
+                <div id="export-opts-body" style="display:none;">
                 <div class="settings-item">
                     <div class="settings-info">
                         <h4>Export Tenants List</h4>
@@ -6172,7 +6168,8 @@
                     </div>
                     <button class="btn btn-sm btn-secondary" onclick="exportExpensesCSV()">Export</button>
                 </div>
-            </div>
+            </div><!-- /export-opts-body -->
+            </div><!-- /export card -->
 
             <div class="card mt-4">
                 <div class="card-header">
@@ -6325,6 +6322,8 @@
         </div>
     </div>
     <button class="fab" id="fab-btn" onclick="toggleFabMenu()">+</button>
+    <!-- Mini floating refresh button -->
+    <button id="prism-mini-refresh" title="Refresh current section" onclick="(function(){const a=document.querySelector('.section.active');if(a&&typeof prismRefreshSection==='function')prismRefreshSection(a.id);})()" style="position:fixed;bottom:90px;right:16px;width:36px;height:36px;border-radius:50%;background:rgba(99,102,241,0.85);border:none;color:#fff;font-size:1rem;cursor:pointer;z-index:9998;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.3);backdrop-filter:blur(4px);">🔄</button>
 
     <!-- Bottom Navigation -->
     <div class="bottom-nav">
@@ -11717,7 +11716,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 // Payments for all tenants of this property
                 const tenantIds   = propTenants.map(t=>t.id);
                 const propPayments= allPayments.filter(p => tenantIds.includes(p.tenantId) && !p.voided);
-                const totalCollected = propPayments.reduce((s,p)=>s+(p.amount||0),0);
+                const totalCollected = propPayments.reduce((s,p)=>s+Math.max(0,(p.amount||0)-(p.discount||0)),0);
 
                 const statusBadge = propTenants.length > 0
                     ? '<span style="background:rgba(16,185,129,0.15);color:#10b981;padding:2px 10px;border-radius:6px;font-size:0.78rem;font-weight:700;">OCCUPIED</span>'
@@ -14078,7 +14077,7 @@ async function recordTenantPayment(tenantId) {
                     ` : ''}
                     <div class="receipt-row receipt-total">
                         <span>Amount Paid:</span>
-                        <span>₱${payment.amount.toLocaleString()}</span>
+                        <span>₱${(payment.amount-(payment.discount||0)).toLocaleString()}${payment.discount>0?'<small style="color:#10b981;margin-left:4px;">(−₱'+payment.discount.toLocaleString()+')</small>':''}</span>
                     </div>
                     ${balanceInfo}
                 </div>
@@ -15859,60 +15858,121 @@ async function loadWaterCustomers() {
                     💰 PAYROLL PROCESS ${unpaidDays > 0 ? '(' + unpaidDays + ' unpaid days)' : ''}
                 </button>
                 
-                <h4 style="margin-bottom: 10px;">📅 Recent Attendance</h4>
-                <div style="max-height: 150px; overflow-y: auto; margin-bottom: 15px;">
+                <h4 style="margin-bottom: 10px;">📋 Staff History</h4>
+
+                <!-- Tab nav -->
+                <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;" id="emp-hist-tabs-${id}">
+                    <button onclick="empHistTab(${id},'attendance')" id="empt-att-${id}" style="padding:5px 10px;border-radius:6px;border:none;background:var(--primary);color:#fff;cursor:pointer;font-size:0.75rem;font-weight:700;">📅 Attendance</button>
+                    <button onclick="empHistTab(${id},'advances')" id="empt-adv-${id}" style="padding:5px 10px;border-radius:6px;border:none;background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;font-weight:600;">💵 Advances</button>
+                    <button onclick="empHistTab(${id},'adjustments')" id="empt-adj-${id}" style="padding:5px 10px;border-radius:6px;border:none;background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;font-weight:600;">⚡ Bonuses/OT/Lates</button>
+                    <button onclick="empHistTab(${id},'salaries')" id="empt-sal-${id}" style="padding:5px 10px;border-radius:6px;border:none;background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;font-weight:600;">💰 Salary</button>
+                </div>
+
+                <!-- Tab: Attendance -->
+                <div id="emp-hist-attendance-${id}" style="max-height:300px;overflow-y:auto;margin-bottom:12px;">
             `;
-            
+
+            // === ATTENDANCE TAB ===
             if (empRecords.length === 0) {
-                content += '<p style="color: var(--text-secondary); font-size: 0.9rem;">No attendance records yet.</p>';
+                content += '<p style="color:var(--text-secondary);font-size:0.9rem;padding:10px 0;">No attendance records yet.</p>';
             } else {
                 empRecords.forEach(r => {
-                    const statusIcon = r.status === 'present' ? '✅' : r.status === 'absent' ? '❌' : r.status === 'halfday' ? '🕐' : r.status === 'restday' ? '🔘' : '📋';
-                    const statusText = r.status === 'present' ? 'Present' : r.status === 'absent' ? 'Absent' : r.status === 'halfday' ? 'Half Day' : r.status === 'restday' ? 'Rest Day' : 'Leave';
-                    const paidBadge = r.paid ? '<span class="badge badge-success" style="font-size: 0.7rem;">Paid</span>' : '<span class="badge badge-warning" style="font-size: 0.7rem;">Unpaid</span>';
+                    const sIcon = r.status==='present'?'✅':r.status==='absent'?'❌':r.status==='halfday'?'🕐':r.status==='restday'?'🔘':r.status==='adjustment'?'⚡':'📋';
+                    const sText = r.status==='present'?'Present':r.status==='absent'?'Absent':r.status==='halfday'?'Half Day':r.status==='restday'?'Rest Day':r.status==='adjustment'?'Adjustment':'Leave';
+                    const paidBadge = r.paid ? '<span style="font-size:0.62rem;background:rgba(16,185,129,0.15);color:#10b981;padding:1px 5px;border-radius:3px;">Paid</span>' : '<span style="font-size:0.62rem;background:rgba(245,158,11,0.15);color:#f59e0b;padding:1px 5px;border-radius:3px;">Unpaid</span>';
+                    const extras = [
+                        r.otHours>0 ? `⏰ OT: ${r.otHours}hrs` : '',
+                        r.bonus>0 ? `🎁 Bonus: ₱${r.bonus.toLocaleString()}` : '',
+                        r.incentive>0 ? `🏆 Incentive: ₱${r.incentive.toLocaleString()}` : '',
+                        r.lateDeduction>0 ? `🕐 Late: -₱${r.lateDeduction.toLocaleString()}` : '',
+                        r.notes ? `📝 ${r.notes}` : '',
+                        r.adjustmentNote ? `📌 ${r.adjustmentNote}` : ''
+                    ].filter(Boolean).join(' · ');
                     content += `
-                        <div class="list-item" style="padding: 8px;cursor:pointer;" onclick="editTimeRecord(${r.id})">
-                            <div class="list-item-content">
-                                <div class="list-item-title" style="font-size: 0.9rem;">${statusIcon} ${r.date}</div>
-                                <div class="list-item-subtitle" style="font-size: 0.8rem;">${statusText} ${r.otHours ? '• OT: '+r.otHours+'hrs' : ''} ${r.lateDeduction ? '• Late: -₱'+r.lateDeduction : ''}</div>
-                            </div>
-                            <div style="display:flex;align-items:center;gap:6px;" onclick="event.stopPropagation()">
-                                ${paidBadge}
-                                <button class="btn btn-sm btn-info" onclick="editTimeRecord(${r.id})" style="padding:2px 7px;font-size:0.7rem;">✏️</button>
-                                <button class="btn btn-sm btn-danger" onclick="deleteTimeRecord(${r.id},${id})" style="padding:2px 7px;font-size:0.7rem;">🗑️</button>
-                            </div>
-                        </div>
-                    `;
-                });
-            }
-            
-            if (_isAdminRole) {
-            content += `
-                <h4 style="margin-bottom: 10px;">Salary History</h4>
-                <div style="max-height: 120px; overflow-y: auto; margin-bottom: 15px;">
-            `;
-            if (empSalaries.length === 0) {
-                content += '<p style="color: var(--text-secondary); font-size: 0.9rem;">No salary payments yet.</p>';
-            } else {
-                empSalaries.forEach(s => {
-                    content += `
-                        <div class="list-item" style="padding: 8px;cursor:pointer;" onclick="editSalaryRecord(${s.id},${id})">
-                            <div class="list-item-content">
-                                <div class="list-item-title" style="font-size: 0.9rem;">💰 ${s.date}</div>
-                                <div class="list-item-subtitle" style="font-size: 0.8rem;">${s.daysWorked || 0} days &bull; ${s.period || "Custom"}</div>
-                            </div>
-                            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
-                                <span class="text-success" style="font-weight:bold;">₱${(s.netPay || 0).toLocaleString()}</span>
-                                <div style="display:flex;gap:4px;" onclick="event.stopPropagation()">
-                                    <button class="btn btn-sm btn-info" onclick="editSalaryRecord(${s.id},${id})" style="padding:2px 7px;font-size:0.7rem;">✏️</button>
-                                    <button class="btn btn-sm btn-danger" onclick="deleteSalaryRecord(${s.id},${id})" style="padding:2px 7px;font-size:0.7rem;">🗑️</button>
+                        <div style="padding:8px 0;border-bottom:1px solid var(--border-color);">
+                            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                                <div style="flex:1;">
+                                    <div style="font-size:0.85rem;font-weight:600;">${sIcon} ${r.date} <span style="font-weight:400;color:var(--text-secondary);">${sText}</span> ${paidBadge}</div>
+                                    ${extras ? `<div style="font-size:0.72rem;color:var(--text-secondary);margin-top:2px;">${extras}</div>` : ''}
+                                </div>
+                                <div style="display:flex;gap:4px;flex-shrink:0;margin-left:8px;" onclick="event.stopPropagation()">
+                                    <button onclick="editTimeRecord(${r.id})" style="padding:2px 6px;font-size:0.68rem;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:4px;color:#818cf8;cursor:pointer;">✏️</button>
+                                    <button onclick="deleteTimeRecord(${r.id},${id})" style="padding:2px 6px;font-size:0.68rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:4px;color:#ef4444;cursor:pointer;">🗑️</button>
                                 </div>
                             </div>
                         </div>
                     `;
                 });
             }
-            content += `</div>`;
+            content += '</div>';
+
+            // === ADVANCES TAB (hidden by default) ===
+            content += `<div id="emp-hist-advances-${id}" style="display:none;max-height:300px;overflow-y:auto;margin-bottom:12px;">`;
+            if (empAdvances.length === 0) {
+                content += '<p style="color:var(--text-secondary);font-size:0.9rem;padding:10px 0;">No cash advances recorded.</p>';
+            } else {
+                empAdvances.forEach(a => {
+                    const db = a.deducted ? '<span style="font-size:0.62rem;background:rgba(16,185,129,0.15);color:#10b981;padding:1px 5px;border-radius:3px;">✅ Deducted</span>' : '<span style="font-size:0.62rem;background:rgba(245,158,11,0.15);color:#f59e0b;padding:1px 5px;border-radius:3px;">⏳ Pending</span>';
+                    content += `
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color);">
+                            <div>
+                                <div style="font-size:0.85rem;font-weight:600;">₱${a.amount.toLocaleString()} ${db}</div>
+                                <div style="font-size:0.72rem;color:var(--text-secondary);">${a.date}${a.reason?' · '+a.reason:''}</div>
+                            </div>
+                            <button onclick="event.stopPropagation();deleteAdvanceRecord(${a.id},${id})" style="padding:2px 6px;font-size:0.68rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:4px;color:#ef4444;cursor:pointer;">🗑️</button>
+                        </div>`;
+                });
+            }
+            content += '</div>';
+
+            // === ADJUSTMENTS TAB: bonuses, OT, incentives, lates from timeRecords ===
+            const adjRecords = empRecords.filter(r => (r.bonus||0)+(r.incentive||0)+(r.overtime||0)+(r.otHours||0)+(r.lateDeduction||0)>0 || r.adjustmentNote || r.status==='adjustment');
+            content += `<div id="emp-hist-adjustments-${id}" style="display:none;max-height:300px;overflow-y:auto;margin-bottom:12px;">`;
+            if (adjRecords.length === 0) {
+                content += '<p style="color:var(--text-secondary);font-size:0.9rem;padding:10px 0;">No bonuses, OT, incentives or late deductions recorded.</p>';
+            } else {
+                adjRecords.forEach(r => {
+                    const lines = [
+                        r.otHours>0 ? `<div><span style="color:#f59e0b;">⏰ OT:</span> ${r.otHours} hrs${r.overtime>0?' = ₱'+r.overtime.toLocaleString():''}</div>` : '',
+                        r.bonus>0 ? `<div><span style="color:#10b981;">🎁 Bonus:</span> ₱${r.bonus.toLocaleString()}</div>` : '',
+                        r.incentive>0 ? `<div><span style="color:#6366f1;">🏆 Incentive:</span> ₱${r.incentive.toLocaleString()}</div>` : '',
+                        r.lateDeduction>0 ? `<div><span style="color:#ef4444;">🕐 Late:</span> -₱${r.lateDeduction.toLocaleString()}</div>` : '',
+                        r.adjustmentNote ? `<div style="color:var(--text-secondary);font-size:0.72rem;">📌 ${r.adjustmentNote}</div>` : ''
+                    ].filter(Boolean).join('');
+                    content += `
+                        <div style="padding:8px 0;border-bottom:1px solid var(--border-color);">
+                            <div style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:4px;">${r.date} · ${r.status==='adjustment'?'Adjustment':r.status}</div>
+                            <div style="font-size:0.82rem;">${lines}</div>
+                            ${r.notes?`<div style="font-size:0.72rem;color:var(--text-secondary);margin-top:2px;">📝 ${r.notes}</div>`:''}
+                        </div>`;
+                });
+            }
+            content += '</div>';
+
+            if (_isAdminRole) {
+            // === SALARY TAB ===
+            content += `<div id="emp-hist-salaries-${id}" style="display:none;max-height:300px;overflow-y:auto;margin-bottom:12px;">`;
+            if (empSalaries.length === 0) {
+                content += '<p style="color:var(--text-secondary);font-size:0.9rem;padding:10px 0;">No salary payments yet.</p>';
+            } else {
+                empSalaries.forEach(s => {
+                    content += `
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color);cursor:pointer;" onclick="editSalaryRecord(${s.id},${id})">
+                            <div>
+                                <div style="font-size:0.85rem;font-weight:600;">💰 ${s.date}</div>
+                                <div style="font-size:0.72rem;color:var(--text-secondary);">${s.daysWorked||0} days · ${s.period||'Custom'}${s.grossPay?` · Gross ₱${s.grossPay.toLocaleString()}`:''}${s.advances>0?` · Advance -₱${s.advances.toLocaleString()}`:''}</div>
+                            </div>
+                            <div style="text-align:right;">
+                                <div style="font-weight:700;color:#10b981;">₱${(s.netPay||0).toLocaleString()}</div>
+                                <div style="display:flex;gap:4px;margin-top:4px;" onclick="event.stopPropagation()">
+                                    <button onclick="editSalaryRecord(${s.id},${id})" style="padding:2px 6px;font-size:0.68rem;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:4px;color:#818cf8;cursor:pointer;">✏️</button>
+                                    <button onclick="deleteSalaryRecord(${s.id},${id})" style="padding:2px 6px;font-size:0.68rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:4px;color:#ef4444;cursor:pointer;">🗑️</button>
+                                </div>
+                            </div>
+                        </div>`;
+                });
+            }
+            content += '</div>';
             } // end salary admin gate
             // Role-based action buttons
             const _isAdmin = currentAppUser && (currentAppUser.role === 'admin' || currentAppUser.role === 'owner');
@@ -16672,6 +16732,29 @@ async function showPayrollSummary() {
             showModal('advance-modal');
         }
     window.showCashAdvanceModal = showCashAdvanceModal;
+        function empHistTab(empId, tab) {
+            const tabs = ['attendance','advances','adjustments','salaries'];
+            tabs.forEach(t => {
+                const el = document.getElementById('emp-hist-'+t+'-'+empId);
+                const btn = document.getElementById('empt-'+t.slice(0,3)+'-'+empId);
+                if (el) el.style.display = t===tab ? 'block' : 'none';
+                if (btn) {
+                    btn.style.background = t===tab ? 'var(--primary)' : 'var(--bg-card)';
+                    btn.style.color = t===tab ? '#fff' : 'var(--text-secondary)';
+                }
+            });
+        }
+        window.empHistTab = empHistTab;
+
+        async function deleteAdvanceRecord(advId, empId) {
+            if (!await showConfirm('Delete this cash advance record?', 'danger', '🗑️ Delete', 'Yes, Delete')) return;
+            await dbDelete('cashAdvances', advId);
+            showToast('✅ Cash advance deleted', 'success');
+            viewEmployeeDetails(empId);
+            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+            debouncedSync();
+        }
+        window.deleteAdvanceRecord = deleteAdvanceRecord;
 
         async function saveCashAdvance(event) {
             event.preventDefault();
@@ -31378,10 +31461,10 @@ async function loadCashierDashboard() {
         let allTxns = [];
 
         if (filterType === 'all' || filterType === 'rent') {
-            todayRent.forEach(p => allTxns.push({ type:'rent', icon:'🏠', label:'Rent Payment', amount:'+₱'+p.amount.toLocaleString(), amountClass:'text-success', sub: p.paymentMethod || 'cash', date: p.date, time: p.createdAt }));
+            todayRent.forEach(p => allTxns.push({ type:'rent', icon:'🏠', label:'Rent Payment', amount:'+₱'+(p.amount-(p.discount||0)).toLocaleString(), amountClass:'text-success', sub: p.paymentMethod || 'cash', date: p.date, time: p.createdAt }));
         }
         if (filterType === 'all' || filterType === 'credit') {
-            todayCredit.forEach(p => allTxns.push({ type:'credit', icon:'💳', label:'Credit Collection', amount:'+₱'+p.amount.toLocaleString(), amountClass:'text-success', sub: p.paymentMethod || 'cash', date: p.date, time: p.createdAt }));
+            todayCredit.forEach(p => allTxns.push({ type:'credit', icon:'💳', label:'Credit Collection', amount:'+₱'+(p.amount-(p.discount||0)).toLocaleString(), amountClass:'text-success', sub: p.paymentMethod || 'cash', date: p.date, time: p.createdAt }));
         }
         if (filterType === 'all' || filterType === 'water') {
             todayWater.forEach(s => allTxns.push({ type:'water', icon:'💧', label:'Water Sale ('+s.gallons+'gal)', amount:'+₱'+s.amountPaid.toLocaleString(), amountClass:'text-success', sub: s.status, date: s.date, time: s.createdAt }));
