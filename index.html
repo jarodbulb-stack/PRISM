@@ -15901,233 +15901,314 @@ async function loadWaterCustomers() {
         }
 
         async function viewEmployeeDetails(id) {
-            // Role gate — HR/Staff profiles are Admin/Owner/Manager only
             if (currentAppUser && ['supervisor','cashier','viewer'].includes(currentAppUser.role)) {
-                showToast('⛔ Cashiers cannot view employee profiles.', 'error');
-                return;
+                showToast('⛔ Access restricted.', 'warning'); return;
             }
             const employee = await dbGet('employees', id);
             if (!employee) return;
-            
-            const advances = await dbGetAll('cashAdvances');
-            const salaries = await dbGetAll('salaryPayments');
-            const timeRecords = await dbGetAll('timeRecords');
-            
-            const empAdvances = advances.filter(a => a.employeeId === id).sort((a, b) => new Date(b.date) - new Date(a.date));
-            const empSalaries = salaries.filter(s => s.employeeId === id).sort((a, b) => new Date(b.date) - new Date(a.date));
-            const empRecords = timeRecords.filter(r => r.employeeId === id).sort((a, b) => new Date(b.date) - new Date(a.date));
-            
-            const unpaidAdvances = empAdvances.filter(a => !a.deducted).reduce((sum, a) => sum + a.amount, 0);
-            const unpaidRecords = empRecords.filter(r => !r.paid);
-            const unpaidDays = unpaidRecords.filter(r => r.status === 'present' || r.status === 'halfday').length;
-            const unpaidOT = unpaidRecords.reduce((sum, r) => sum + (r.otHours || 0), 0);
-            const unpaidBonus = unpaidRecords.reduce((sum, r) => sum + (r.bonus || 0), 0);
-            const unpaidLates = unpaidRecords.reduce((sum, r) => sum + (r.lateDeduction || 0), 0);
-            
-            // Calculate estimated salary
+
+            // ── Load all records ──
+            const [allTimeRecs, allAdvances, allSalaries] = await Promise.all([
+                dbGetAll('timeRecords'), dbGetAll('cashAdvances'), dbGetAll('salaryPayments')
+            ]);
+            const empRecs     = allTimeRecs.filter(r => r.employeeId === id).sort((a,b)=>b.date>a.date?1:-1);
+            const empAdvances  = allAdvances.filter(a => a.employeeId === id).sort((a,b)=>b.date>a.date?1:-1);
+            const empSalaries  = allSalaries.filter(s => s.employeeId === id).sort((a,b)=>b.date>a.date?1:-1);
+
+            // ── Date range: default = all time ──
+            const minDate = empRecs.length ? empRecs.reduce((m,r)=>r.date<m?r.date:m, empRecs[0].date) : '';
+            const maxDate = empRecs.length ? empRecs.reduce((m,r)=>r.date>m?r.date:m, empRecs[0].date) : '';
+            const _today = new Date();
+            const _thisMonthStart = _today.getFullYear()+'-'+String(_today.getMonth()+1).padStart(2,'0')+'-01';
+            const _thisMonthEnd   = new Date(_today.getFullYear(),_today.getMonth()+1,0).toISOString().split('T')[0];
+            // Default: show current month; if no records this month, fall back to all
+            const _hasThisMonth = empRecs.some(r => r.date >= _thisMonthStart && r.date <= _thisMonthEnd);
+            let rangeFrom = _hasThisMonth ? _thisMonthStart : (minDate || _thisMonthStart);
+            let rangeTo   = _hasThisMonth ? _thisMonthEnd   : (maxDate || _thisMonthEnd);
+
             const dailyRate = parseFloat(employee.dailyRate) || 0;
-            const otRate = parseFloat(employee.otRate) || Math.round(dailyRate / 8 * 1.25);
-            const halfDays = unpaidRecords.filter(r => r.status === 'halfday').length;
-            const fullDays = unpaidRecords.filter(r => r.status === 'present').length;
-            const estimatedBase = (fullDays * dailyRate) + (halfDays * dailyRate * 0.5);
-            const estimatedOT = unpaidOT * otRate;
-            const estimatedGross = estimatedBase + estimatedOT + unpaidBonus - unpaidLates - unpaidAdvances;
-            
-            const _isAdminRole = currentAppUser && (currentAppUser.role === 'admin' || currentAppUser.role === 'owner');
-            let content = `
-                <div style="text-align: center; margin-bottom: 10px;">
+            const otRate    = parseFloat(employee.otRate) || Math.round(dailyRate / 8 * 1.25);
+            const _isAdmin  = currentAppUser && ['admin','owner'].includes(currentAppUser.role);
+
+            // ── Compute summary for a range ──
+            function _empCalc(from, to) {
+                const recs = empRecs.filter(r => r.date >= from && r.date <= to);
+                const unpaid = recs.filter(r => !r.paid);
+                const paid   = recs.filter(r =>  r.paid);
+                const full   = unpaid.filter(r=>r.status==='present').length;
+                const half   = unpaid.filter(r=>r.status==='halfday').length;
+                const absent = unpaid.filter(r=>r.status==='absent').length;
+                const ot     = unpaid.reduce((s,r)=>s+(r.otHours||0),0);
+                const bonus  = unpaid.reduce((s,r)=>s+(r.bonus||0)+(r.incentive||0),0);
+                const lates  = unpaid.reduce((s,r)=>s+(r.lateDeduction||0),0);
+                const advPending = empAdvances.filter(a=>!a.deducted&&(!a.date||(a.date>=from&&a.date<=to)));
+                const advTotal = advPending.reduce((s,a)=>s+a.amount,0);
+                const gross  = (full*dailyRate)+(half*dailyRate*0.5)+(ot*otRate)+bonus;
+                const net    = Math.max(0, gross - lates - advTotal);
+                return {recs,unpaid,paid,full,half,absent,ot,bonus,lates,advPending,advTotal,gross,net,from,to};
+            }
+
+            // ── Render everything ──
+            function _empRender(from, to) {
+                const p = _empCalc(from, to);
+                const allUnpaidCount = empRecs.filter(r=>!r.paid&&(r.status==='present'||r.status==='halfday')).length;
+                const rangeRecs   = empRecs.filter(r=>r.date>=from&&r.date<=to);
+                const rangeAdv    = empAdvances.filter(a=>!a.date||(a.date>=from&&a.date<=to));
+                const rangeAdj    = rangeRecs.filter(r=>(r.bonus||0)+(r.incentive||0)+(r.otHours||0)+(r.lateDeduction||0)>0||r.adjustmentNote||r.status==='adjustment');
+                const rangeSal    = empSalaries.filter(s=>(!s.dateFrom||s.dateFrom>=from)&&(!s.dateTo||s.dateTo<=to));
+
+                const html = `
+                <div style="text-align:center;margin-bottom:10px;">
                     ${employee.photo
-                        ? `<div style="width:80px;height:80px;border-radius:50%;overflow:hidden;margin:0 auto 8px;border:2px solid rgba(99,102,241,0.4);">
-                               <img src="${employee.photo}" style="width:100%;height:100%;object-fit:cover;">
-                           </div>`
-                        : `<div style="font-size:2.5rem;margin-bottom:8px;">👷</div>`
-                    }
-                    <h2 style="margin: 5px 0;">${employee.name}</h2>
-                    <p style="color: var(--text-secondary); margin: 0;">${employee.position || 'Staff'}</p>
-                </div>
-                ${_isAdminRole ? `
-                <button class="admin-edit-profile-btn" onclick="editEmployee(${id})">
-                    ✏️ Edit Staff Profile
-                </button>` : ''}
-                
-                ${unpaidDays > 0 ? `
-                <div style="background: var(--primary); color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                    <h4 style="margin: 0 0 10px 0;">📊 Unpaid Work Summary</h4>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; font-size: 0.9rem;">
-                        <span>Days Worked:</span><span>${fullDays} full + ${halfDays} half</span>
-                        ${unpaidOT > 0 ? `<span>Overtime:</span><span>${unpaidOT} hours</span>` : ''}
-                        ${unpaidBonus > 0 ? `<span>Bonuses:</span><span>₱${unpaidBonus.toLocaleString()}</span>` : ''}
-                        <span>Lates:</span><span>-₱${unpaidLates.toLocaleString()}</span>
-                        <span>Advances:</span><span>-₱${unpaidAdvances.toLocaleString()}</span>
-                    </div>
-                    <hr style="border-color: rgba(255,255,255,0.3); margin: 10px 0;">
-                    <div style="display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: bold;">
-                        <span>Est. Net Pay:</span>
-                        <span>${_isAdminRole ? "₱"+Math.max(0, estimatedGross).toLocaleString() : "—"}</span>
-                    </div>
-                </div>
-                ` : `
-                <div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center;">
-                    <p style="color: var(--text-secondary); margin: 0;">No unpaid work days recorded</p>
-                </div>
-                `}
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px;">
-                    <button class="btn btn-primary" onclick="showTimeRecordModal(${id}, '${employee.name}')">📝 Record Attendance</button>
-                    <button class="btn btn-warning" onclick="showCashAdvanceModal(${id}, '${employee.name}')">💵 Cash Advance</button>
-                </div>
-                
-                <button class="btn btn-success btn-block" onclick="showPayrollProcess(${id})" style="margin-bottom: 15px;">
-                    💰 PAYROLL PROCESS ${unpaidDays > 0 ? '(' + unpaidDays + ' unpaid days)' : ''}
-                </button>
-                
-                <h4 style="margin-bottom: 10px;">📋 Staff History</h4>
-
-                <!-- Tab nav -->
-                <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;" id="emp-hist-tabs-${id}">
-                    <button onclick="empHistTab(${id},'attendance')" id="empt-att-${id}" style="padding:5px 10px;border-radius:6px;border:none;background:var(--primary);color:#fff;cursor:pointer;font-size:0.75rem;font-weight:700;">📅 Attendance</button>
-                    <button onclick="empHistTab(${id},'advances')" id="empt-adv-${id}" style="padding:5px 10px;border-radius:6px;border:none;background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;font-weight:600;">💵 Advances</button>
-                    <button onclick="empHistTab(${id},'adjustments')" id="empt-adj-${id}" style="padding:5px 10px;border-radius:6px;border:none;background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;font-weight:600;">⚡ Bonuses/OT/Lates</button>
-                    <button onclick="empHistTab(${id},'salaries')" id="empt-sal-${id}" style="padding:5px 10px;border-radius:6px;border:none;background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;font-weight:600;">💰 Salary</button>
+                        ? `<div style="width:70px;height:70px;border-radius:50%;overflow:hidden;margin:0 auto 6px;border:2px solid rgba(99,102,241,0.4);"><img src="${employee.photo}" style="width:100%;height:100%;object-fit:cover;"></div>`
+                        : `<div style="font-size:2rem;margin-bottom:6px;">👷</div>`}
+                    <div style="font-weight:700;font-size:1rem;">${employee.name}</div>
+                    <div style="font-size:0.78rem;color:var(--text-secondary);">${employee.position||'Staff'} · ₱${dailyRate.toLocaleString()}/day</div>
                 </div>
 
-                <!-- Tab: Attendance -->
-                <div id="emp-hist-attendance-${id}" style="max-height:300px;overflow-y:auto;margin-bottom:12px;">
-            `;
+                ${_isAdmin ? `<button class="admin-edit-profile-btn" onclick="editEmployee(${id})">✏️ Edit Staff Profile</button>` : ''}
 
-            // === ATTENDANCE TAB ===
-            if (empRecords.length === 0) {
-                content += '<p style="color:var(--text-secondary);font-size:0.9rem;padding:10px 0;">No attendance records yet.</p>';
-            } else {
-                empRecords.forEach(r => {
-                    const sIcon = r.status==='present'?'✅':r.status==='absent'?'❌':r.status==='halfday'?'🕐':r.status==='restday'?'🔘':r.status==='adjustment'?'⚡':'📋';
-                    const sText = r.status==='present'?'Present':r.status==='absent'?'Absent':r.status==='halfday'?'Half Day':r.status==='restday'?'Rest Day':r.status==='adjustment'?'Adjustment':'Leave';
-                    const paidBadge = r.paid ? '<span style="font-size:0.62rem;background:rgba(16,185,129,0.15);color:#10b981;padding:1px 5px;border-radius:3px;">Paid</span>' : '<span style="font-size:0.62rem;background:rgba(245,158,11,0.15);color:#f59e0b;padding:1px 5px;border-radius:3px;">Unpaid</span>';
-                    const extras = [
-                        r.otHours>0 ? `⏰ OT: ${r.otHours}hrs` : '',
-                        r.bonus>0 ? `🎁 Bonus: ₱${r.bonus.toLocaleString()}` : '',
-                        r.incentive>0 ? `🏆 Incentive: ₱${r.incentive.toLocaleString()}` : '',
-                        r.lateDeduction>0 ? `🕐 Late: -₱${r.lateDeduction.toLocaleString()}` : '',
-                        r.notes ? `📝 ${r.notes}` : '',
-                        r.adjustmentNote ? `📌 ${r.adjustmentNote}` : ''
-                    ].filter(Boolean).join(' · ');
-                    content += `
-                        <div style="padding:8px 0;border-bottom:1px solid var(--border-color);">
-                            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-                                <div style="flex:1;">
-                                    <div style="font-size:0.85rem;font-weight:600;">${sIcon} ${r.date} <span style="font-weight:400;color:var(--text-secondary);">${sText}</span> ${paidBadge}</div>
-                                    ${extras ? `<div style="font-size:0.72rem;color:var(--text-secondary);margin-top:2px;">${extras}</div>` : ''}
-                                </div>
-                                <div style="display:flex;gap:4px;flex-shrink:0;margin-left:8px;" onclick="event.stopPropagation()">
-                                    <button onclick="editTimeRecord(${r.id})" style="padding:2px 6px;font-size:0.68rem;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:4px;color:#818cf8;cursor:pointer;">✏️</button>
-                                    <button onclick="deleteTimeRecord(${r.id},${id})" style="padding:2px 6px;font-size:0.68rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:4px;color:#ef4444;cursor:pointer;">🗑️</button>
-                                </div>
-                            </div>
+                <!-- ══ DATE RANGE FILTER ══ -->
+                <div style="background:linear-gradient(135deg,rgba(99,102,241,0.12),rgba(99,102,241,0.05));border:1px solid rgba(99,102,241,0.3);border-radius:10px;padding:12px;margin-bottom:12px;">
+                    <div style="font-size:0.7rem;font-weight:700;color:#818cf8;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">📅 Date Range — pick any dates</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+                        <div>
+                            <div style="font-size:0.65rem;color:var(--text-secondary);margin-bottom:3px;">From</div>
+                            <input type="date" id="empd-from-${id}" value="${from}"
+                                style="width:100%;padding:7px 8px;background:var(--bg-card);border:2px solid rgba(99,102,241,0.4);border-radius:7px;color:var(--text-primary);font-size:0.85rem;box-sizing:border-box;cursor:pointer;"
+                                onchange="empDetailRefresh(${id})">
                         </div>
-                    `;
-                });
-            }
-            content += '</div>';
-
-            // === ADVANCES TAB (hidden by default) ===
-            content += `<div id="emp-hist-advances-${id}" style="display:none;max-height:300px;overflow-y:auto;margin-bottom:12px;">`;
-            if (empAdvances.length === 0) {
-                content += '<p style="color:var(--text-secondary);font-size:0.9rem;padding:10px 0;">No cash advances recorded.</p>';
-            } else {
-                empAdvances.forEach(a => {
-                    const db = a.deducted ? '<span style="font-size:0.62rem;background:rgba(16,185,129,0.15);color:#10b981;padding:1px 5px;border-radius:3px;">✅ Deducted</span>' : '<span style="font-size:0.62rem;background:rgba(245,158,11,0.15);color:#f59e0b;padding:1px 5px;border-radius:3px;">⏳ Pending</span>';
-                    content += `
-                        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color);">
-                            <div>
-                                <div style="font-size:0.85rem;font-weight:600;">₱${a.amount.toLocaleString()} ${db}</div>
-                                <div style="font-size:0.72rem;color:var(--text-secondary);">${a.date}${a.reason?' · '+a.reason:''}</div>
-                            </div>
-                            <button onclick="event.stopPropagation();deleteAdvanceRecord(${a.id},${id})" style="padding:2px 6px;font-size:0.68rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:4px;color:#ef4444;cursor:pointer;">🗑️</button>
-                        </div>`;
-                });
-            }
-            content += '</div>';
-
-            // === ADJUSTMENTS TAB: bonuses, OT, incentives, lates from timeRecords ===
-            const adjRecords = empRecords.filter(r => (r.bonus||0)+(r.incentive||0)+(r.overtime||0)+(r.otHours||0)+(r.lateDeduction||0)>0 || r.adjustmentNote || r.status==='adjustment');
-            content += `<div id="emp-hist-adjustments-${id}" style="display:none;max-height:300px;overflow-y:auto;margin-bottom:12px;">`;
-            if (adjRecords.length === 0) {
-                content += '<p style="color:var(--text-secondary);font-size:0.9rem;padding:10px 0;">No bonuses, OT, incentives or late deductions recorded.</p>';
-            } else {
-                adjRecords.forEach(r => {
-                    const lines = [
-                        r.otHours>0 ? `<div><span style="color:#f59e0b;">⏰ OT:</span> ${r.otHours} hrs${r.overtime>0?' = ₱'+r.overtime.toLocaleString():''}</div>` : '',
-                        r.bonus>0 ? `<div><span style="color:#10b981;">🎁 Bonus:</span> ₱${r.bonus.toLocaleString()}</div>` : '',
-                        r.incentive>0 ? `<div><span style="color:#6366f1;">🏆 Incentive:</span> ₱${r.incentive.toLocaleString()}</div>` : '',
-                        r.lateDeduction>0 ? `<div><span style="color:#ef4444;">🕐 Late:</span> -₱${r.lateDeduction.toLocaleString()}</div>` : '',
-                        r.adjustmentNote ? `<div style="color:var(--text-secondary);font-size:0.72rem;">📌 ${r.adjustmentNote}</div>` : ''
-                    ].filter(Boolean).join('');
-                    content += `
-                        <div style="padding:8px 0;border-bottom:1px solid var(--border-color);">
-                            <div style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:4px;">${r.date} · ${r.status==='adjustment'?'Adjustment':r.status}</div>
-                            <div style="font-size:0.82rem;">${lines}</div>
-                            ${r.notes?`<div style="font-size:0.72rem;color:var(--text-secondary);margin-top:2px;">📝 ${r.notes}</div>`:''}
-                        </div>`;
-                });
-            }
-            content += '</div>';
-
-            if (_isAdminRole) {
-            // === SALARY TAB ===
-            content += `<div id="emp-hist-salaries-${id}" style="display:none;max-height:300px;overflow-y:auto;margin-bottom:12px;">`;
-            if (empSalaries.length === 0) {
-                content += '<p style="color:var(--text-secondary);font-size:0.9rem;padding:10px 0;">No salary payments yet.</p>';
-            } else {
-                empSalaries.forEach(s => {
-                    content += `
-                        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color);cursor:pointer;" onclick="editSalaryRecord(${s.id},${id})">
-                            <div>
-                                <div style="font-size:0.85rem;font-weight:600;">💰 ${s.date}</div>
-                                <div style="font-size:0.72rem;color:var(--text-secondary);">${s.daysWorked||0} days · ${s.period||'Custom'}${s.grossPay?` · Gross ₱${s.grossPay.toLocaleString()}`:''}${s.advances>0?` · Advance -₱${s.advances.toLocaleString()}`:''}</div>
-                            </div>
-                            <div style="text-align:right;">
-                                <div style="font-weight:700;color:#10b981;">₱${(s.netPay||0).toLocaleString()}</div>
-                                <div style="display:flex;gap:4px;margin-top:4px;" onclick="event.stopPropagation()">
-                                    <button onclick="editSalaryRecord(${s.id},${id})" style="padding:2px 6px;font-size:0.68rem;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:4px;color:#818cf8;cursor:pointer;">✏️</button>
-                                    <button onclick="deleteSalaryRecord(${s.id},${id})" style="padding:2px 6px;font-size:0.68rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:4px;color:#ef4444;cursor:pointer;">🗑️</button>
-                                </div>
-                            </div>
-                        </div>`;
-                });
-            }
-            content += '</div>';
-            } // end salary admin gate
-            // Role-based action buttons
-            const _isAdmin = currentAppUser && (currentAppUser.role === 'admin' || currentAppUser.role === 'owner');
-            if (_isAdmin) {
-                content += `
-                </div>
-                <!-- Quick Actions -->
-                <div style="background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;padding:12px;margin-bottom:10px;">
-                    <div style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">⚡ Quick Payroll Actions</div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-                        <button class="btn btn-sm" onclick="showBonusModal(${id},'${employee.name}')" style="background:rgba(16,185,129,0.15);border:1px solid #10b981;color:#10b981;font-weight:600;padding:8px 4px;font-size:0.78rem;">🎁 Bonus</button>
-                        <button class="btn btn-sm" onclick="showOvertimeModal(${id},'${employee.name}')" style="background:rgba(245,158,11,0.15);border:1px solid #f59e0b;color:#f59e0b;font-weight:600;padding:8px 4px;font-size:0.78rem;">⏰ Overtime</button>
-                        <button class="btn btn-sm" onclick="showIncentiveModal(${id},'${employee.name}')" style="background:rgba(99,102,241,0.15);border:1px solid #6366f1;color:#6366f1;font-weight:600;padding:8px 4px;font-size:0.78rem;">🏆 Incentive</button>
+                        <div>
+                            <div style="font-size:0.65rem;color:var(--text-secondary);margin-bottom:3px;">To</div>
+                            <input type="date" id="empd-to-${id}" value="${to}"
+                                style="width:100%;padding:7px 8px;background:var(--bg-card);border:2px solid rgba(99,102,241,0.4);border-radius:7px;color:var(--text-primary);font-size:0.85rem;box-sizing:border-box;cursor:pointer;"
+                                onchange="empDetailRefresh(${id})">
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:4px;flex-wrap:wrap;padding-top:4px;border-top:1px solid rgba(99,102,241,0.15);">
+                        <span style="font-size:0.62rem;color:var(--text-secondary);padding-top:4px;margin-right:2px;">Quick:</span>
+                        <button onclick="empDetailPreset(${id},'all')"    style="padding:3px 8px;border-radius:5px;border:1px solid rgba(99,102,241,0.3);background:rgba(99,102,241,0.1);color:#818cf8;cursor:pointer;font-size:0.68rem;font-weight:600;">All Time</button>
+                        <button onclick="empDetailPreset(${id},'month')"  style="padding:3px 8px;border-radius:5px;border:1px solid rgba(139,92,246,0.3);background:rgba(139,92,246,0.1);color:#a78bfa;cursor:pointer;font-size:0.68rem;font-weight:600;">This Month</button>
+                        <button onclick="empDetailPreset(${id},'lmonth')" style="padding:3px 8px;border-radius:5px;border:1px solid rgba(245,158,11,0.3);background:rgba(245,158,11,0.1);color:#f59e0b;cursor:pointer;font-size:0.68rem;font-weight:600;">Last Month</button>
+                        <button onclick="empDetailPreset(${id},'unpaid')" style="padding:3px 8px;border-radius:5px;border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.1);color:#f87171;cursor:pointer;font-size:0.68rem;font-weight:600;">Unpaid</button>
                     </div>
                 </div>
-                <div style="display: flex; gap: 10px;">
-                    <button class="btn btn-secondary" onclick="editEmployee(${id})" style="flex: 1;">✏️ Edit</button>
-                    <button class="btn btn-primary" onclick="hideModal('employee-detail-modal');showPayrollForEmployee(${id});" style="flex: 1;">💵 Payroll</button>
-                    <button class="btn btn-danger" onclick="deleteEmployee(${id})" style="flex: 1;">🗑️ Delete</button>
+
+                <!-- ══ WORK SUMMARY ══ -->
+                <div style="background:var(--primary);color:white;border-radius:10px;padding:13px;margin-bottom:12px;">
+                    <div style="font-size:0.72rem;font-weight:700;opacity:0.8;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">📊 Summary · ${from} → ${to}</div>
+                    <div style="display:grid;grid-template-columns:1fr auto;gap:3px 10px;font-size:0.84rem;">
+                        <span>Full Days (${p.full})</span><span style="font-weight:700;">₱${(p.full*dailyRate).toLocaleString()}</span>
+                        ${p.half>0?`<span>Half Days (${p.half})</span><span style="font-weight:700;">₱${(p.half*dailyRate*0.5).toLocaleString()}</span>`:''}
+                        ${p.absent>0?`<span style="opacity:0.7;">Absences (${p.absent})</span><span style="opacity:0.7;">—</span>`:''}
+                        ${p.ot>0?`<span>OT (${p.ot}hrs)</span><span style="font-weight:700;">₱${(p.ot*otRate).toLocaleString()}</span>`:''}
+                        ${p.bonus>0?`<span>Bonus/Incentive</span><span style="font-weight:700;color:#86efac;">₱${p.bonus.toLocaleString()}</span>`:''}
+                        ${p.lates>0?`<span>Lates/Penalties</span><span style="color:#fca5a5;">-₱${p.lates.toLocaleString()}</span>`:''}
+                        ${p.advTotal>0?`<span>Advances (${p.advPending.length}×)</span><span style="color:#fca5a5;">-₱${p.advTotal.toLocaleString()}</span>`:''}
+                    </div>
+                    <div style="border-top:1px solid rgba(255,255,255,0.25);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;font-weight:800;font-size:1rem;">
+                        <span>Est. Net Pay</span><span>₱${p.net.toLocaleString()}</span>
+                    </div>
                 </div>
-            `;
-            } else {
-                content += `
+
+                <!-- ══ ACTION BUTTONS ══ -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+                    <button class="btn btn-primary" onclick="showTimeRecordModal(${id},'${employee.name.replace(/'/g,"\\'")}')">📝 Record Attendance</button>
+                    <button class="btn btn-warning"  onclick="showCashAdvanceModal(${id},'${employee.name.replace(/'/g,"\\'")}')">💵 Cash Advance</button>
                 </div>
-                <button class="btn btn-secondary btn-block" onclick="hideModal('employee-detail-modal')">Close</button>
-            `;
+                <button class="btn btn-success btn-block" onclick="empDetailPayroll(${id})" style="margin-bottom:14px;">
+                    💰 PAYROLL PROCESS ${allUnpaidCount>0?'('+allUnpaidCount+' unpaid days)':''}
+                </button>
+
+                ${_isAdmin ? `
+                <div style="background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;padding:10px;margin-bottom:12px;">
+                    <div style="font-size:0.7rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">⚡ Quick Add</div>
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+                        <button onclick="showBonusModal(${id},'${employee.name.replace(/'/g,"\\'")}') "    style="padding:7px 4px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:7px;color:#10b981;cursor:pointer;font-size:0.75rem;font-weight:600;">🎁 Bonus</button>
+                        <button onclick="showOvertimeModal(${id},'${employee.name.replace(/'/g,"\\'")}') " style="padding:7px 4px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);border-radius:7px;color:#f59e0b;cursor:pointer;font-size:0.75rem;font-weight:600;">⏰ Overtime</button>
+                        <button onclick="showIncentiveModal(${id},'${employee.name.replace(/'/g,"\\'")}') "style="padding:7px 4px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);border-radius:7px;color:#818cf8;cursor:pointer;font-size:0.75rem;font-weight:600;">🏆 Incentive</button>
+                    </div>
+                </div>` : ''}
+
+                <!-- ══ HISTORY TABS ══ -->
+                <div style="font-size:0.8rem;font-weight:700;margin-bottom:8px;">📋 Staff History <span style="font-size:0.7rem;font-weight:400;color:var(--text-secondary);">(${from} → ${to})</span></div>
+                <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;">
+                    <button id="empt-att-${id}"  onclick="empHistTab(${id},'attendance')"  style="padding:5px 9px;border-radius:6px;border:none;background:var(--primary);color:#fff;cursor:pointer;font-size:0.72rem;font-weight:700;">📅 Attendance (${rangeRecs.length})</button>
+                    <button id="empt-adv-${id}"  onclick="empHistTab(${id},'advances')"    style="padding:5px 9px;border-radius:6px;border:none;background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.72rem;font-weight:600;">💵 Advances (${rangeAdv.length})</button>
+                    <button id="empt-adj-${id}"  onclick="empHistTab(${id},'adjustments')" style="padding:5px 9px;border-radius:6px;border:none;background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.72rem;font-weight:600;">⚡ Adj (${rangeAdj.length})</button>
+                    <button id="empt-sal-${id}"  onclick="empHistTab(${id},'salaries')"    style="padding:5px 9px;border-radius:6px;border:none;background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.72rem;font-weight:600;">💰 Salary (${rangeSal.length})</button>
+                </div>
+
+                <!-- ATTENDANCE TAB -->
+                <div id="emp-hist-attendance-${id}" style="max-height:320px;overflow-y:auto;margin-bottom:10px;">
+                    ${rangeRecs.length===0 ? '<p style="color:var(--text-secondary);font-size:0.85rem;padding:10px 0;">No records in this range.</p>' :
+                        rangeRecs.map(r => {
+                            const sIcon = r.status==='present'?'✅':r.status==='absent'?'❌':r.status==='halfday'?'🕐':r.status==='restday'?'🔘':r.status==='adjustment'?'⚡':'📋';
+                            const sText = {present:'Present',absent:'Absent',halfday:'Half Day',restday:'Rest Day',adjustment:'Adjustment'}[r.status]||'Leave';
+                            const pBadge = r.paid
+                                ? '<span style="font-size:0.6rem;background:rgba(16,185,129,0.15);color:#10b981;padding:1px 5px;border-radius:3px;">Paid</span>'
+                                : '<span style="font-size:0.6rem;background:rgba(245,158,11,0.15);color:#f59e0b;padding:1px 5px;border-radius:3px;">Unpaid</span>';
+                            const extras = [
+                                r.otHours>0?`⏰ OT:${r.otHours}h`:'',
+                                r.bonus>0?`🎁₱${r.bonus.toLocaleString()}`:'',
+                                r.incentive>0?`🏆₱${r.incentive.toLocaleString()}`:'',
+                                r.lateDeduction>0?`🕐-₱${r.lateDeduction.toLocaleString()}`:'',
+                                r.notes||'', r.adjustmentNote||''
+                            ].filter(Boolean).join(' · ');
+                            return `<div style="padding:7px 0;border-bottom:1px solid var(--border-color);">
+                                <div style="display:flex;justify-content:space-between;align-items:center;">
+                                    <div style="flex:1;min-width:0;">
+                                        <div style="font-size:0.83rem;font-weight:600;">${sIcon} ${r.date} <span style="font-weight:400;color:var(--text-secondary);">${sText}</span> ${pBadge}</div>
+                                        ${extras?`<div style="font-size:0.68rem;color:var(--text-secondary);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${extras}</div>`:''}
+                                    </div>
+                                    <div style="display:flex;gap:3px;flex-shrink:0;margin-left:6px;">
+                                        <button onclick="editTimeRecord(${r.id})" style="padding:2px 6px;font-size:0.65rem;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:4px;color:#818cf8;cursor:pointer;">✏️</button>
+                                        <button onclick="deleteTimeRecord(${r.id},${id})" style="padding:2px 6px;font-size:0.65rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:4px;color:#ef4444;cursor:pointer;">🗑️</button>
+                                    </div>
+                                </div>
+                            </div>`;
+                        }).join('')
+                    }
+                </div>
+
+                <!-- ADVANCES TAB -->
+                <div id="emp-hist-advances-${id}" style="display:none;max-height:320px;overflow-y:auto;margin-bottom:10px;">
+                    ${rangeAdv.length===0 ? '<p style="color:var(--text-secondary);font-size:0.85rem;padding:10px 0;">No advances in this range.</p>' :
+                        rangeAdv.map(a => {
+                            const db = a.deducted
+                                ? '<span style="font-size:0.6rem;background:rgba(16,185,129,0.15);color:#10b981;padding:1px 5px;border-radius:3px;">✅ Deducted</span>'
+                                : '<span style="font-size:0.6rem;background:rgba(245,158,11,0.15);color:#f59e0b;padding:1px 5px;border-radius:3px;">⏳ Pending</span>';
+                            return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border-color);">
+                                <div style="flex:1;min-width:0;">
+                                    <div style="font-size:0.83rem;font-weight:600;">₱${a.amount.toLocaleString()} ${db}</div>
+                                    <div style="font-size:0.68rem;color:var(--text-secondary);">${a.date||'—'}${a.reason?' · '+a.reason:''}</div>
+                                </div>
+                                <div style="display:flex;gap:3px;flex-shrink:0;margin-left:6px;">
+                                    <button onclick="empEditAdvance(${a.id},${id})" style="padding:2px 6px;font-size:0.65rem;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:4px;color:#818cf8;cursor:pointer;">✏️</button>
+                                    <button onclick="deleteAdvanceRecord(${a.id},${id})" style="padding:2px 6px;font-size:0.65rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:4px;color:#ef4444;cursor:pointer;">🗑️</button>
+                                </div>
+                            </div>`;
+                        }).join('')
+                    }
+                </div>
+
+                <!-- ADJUSTMENTS TAB (Bonuses/OT/Lates/Incentives) -->
+                <div id="emp-hist-adjustments-${id}" style="display:none;max-height:320px;overflow-y:auto;margin-bottom:10px;">
+                    ${rangeAdj.length===0 ? '<p style="color:var(--text-secondary);font-size:0.85rem;padding:10px 0;">No adjustments in this range.</p>' :
+                        rangeAdj.map(r => {
+                            const lines2 = [
+                                r.otHours>0?`<span style="color:#f59e0b;">⏰ OT ${r.otHours}hrs${r.overtime>0?' = ₱'+r.overtime.toLocaleString():''}</span>`:'',
+                                r.bonus>0?`<span style="color:#10b981;">🎁 Bonus ₱${r.bonus.toLocaleString()}</span>`:'',
+                                r.incentive>0?`<span style="color:#6366f1;">🏆 Incentive ₱${r.incentive.toLocaleString()}</span>`:'',
+                                r.lateDeduction>0?`<span style="color:#ef4444;">🕐 Late -₱${r.lateDeduction.toLocaleString()}</span>`:'',
+                                r.adjustmentNote?`<span style="color:var(--text-secondary);font-size:0.7rem;">📌 ${r.adjustmentNote}</span>`:''
+                            ].filter(Boolean).join(' &nbsp;');
+                            return `<div style="padding:7px 0;border-bottom:1px solid var(--border-color);">
+                                <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                                    <div style="flex:1;">
+                                        <div style="font-size:0.7rem;color:var(--text-secondary);margin-bottom:3px;">${r.date} · ${r.status==='adjustment'?'Adjustment':r.status} ${r.paid?'<span style="color:#10b981;">· Paid</span>':'<span style="color:#f59e0b;">· Unpaid</span>'}</div>
+                                        <div style="font-size:0.82rem;">${lines2}</div>
+                                        ${r.notes?`<div style="font-size:0.68rem;color:var(--text-secondary);margin-top:2px;">📝 ${r.notes}</div>`:''}
+                                    </div>
+                                    <button onclick="editTimeRecord(${r.id})" style="padding:2px 6px;font-size:0.65rem;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:4px;color:#818cf8;cursor:pointer;flex-shrink:0;margin-left:6px;">✏️</button>
+                                </div>
+                            </div>`;
+                        }).join('')
+                    }
+                </div>
+
+                <!-- SALARY TAB -->
+                <div id="emp-hist-salaries-${id}" style="display:none;max-height:320px;overflow-y:auto;margin-bottom:10px;">
+                    ${rangeSal.length===0 ? '<p style="color:var(--text-secondary);font-size:0.85rem;padding:10px 0;">No salary records in this range.</p>' :
+                        rangeSal.map(s => `
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border-color);">
+                                <div style="flex:1;min-width:0;">
+                                    <div style="font-size:0.83rem;font-weight:600;">💰 ${s.date} <span style="font-size:0.68rem;color:var(--text-secondary);">${s.period||''}</span></div>
+                                    <div style="font-size:0.68rem;color:var(--text-secondary);">${s.fullDays||s.daysWorked||0}d ${s.halfDays>0?'+ '+s.halfDays+'h ':''} · Gross ₱${(s.grossPay||s.netPay||0).toLocaleString()}${s.advancesDeducted>0?' · Adv -₱'+s.advancesDeducted.toLocaleString():''}</div>
+                                </div>
+                                <div style="text-align:right;flex-shrink:0;margin-left:8px;">
+                                    <div style="font-weight:800;color:#10b981;font-size:0.95rem;">₱${(s.netPay||0).toLocaleString()}</div>
+                                    <div style="display:flex;gap:3px;margin-top:3px;justify-content:flex-end;">
+                                        <button onclick="deleteSalaryRecord(${s.id},${id})" style="padding:2px 6px;font-size:0.65rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:4px;color:#ef4444;cursor:pointer;">🗑️</button>
+                                    </div>
+                                </div>
+                            </div>`).join('')
+                    }
+                </div>
+
+                ${_isAdmin ? `
+                <div style="display:flex;gap:8px;margin-top:6px;">
+                    <button class="btn btn-secondary" onclick="editEmployee(${id})" style="flex:1;">✏️ Edit</button>
+                    <button class="btn btn-danger"    onclick="deleteEmployee(${id})" style="flex:1;">🗑️ Delete</button>
+                </div>` : `<button class="btn btn-secondary btn-block" onclick="hideModal('employee-detail-modal')">Close</button>`}
+                `;
+
+                document.getElementById('employee-detail-content').innerHTML = html;
+                window._employeeDetailId = id;
+
+                // Scroll to top of modal body
+                const mb = document.getElementById('employee-detail-content');
+                if (mb) mb.scrollTop = 0;
             }
-            
-            document.getElementById('employee-detail-content').innerHTML = content;
-            window._employeeDetailId = id;
-            // Show edit button in header for admin/owner only
-            
+
+            // ── Store state for refresh ──
+            window._empDetailId = id;
+            window._empDetailData = { employee, empRecs, empAdvances, empSalaries, dailyRate, otRate, _isAdmin, _empCalc, _empRender, minDate, maxDate };
+            window.empDetailRefresh = function(eid) {
+                if (eid !== id) return;
+                const today = new Date();
+                const fmt = d => d.toISOString().split('T')[0];
+                const f = document.getElementById('empd-from-'+id)?.value || fmt(new Date(today.getFullYear(), today.getMonth(), 1));
+                const t = document.getElementById('empd-to-'+id)?.value   || fmt(today);
+                // Only warn if both are filled and order is wrong — allow partial entry
+                if (f && t && f > t) {
+                    // Auto-swap instead of blocking
+                    const fi=document.getElementById('empd-from-'+id);
+                    const ti=document.getElementById('empd-to-'+id);
+                    if (fi) fi.value=t; if (ti) ti.value=f;
+                    _empRender(t, f);
+                    return;
+                }
+                _empRender(f || '2000-01-01', t || fmt(today));
+            };
+            window.empDetailPreset = function(eid, preset) {
+                if (eid !== id) return;
+                const today = new Date();
+                const fmt = d => d.toISOString().split('T')[0];
+                let f, t;
+                if (preset === 'all') {
+                    // Show ALL records ever — use a wide open range
+                    f = minDate || fmt(new Date(today.getFullYear()-5, 0, 1));
+                    t = fmt(today);
+                } else if (preset === 'month') {
+                    const y=today.getFullYear(), m=today.getMonth();
+                    f=fmt(new Date(y,m,1)); t=fmt(new Date(y,m+1,0));
+                } else if (preset === 'lmonth') {
+                    const y=today.getFullYear(), m=today.getMonth()-1;
+                    const d1=new Date(y,m,1), d2=new Date(y,m+1,0);
+                    f=fmt(d1); t=fmt(d2);
+                } else if (preset === 'unpaid') {
+                    const ur = empRecs.filter(r=>!r.paid);
+                    if (!ur.length) { showToast('No unpaid records.','info'); return; }
+                    f=ur.reduce((min,r)=>r.date<min?r.date:min, ur[0].date);
+                    t=ur.reduce((max,r)=>r.date>max?r.date:max, ur[0].date);
+                } else {
+                    f=minDate||fmt(today); t=fmt(today);
+                }
+                const fi=document.getElementById('empd-from-'+id);
+                const ti=document.getElementById('empd-to-'+id);
+                if (fi) fi.value=f; if (ti) ti.value=t;
+                _empRender(f, t);
+            };
+            window.empDetailPayroll = function(eid) {
+                if (eid !== id) return;
+                const f=document.getElementById('empd-from-'+id)?.value||minDate;
+                const t=document.getElementById('empd-to-'+id)?.value||maxDate;
+                hideModal('employee-detail-modal');
+                showGiveSalaryModal(id, f, t);
+            };
+
+            _empRender(rangeFrom, rangeTo);
             showModal('employee-detail-modal');
         }
     window.viewEmployeeDetails = viewEmployeeDetails;
@@ -16683,7 +16764,7 @@ async function showPayrollSummary() {
         }
     window.showPayrollProcess = showPayrollProcess;
 
-        async function showGiveSalaryModal(employeeId) {
+        async function showGiveSalaryModal(employeeId, presetFrom, presetTo) {
             const employee = await dbGet('employees', employeeId);
             if (!employee) return;
 
@@ -16696,9 +16777,10 @@ async function showPayrollSummary() {
                 return;
             }
 
-            // Default range = all unpaid records
+            // Default range = passed preset or all unpaid records
             const minDate = allUnpaid.reduce((m,r)=>r.date<m?r.date:m, allUnpaid[0].date);
             const maxDate = allUnpaid.reduce((m,r)=>r.date>m?r.date:m, allUnpaid[0].date);
+            if (presetFrom && presetTo) { /* use passed range */ }
 
             const dailyRate = parseFloat(employee.dailyRate) || 0;
             const otRate    = parseFloat(employee.otRate) || Math.round(dailyRate / 8 * 1.25);
@@ -16824,7 +16906,7 @@ async function showPayrollSummary() {
             hideModal('employee-detail-modal');
             hideModal('payroll-summary-modal');
             showModal('give-salary-modal');
-            _renderPayrollModal(minDate, maxDate);
+            _renderPayrollModal(presetFrom||minDate, presetTo||maxDate);
         }
 
         function _refreshPayrollModal(employeeId) {
@@ -16978,6 +17060,50 @@ async function showPayrollSummary() {
             });
         }
         window.empHistTab = empHistTab;
+
+        async function empEditAdvance(advId, empId) {
+            const adv = await dbGet('cashAdvances', advId);
+            if (!adv) { showToast('Advance not found.','warning'); return; }
+            const inp = 'width:100%;padding:9px 10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:0.9rem;box-sizing:border-box;margin-bottom:10px;';
+            const em = document.createElement('div');
+            em.id = 'emp-adv-edit-modal';
+            em.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:999999;display:flex;align-items:center;justify-content:center;padding:16px;';
+            em.innerHTML = `<div style="background:#1e293b;border:1px solid #334155;border-radius:14px;padding:20px;width:100%;max-width:360px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><h3 style="margin:0;color:#f1f5f9;font-size:0.95rem;">✏️ Edit Cash Advance</h3><button onclick="document.getElementById('emp-adv-edit-modal').remove()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.2rem;">✕</button></div>
+                <label style="font-size:0.75rem;color:#94a3b8;display:block;margin-bottom:3px;">Amount (₱)</label>
+                <input type="number" id="eae-amount" value="${adv.amount}" style="${inp}">
+                <label style="font-size:0.75rem;color:#94a3b8;display:block;margin-bottom:3px;">Date</label>
+                <input type="date" id="eae-date" value="${adv.date||''}" style="${inp}">
+                <label style="font-size:0.75rem;color:#94a3b8;display:block;margin-bottom:3px;">Reason / Notes</label>
+                <input type="text" id="eae-reason" value="${adv.reason||''}" placeholder="e.g. emergency, extension..." style="${inp}">
+                <label style="font-size:0.75rem;color:#94a3b8;display:block;margin-bottom:3px;">Status</label>
+                <select id="eae-deducted" style="${inp}">
+                    <option value="0" ${!adv.deducted?'selected':''}>⏳ Pending (not yet deducted)</option>
+                    <option value="1" ${adv.deducted?'selected':''}>✅ Deducted</option>
+                </select>
+                <div style="display:flex;gap:8px;margin-top:4px;">
+                    <button onclick="empSaveAdvance(${advId},${empId})" style="flex:2;padding:10px;background:#10b981;border:none;border-radius:8px;color:#fff;font-weight:700;cursor:pointer;">💾 Save</button>
+                    <button onclick="document.getElementById('emp-adv-edit-modal').remove()" style="flex:1;padding:10px;background:rgba(255,255,255,0.06);border:1px solid #334155;border-radius:8px;color:#94a3b8;cursor:pointer;">Cancel</button>
+                </div>
+            </div>`;
+            document.body.appendChild(em);
+        }
+        window.empEditAdvance = empEditAdvance;
+
+        async function empSaveAdvance(advId, empId) {
+            const adv = await dbGet('cashAdvances', advId);
+            if (!adv) return;
+            adv.amount   = parseFloat(document.getElementById('eae-amount')?.value) || adv.amount;
+            adv.date     = document.getElementById('eae-date')?.value || adv.date;
+            adv.reason   = document.getElementById('eae-reason')?.value?.trim() || '';
+            adv.deducted = document.getElementById('eae-deducted')?.value === '1';
+            await dbUpdate('cashAdvances', adv);
+            document.getElementById('emp-adv-edit-modal')?.remove();
+            showToast('✅ Advance updated.','success');
+            viewEmployeeDetails(empId);
+            debouncedSync();
+        }
+        window.empSaveAdvance = empSaveAdvance;
 
         async function deleteAdvanceRecord(advId, empId) {
             if (!await showConfirm('Delete this cash advance record?', 'danger', '🗑️ Delete', 'Yes, Delete')) return;
@@ -22642,6 +22768,7 @@ async function showPayrollSummary() {
                 let dots = '';
                 if (sd.tenants.length>0 || sd.overdue.some(x=>x.type==='tenant'))  dots += '<span class="cal-dot dot-rent"></span>';
                 if (sd.debtors.length>0 || sd.overdue.some(x=>x.type==='debtor'))   dots += '<span class="cal-dot dot-credit"></span>';
+                if (sd.overdue.length>0) dots += '<span class="cal-dot" style="background:#ef4444;box-shadow:0 0 4px rgba(239,68,68,0.6);"></span>';
                 if (hasTask || sd.overdue.some(x=>x.type==='task'))                 dots += '<span class="cal-dot dot-task"></span>';
                 const hasReminder = sd.notes.some(n => n.type==='reminder');
                 const hasPlainNote = sd.notes.some(n => n.type==='note');
@@ -22868,6 +22995,59 @@ async function showPayrollSummary() {
             var sections = [];
             var P = '\u20b1';
 
+            // ── OVERDUE SECTION (only on past days) ──
+            if (isPast) {
+                var overdueItems = [];
+                // Overdue rent: tenants whose dueDay === this day and unpaid
+                var rm0 = year + '-' + mo;
+                tenants.filter(function(t) {
+                    if (!t || !t.id || t.status === 'inactive') return false;
+                    var dd = parseInt(t.dueDay || t.rentDueDay || 5);
+                    return dd === day && !payments.some(function(p) { return p.tenantId === t.id && (p.monthCovered === rm0 || p.forMonth === rm0); });
+                }).forEach(function(t) {
+                    overdueItems.push({ color:'56,189,248', border:'#38bdf8', icon:'🏠', label: t.name, sub: P + prismSafeNumber(t.rent||t.monthlyRent).toLocaleString() + ' rent overdue', nav:'prismCalNavTenant('+t.id+')' });
+                });
+                // Overdue credits: dueDate === this day OR (no dueDate and day of month lent === this day)
+                credits.filter(function(c) {
+                    if (!c || !c.id || c.status === 'closed') return false;
+                    var matchDay = false;
+                    if (c.dueDate && c.dueDate === dateKey) matchDay = true;
+                    else if (!c.dueDate && c.dateLent) { var lent2 = new Date(c.dateLent+'T00:00:00'); matchDay = !isNaN(lent2) && lent2.getDate()===day; }
+                    if (!matchDay) return false;
+                    var paid2 = creditPayments.filter(function(p){return p.creditId===c.id;}).reduce(function(s,p){return s+prismSafeNumber(p.amount);},0);
+                    return paid2 < prismSafeNumber(c.principal);
+                }).forEach(function(c) {
+                    var bal = prismSafeNumber(c.principal) - creditPayments.filter(function(p){return p.creditId===c.id;}).reduce(function(s,p){return s+prismSafeNumber(p.amount);},0);
+                    overdueItems.push({ color:'249,115,22', border:'#f97316', icon:'💳', label: c.debtor||c.name||'Debtor', sub: P+bal.toLocaleString()+' balance overdue', nav:'prismCalNavCredit('+c.id+')' });
+                });
+                // Overdue tasks
+                tasks.filter(function(t){ return t && t.dueDate === dateKey && t.status !== 'completed'; }).forEach(function(t) {
+                    overdueItems.push({ color:'167,139,250', border:'#a78bfa', icon:'⚠️', label: t.title, sub: 'Task overdue · '+(t.priority||''), nav:'prismCalNavTask('+t.id+')' });
+                });
+                // Overdue payables
+                payablesAll.filter(function(p){ return p.dueDate===dateKey && p.status!=='paid'; }).forEach(function(p) {
+                    overdueItems.push({ color:'239,68,68', border:'#ef4444', icon:'🧾', label: (p.supplier||'Supplier')+(p.invoice?' · '+p.invoice:''), sub: P+(p.amount||0).toLocaleString()+' payable overdue', nav:'prismCalNavPayable('+p.id+')' });
+                });
+
+                if (overdueItems.length) {
+                    var hOv = '<div style="margin-bottom:16px;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:10px 12px;">'
+                        + '<div style="font-size:0.72rem;font-weight:700;color:#ef4444;letter-spacing:0.08em;margin-bottom:8px;">🔴 OVERDUE ('+overdueItems.length+')</div>';
+                    overdueItems.forEach(function(ov) {
+                        var ovNav = ov.nav || '';
+                        hOv += '<div data-ovnav="'+ovNav+'" style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(239,68,68,0.12);cursor:pointer;" onclick="prismCalOvClick(this)" onmouseenter="this.style.opacity=\'0.7\'" onmouseleave="this.style.opacity=\'1\'">'
+                            + '<div style="font-size:1.1rem;flex-shrink:0;">'+ov.icon+'</div>'
+                            + '<div style="flex:1;min-width:0;">'
+                            + '<div style="font-size:0.84rem;font-weight:600;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+prismSafeString(ov.label)+'</div>'
+                            + '<div style="font-size:0.7rem;color:#ef4444;">'+ov.sub+'</div>'
+                            + '</div>'
+                            + '<span style="font-size:0.65rem;background:#ef4444;color:#fff;padding:1px 7px;border-radius:10px;flex-shrink:0;">OVERDUE</span>'
+                            + '</div>';
+                    });
+                    hOv += '</div>';
+                    sections.push(hOv);
+                }
+            }
+
             // Tasks (Step 1-3: dueDate + repeat)
             var dayTasks = tasks.filter(function(t) {
                 if (!t || !t.id || !t.dueDate || t.status === 'completed') return false;
@@ -22924,30 +23104,44 @@ async function showPayrollSummary() {
                 return !payments.some(function(p) { return p.tenantId === t.id && (p.monthCovered === rm || p.forMonth === rm); });
             });
             if (rentDue.length) {
-                var h3 = '<div style="margin-bottom:14px;"><div style="font-size:0.72rem;font-weight:700;color:#38bdf8;letter-spacing:0.08em;margin-bottom:7px;">RENT DUE (' + rentDue.length + ')</div>';
+                var rentOverdue = isPast;
+                var h3 = '<div style="margin-bottom:14px;"><div style="font-size:0.72rem;font-weight:700;color:'+(rentOverdue?'#ef4444':'#38bdf8')+';letter-spacing:0.08em;margin-bottom:7px;">'+(rentOverdue?'🔴 RENT OVERDUE':'🏠 RENT DUE')+' (' + rentDue.length + ')</div>';
                 rentDue.forEach(function(t) {
-                    h3 += prismMakeCalCard('56,189,248', '#38bdf8', 'prismCalNavTenant(' + t.id + ')',
+                    h3 += prismMakeCalCard(rentOverdue?'239,68,68':'56,189,248', rentOverdue?'#ef4444':'#38bdf8', 'prismCalNavTenant(' + t.id + ')',
                         prismSafeString(t.name),
-                        P + prismSafeNumber(t.rent || t.monthlyRent).toLocaleString() + ' · tap to collect', '');
+                        P + prismSafeNumber(t.rent || t.monthlyRent).toLocaleString() + (rentOverdue?' — OVERDUE · tap to collect':' · tap to collect'), '');
                 });
                 sections.push(h3 + '</div>');
             }
 
-            // Credit Due
+            // Credit Due — use dueDate if set, else day-of-month from dateLent
             var creditsDue = credits.filter(function(c) {
-                if (!c || !c.id || !c.dateLent || c.status === 'closed') return false;
-                var lent = new Date(c.dateLent + 'T00:00:00');
-                if (isNaN(lent) || lent.getDate() !== day) return false;
-                var paid = creditPayments.filter(function(p) { return p.creditId === c.id; })
-                    .reduce(function(s, p) { return s + prismSafeNumber(p.amount); }, 0);
-                return paid < prismSafeNumber(c.principal);
+                if (!c || !c.id || c.status === 'closed') return false;
+                // Check specific dueDate first
+                if (c.dueDate && c.dueDate === dateKey) {
+                    var paid0 = creditPayments.filter(function(p){return p.creditId===c.id;}).reduce(function(s,p){return s+prismSafeNumber(p.amount);},0);
+                    return paid0 < prismSafeNumber(c.principal);
+                }
+                // Fallback: day of month from dateLent (recurring monthly reminder)
+                if (!c.dueDate && c.dateLent) {
+                    var lent = new Date(c.dateLent + 'T00:00:00');
+                    if (isNaN(lent) || lent.getDate() !== day) return false;
+                    var paid = creditPayments.filter(function(p) { return p.creditId === c.id; })
+                        .reduce(function(s, p) { return s + prismSafeNumber(p.amount); }, 0);
+                    return paid < prismSafeNumber(c.principal);
+                }
+                return false;
             });
             if (creditsDue.length) {
-                var h4 = '<div style="margin-bottom:14px;"><div style="font-size:0.72rem;font-weight:700;color:#f97316;letter-spacing:0.08em;margin-bottom:7px;">CREDIT DUE (' + creditsDue.length + ')</div>';
+                var h4 = '<div style="margin-bottom:14px;"><div style="font-size:0.72rem;font-weight:700;color:#f97316;letter-spacing:0.08em;margin-bottom:7px;">'
+                    + (isPast ? '🔴 ' : '💳 ') + 'CREDIT DUE (' + creditsDue.length + ')</div>';
                 creditsDue.forEach(function(c) {
+                    var cPaid = creditPayments.filter(function(p){return p.creditId===c.id;}).reduce(function(s,p){return s+prismSafeNumber(p.amount);},0);
+                    var cBal  = prismSafeNumber(c.principal) - cPaid;
+                    var dueTxt = c.dueDate ? 'Due: '+c.dueDate : 'Monthly reminder';
                     h4 += prismMakeCalCard('249,115,22', '#f97316', 'prismCalNavCredit(' + c.id + ')',
                         prismSafeString(c.debtor || c.name || c.borrowerName || 'Debtor'),
-                        P + prismSafeNumber(c.principal).toLocaleString() + ' principal', '');
+                        P + cBal.toLocaleString() + ' balance · ' + dueTxt + ' · tap to collect', '');
                 });
                 sections.push(h4 + '</div>');
             }
@@ -23049,6 +23243,11 @@ async function showPayrollSummary() {
         showSection('credits');
         setTimeout(function() { if (typeof showCreditDetail === 'function') showCreditDetail(id); }, 350);
     }
+    function prismCalOvClick(el) {
+        var nav = el ? el.getAttribute('data-ovnav') : '';
+        if (nav) { try { eval(nav); } catch(e) { console.warn('nav error', e); } }
+    }
+    window.prismCalOvClick = prismCalOvClick;
     window.prismOpenCalendarDay = prismOpenCalendarDay;
     window.prismCalNavTask      = prismCalNavTask;
     window.prismCalNavNote      = prismCalNavNote;
