@@ -4265,9 +4265,9 @@
                 <div class="card-header" style="flex-wrap:wrap;gap:8px;">
                     <div class="card-title" id="expenses-card-title">Expenses This Month</div>
                     <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-                        <button onclick="setExpCardRange('month',this)" class="dash-range-btn active" data-exprange="month" style="padding:3px 10px;border-radius:6px;border:1px solid #6366f1;background:#6366f1;color:#fff;cursor:pointer;font-size:0.75rem;">Month</button>
+                        <button onclick="setExpCardRange('month',this)" class="dash-range-btn" data-exprange="month" style="padding:3px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;">Month</button>
                         <button onclick="setExpCardRange('week',this)" class="dash-range-btn" data-exprange="week" style="padding:3px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;">Week</button>
-                        <button onclick="setExpCardRange('today',this)" class="dash-range-btn" data-exprange="today" style="padding:3px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;">Today</button>
+                        <button onclick="setExpCardRange('today',this)" class="dash-range-btn active" data-exprange="today" style="padding:3px 10px;border-radius:6px;border:1px solid #6366f1;background:#6366f1;color:#fff;cursor:pointer;font-size:0.75rem;">Today</button>
                         <button onclick="setExpCardRange('custom',this)" class="dash-range-btn" data-exprange="custom" style="padding:3px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;">Custom</button>
                     </div>
                 </div>
@@ -26265,7 +26265,7 @@ async function clearAllData() {
         function showNetIncomeDetails()      { showDashIeDetail('net'); }
 
         // ── Expenses card date range picker ──
-        let _expCardRange = 'month';
+        let _expCardRange = 'today';
         function setExpCardRange(range, btn) {
             _expCardRange = range;
             document.querySelectorAll('[data-exprange]').forEach(b => {
