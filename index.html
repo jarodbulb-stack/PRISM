@@ -12381,9 +12381,12 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             const renderRow = (tenant, isInactive) => {
                 const property = properties.find(p => p.id === tenant.propertyId);
                 const tenantPayments = payments.filter(p => p.tenantId === tenant.id && p.type === 'rent');
-                const currentMonthPayment = tenantPayments.find(p => p.monthCovered === currentMonth);
-                const currentMonthPaid = currentMonthPayment ? currentMonthPayment.amount : 0;
-                const currentMonthProgress = tenant.rent > 0 ? Math.min(100, (currentMonthPaid / tenant.rent) * 100) : 0;
+                const currentMonthPayments = tenantPayments.filter(p => p.monthCovered === currentMonth);
+                // Net paid = amount minus discount; expected = rent minus discount for this month
+                const currentMonthNetPaid = currentMonthPayments.reduce((s,p) => s + Math.max(0,(p.amount||0)-(p.discount||0)), 0);
+                const currentMonthDiscount = currentMonthPayments.reduce((s,p) => s + (p.discount||0), 0);
+                const currentMonthExpected = Math.max(1, (tenant.rent||0) - currentMonthDiscount);
+                const currentMonthProgress = Math.min(100, (currentMonthNetPaid / currentMonthExpected) * 100);
                 let progressClass = currentMonthProgress >= 100 ? 'success' : currentMonthProgress >= 50 ? 'warning' : 'danger';
 
                 if (isInactive) {
@@ -12535,9 +12538,10 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             const now = new Date();
             const moveInDate = new Date(tenant.moveIn);
             const monthsDiff = (now.getFullYear() - moveInDate.getFullYear()) * 12 + (now.getMonth() - moveInDate.getMonth()) + 1;
-            const expectedTotal = monthsDiff * tenant.rent;
+            const totalDiscountsGiven = payments.reduce((sum, p) => sum + (p.discount || 0), 0);
+            const expectedTotal = Math.max(0, monthsDiff * tenant.rent - totalDiscountsGiven);
             const paidTotal = payments.reduce((sum, p) => sum + Math.max(0, p.amount - (p.discount || 0)), 0);
-            const balance = expectedTotal - paidTotal;
+            const balance = Math.max(0, expectedTotal - paidTotal);
 
             // Calculate due date and late fees
             const dueDay = tenant.dueDay || 5;
@@ -14006,12 +14010,13 @@ async function recordTenantPayment(tenantId) {
                     // Check for advance payment
                     const isAdvance = payment.type === 'advance' || (payment.notes && payment.notes.toLowerCase().includes('advance'));
                     
-                    // Calculate total outstanding
-                    const totalPaid = tenantPayments.reduce((sum, p) => sum + p.amount, 0);
+                    // Calculate total outstanding (discounts reduce expected total)
+                    const totalPaid = tenantPayments.reduce((sum, p) => sum + Math.max(0, p.amount - (p.discount || 0)), 0);
                     const moveInDate = new Date(tenant.moveIn);
                     const today = new Date();
                     const monthsOccupied = Math.max(1, Math.ceil((today - moveInDate) / (30 * 24 * 60 * 60 * 1000)));
-                    const totalExpected = monthlyRent * monthsOccupied;
+                    const receiptDiscountsGiven = tenantPayments.reduce((sum, p) => sum + (p.discount || 0), 0);
+                    const totalExpected = Math.max(0, monthlyRent * monthsOccupied - receiptDiscountsGiven);
                     const totalBalance = Math.max(0, totalExpected - totalPaid);
 
                     balanceInfo = `
@@ -14213,10 +14218,11 @@ async function recordTenantPayment(tenantId) {
                 const moveInDate = new Date(tenant.moveIn);
                 const todayDate = new Date();
                 
-                // Calculate months occupied
+                // Calculate months occupied (discounts reduce expected total)
                 const monthsOccupied = Math.max(1, Math.ceil((todayDate - moveInDate) / (30 * 24 * 60 * 60 * 1000)));
-                const totalExpected = monthlyRent * monthsOccupied;
-                const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+                const soaDiscountsGiven = payments.reduce((sum, p) => sum + (p.discount || 0), 0);
+                const totalExpected = Math.max(0, monthlyRent * monthsOccupied - soaDiscountsGiven);
+                const totalPaid = payments.reduce((sum, p) => sum + Math.max(0, p.amount - (p.discount || 0)), 0);
                 const totalBalance = Math.max(0, totalExpected - totalPaid);
 
                 // Check for advance
@@ -14474,9 +14480,10 @@ async function recordTenantPayment(tenantId) {
             const now = new Date();
             const moveInDate = new Date(tenant.moveIn);
             const monthsDiff = (now.getFullYear() - moveInDate.getFullYear()) * 12 + (now.getMonth() - moveInDate.getMonth()) + 1;
-            const expectedTotal = monthsDiff * tenant.rent;
-            const paidTotal = payments.reduce((sum, p) => sum + p.amount, 0);
-            const balance = expectedTotal - paidTotal;
+            const ledgerDiscountsGiven = payments.reduce((sum, p) => sum + (p.discount || 0), 0);
+            const expectedTotal = Math.max(0, monthsDiff * tenant.rent - ledgerDiscountsGiven);
+            const paidTotal = payments.reduce((sum, p) => sum + Math.max(0, p.amount - (p.discount || 0)), 0);
+            const balance = Math.max(0, expectedTotal - paidTotal);
 
             const dueDay = tenant.dueDay || 5;
             const currentMonth = new Date(now.getFullYear(), now.getMonth(), dueDay);
