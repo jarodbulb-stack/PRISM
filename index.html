@@ -4002,7 +4002,6 @@
                 <!-- Reminder notifications loaded by prismCheckReminders() -->
             </div>
             <div style="display:flex;justify-content:flex-end;margin-bottom:4px;">
-                <button class="prism-refresh-btn btn btn-sm btn-secondary" data-section="dashboard" onclick="prismRefreshSection('dashboard')" style="padding:3px 8px;font-size:0.75rem;border-radius:6px;" title="Refresh dashboard">🔄 Refresh</button>
             </div>
 
             <div class="stats-grid">
@@ -4365,7 +4364,6 @@
             <div class="card">
                 <div class="card-header">
                     <div class="card-title">My Properties
-                    <button class="prism-refresh-btn btn btn-sm btn-secondary" style="padding:3px 8px;font-size:0.75rem;min-width:32px;border-radius:6px;" title="Refresh this section" data-section="properties" onclick="prismRefreshSection('properties')">🔄</button>
                 </div>
                 </div>
                 <!-- Search bar -->
@@ -4401,7 +4399,6 @@
             <div class="card">
                 <div class="card-header">
                     <div class="card-title">Quick Add Tenant
-                    <button class="prism-refresh-btn btn btn-sm btn-secondary" style="padding:3px 8px;font-size:0.75rem;min-width:32px;border-radius:6px;" title="Refresh this section" data-section="tenants" onclick="prismRefreshSection('tenants')">🔄</button>
                 </div>
                 </div>
                 <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 10px;">Choose how to add a tenant:</p>
@@ -4629,9 +4626,6 @@
             <div class="card">
                 <div class="card-header">
                     <div class="card-title">Quick Add Expense
-                    <button class="prism-refresh-btn btn btn-sm btn-secondary" style="padding:3px 8px;font-size:0.75rem;min-width:32px;border-radius:6px;" title="Refresh this section" data-section="credits" onclick="prismRefreshSection('credits')">🔄</button>
-                
-                    <button class="prism-refresh-btn btn btn-sm btn-secondary" style="padding:3px 8px;font-size:0.75rem;min-width:32px;border-radius:6px;" title="Refresh this section" data-section="expenses" onclick="prismRefreshSection('expenses')">🔄</button>
                 </div>
                 </div>
                 <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 10px;">Tap a category to quickly add an expense:</p>
@@ -4817,7 +4811,6 @@
             <div class="card">
                 <div class="card-header">
                     <div class="card-title">📝 Custom Notes
-                    <button class="prism-refresh-btn btn btn-sm btn-secondary" style="padding:3px 8px;font-size:0.75rem;min-width:32px;border-radius:6px;" title="Refresh this section" data-section="notes" onclick="prismRefreshSection('notes')">🔄</button>
                 </div>
                     <button class="btn btn-sm btn-primary" onclick="showAddNoteModal()">+ Add Note</button>
                 </div>
@@ -4921,7 +4914,6 @@
             <div class="card">
                 <div class="card-header">
                     <div class="card-title">💧 Water Refilling Station
-                    <button class="prism-refresh-btn btn btn-sm btn-secondary" style="padding:3px 8px;font-size:0.75rem;min-width:32px;border-radius:6px;" title="Refresh this section" data-section="water" onclick="prismRefreshSection('water')">🔄</button>
                 </div>
                     <div style="display: flex; gap: 6px; flex-wrap:wrap;">
                         <button class="btn btn-sm btn-primary" onclick="showModal('water-customer-modal')">+ Customer</button>
@@ -5099,7 +5091,6 @@
             <div class="card" id="income-today-card">
                 <div class="card-header">
                     <div class="card-title">📋 Transactions
-                    <button class="prism-refresh-btn btn btn-sm btn-secondary" style="padding:3px 8px;font-size:0.75rem;min-width:32px;border-radius:6px;" title="Refresh this section" data-section="income" onclick="prismRefreshSection('income')">🔄</button>
                 </div>
                     <div style="display:flex;gap:6px;">
                         <button class="btn btn-sm btn-secondary" onclick="loadIncomeTodayFeed()" title="Refresh">↺</button>
@@ -5328,7 +5319,6 @@
             <div class="card">
                 <div class="card-header">
                     <div class="card-title">👷 Employee Management
-                    <button class="prism-refresh-btn btn btn-sm btn-secondary" style="padding:3px 8px;font-size:0.75rem;min-width:32px;border-radius:6px;" title="Refresh this section" data-section="employees" onclick="prismRefreshSection('employees')">🔄</button>
                 </div>
                     <button id="void-requests-btn" onclick="showVoidRequests()" style="display:none;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);color:#ef4444;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:0.8rem;font-weight:700;">
                         ⚠️ Void Requests <span id="void-req-count" style="background:#ef4444;color:white;border-radius:10px;padding:1px 7px;margin-left:4px;font-size:0.75rem;">0</span>
@@ -5507,7 +5497,6 @@
             <div class="card">
                 <div class="card-header">
                     <div class="card-title">✅ Task Management
-                    <button class="prism-refresh-btn btn btn-sm btn-secondary" style="padding:3px 8px;font-size:0.75rem;min-width:32px;border-radius:6px;" title="Refresh this section" data-section="tasks" onclick="prismRefreshSection('tasks')">🔄</button>
                 </div>
                     <div style="display:flex;gap:6px;align-items:center;">
                         <input type="text" id="tasks-search-input" placeholder="🔍 Search tasks..." oninput="filterTasksList()" style="padding:5px 8px;font-size:0.78rem;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-card);color:var(--text-primary);width:150px;">
@@ -5610,7 +5599,6 @@
                 <div class="card-header">
                     <div>
                         <div class="card-title">🧾 Trade Payables
-                    <button class="prism-refresh-btn btn btn-sm btn-secondary" style="padding:3px 8px;font-size:0.75rem;min-width:32px;border-radius:6px;" title="Refresh this section" data-section="payables" onclick="prismRefreshSection('payables')">🔄</button>
                 </div>
                         <div class="card-subtitle">Supplier invoices &amp; accounts payable</div>
                     </div>
@@ -5667,7 +5655,6 @@
                 <div class="card-header">
                     <div>
                         <div class="card-title">🏭 Suppliers Directory
-                    <button class="prism-refresh-btn btn btn-sm btn-secondary" style="padding:3px 8px;font-size:0.75rem;min-width:32px;border-radius:6px;" title="Refresh this section" data-section="suppliers" onclick="prismRefreshSection('suppliers')">🔄</button>
                 </div>
                         <div class="card-subtitle">Supplier &amp; vendor contact ledger</div>
                     </div>
@@ -5692,11 +5679,6 @@
                     </div>
                 </div>
             </div>
-            <div style="display:flex;gap:8px;margin-top:16px;padding:14px 0 4px;border-top:1px solid var(--border-color);">
-                <button class="btn btn-secondary" style="flex:1;font-size:0.82rem;" onclick="showSection('payables')">← Payables</button>
-                <button class="btn btn-primary" style="flex:1;font-size:0.82rem;" onclick="showSection('settings')">⚙️ Settings →</button>
-            </div>
-        
 
             <!-- nav-bottom-suppliers -->
             <div style="display:flex;flex-direction:column;gap:8px;margin-top:24px;padding:14px 0 4px;border-top:1px solid var(--border-color);">
@@ -6432,6 +6414,18 @@
                     
                     <!-- New tenant fields -->
                     <div id="new-tenant-section">
+                        <!-- Tenant Photo Upload -->
+                        <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:16px;">
+                            <div id="tenant-photo-preview" onclick="document.getElementById('tenant-photo-input').click()" style="width:80px;height:80px;border-radius:50%;background:rgba(99,102,241,0.1);border:2px dashed rgba(99,102,241,0.4);display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;position:relative;">
+                                <span id="tenant-photo-placeholder" style="font-size:2rem;">👤</span>
+                                <img id="tenant-photo-img" src="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                                <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.5);text-align:center;font-size:0.58rem;color:#fff;padding:3px;border-radius:0 0 50px 50px;">📷 ID Photo</div>
+                            </div>
+                            <input type="file" id="tenant-photo-input" accept="image/*" style="display:none;" onchange="tenantPhotoPreview(this)">
+                            <input type="hidden" id="tenant-photo-data">
+                            <button type="button" id="tenant-photo-clear-btn" onclick="tenantPhotoClear()" style="display:none;margin-top:5px;padding:2px 10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:6px;color:#ef4444;cursor:pointer;font-size:0.7rem;">✕ Remove</button>
+                        </div>
+
                         <div class="form-group">
                             <label>Full Name *</label>
                             <input type="text" id="tenant-name" placeholder="Tenant's full name">
@@ -6712,6 +6706,18 @@
             </div>
             <div class="modal-body">
                 <form id="credit-form" onsubmit="saveCredit(event)">
+                    <!-- Debtor Photo Upload -->
+                    <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:16px;">
+                        <div id="credit-photo-preview" onclick="document.getElementById('credit-photo-input').click()" style="width:80px;height:80px;border-radius:50%;background:rgba(245,158,11,0.1);border:2px dashed rgba(245,158,11,0.35);display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;position:relative;">
+                            <span id="credit-photo-placeholder" style="font-size:2rem;">💳</span>
+                            <img id="credit-photo-img" src="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                            <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.5);text-align:center;font-size:0.58rem;color:#fff;padding:3px;border-radius:0 0 50px 50px;">📷 ID Photo</div>
+                        </div>
+                        <input type="file" id="credit-photo-input" accept="image/*" style="display:none;" onchange="creditPhotoPreview(this)">
+                        <input type="hidden" id="credit-photo-data">
+                        <button type="button" id="credit-photo-clear-btn" onclick="creditPhotoClear()" style="display:none;margin-top:5px;padding:2px 10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:6px;color:#ef4444;cursor:pointer;font-size:0.7rem;">✕ Remove</button>
+                    </div>
+
                     <div class="form-group">
                         <label>Debtor Name</label>
                         <input type="text" id="credit-debtor" required placeholder="Who are you lending to?">
@@ -7215,6 +7221,19 @@
             <div class="modal-body">
                 <form id="employee-form" onsubmit="saveEmployee(event)">
                     <input type="hidden" id="employee-edit-id">
+                    <input type="hidden" id="employee-photo-data">
+                    
+                    <!-- Photo Upload -->
+                    <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:18px;">
+                        <div id="emp-photo-preview" onclick="document.getElementById('emp-photo-input').click()" style="width:90px;height:90px;border-radius:50%;background:rgba(99,102,241,0.12);border:2px dashed rgba(99,102,241,0.4);display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;position:relative;transition:border-color 0.2s;">
+                            <span id="emp-photo-placeholder" style="font-size:2.2rem;">👷</span>
+                            <img id="emp-photo-img" src="" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                            <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.55);text-align:center;font-size:0.6rem;color:#fff;padding:3px;border-radius:0 0 50px 50px;">📷 Tap</div>
+                        </div>
+                        <input type="file" id="emp-photo-input" accept="image/*" style="display:none;" onchange="empPhotoPreview(this)">
+                        <button type="button" id="emp-photo-clear" onclick="empPhotoClear()" style="display:none;margin-top:6px;padding:3px 10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:6px;color:#ef4444;cursor:pointer;font-size:0.72rem;">✕ Remove Photo</button>
+                    </div>
+
                     <div class="form-group">
                         <label>Employee Name *</label>
                         <input type="text" id="employee-name" required placeholder="Full name">
@@ -10971,6 +10990,58 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
         // =====================
         // CLIENT ID PHOTO FUNCTIONS
         // =====================
+        // ── Tenant Photo Helpers ──
+        function tenantPhotoPreview(input) {
+            const file = input.files[0];
+            if (!file) return;
+            if (file.size > 3 * 1024 * 1024) { showToast('⚠️ Photo too large. Max 3MB.','warning'); input.value=''; return; }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const d = e.target.result;
+                document.getElementById('tenant-photo-data').value = d;
+                document.getElementById('tenant-photo-img').src = d;
+                document.getElementById('tenant-photo-img').style.display = 'block';
+                document.getElementById('tenant-photo-placeholder').style.display = 'none';
+                document.getElementById('tenant-photo-clear-btn').style.display = 'inline-block';
+            };
+            reader.readAsDataURL(file);
+        }
+        function tenantPhotoClear() {
+            const f = document.getElementById('tenant-photo-data'); if(f) f.value='';
+            const i = document.getElementById('tenant-photo-img'); if(i){i.src='';i.style.display='none';}
+            const p = document.getElementById('tenant-photo-placeholder'); if(p) p.style.display='block';
+            const b = document.getElementById('tenant-photo-clear-btn'); if(b) b.style.display='none';
+            const inp = document.getElementById('tenant-photo-input'); if(inp) inp.value='';
+        }
+        window.tenantPhotoPreview = tenantPhotoPreview;
+        window.tenantPhotoClear   = tenantPhotoClear;
+
+        // ── Credit/Debtor Photo Helpers ──
+        function creditPhotoPreview(input) {
+            const file = input.files[0];
+            if (!file) return;
+            if (file.size > 3 * 1024 * 1024) { showToast('⚠️ Photo too large. Max 3MB.','warning'); input.value=''; return; }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const d = e.target.result;
+                document.getElementById('credit-photo-data').value = d;
+                document.getElementById('credit-photo-img').src = d;
+                document.getElementById('credit-photo-img').style.display = 'block';
+                document.getElementById('credit-photo-placeholder').style.display = 'none';
+                document.getElementById('credit-photo-clear-btn').style.display = 'inline-block';
+            };
+            reader.readAsDataURL(file);
+        }
+        function creditPhotoClear() {
+            const f = document.getElementById('credit-photo-data'); if(f) f.value='';
+            const i = document.getElementById('credit-photo-img'); if(i){i.src='';i.style.display='none';}
+            const p = document.getElementById('credit-photo-placeholder'); if(p) p.style.display='block';
+            const b = document.getElementById('credit-photo-clear-btn'); if(b) b.style.display='none';
+            const inp = document.getElementById('credit-photo-input'); if(inp) inp.value='';
+        }
+        window.creditPhotoPreview = creditPhotoPreview;
+        window.creditPhotoClear   = creditPhotoClear;
+
         function triggerPhotoUpload(type, id) {
             // Create hidden file input if not exists
             let fileInput = document.getElementById('photo-upload-input');
@@ -12035,10 +12106,13 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     tenant.lateFee = lateFee;
                     tenant.status = 'active';
                     tenant.updatedAt = new Date().toISOString();
+                    const _editTenantPhoto = document.getElementById('tenant-photo-data')?.value || '';
+                    if (_editTenantPhoto) tenant.photo = _editTenantPhoto;
                     
                     await dbUpdate('tenants', tenant);
                 } else {
                     // New tenant
+                    const _tenantPhoto = document.getElementById('tenant-photo-data')?.value || '';
                     const tenant = {
                         name,
                         phone,
@@ -12050,6 +12124,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                         deposit,
                         depositPaid: false,
                         lateFee,
+                        photo: _tenantPhoto || undefined,
                         status: 'active',
                         createdAt: new Date().toISOString()
                     };
@@ -12329,6 +12404,9 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
 
                 return `
                     <div class="list-item" style="cursor:pointer;" onclick="${(tenantFilter === 'unpaid' || tenantFilter === 'overdue') ? `viewTenantLedgerAndPay(${tenant.id})` : `viewTenantDetails(${tenant.id})`}">
+                        <div style="flex-shrink:0;width:42px;height:42px;border-radius:50%;overflow:hidden;margin-right:12px;border:2px solid rgba(99,102,241,0.25);background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:0.85rem;">
+                            ${tenant.photo ? `<img src="${tenant.photo}" style="width:100%;height:100%;object-fit:cover;">` : `${(tenant.name||'?').split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2)}`}
+                        </div>
                         <div class="item-info" style="flex: 1">
                             <h4>${tenant.name}</h4>
                             <p>${property ? property.name : 'Unknown property'} • ₱${tenant.rent.toLocaleString()}/mo</p>
@@ -15674,6 +15752,10 @@ async function loadWaterCustomers() {
     // Admin/Manager: clickable profile cards with rich info
     container.innerHTML = employees.map(function(e) {
         var initials = (e.name||'?').split(' ').map(function(w){return w[0];}).join('').substring(0,2).toUpperCase();
+        var avatarInner = e.photo
+            ? '<img src="'+e.photo+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">'
+            : initials;
+        var avatarBg = e.photo ? 'background:transparent;' : 'background:linear-gradient(135deg,#6366f1,#8b5cf6);';
         var statusColor = e.status === 'inactive' ? '#64748b' : '#10b981';
         var payBadge = e.payFrequency ? '<span style="font-size:0.68rem;color:#818cf8;background:rgba(99,102,241,0.12);padding:2px 7px;border-radius:10px;">'+e.payFrequency+'</span>' : '';
         var unpaidBadge = (e.unpaidDays > 0) ? '<span style="font-size:0.68rem;background:rgba(59,130,246,0.15);color:#60a5fa;padding:2px 7px;border-radius:10px;">'+e.unpaidDays+' unpaid days</span>' : '';
@@ -15686,7 +15768,7 @@ async function loadWaterCustomers() {
             + 'border-left:3px solid '+statusColor+';"'
             + ' onmouseenter="this.style.background=\'rgba(99,102,241,0.06)\';this.style.borderTopColor=\'#6366f1\';this.style.borderRightColor=\'#6366f1\';this.style.borderBottomColor=\'#6366f1\'"'
             + ' onmouseleave="this.style.background=\'var(--bg-card)\';this.style.borderTopColor=\'var(--border-color)\';this.style.borderRightColor=\'var(--border-color)\';this.style.borderBottomColor=\'var(--border-color)\'">'
-            + '<div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:0.95rem;flex-shrink:0;">'+initials+'</div>'
+            + '<div style="width:44px;height:44px;border-radius:50%;'+avatarBg+'display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:0.95rem;flex-shrink:0;overflow:hidden;border:2px solid rgba(99,102,241,0.3);">'+avatarInner+'</div>'
             + '<div style="flex:1;min-width:0;">'
             + '<div style="font-weight:700;font-size:0.95rem;color:var(--text-primary,#f1f5f9);margin-bottom:3px;">'+e.name+'</div>'
             + '<div style="font-size:0.78rem;color:#64748b;margin-bottom:5px;">'+(e.position||'Staff')+'</div>'
@@ -15696,6 +15778,38 @@ async function loadWaterCustomers() {
             + '</div>';
     }).join('');
         }
+
+        // ── Employee Photo Upload Helpers ──
+        function empPhotoPreview(input) {
+            const file = input.files[0];
+            if (!file) return;
+            if (file.size > 2 * 1024 * 1024) {
+                showToast('⚠️ Photo too large. Max 2MB.', 'warning');
+                input.value = '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = e.target.result;
+                document.getElementById('employee-photo-data').value = data;
+                document.getElementById('employee-photo-img').src = data;
+                document.getElementById('employee-photo-img').style.display = 'block';
+                document.getElementById('emp-photo-placeholder').style.display = 'none';
+                document.getElementById('emp-photo-clear').style.display = 'inline-block';
+            };
+            reader.readAsDataURL(file);
+        }
+        function empPhotoClear() {
+            document.getElementById('employee-photo-data').value = '';
+            document.getElementById('employee-photo-img').src = '';
+            document.getElementById('employee-photo-img').style.display = 'none';
+            document.getElementById('emp-photo-placeholder').style.display = 'block';
+            document.getElementById('emp-photo-clear').style.display = 'none';
+            const inp = document.getElementById('emp-photo-input');
+            if (inp) inp.value = '';
+        }
+        window.empPhotoPreview = empPhotoPreview;
+        window.empPhotoClear   = empPhotoClear;
 
         function calculateOTRate() {
             const dailyRate = parseFloat(document.getElementById('employee-daily-rate').value.replace(/,/g, '')) || 0;
@@ -15739,6 +15853,8 @@ async function loadWaterCustomers() {
             const parsedDailyRate = parseFloat(dailyRate.replace(/,/g, '')) || 0;
             const parsedOTRate = otRate ? parseFloat(otRate.replace(/,/g, '')) : Math.round(parsedDailyRate / 8 * 1.25);
             
+            const photoData = document.getElementById('employee-photo-data')?.value || '';
+
             const employee = {
                 name,
                 phone,
@@ -15751,6 +15867,7 @@ async function loadWaterCustomers() {
                 paySchedule,
                 startDate,
                 notes,
+                photo: photoData || undefined,
                 status: 'active',
                 createdAt: new Date().toISOString()
             };
@@ -15769,6 +15886,7 @@ async function loadWaterCustomers() {
                 hideModal('employee-modal');
                 document.getElementById('employee-form').reset();
                 document.getElementById('employee-edit-id').value = '';
+                empPhotoClear();
                 // Reset checkboxes
                 ['mon','tue','wed','thu','fri','sat'].forEach(d => document.getElementById('work-'+d).checked = true);
                 document.getElementById('work-sun').checked = false;
@@ -15818,7 +15936,12 @@ async function loadWaterCustomers() {
             const _isAdminRole = currentAppUser && (currentAppUser.role === 'admin' || currentAppUser.role === 'owner');
             let content = `
                 <div style="text-align: center; margin-bottom: 10px;">
-                    <div style="font-size: 2.5rem;">👷</div>
+                    ${employee.photo
+                        ? `<div style="width:80px;height:80px;border-radius:50%;overflow:hidden;margin:0 auto 8px;border:2px solid rgba(99,102,241,0.4);">
+                               <img src="${employee.photo}" style="width:100%;height:100%;object-fit:cover;">
+                           </div>`
+                        : `<div style="font-size:2.5rem;margin-bottom:8px;">👷</div>`
+                    }
                     <h2 style="margin: 5px 0;">${employee.name}</h2>
                     <p style="color: var(--text-secondary); margin: 0;">${employee.position || 'Staff'}</p>
                 </div>
@@ -16563,89 +16686,193 @@ async function showPayrollSummary() {
         async function showGiveSalaryModal(employeeId) {
             const employee = await dbGet('employees', employeeId);
             if (!employee) return;
-            
-            const timeRecords = await dbGetAll('timeRecords');
-            const advances = await dbGetAll('cashAdvances');
-            
-            const unpaidRecords = timeRecords.filter(r => r.employeeId === employeeId && !r.paid);
-            
-            if (unpaidRecords.length === 0) {
+
+            const allTimeRecords = await dbGetAll('timeRecords');
+            const allAdvances    = await dbGetAll('cashAdvances');
+            const allUnpaid      = allTimeRecords.filter(r => r.employeeId === employeeId && !r.paid);
+
+            if (allUnpaid.length === 0) {
                 showToast('ℹ️ No unpaid work days to pay for this employee.', 'info');
                 return;
             }
-            
+
+            // Default range = all unpaid records
+            const minDate = allUnpaid.reduce((m,r)=>r.date<m?r.date:m, allUnpaid[0].date);
+            const maxDate = allUnpaid.reduce((m,r)=>r.date>m?r.date:m, allUnpaid[0].date);
+
             const dailyRate = parseFloat(employee.dailyRate) || 0;
-            const otRate = parseFloat(employee.otRate) || Math.round(dailyRate / 8 * 1.25);
-            
-            const fullDays = unpaidRecords.filter(r => r.status === 'present').length;
-            const halfDays = unpaidRecords.filter(r => r.status === 'halfday').length;
-            const absences = unpaidRecords.filter(r => r.status === 'absent').length;
-            const totalOT = unpaidRecords.reduce((sum, r) => sum + (r.otHours || 0), 0);
-            const totalBonus = unpaidRecords.reduce((sum, r) => sum + (r.bonus || 0), 0);
-            const totalLates = unpaidRecords.reduce((sum, r) => sum + (r.lateDeduction || 0), 0);
-            
-            const empAdvances = advances.filter(a => a.employeeId === employeeId && !a.deducted);
-            const unpaidAdvances = empAdvances.reduce((sum, a) => sum + a.amount, 0);
-            
-            const baseSalary = (fullDays * dailyRate) + (halfDays * dailyRate * 0.5);
-            const otPay = totalOT * otRate;
-            const grossPay = baseSalary + otPay + totalBonus;
-            const totalDeductions = totalLates + unpaidAdvances;
-            const netPay = Math.max(0, grossPay - totalDeductions);
-            
-            const dateFrom = unpaidRecords.length > 0 ? unpaidRecords.reduce((min, r) => r.date < min ? r.date : min, unpaidRecords[0].date) : '';
-            const dateTo = unpaidRecords.length > 0 ? unpaidRecords.reduce((max, r) => r.date > max ? r.date : max, unpaidRecords[0].date) : '';
-            
-            let content = `
-                <div style="text-align: center; margin-bottom: 15px;">
-                    <div style="font-size: 2rem;">💰</div>
-                    <h3 style="margin: 5px 0;">${employee.name}</h3>
-                    <p style="color: var(--text-secondary); margin: 0;">Period: ${dateFrom} to ${dateTo}</p>
+            const otRate    = parseFloat(employee.otRate) || Math.round(dailyRate / 8 * 1.25);
+
+            // ── Recalculate based on selected date range ──
+            function _calcPayroll(fromDate, toDate) {
+                const recs = allUnpaid.filter(r => r.date >= fromDate && r.date <= toDate);
+                const workRecs = recs.filter(r => r.status === 'present' || r.status === 'halfday' || r.status === 'adjustment');
+                const full    = recs.filter(r => r.status === 'present').length;
+                const half    = recs.filter(r => r.status === 'halfday').length;
+                const absent  = recs.filter(r => r.status === 'absent').length;
+                const ot      = recs.reduce((s,r)=>s+(r.otHours||0),0);
+                const bonus   = recs.reduce((s,r)=>s+(r.bonus||0)+(r.incentive||0),0);
+                const lates   = recs.reduce((s,r)=>s+(r.lateDeduction||0),0);
+                // Only include advances created within the date range (or all unpaid if no date on advance)
+                const advRecs = allAdvances.filter(a => a.employeeId === employeeId && !a.deducted && (!a.date || (a.date >= fromDate && a.date <= toDate)));
+                const advTotal = advRecs.reduce((s,a)=>s+a.amount,0);
+                const base  = (full * dailyRate) + (half * dailyRate * 0.5);
+                const otPay = ot * otRate;
+                const gross = base + otPay + bonus;
+                const deductions = lates + advTotal;
+                const net = Math.max(0, gross - deductions);
+                return { full, half, absent, ot, otPay, bonus, lates, advTotal, base, gross, deductions, net, recs, advRecs, count: recs.length };
+            }
+
+            // ── Render the modal content ──
+            function _renderPayrollModal(fromDate, toDate) {
+                const p = _calcPayroll(fromDate, toDate);
+                const noWork = p.full === 0 && p.half === 0 && p.bonus === 0 && p.ot === 0;
+
+                document.getElementById('give-salary-content').innerHTML = `
+                <div style="text-align:center;margin-bottom:14px;">
+                    <div style="font-size:1.8rem;">💰</div>
+                    <h3 style="margin:4px 0;">${employee.name}</h3>
+                    <p style="color:var(--text-secondary);font-size:0.8rem;margin:0;">${employee.position||'Staff'} · ₱${dailyRate.toLocaleString()}/day</p>
                 </div>
-                
-                <div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                    <h4 style="margin: 0 0 10px 0;">📊 Work Summary</h4>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.9rem;">
-                        <span>Full Days:</span><span>${fullDays} × ₱${dailyRate.toLocaleString()} = ₱${(fullDays * dailyRate).toLocaleString()}</span>
-                        <span>Half Days:</span><span>${halfDays} × ₱${(dailyRate * 0.5).toLocaleString()} = ₱${(halfDays * dailyRate * 0.5).toLocaleString()}</span>
-                        <span>Absences:</span><span>${absences} days</span>
-                        ${totalOT > 0 ? `<span>Overtime:</span><span>${totalOT} hrs × ₱${otRate} = ₱${otPay.toLocaleString()}</span>` : ''}
-                        ${totalBonus > 0 ? `<span>Bonuses:</span><span>₱${totalBonus.toLocaleString()}</span>` : ''}
+
+                <!-- Date Range Picker -->
+                <div style="background:var(--bg-secondary);border-radius:10px;padding:12px;margin-bottom:14px;border:2px solid var(--primary);">
+                    <div style="font-size:0.75rem;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">📅 Payroll Period</div>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <div style="flex:1;min-width:120px;">
+                            <label style="font-size:0.7rem;color:var(--text-secondary);display:block;margin-bottom:3px;">From</label>
+                            <input type="date" id="payroll-from" value="${fromDate}" min="${minDate}" max="${maxDate}"
+                                style="width:100%;padding:7px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:7px;color:var(--text-primary);font-size:0.85rem;box-sizing:border-box;"
+                                onchange="_refreshPayrollModal(${employeeId})">
+                        </div>
+                        <div style="color:var(--text-secondary);padding-top:16px;">→</div>
+                        <div style="flex:1;min-width:120px;">
+                            <label style="font-size:0.7rem;color:var(--text-secondary);display:block;margin-bottom:3px;">To</label>
+                            <input type="date" id="payroll-to" value="${toDate}" min="${minDate}" max="${maxDate}"
+                                style="width:100%;padding:7px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:7px;color:var(--text-primary);font-size:0.85rem;box-sizing:border-box;"
+                                onchange="_refreshPayrollModal(${employeeId})">
+                        </div>
                     </div>
-                    <hr style="margin: 10px 0; border-color: var(--border);">
-                    <div style="display: flex; justify-content: space-between; font-weight: bold;">
-                        <span>Gross Pay:</span><span>₱${grossPay.toLocaleString()}</span>
+                    <!-- Quick presets -->
+                    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;">
+                        <button onclick="_payrollPreset(${employeeId},'all')" style="padding:3px 9px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);border-radius:5px;color:#818cf8;cursor:pointer;font-size:0.7rem;font-weight:600;">All Unpaid</button>
+                        <button onclick="_payrollPreset(${employeeId},'week')" style="padding:3px 9px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:5px;color:#10b981;cursor:pointer;font-size:0.7rem;font-weight:600;">This Week</button>
+                        <button onclick="_payrollPreset(${employeeId},'lastweek')" style="padding:3px 9px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:5px;color:#f59e0b;cursor:pointer;font-size:0.7rem;font-weight:600;">Last Week</button>
+                        <button onclick="_payrollPreset(${employeeId},'month')" style="padding:3px 9px;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.3);border-radius:5px;color:#a78bfa;cursor:pointer;font-size:0.7rem;font-weight:600;">This Month</button>
+                    </div>
+                    <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:6px;text-align:center;">
+                        ${p.count} record(s) in selected range · ${p.full} full + ${p.half} half days
                     </div>
                 </div>
-                
-                <div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                    <h4 style="margin: 0 0 10px 0; color: var(--danger);">➖ Deductions</h4>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.9rem;">
-                        <span>Lates/Undertime:</span><span>₱${totalLates.toLocaleString()}</span>
-                        <span>Cash Advances:</span><span>₱${unpaidAdvances.toLocaleString()}</span>
+
+                ${noWork ? `<div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:12px;text-align:center;margin-bottom:12px;color:#f59e0b;font-size:0.85rem;">⚠️ No work days found in this date range. Adjust the period above.</div>` : ''}
+
+                <!-- Work Summary -->
+                <div style="background:var(--bg-secondary);padding:13px;border-radius:10px;margin-bottom:12px;">
+                    <div style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">📊 Work Summary</div>
+                    <div style="display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:0.85rem;">
+                        <span>Full Days (${p.full})</span><span style="font-weight:600;">₱${(p.full*dailyRate).toLocaleString()}</span>
+                        ${p.half>0?`<span>Half Days (${p.half})</span><span style="font-weight:600;">₱${(p.half*dailyRate*0.5).toLocaleString()}</span>`:''}
+                        ${p.absent>0?`<span style="color:#ef4444;">Absences</span><span style="color:#ef4444;">${p.absent} day(s)</span>`:''}
+                        ${p.ot>0?`<span>Overtime (${p.ot} hrs)</span><span style="font-weight:600;">₱${p.otPay.toLocaleString()}</span>`:''}
+                        ${p.bonus>0?`<span>Bonus/Incentive</span><span style="font-weight:600;color:#10b981;">₱${p.bonus.toLocaleString()}</span>`:''}
                     </div>
-                    <hr style="margin: 10px 0; border-color: var(--border);">
-                    <div style="display: flex; justify-content: space-between; font-weight: bold;">
-                        <span>Total Deductions:</span><span>₱${totalDeductions.toLocaleString()}</span>
+                    <div style="border-top:1px solid var(--border-color);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;font-weight:700;">
+                        <span>Gross Pay</span><span>₱${p.gross.toLocaleString()}</span>
                     </div>
                 </div>
-                
-                <div style="background: var(--success); color: white; padding: 20px; border-radius: 8px; margin-bottom: 15px; text-align: center;">
-                    <div style="font-size: 0.9rem; margin-bottom: 5px;">NET PAY</div>
-                    <div style="font-size: 2rem; font-weight: bold;">₱${netPay.toLocaleString()}</div>
+
+                <!-- Deductions -->
+                <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.15);padding:13px;border-radius:10px;margin-bottom:12px;">
+                    <div style="font-size:0.75rem;font-weight:700;color:#ef4444;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">➖ Deductions</div>
+                    <div style="display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:0.85rem;">
+                        <span>Lates/Undertime</span><span style="color:#ef4444;">-₱${p.lates.toLocaleString()}</span>
+                        <span>Cash Advances${p.advRecs.length>1?' ('+p.advRecs.length+'×)':''}</span><span style="color:#ef4444;">-₱${p.advTotal.toLocaleString()}</span>
+                    </div>
+                    <div style="border-top:1px solid rgba(239,68,68,0.2);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;font-weight:700;color:#ef4444;">
+                        <span>Total Deductions</span><span>-₱${p.deductions.toLocaleString()}</span>
+                    </div>
                 </div>
-                
-                <button class="btn btn-success btn-block" onclick="confirmGiveSalary(${employeeId}, ${netPay}, '${dateFrom}', '${dateTo}', ${fullDays}, ${halfDays}, ${totalOT}, ${totalBonus}, ${totalLates}, ${unpaidAdvances})">
-                    ✅ CONFIRM - Employee Received ₱${netPay.toLocaleString()}
+
+                <!-- Net Pay -->
+                <div style="background:linear-gradient(135deg,#10b981,#059669);color:white;padding:16px;border-radius:10px;margin-bottom:14px;text-align:center;">
+                    <div style="font-size:0.8rem;opacity:0.85;margin-bottom:4px;">NET PAY · ${fromDate} → ${toDate}</div>
+                    <div style="font-size:2.2rem;font-weight:800;">₱${p.net.toLocaleString()}</div>
+                </div>
+
+                <button class="btn btn-success btn-block" ${noWork?'disabled style="opacity:0.5;cursor:not-allowed;"':''} onclick="confirmGiveSalary(${employeeId}, ${p.net}, '${fromDate}', '${toDate}', ${p.full}, ${p.half}, ${p.ot}, ${p.bonus}, ${p.lates}, ${p.advTotal})">
+                    ✅ CONFIRM — Pay ₱${p.net.toLocaleString()}
                 </button>
-                <button class="btn btn-secondary btn-block" onclick="hideModal('give-salary-modal')" style="margin-top: 10px;">Cancel</button>
-            `;
-            
-            document.getElementById('give-salary-content').innerHTML = content;
+                <button class="btn btn-secondary btn-block" onclick="hideModal('give-salary-modal')" style="margin-top:8px;">Cancel</button>
+                `;
+            }
+
+            // Store state for refresh callbacks
+            window._payrollEmpId = employeeId;
+            window._payrollAllUnpaid = allUnpaid;
+            window._payrollAllAdvances = allAdvances;
+            window._payrollDailyRate = dailyRate;
+            window._payrollOtRate = otRate;
+            window._payrollEmployee = employee;
+            window._payrollMinDate = minDate;
+            window._payrollMaxDate = maxDate;
+            window._calcPayroll = _calcPayroll;
+            window._renderPayrollModal = _renderPayrollModal;
+
+            document.getElementById('give-salary-content').innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-secondary);">Loading...</div>';
             hideModal('employee-detail-modal');
             hideModal('payroll-summary-modal');
             showModal('give-salary-modal');
+            _renderPayrollModal(minDate, maxDate);
         }
+
+        function _refreshPayrollModal(employeeId) {
+            const from = document.getElementById('payroll-from')?.value || window._payrollMinDate;
+            const to   = document.getElementById('payroll-to')?.value   || window._payrollMaxDate;
+            if (from > to) { showToast('⚠️ From date must be before To date.','warning'); return; }
+            if (typeof window._renderPayrollModal === 'function') window._renderPayrollModal(from, to);
+        }
+        window._refreshPayrollModal = _refreshPayrollModal;
+
+        function _payrollPreset(employeeId, preset) {
+            const allUnpaid = window._payrollAllUnpaid || [];
+            const minDate = window._payrollMinDate || '';
+            const maxDate = window._payrollMaxDate || '';
+            const today = new Date();
+            let from = minDate, to = maxDate;
+
+            if (preset === 'all') {
+                from = minDate; to = maxDate;
+            } else if (preset === 'week') {
+                // Sun–Sat of current week
+                const day = today.getDay();
+                const sun = new Date(today); sun.setDate(today.getDate() - day);
+                const sat = new Date(sun); sat.setDate(sun.getDate() + 6);
+                from = sun.toISOString().split('T')[0];
+                to   = sat.toISOString().split('T')[0];
+            } else if (preset === 'lastweek') {
+                const day = today.getDay();
+                const lastSun = new Date(today); lastSun.setDate(today.getDate() - day - 7);
+                const lastSat = new Date(lastSun); lastSat.setDate(lastSun.getDate() + 6);
+                from = lastSun.toISOString().split('T')[0];
+                to   = lastSat.toISOString().split('T')[0];
+            } else if (preset === 'month') {
+                from = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-01';
+                const lastDay = new Date(today.getFullYear(), today.getMonth()+1, 0).getDate();
+                to = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(lastDay).padStart(2,'0');
+            }
+            // Clamp to available range
+            if (from < minDate) from = minDate;
+            if (to > maxDate) to = maxDate;
+
+            const fi = document.getElementById('payroll-from');
+            const ti = document.getElementById('payroll-to');
+            if (fi) fi.value = from;
+            if (ti) ti.value = to;
+            if (typeof window._renderPayrollModal === 'function') window._renderPayrollModal(from, to);
+        }
+        window._payrollPreset = _payrollPreset;
 
         async function confirmGiveSalary(employeeId, netPay, dateFrom, dateTo, daysWorked, halfDays, otHours, bonus, lates, advances) {
             if (!await showConfirm(`Pay ₱${netPay.toLocaleString()} to this employee?`, 'success', '💵 Confirm Salary Payment', 'Yes, Pay')) return;
@@ -16675,19 +16902,25 @@ async function showPayrollSummary() {
                 showToast('⏳ Processing salary payment...', 'info');
                 await dbAdd('salaryPayments', salary);
                 
-                // Mark time records as paid
+                // Mark ONLY time records within the selected date range as paid
                 const timeRecords = await dbGetAll('timeRecords');
-                const unpaidRecords = timeRecords.filter(r => r.employeeId === employeeId && !r.paid);
+                const unpaidRecords = timeRecords.filter(r =>
+                    r.employeeId === employeeId && !r.paid &&
+                    r.date >= dateFrom && r.date <= dateTo
+                );
                 for (const record of unpaidRecords) {
                     record.paid = true;
                     record.paidDate = paymentDate;
                     await dbUpdate('timeRecords', record);
                 }
-                
-                // Mark advances as deducted
+
+                // Mark advances as deducted (only those within date range or all if no date)
                 if (advances > 0) {
                     const allAdvances = await dbGetAll('cashAdvances');
-                    const empAdvances = allAdvances.filter(a => a.employeeId === employeeId && !a.deducted);
+                    const empAdvances = allAdvances.filter(a =>
+                        a.employeeId === employeeId && !a.deducted &&
+                        (!a.date || (a.date >= dateFrom && a.date <= dateTo))
+                    );
                     for (const adv of empAdvances) {
                         adv.deducted = true;
                         adv.deductedDate = paymentDate;
@@ -17003,6 +17236,17 @@ async function showPayrollSummary() {
             document.getElementById('employee-pay-schedule').value = employee.paySchedule || 'weekly';
             document.getElementById('employee-start-date').value = employee.startDate || '';
             document.getElementById('employee-notes').value = employee.notes || '';
+
+            // Load existing photo
+            if (employee.photo) {
+                document.getElementById('employee-photo-data').value = employee.photo;
+                document.getElementById('employee-photo-img').src = employee.photo;
+                document.getElementById('employee-photo-img').style.display = 'block';
+                document.getElementById('emp-photo-placeholder').style.display = 'none';
+                document.getElementById('emp-photo-clear').style.display = 'inline-block';
+            } else {
+                empPhotoClear();
+            }
             
             // Set work days checkboxes
             const workDays = employee.workDays || {mon: true, tue: true, wed: true, thu: true, fri: true, sat: true, sun: false};
@@ -17073,6 +17317,7 @@ async function showPayrollSummary() {
                 return;
             }
 
+            const _creditPhoto = document.getElementById('credit-photo-data')?.value || '';
             const credit = {
                 debtor,
                 phone,
@@ -17082,6 +17327,7 @@ async function showPayrollSummary() {
                 dateLent,
                 dueDate: dueDate || null,
                 purpose,
+                photo: _creditPhoto || undefined,
                 status: 'active',
                 createdAt: new Date().toISOString()
             };
@@ -17094,6 +17340,7 @@ async function showPayrollSummary() {
                 await dbAdd('credits', credit);
                 hideModal('credit-modal');
                 document.getElementById('credit-form').reset();
+                creditPhotoClear();
                 loadCredits();
                 loadDashboard();
                 // Immediate sync for critical data
@@ -17186,6 +17433,9 @@ async function showPayrollSummary() {
 
                 return `
                     <div class="list-item" onclick="viewCreditDetails(${credit.id})">
+                        <div style="flex-shrink:0;width:42px;height:42px;border-radius:50%;overflow:hidden;margin-right:12px;border:2px solid rgba(245,158,11,0.25);background:linear-gradient(135deg,#f59e0b,#d97706);display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:0.85rem;">
+                            ${credit.photo ? `<img src="${credit.photo}" style="width:100%;height:100%;object-fit:cover;">` : `${(credit.debtor||'?').split(' ').map(w=>w[0]).join('').toUpperCase().substring(0,2)}`}
+                        </div>
                         <div class="item-info" style="flex: 1">
                             <h4>${credit.debtor}</h4>
                             <p>₱${credit.principal.toLocaleString()} • ${credit.interestType === 'none' ? 'No interest' : credit.interestType + ' ' + credit.interestRate + (credit.interestType === 'simple' ? '%' : '')}</p>
@@ -19947,8 +20197,16 @@ async function showPayrollSummary() {
 
                 const _render = async () => {
                     const freshExp = await dbGetAll('expenses');
+                    // Apply date picker filters if set
+                    const _fromPick = document.getElementById('exp-cat-from')?.value || '';
+                    const _toPick   = document.getElementById('exp-cat-to')?.value   || '';
                     let freshCat;
-                    if (range) {
+                    if (_fromPick || _toPick) {
+                        freshCat = freshExp.filter(e => {
+                            const d = (e.date||'').substring(0,10);
+                            return (!_fromPick || d >= _fromPick) && (!_toPick || d <= _toPick) && (e.category||'').toLowerCase()===category.toLowerCase();
+                        });
+                    } else if (range) {
                         freshCat = freshExp.filter(e=>{
                             const d=(e.date||'').substring(0,10);
                             return d>=range.from&&d<=range.to&&(e.category||'').toLowerCase()===category.toLowerCase();
@@ -19984,10 +20242,7 @@ async function showPayrollSummary() {
                             <span style="color:#ef4444;">₱${total.toLocaleString()}</span>
                         </div>`;
                     }
-                    rows += `<button onclick="var m=document.getElementById('flashcard-modal');if(m)m.remove();openExpenseWithCategory('${category}');"
-                        style="width:100%;margin-top:12px;padding:11px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.88rem;">
-                        + Add ${catLabel} Expense
-                    </button>`;
+
 
                     const body = document.getElementById('exp-cat-body');
                     if (body) body.innerHTML = rows;
@@ -20003,11 +20258,19 @@ async function showPayrollSummary() {
                 modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
                 modal.innerHTML =
                     '<div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;">' +
-                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;position:sticky;top:0;background:#1e293b;padding-bottom:10px;border-bottom:1px solid #334155;">' +
+                    '<div style="position:sticky;top:0;background:#1e293b;padding-bottom:10px;border-bottom:1px solid #334155;margin-bottom:10px;z-index:2;">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
                     '<div><h3 style="margin:0;color:#f1f5f9;font-size:1rem;">'+catLabel+' Expenses</h3>' +
                     '<div id="exp-cat-count" style="font-size:0.7rem;color:#64748b;margin-top:2px;"></div></div>' +
                     '<button onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.3rem;padding:0 4px;">✕</button>' +
-                    '</div><div id="exp-cat-body" style="min-height:60px;"><div style="text-align:center;color:#64748b;padding:20px;">Loading...</div></div></div>';
+                    '</div>' +
+                    '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">' +
+                    '<input type="date" id="exp-cat-from" placeholder="From" style="padding:4px 7px;background:#0f172a;border:1px solid #334155;border-radius:6px;color:#f1f5f9;font-size:0.75rem;" onchange="if(window._expCatRerender)window._expCatRerender()">' +
+                    '<input type="date" id="exp-cat-to" placeholder="To" style="padding:4px 7px;background:#0f172a;border:1px solid #334155;border-radius:6px;color:#f1f5f9;font-size:0.75rem;" onchange="if(window._expCatRerender)window._expCatRerender()">' +
+                    '<button onclick="document.getElementById(\'exp-cat-from\').value=\'\';document.getElementById(\'exp-cat-to\').value=\'\';if(window._expCatRerender)window._expCatRerender()" style="padding:4px 8px;background:rgba(255,255,255,0.06);border:1px solid #334155;border-radius:6px;color:#94a3b8;cursor:pointer;font-size:0.72rem;">Clear</button>' +
+                    '<button onclick="var m=document.getElementById(\'flashcard-modal\');if(m)m.remove();openExpenseWithCategory(\''+category+'\')" style="margin-left:auto;padding:6px 14px;background:rgba(239,68,68,0.18);border:1px solid rgba(239,68,68,0.4);color:#f87171;border-radius:7px;cursor:pointer;font-size:0.8rem;font-weight:700;white-space:nowrap;">+ Add</button>' +
+                    '</div></div>' +
+                    '<div id="exp-cat-body" style="min-height:60px;"><div style="text-align:center;color:#64748b;padding:20px;">Loading...</div></div></div>';
                 document.body.appendChild(modal);
                 modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
                 await _render();
@@ -25454,8 +25717,102 @@ async function clearAllData() {
         }
         window.showWaterFlashcardDetail = showWaterFlashcardDetail;
 
-        function showStaffFlashcardDetail(type) {
-            showToast('ℹ️ See the Staff page for detailed records.','info');
+        async function showStaffFlashcardDetail(type) {
+            const employees = await dbGetAll('employees');
+            const advances = await dbGetAll('cashAdvances');
+            const timeRecords = await dbGetAll('timeRecords');
+            const salaries = await dbGetAll('salaryPayments');
+            const now = new Date();
+            const thisMonth = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+
+            let title = '', rows = '';
+
+            if (type === 'advances') {
+                title = '💵 Unpaid Cash Advances';
+                const pending = advances.filter(a => !a.deducted);
+                if (pending.length === 0) { rows = '<p style="color:var(--text-secondary);text-align:center;padding:20px;">No pending advances.</p>'; }
+                else {
+                    // Group by employee
+                    const byEmp = {};
+                    pending.forEach(a => { if (!byEmp[a.employeeId]) byEmp[a.employeeId] = []; byEmp[a.employeeId].push(a); });
+                    Object.keys(byEmp).forEach(empId => {
+                        const emp = employees.find(e => e.id === parseInt(empId));
+                        const empName = emp ? emp.name : 'Unknown';
+                        const total = byEmp[empId].reduce((s,a) => s + (a.amount||0), 0);
+                        rows += `<div style="background:var(--bg-primary);border-radius:10px;padding:10px 12px;margin-bottom:8px;border-left:3px solid #f59e0b;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <div><div style="font-weight:700;font-size:0.9rem;">👤 ${empName}</div>
+                                <div style="font-size:0.72rem;color:var(--text-secondary);">${byEmp[empId].length} advance(s)</div></div>
+                                <div style="font-weight:800;color:#f59e0b;">₱${total.toLocaleString()}</div>
+                            </div>
+                            <div style="margin-top:6px;">
+                            ${byEmp[empId].map(a=>`<div style="font-size:0.75rem;color:var(--text-secondary);padding:2px 0;">• ₱${a.amount.toLocaleString()} — ${a.date}${a.reason?' ('+a.reason+')':''}</div>`).join('')}
+                            </div>
+                            <button onclick="viewEmployeeDetails(${empId})" style="margin-top:6px;width:100%;padding:5px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:#fbbf24;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:600;">👁 View ${empName}</button>
+                        </div>`;
+                    });
+                }
+            } else if (type === 'unpaid-days') {
+                title = '📅 Unpaid Work Days';
+                const unpaidByEmp = {};
+                timeRecords.filter(r => !r.paid && (r.status==='present'||r.status==='halfday'||r.status==='adjustment')).forEach(r => {
+                    if (!unpaidByEmp[r.employeeId]) unpaidByEmp[r.employeeId] = [];
+                    unpaidByEmp[r.employeeId].push(r);
+                });
+                if (Object.keys(unpaidByEmp).length === 0) { rows = '<p style="color:var(--text-secondary);text-align:center;padding:20px;">No unpaid days.</p>'; }
+                else {
+                    Object.keys(unpaidByEmp).forEach(empId => {
+                        const emp = employees.find(e => e.id === parseInt(empId));
+                        const empName = emp ? emp.name : 'Unknown';
+                        const recs = unpaidByEmp[empId];
+                        const days = recs.filter(r=>r.status==='present').length + recs.filter(r=>r.status==='halfday').length * 0.5;
+                        rows += `<div style="background:var(--bg-primary);border-radius:10px;padding:10px 12px;margin-bottom:8px;border-left:3px solid #6366f1;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <div><div style="font-weight:700;font-size:0.9rem;">👤 ${empName}</div>
+                                <div style="font-size:0.72rem;color:var(--text-secondary);">${days} unpaid day(s) · ${recs.length} records</div></div>
+                                <div style="font-weight:800;color:#818cf8;">${days}d</div>
+                            </div>
+                            <div style="margin-top:4px;">${recs.slice(0,3).map(r=>`<div style="font-size:0.73rem;color:var(--text-secondary);padding:1px 0;">• ${r.date} — ${r.status}${r.bonus>0?' 🎁₱'+r.bonus:''}</div>`).join('')}${recs.length>3?`<div style="font-size:0.72rem;color:#6366f1;">+ ${recs.length-3} more</div>`:''}</div>
+                            <button onclick="viewEmployeeDetails(${empId})" style="margin-top:6px;width:100%;padding:5px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:600;">👁 View ${empName}</button>
+                        </div>`;
+                    });
+                }
+            } else if (type === 'paid-salaries') {
+                title = '💰 Salaries Paid This Month';
+                const thisMonthSal = salaries.filter(s => (s.date||'').startsWith(thisMonth));
+                if (thisMonthSal.length === 0) { rows = '<p style="color:var(--text-secondary);text-align:center;padding:20px;">No salaries paid this month.</p>'; }
+                else {
+                    thisMonthSal.sort((a,b)=>b.date>a.date?1:-1).forEach(s => {
+                        const emp = employees.find(e => e.id === s.employeeId);
+                        rows += `<div style="background:var(--bg-primary);border-radius:10px;padding:10px 12px;margin-bottom:8px;border-left:3px solid #10b981;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <div><div style="font-weight:700;font-size:0.9rem;">👤 ${emp?emp.name:'Unknown'}</div>
+                                <div style="font-size:0.72rem;color:var(--text-secondary);">${s.date} · ${s.daysWorked||0} days · ${s.period||'Custom'}</div></div>
+                                <div style="font-weight:800;color:#10b981;">₱${(s.netPay||0).toLocaleString()}</div>
+                            </div>
+                        </div>`;
+                    });
+                }
+            } else {
+                showSection('employees'); return;
+            }
+
+            // Show in a modal
+            const ex = document.getElementById('staff-flashcard-modal');
+            if (ex) ex.remove();
+            const m = document.createElement('div');
+            m.id = 'staff-flashcard-modal';
+            m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
+            m.onclick = e => { if(e.target===m) m.remove(); };
+            m.innerHTML = `<div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;width:100%;max-width:440px;max-height:85vh;overflow-y:auto;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #334155;position:sticky;top:0;background:#1e293b;">
+                    <h3 style="margin:0;color:#f1f5f9;font-size:1rem;">${title}</h3>
+                    <button onclick="document.getElementById('staff-flashcard-modal').remove()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.3rem;">✕</button>
+                </div>
+                ${rows}
+                <button onclick="document.getElementById('staff-flashcard-modal').remove();showSection('employees')" style="width:100%;margin-top:10px;padding:10px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#818cf8;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;">→ Go to Staff Page</button>
+            </div>`;
+            document.body.appendChild(m);
         }
         window.showStaffFlashcardDetail = showStaffFlashcardDetail;
 
