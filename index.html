@@ -4968,8 +4968,8 @@
                             <option value="">All Months</option>
                             <option value="01">January</option><option value="02">February</option><option value="03">March</option><option value="04">April</option><option value="05">May</option><option value="06">June</option><option value="07">July</option><option value="08">August</option><option value="09">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option>
                         </select>
-                        <input type="date" id="wh-from" onchange="loadWaterSectionHistory()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;">
-                        <input type="date" id="wh-to" onchange="loadWaterSectionHistory()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;">
+                        <input type="date" id="wh-from" onchange="this.dataset.userSet='1';loadWaterSectionHistory()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;">
+                        <input type="date" id="wh-to" onchange="this.dataset.userSet='1';loadWaterSectionHistory()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;">
                         <input type="text" id="wh-search" placeholder="🔍 Search customer..." oninput="loadWaterSectionHistory()" style="padding:5px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;width:140px;">
                     </div>
                     <div id="wh-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;"></div>
@@ -13220,6 +13220,7 @@ async function recordTenantPayment(tenantId) {
             showToast('Attendance record deleted.', 'success');
             await viewEmployeeDetails(employeeId);
         }
+        window.deleteTimeRecord = deleteTimeRecord;
 
         // ── End Tenancy: marks tenant inactive + sets property to vacant ──
         async function endTenancy(tenantId) {
@@ -15792,8 +15793,8 @@ async function loadWaterCustomers() {
             reader.onload = function(e) {
                 const data = e.target.result;
                 document.getElementById('employee-photo-data').value = data;
-                document.getElementById('employee-photo-img').src = data;
-                document.getElementById('employee-photo-img').style.display = 'block';
+                document.getElementById('emp-photo-img').src = data;
+                document.getElementById('emp-photo-img').style.display = 'block';
                 document.getElementById('emp-photo-placeholder').style.display = 'none';
                 document.getElementById('emp-photo-clear').style.display = 'inline-block';
             };
@@ -15801,8 +15802,8 @@ async function loadWaterCustomers() {
         }
         function empPhotoClear() {
             document.getElementById('employee-photo-data').value = '';
-            document.getElementById('employee-photo-img').src = '';
-            document.getElementById('employee-photo-img').style.display = 'none';
+            document.getElementById('emp-photo-img').src = '';
+            document.getElementById('emp-photo-img').style.display = 'none';
             document.getElementById('emp-photo-placeholder').style.display = 'block';
             document.getElementById('emp-photo-clear').style.display = 'none';
             const inp = document.getElementById('emp-photo-input');
@@ -16284,8 +16285,14 @@ async function loadWaterCustomers() {
                 
                 hideModal('time-record-modal');
                 loadEmployees();
-                viewEmployeeDetails(employeeId);
-                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+                // If opened from payroll modal, re-open payroll instead of employee detail
+                if (window._payrollReopenAfterEdit) {
+                    const _roe = window._payrollReopenAfterEdit;
+                    window._payrollReopenAfterEdit = null;
+                    await showGiveSalaryModal(_roe.employeeId, _roe.fromDate, _roe.toDate);
+                } else {
+                    viewEmployeeDetails(employeeId);
+                }
                 if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
         debouncedSync();
                 showToast('Attendance recorded!', 'success');
@@ -16315,6 +16322,7 @@ async function loadWaterCustomers() {
             hideModal('employee-detail-modal');
             showModal('time-record-modal');
         }
+        window.editTimeRecord = editTimeRecord;
 
         // Quick Attendance for all employees
         async function saveAttendance() { return showQuickAttendance(); }
@@ -16785,109 +16793,240 @@ async function showPayrollSummary() {
             const dailyRate = parseFloat(employee.dailyRate) || 0;
             const otRate    = parseFloat(employee.otRate) || Math.round(dailyRate / 8 * 1.25);
 
-            // ── Recalculate based on selected date range ──
-            function _calcPayroll(fromDate, toDate) {
-                const recs = allUnpaid.filter(r => r.date >= fromDate && r.date <= toDate);
-                const workRecs = recs.filter(r => r.status === 'present' || r.status === 'halfday' || r.status === 'adjustment');
-                const full    = recs.filter(r => r.status === 'present').length;
-                const half    = recs.filter(r => r.status === 'halfday').length;
-                const absent  = recs.filter(r => r.status === 'absent').length;
-                const ot      = recs.reduce((s,r)=>s+(r.otHours||0),0);
-                const bonus   = recs.reduce((s,r)=>s+(r.bonus||0)+(r.incentive||0),0);
-                const lates   = recs.reduce((s,r)=>s+(r.lateDeduction||0),0);
-                // Only include advances created within the date range (or all unpaid if no date on advance)
-                const advRecs = allAdvances.filter(a => a.employeeId === employeeId && !a.deducted && (!a.date || (a.date >= fromDate && a.date <= toDate)));
-                const advTotal = advRecs.reduce((s,a)=>s+a.amount,0);
-                const base  = (full * dailyRate) + (half * dailyRate * 0.5);
-                const otPay = ot * otRate;
-                const gross = base + otPay + bonus;
-                const deductions = lates + advTotal;
-                const net = Math.max(0, gross - deductions);
-                return { full, half, absent, ot, otPay, bonus, lates, advTotal, base, gross, deductions, net, recs, advRecs, count: recs.length };
+            // ── Recalculate based on selected date range (ENHANCED) ──
+            // Supports per-advance checkboxes and manual bonus/deduction overrides
+            function _calcPayroll(fromDate, toDate, deferredAdvIds, extraBonus, extraDeductions) {
+                deferredAdvIds  = deferredAdvIds  || window._payrollDeferredAdvIds  || [];
+                extraBonus      = extraBonus      != null ? extraBonus      : (window._payrollExtraBonus      || 0);
+                extraDeductions = extraDeductions != null ? extraDeductions : (window._payrollExtraDeductions || 0);
+                const recs      = allUnpaid.filter(r => r.date >= fromDate && r.date <= toDate);
+                const full      = recs.filter(r => r.status === 'present').length;
+                const half      = recs.filter(r => r.status === 'halfday').length;
+                const absent    = recs.filter(r => r.status === 'absent').length;
+                const ot        = recs.reduce((s,r)=>s+(r.otHours||0),0);
+                const bonus     = recs.reduce((s,r)=>s+(r.bonus||0)+(r.incentive||0),0);
+                const lates     = recs.reduce((s,r)=>s+(r.lateDeduction||0),0);
+                const allAdvRecs = allAdvances.filter(a => a.employeeId === employeeId && !a.deducted && (!a.date || (a.date >= fromDate && a.date <= toDate)));
+                const advRecs   = allAdvRecs.filter(a => !deferredAdvIds.includes(a.id));
+                const advTotal  = advRecs.reduce((s,a)=>s+a.amount,0);
+                const base      = (full * dailyRate) + (half * dailyRate * 0.5);
+                const otPay     = ot * otRate;
+                const gross     = base + otPay + bonus + extraBonus;
+                const deductions = lates + advTotal + extraDeductions;
+                const net       = Math.max(0, gross - deductions);
+                return { full, half, absent, ot, otPay, bonus, lates, advTotal, base, gross, deductions, net, recs, advRecs, allAdvRecs, count: recs.length, extraBonus, extraDeductions };
             }
-
-            // ── Render the modal content ──
+            // ── Render the enhanced payroll modal ──
             function _renderPayrollModal(fromDate, toDate) {
-                const p = _calcPayroll(fromDate, toDate);
-                const noWork = p.full === 0 && p.half === 0 && p.bonus === 0 && p.ot === 0;
+                const deferredAdvIds    = window._payrollDeferredAdvIds    || [];
+                const extraBonus        = window._payrollExtraBonus        || 0;
+                const extraDeductions   = window._payrollExtraDeductions   || 0;
+                const p = _calcPayroll(fromDate, toDate, deferredAdvIds, extraBonus, extraDeductions);
+                const noWork = p.full===0 && p.half===0 && p.bonus===0 && p.ot===0 && p.extraBonus===0;
 
-                document.getElementById('give-salary-content').innerHTML = `
-                <div style="text-align:center;margin-bottom:14px;">
-                    <div style="font-size:1.8rem;">💰</div>
-                    <h3 style="margin:4px 0;">${employee.name}</h3>
-                    <p style="color:var(--text-secondary);font-size:0.8rem;margin:0;">${employee.position||'Staff'} · ₱${dailyRate.toLocaleString()}/day</p>
-                </div>
+                // Build attendance rows
+                const sortedRecs = [...p.recs].sort((a,b)=>a.date.localeCompare(b.date));
+                let attendHTML = sortedRecs.length === 0
+                    ? '<div style="color:var(--text-secondary);font-size:0.8rem;text-align:center;padding:8px;">No records in this period.</div>'
+                    : sortedRecs.map(r => {
+                        const sc = ({present:'#10b981',halfday:'#f59e0b',absent:'#ef4444',rest:'#6b7280'})[r.status]||'#6b7280';
+                        const lbl = r.status==='present'?'Full':r.status==='halfday'?'Half':r.status.charAt(0).toUpperCase()+r.status.slice(1);
+                        const ex  = (r.lateDeduction>0?' \u00b7 Late -\u20b1'+r.lateDeduction:'')+(r.otHours>0?' \u00b7 OT '+r.otHours+'h':'')+(r.bonus>0?' \u00b7 Bonus \u20b1'+r.bonus:'')+(r.notes?' \u00b7 '+r.notes:'');
+                        return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);">'
+                            +'<span style="font-size:0.75rem;color:var(--text-secondary);min-width:80px;">'+r.date+'</span>'
+                            +'<span style="font-size:0.72rem;font-weight:700;color:'+sc+';background:'+sc+'22;padding:2px 7px;border-radius:10px;">'+lbl+'</span>'
+                            +'<span style="font-size:0.72rem;color:var(--text-secondary);flex:1;">'+ex+'</span>'
+                            +'<button data-prl-edit-att="'+r.id+'" style="padding:2px 7px;font-size:0.65rem;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:4px;color:#818cf8;cursor:pointer;">\u270f\ufe0f</button>'
+                            +'<button data-prl-del-att="'+r.id+'" style="padding:2px 7px;font-size:0.65rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:4px;color:#ef4444;cursor:pointer;">\u{1f5d1}\ufe0f</button>'
+                            +'</div>';
+                      }).join('');
 
-                <!-- Date Range Picker -->
-                <div style="background:var(--bg-secondary);border-radius:10px;padding:12px;margin-bottom:14px;border:2px solid var(--primary);">
-                    <div style="font-size:0.75rem;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">📅 Payroll Period</div>
-                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                        <div style="flex:1;min-width:120px;">
-                            <label style="font-size:0.7rem;color:var(--text-secondary);display:block;margin-bottom:3px;">From</label>
-                            <input type="date" id="payroll-from" value="${fromDate}" min="${minDate}" max="${maxDate}"
-                                style="width:100%;padding:7px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:7px;color:var(--text-primary);font-size:0.85rem;box-sizing:border-box;"
-                                onchange="_refreshPayrollModal(${employeeId})">
-                        </div>
-                        <div style="color:var(--text-secondary);padding-top:16px;">→</div>
-                        <div style="flex:1;min-width:120px;">
-                            <label style="font-size:0.7rem;color:var(--text-secondary);display:block;margin-bottom:3px;">To</label>
-                            <input type="date" id="payroll-to" value="${toDate}" min="${minDate}" max="${maxDate}"
-                                style="width:100%;padding:7px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:7px;color:var(--text-primary);font-size:0.85rem;box-sizing:border-box;"
-                                onchange="_refreshPayrollModal(${employeeId})">
-                        </div>
-                    </div>
-                    <!-- Quick presets -->
-                    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;">
-                        <button onclick="_payrollPreset(${employeeId},'all')" style="padding:3px 9px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);border-radius:5px;color:#818cf8;cursor:pointer;font-size:0.7rem;font-weight:600;">All Unpaid</button>
-                        <button onclick="_payrollPreset(${employeeId},'week')" style="padding:3px 9px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:5px;color:#10b981;cursor:pointer;font-size:0.7rem;font-weight:600;">This Week</button>
-                        <button onclick="_payrollPreset(${employeeId},'lastweek')" style="padding:3px 9px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:5px;color:#f59e0b;cursor:pointer;font-size:0.7rem;font-weight:600;">Last Week</button>
-                        <button onclick="_payrollPreset(${employeeId},'month')" style="padding:3px 9px;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.3);border-radius:5px;color:#a78bfa;cursor:pointer;font-size:0.7rem;font-weight:600;">This Month</button>
-                    </div>
-                    <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:6px;text-align:center;">
-                        ${p.count} record(s) in selected range · ${p.full} full + ${p.half} half days
-                    </div>
-                </div>
+                // Build advance rows with checkboxes
+                let advHTML = p.allAdvRecs.length === 0
+                    ? '<div style="color:var(--text-secondary);font-size:0.8rem;padding:4px 0;">No cash advances in this period.</div>'
+                    : p.allAdvRecs.map(a => {
+                        const def = deferredAdvIds.includes(a.id);
+                        return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.05);">'
+                            +'<input type="checkbox" data-prl-adv="'+a.id+'" '+(def?'':'checked')+' style="width:15px;height:15px;cursor:pointer;accent-color:#10b981;">'
+                            +'<span style="font-size:0.78rem;flex:1;">'+(a.date||'(no date)')+' \u2014 '+(a.notes||'Cash Advance')+'</span>'
+                            +'<span style="font-size:0.82rem;font-weight:700;color:#ef4444;">-\u20b1'+(a.amount||0).toLocaleString()+'</span>'
+                            +'</div>';
+                      }).join('');
 
-                ${noWork ? `<div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:12px;text-align:center;margin-bottom:12px;color:#f59e0b;font-size:0.85rem;">⚠️ No work days found in this date range. Adjust the period above.</div>` : ''}
+                // Build manual extras
+                const extras = window._payrollExtras || [];
+                let extrasHTML = extras.length ? extras.map((e,i)=>
+                    '<div style="display:flex;align-items:center;gap:6px;padding:3px 0;">'
+                    +'<span style="font-size:0.78rem;flex:1;">'+e.label+'</span>'
+                    +'<span style="font-size:0.82rem;font-weight:700;color:'+(e.type==='bonus'?'#10b981':'#ef4444')+'">'+(e.type==='bonus'?'+':'-')+'\u20b1'+e.amount.toLocaleString()+'</span>'
+                    +'<button data-prl-del-extra="'+i+'" style="padding:1px 6px;font-size:0.65rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:4px;color:#ef4444;cursor:pointer;">\u00d7</button>'
+                    +'</div>'
+                ).join('') : '<div style="color:var(--text-secondary);font-size:0.78rem;padding:4px 0;">No manual adjustments added.</div>';
 
-                <!-- Work Summary -->
-                <div style="background:var(--bg-secondary);padding:13px;border-radius:10px;margin-bottom:12px;">
-                    <div style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">📊 Work Summary</div>
-                    <div style="display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:0.85rem;">
-                        <span>Full Days (${p.full})</span><span style="font-weight:600;">₱${(p.full*dailyRate).toLocaleString()}</span>
-                        ${p.half>0?`<span>Half Days (${p.half})</span><span style="font-weight:600;">₱${(p.half*dailyRate*0.5).toLocaleString()}</span>`:''}
-                        ${p.absent>0?`<span style="color:#ef4444;">Absences</span><span style="color:#ef4444;">${p.absent} day(s)</span>`:''}
-                        ${p.ot>0?`<span>Overtime (${p.ot} hrs)</span><span style="font-weight:600;">₱${p.otPay.toLocaleString()}</span>`:''}
-                        ${p.bonus>0?`<span>Bonus/Incentive</span><span style="font-weight:600;color:#10b981;">₱${p.bonus.toLocaleString()}</span>`:''}
-                    </div>
-                    <div style="border-top:1px solid var(--border-color);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;font-weight:700;">
-                        <span>Gross Pay</span><span>₱${p.gross.toLocaleString()}</span>
-                    </div>
-                </div>
+                document.getElementById('give-salary-content').innerHTML =
+                    '<div style="text-align:center;margin-bottom:14px;">'
+                    +'<div style="font-size:1.8rem;">\ud83d\udcb0</div>'
+                    +'<h3 style="margin:4px 0;">'+employee.name+'</h3>'
+                    +'<p style="color:var(--text-secondary);font-size:0.8rem;margin:0;">'+(employee.position||'Staff')+' \u00b7 \u20b1'+dailyRate.toLocaleString()+'/day</p>'
+                    +'</div>'
 
-                <!-- Deductions -->
-                <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.15);padding:13px;border-radius:10px;margin-bottom:12px;">
-                    <div style="font-size:0.75rem;font-weight:700;color:#ef4444;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">➖ Deductions</div>
-                    <div style="display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:0.85rem;">
-                        <span>Lates/Undertime</span><span style="color:#ef4444;">-₱${p.lates.toLocaleString()}</span>
-                        <span>Cash Advances${p.advRecs.length>1?' ('+p.advRecs.length+'×)':''}</span><span style="color:#ef4444;">-₱${p.advTotal.toLocaleString()}</span>
-                    </div>
-                    <div style="border-top:1px solid rgba(239,68,68,0.2);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;font-weight:700;color:#ef4444;">
-                        <span>Total Deductions</span><span>-₱${p.deductions.toLocaleString()}</span>
-                    </div>
-                </div>
+                    // Period
+                    +'<div style="background:var(--bg-secondary);border-radius:10px;padding:12px;margin-bottom:12px;border:2px solid var(--primary);">'
+                    +'<div style="font-size:0.75rem;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">\ud83d\udcc5 Payroll Period</div>'
+                    +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+                    +'<div style="flex:1;min-width:120px;"><label style="font-size:0.7rem;color:var(--text-secondary);display:block;margin-bottom:3px;">From</label>'
+                    +'<input type="date" id="payroll-from" value="'+fromDate+'" style="width:100%;padding:7px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:7px;color:var(--text-primary);font-size:0.85rem;box-sizing:border-box;" onchange="_refreshPayrollModal('+employeeId+')"></div>'
+                    +'<div style="color:var(--text-secondary);padding-top:16px;">\u2192</div>'
+                    +'<div style="flex:1;min-width:120px;"><label style="font-size:0.7rem;color:var(--text-secondary);display:block;margin-bottom:3px;">To</label>'
+                    +'<input type="date" id="payroll-to" value="'+toDate+'" style="width:100%;padding:7px 8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:7px;color:var(--text-primary);font-size:0.85rem;box-sizing:border-box;" onchange="_refreshPayrollModal('+employeeId+')"></div>'
+                    +'</div>'
+                    +'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;">'
+                    +'<button onclick="_payrollPreset('+employeeId+',\'all\')" style="padding:3px 9px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);border-radius:5px;color:#818cf8;cursor:pointer;font-size:0.7rem;font-weight:600;">All Unpaid</button>'
+                    +'<button onclick="_payrollPreset('+employeeId+',\'week\')" style="padding:3px 9px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:5px;color:#10b981;cursor:pointer;font-size:0.7rem;font-weight:600;">This Week</button>'
+                    +'<button onclick="_payrollPreset('+employeeId+',\'lastweek\')" style="padding:3px 9px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:5px;color:#f59e0b;cursor:pointer;font-size:0.7rem;font-weight:600;">Last Week</button>'
+                    +'<button onclick="_payrollPreset('+employeeId+',\'month\')" style="padding:3px 9px;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.3);border-radius:5px;color:#a78bfa;cursor:pointer;font-size:0.7rem;font-weight:600;">This Month</button>'
+                    +'</div>'
+                    +'<div style="font-size:0.72rem;color:var(--text-secondary);margin-top:6px;text-align:center;">'+p.count+' record(s) in selected range \u00b7 '+p.full+' full + '+p.half+' half days</div>'
+                    +'</div>'
 
-                <!-- Net Pay -->
-                <div style="background:linear-gradient(135deg,#10b981,#059669);color:white;padding:16px;border-radius:10px;margin-bottom:14px;text-align:center;">
-                    <div style="font-size:0.8rem;opacity:0.85;margin-bottom:4px;">NET PAY · ${fromDate} → ${toDate}</div>
-                    <div style="font-size:2.2rem;font-weight:800;">₱${p.net.toLocaleString()}</div>
-                </div>
+                    +(noWork?'<div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:12px;text-align:center;margin-bottom:12px;color:#f59e0b;font-size:0.85rem;">\u26a0\ufe0f No work days found in this date range.</div>':'')
 
-                <button class="btn btn-success btn-block" ${noWork?'disabled style="opacity:0.5;cursor:not-allowed;"':''} onclick="confirmGiveSalary(${employeeId}, ${p.net}, '${fromDate}', '${toDate}', ${p.full}, ${p.half}, ${p.ot}, ${p.bonus}, ${p.lates}, ${p.advTotal})">
-                    ✅ CONFIRM — Pay ₱${p.net.toLocaleString()}
-                </button>
-                <button class="btn btn-secondary btn-block" onclick="hideModal('give-salary-modal')" style="margin-top:8px;">Cancel</button>
-                `;
+                    // Attendance CRUD
+                    +'<div style="background:var(--bg-secondary);border-radius:10px;margin-bottom:12px;overflow:hidden;">'
+                    +'<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 13px;cursor:pointer;background:rgba(99,102,241,0.08);border-bottom:1px solid var(--border-color);" onclick="var b=document.getElementById(\'prl-att-body\');b.style.display=b.style.display===\'none\'?\'block\':\'none\';">'
+                    +'<span style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;">\ud83d\udcc6 Attendance Records ('+p.count+')</span>'
+                    +'<div style="display:flex;gap:6px;align-items:center;">'
+                    +'<button data-prl-add-att="'+employeeId+'" style="padding:3px 9px;font-size:0.7rem;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);border-radius:5px;color:#10b981;cursor:pointer;font-weight:600;">+ Add</button>'
+                    +'<span style="color:var(--text-secondary);">\u25be</span>'
+                    +'</div></div>'
+                    +'<div id="prl-att-body" style="padding:10px 13px;display:block;">'+attendHTML+'</div>'
+                    +'</div>'
+
+                    // Work Summary
+                    +'<div style="background:var(--bg-secondary);padding:13px;border-radius:10px;margin-bottom:12px;">'
+                    +'<div style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">\ud83d\udcca Work Summary</div>'
+                    +'<div style="display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:0.85rem;">'
+                    +'<span>Full Days ('+p.full+')</span><span style="font-weight:600;">\u20b1'+(p.full*dailyRate).toLocaleString()+'</span>'
+                    +(p.half>0?'<span>Half Days ('+p.half+')</span><span style="font-weight:600;">\u20b1'+(p.half*dailyRate*0.5).toLocaleString()+'</span>':'')
+                    +(p.absent>0?'<span style="color:#ef4444;">Absences</span><span style="color:#ef4444;">'+p.absent+' day(s)</span>':'')
+                    +(p.ot>0?'<span>Overtime ('+p.ot+' hrs)</span><span style="font-weight:600;">\u20b1'+p.otPay.toLocaleString()+'</span>':'')
+                    +(p.bonus>0?'<span>Bonus/Incentive</span><span style="font-weight:600;color:#10b981;">\u20b1'+p.bonus.toLocaleString()+'</span>':'')
+                    +(p.extraBonus>0?'<span style="color:#10b981;">Manual Additions</span><span style="font-weight:600;color:#10b981;">+\u20b1'+p.extraBonus.toLocaleString()+'</span>':'')
+                    +'</div>'
+                    +'<div style="border-top:1px solid var(--border-color);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;font-weight:700;">'
+                    +'<span>Gross Pay</span><span>\u20b1'+p.gross.toLocaleString()+'</span></div></div>'
+
+                    // Cash Advances with checkboxes
+                    +'<div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.15);padding:13px;border-radius:10px;margin-bottom:12px;">'
+                    +'<div style="font-size:0.75rem;font-weight:700;color:#ef4444;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">\u2796 Cash Advances'
+                    +'<span style="font-size:0.65rem;font-weight:400;color:var(--text-secondary);text-transform:none;letter-spacing:0;margin-left:6px;">Uncheck to defer to next payroll</span></div>'
+                    +advHTML
+                    +'<div style="border-top:1px solid rgba(239,68,68,0.2);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;font-weight:700;color:#ef4444;">'
+                    +'<span>CA Deductions</span><span>-\u20b1'+p.advTotal.toLocaleString()+'</span></div></div>'
+
+                    // Lates / Penalties
+                    +'<div style="background:rgba(239,68,68,0.04);border:1px solid rgba(239,68,68,0.1);padding:13px;border-radius:10px;margin-bottom:12px;">'
+                    +'<div style="font-size:0.75rem;font-weight:700;color:#ef4444;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">\u23f0 Lates / Penalties</div>'
+                    +'<div style="display:flex;justify-content:space-between;font-size:0.85rem;">'
+                    +'<span>Total Lates/Undertime</span><span style="color:#ef4444;font-weight:600;">-\u20b1'+p.lates.toLocaleString()+'</span></div>'
+                    +'<div style="font-size:0.7rem;color:var(--text-secondary);margin-top:4px;">Computed from attendance records above. Edit individual records to adjust.</div>'
+                    +(p.extraDeductions>0?'<div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-top:6px;"><span>Manual Deductions</span><span style="color:#ef4444;font-weight:600;">-\u20b1'+p.extraDeductions.toLocaleString()+'</span></div>':'')
+                    +'</div>'
+
+                    // Manual Adjustments
+                    +'<div style="background:var(--bg-secondary);border-radius:10px;margin-bottom:12px;overflow:hidden;">'
+                    +'<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 13px;cursor:pointer;background:rgba(16,185,129,0.08);border-bottom:1px solid var(--border-color);" onclick="var b=document.getElementById(\'prl-extras-body\');b.style.display=b.style.display===\'none\'?\'block\':\'none\';">'
+                    +'<span style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:1px;">\u2795 Manual Adjustments'+(extras.length>0?' ('+extras.length+')':'')+'</span>'
+                    +'<span style="color:var(--text-secondary);">\u25be</span></div>'
+                    +'<div id="prl-extras-body" style="padding:10px 13px;display:block;">'+extrasHTML
+                    +'<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">'
+                    +'<button data-prl-add-extra="bonus" style="padding:4px 10px;font-size:0.72rem;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);border-radius:5px;color:#10b981;cursor:pointer;font-weight:600;">+ Add Bonus/OT</button>'
+                    +'<button data-prl-add-extra="deduction" style="padding:4px 10px;font-size:0.72rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:5px;color:#ef4444;cursor:pointer;font-weight:600;">+ Add Deduction</button>'
+                    +'</div></div></div>'
+
+                    // Net Pay
+                    +'<div style="background:linear-gradient(135deg,#10b981,#059669);color:white;padding:16px;border-radius:10px;margin-bottom:14px;text-align:center;">'
+                    +'<div style="font-size:0.8rem;opacity:0.85;margin-bottom:2px;">NET PAY \u00b7 '+fromDate+' \u2192 '+toDate+'</div>'
+                    +'<div style="font-size:2.2rem;font-weight:800;">\u20b1'+p.net.toLocaleString()+'</div>'
+                    +'<div style="font-size:0.75rem;opacity:0.8;margin-top:4px;">Gross \u20b1'+p.gross.toLocaleString()+' \u2212 Deductions \u20b1'+p.deductions.toLocaleString()+'</div>'
+                    +'</div>'
+
+                    +'<button class="btn btn-success btn-block" '+(noWork?'disabled style="opacity:0.5;cursor:not-allowed;"':'')+' onclick="_confirmPayrollEnhanced('+employeeId+', \''+fromDate+'\', \''+toDate+'\')">'
+                    +'\u2705 CONFIRM \u2014 Pay \u20b1'+p.net.toLocaleString()
+                    +'</button>'
+                    +'<button class="btn btn-secondary btn-block" onclick="hideModal(\'give-salary-modal\')" style="margin-top:8px;">Cancel</button>';
+
+                // Wire up event delegation
+                const cont = document.getElementById('give-salary-content');
+                if (!cont) return;
+                cont.addEventListener('change', function _prlChange(ev) {
+                    if (ev.target.dataset.prlAdv !== undefined) {
+                        const advId = parseInt(ev.target.dataset.prlAdv);
+                        let def = window._payrollDeferredAdvIds || [];
+                        if (ev.target.checked) { def = def.filter(id=>id!==advId); }
+                        else { if (!def.includes(advId)) def.push(advId); }
+                        window._payrollDeferredAdvIds = def;
+                        const f = document.getElementById('payroll-from')?.value || fromDate;
+                        const t = document.getElementById('payroll-to')?.value   || toDate;
+                        _renderPayrollModal(f, t);
+                    }
+                });
+                cont.addEventListener('click', async function _prlClick(ev) {
+                    const t = ev.target;
+                    const f = document.getElementById('payroll-from')?.value || fromDate;
+                    const to = document.getElementById('payroll-to')?.value  || toDate;
+
+                    if (t.dataset.prlEditAtt) {
+                        const rid = parseInt(t.dataset.prlEditAtt);
+                        window._payrollReopenAfterEdit = { employeeId, fromDate: f, toDate: to };
+                        hideModal('give-salary-modal');
+                        editTimeRecord(rid);
+                    }
+                    else if (t.dataset.prlDelAtt) {
+                        const rid = parseInt(t.dataset.prlDelAtt);
+                        const rec = sortedRecs.find(r=>r.id===rid);
+                        if (!rec) return;
+                        if (!await showConfirm('Delete attendance record for '+rec.date+'?','danger','Delete Record','Yes, Delete','Cancel')) return;
+                        await dbDelete('timeRecords', rid);
+                        debouncedSync();
+                        const ix = allUnpaid.findIndex(r=>r.id===rid);
+                        if (ix!==-1) allUnpaid.splice(ix,1);
+                        window._payrollAllUnpaid = allUnpaid;
+                        loadEmployees();
+                        showToast('Attendance record deleted.','success');
+                        _renderPayrollModal(f, to);
+                    }
+                    else if (t.dataset.prlAddAtt) {
+                        window._payrollReopenAfterEdit = { employeeId, fromDate: f, toDate: to };
+                        hideModal('give-salary-modal');
+                        showTimeRecordModal(employeeId, employee.name);
+                    }
+                    else if (t.dataset.prlDelExtra !== undefined && t.dataset.prlDelExtra !== '') {
+                        const ix = parseInt(t.dataset.prlDelExtra);
+                        const ex = window._payrollExtras || [];
+                        ex.splice(ix,1);
+                        window._payrollExtras = ex;
+                        window._payrollExtraBonus = ex.filter(e=>e.type==='bonus').reduce((s,e)=>s+e.amount,0);
+                        window._payrollExtraDeductions = ex.filter(e=>e.type==='deduction').reduce((s,e)=>s+e.amount,0);
+                        _renderPayrollModal(f, to);
+                    }
+                    else if (t.dataset.prlAddExtra) {
+                        const type = t.dataset.prlAddExtra;
+                        showInputModal(type==='bonus'?'Bonus/OT label:':'Deduction label:', function(lbl) {
+                            if (!lbl||!lbl.trim()) return;
+                            showInputModal('Amount (\u20b1):', function(amtStr) {
+                                const amt = parseFloat(amtStr)||0;
+                                if (amt<=0) { showToast('\u26a0\ufe0f Enter a valid amount.','warning'); return; }
+                                const ex = window._payrollExtras||[];
+                                ex.push({ type, label: lbl.trim(), amount: amt });
+                                window._payrollExtras = ex;
+                                window._payrollExtraBonus = ex.filter(e=>e.type==='bonus').reduce((s,e)=>s+e.amount,0);
+                                window._payrollExtraDeductions = ex.filter(e=>e.type==='deduction').reduce((s,e)=>s+e.amount,0);
+                                _renderPayrollModal(document.getElementById('payroll-from')?.value||f, document.getElementById('payroll-to')?.value||to);
+                            });
+                        });
+                    }
+                });
             }
 
             // Store state for refresh callbacks
@@ -16908,6 +17047,8 @@ async function showPayrollSummary() {
             showModal('give-salary-modal');
             _renderPayrollModal(presetFrom||minDate, presetTo||maxDate);
         }
+
+        window.showGiveSalaryModal = showGiveSalaryModal;
 
         function _refreshPayrollModal(employeeId) {
             const from = document.getElementById('payroll-from')?.value || window._payrollMinDate;
@@ -17034,6 +17175,105 @@ async function showPayrollSummary() {
                 showToast('❌ Error: ' + error.message, 'error');
             }
         }
+
+        // ── Enhanced payroll confirm ── uses deferred advances + manual extras
+        async function _confirmPayrollEnhanced(employeeId, dateFrom, dateTo) {
+            const deferredAdvIds  = window._payrollDeferredAdvIds  || [];
+            const extras          = window._payrollExtras          || [];
+            const extraBonus      = extras.filter(e=>e.type==='bonus').reduce((s,e)=>s+e.amount,0);
+            const extraDeductions = extras.filter(e=>e.type==='deduction').reduce((s,e)=>s+e.amount,0);
+
+            const employee = await dbGet('employees', employeeId);
+            if (!employee) { showToast('Employee not found.','warning'); return; }
+
+            const allTimeRecords = await dbGetAll('timeRecords');
+            const allAdvances    = await dbGetAll('cashAdvances');
+            const allUnpaid      = allTimeRecords.filter(r=>r.employeeId===employeeId && !r.paid);
+            const dailyRate      = parseFloat(employee.dailyRate)||0;
+            const otRate         = parseFloat(employee.otRate)||Math.round(dailyRate/8*1.25);
+
+            const recs   = allUnpaid.filter(r=>r.date>=dateFrom && r.date<=dateTo);
+            const full   = recs.filter(r=>r.status==='present').length;
+            const half   = recs.filter(r=>r.status==='halfday').length;
+            const ot     = recs.reduce((s,r)=>s+(r.otHours||0),0);
+            const bonus  = recs.reduce((s,r)=>s+(r.bonus||0)+(r.incentive||0),0);
+            const lates  = recs.reduce((s,r)=>s+(r.lateDeduction||0),0);
+
+            const allAdvRecs = allAdvances.filter(a=>a.employeeId===employeeId && !a.deducted && (!a.date||(a.date>=dateFrom&&a.date<=dateTo)));
+            const advRecs    = allAdvRecs.filter(a=>!deferredAdvIds.includes(a.id));
+            const advTotal   = advRecs.reduce((s,a)=>s+a.amount,0);
+
+            const base   = (full*dailyRate)+(half*dailyRate*0.5);
+            const otPay  = ot*otRate;
+            const gross  = base+otPay+bonus+extraBonus;
+            const deductions = lates+advTotal+extraDeductions;
+            const netPay = Math.max(0, gross-deductions);
+
+            if (netPay<=0 && gross<=0) { showToast('\u26a0\ufe0f No payable work found in this period.','warning'); return; }
+
+            const deferredCount = deferredAdvIds.length;
+            const extrasNote = extras.length>0 ? ' | '+extras.length+' manual adjustment'+(extras.length>1?'s':'') : '';
+            const deferNote  = deferredCount>0 ? ' | '+deferredCount+' advance(s) deferred' : '';
+
+            if (!await showConfirm(
+                'Pay \u20b1'+netPay.toLocaleString()+' to '+employee.name+'?'+extrasNote+deferNote,
+                'success', '\ud83d\udcb5 Confirm Salary Payment', 'Yes, Pay'
+            )) return;
+
+            const paymentDate = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
+            const extrasBreakdown = extras.map(e=>(e.type==='bonus'?'+':'-')+'\u20b1'+e.amount+' ('+e.label+')').join(', ');
+
+            const salary = {
+                employeeId,
+                period: dateFrom+' to '+dateTo,
+                dateFrom, dateTo,
+                daysWorked: full+half, fullDays: full, halfDays: half,
+                otHours: ot, bonus: bonus+extraBonus, lates,
+                advancesDeducted: advTotal+extraDeductions,
+                netPay,
+                extras: extrasBreakdown||'',
+                deferredAdvances: deferredCount,
+                date: paymentDate,
+                createdAt: new Date().toISOString()
+            };
+
+            try {
+                showToast('\u23f3 Processing salary payment...','info');
+                await dbAdd('salaryPayments', salary);
+
+                // Mark time records as paid
+                for (const r of recs) { r.paid=true; r.paidDate=paymentDate; await dbUpdate('timeRecords',r); }
+
+                // Mark ONLY included advances as deducted (deferred ones stay open)
+                for (const adv of advRecs) { adv.deducted=true; adv.deductedDate=paymentDate; await dbUpdate('cashAdvances',adv); }
+
+                // Record as expense
+                await dbAdd('expenses', {
+                    category: 'salaries',
+                    description: 'Salary - '+employee.name+' ('+dateFrom+' to '+dateTo+')',
+                    amount: netPay,
+                    date: paymentDate,
+                    notes: full+' full + '+half+' half days, OT: '+ot+'hrs'+(extrasBreakdown?' | '+extrasBreakdown:'')+(deferNote?deferNote:''),
+                    createdAt: new Date().toISOString()
+                });
+
+                // Reset all payroll state
+                window._payrollDeferredAdvIds=[]; window._payrollExtraBonus=0;
+                window._payrollExtraDeductions=0; window._payrollExtras=[];
+
+                hideModal('give-salary-modal');
+                loadEmployees();
+                if (typeof prismAutoRefreshCurrent==='function') prismAutoRefreshCurrent();
+                debouncedSync();
+                showToast('\u2705 Salary of \u20b1'+netPay.toLocaleString()+' paid to '+employee.name+'!'+(deferredCount>0?' '+deferredCount+' advance(s) deferred to next payroll.':''),'success');
+
+            } catch (err) {
+                console.error('Payroll error:',err);
+                showToast('\u274c Error: '+err.message,'error');
+            }
+        }
+        window._confirmPayrollEnhanced = _confirmPayrollEnhanced;
+
 
         function showCashAdvanceModal(employeeId, employeeName) {
             document.getElementById('advance-employee-id').value = employeeId;
@@ -17366,8 +17606,8 @@ async function showPayrollSummary() {
             // Load existing photo
             if (employee.photo) {
                 document.getElementById('employee-photo-data').value = employee.photo;
-                document.getElementById('employee-photo-img').src = employee.photo;
-                document.getElementById('employee-photo-img').style.display = 'block';
+                document.getElementById('emp-photo-img').src = employee.photo;
+                document.getElementById('emp-photo-img').style.display = 'block';
                 document.getElementById('emp-photo-placeholder').style.display = 'none';
                 document.getElementById('emp-photo-clear').style.display = 'inline-block';
             } else {
@@ -28509,8 +28749,12 @@ async function clearAllData() {
 
             const filterYear   = (document.getElementById('wh-year')||{}).value  || '';
             const filterMonth  = (document.getElementById('wh-month')||{}).value || '';
-            const filterFrom   = (document.getElementById('wh-from')||{}).value  || '';
-            const filterTo     = (document.getElementById('wh-to')||{}).value    || '';
+            // Read dates — empty means show all; browser may auto-fill visually but
+            // we only filter when the user has actually selected a date
+            const fromEl = document.getElementById('wh-from');
+            const toEl   = document.getElementById('wh-to');
+            const filterFrom   = (fromEl && fromEl.dataset.userSet) ? (fromEl.value || '') : '';
+            const filterTo     = (toEl   && toEl.dataset.userSet)   ? (toEl.value   || '') : '';
             const filterSearch = ((document.getElementById('wh-search')||{}).value || '').toLowerCase();
 
             const [sales, customers] = await Promise.all([dbGetAll('waterSales'), dbGetAll('waterCustomers')]);
