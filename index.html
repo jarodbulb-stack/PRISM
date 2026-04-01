@@ -1811,11 +1811,17 @@
             transition: all 0.2s ease;
         }
 
-        .expense-summary-item[onclick]:hover {
+        .expense-summary-item[onclick]:hover,
+        .expense-summary-item[onclick]:focus {
             background: var(--primary);
             border-color: var(--primary);
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+            outline: none;
+        }
+        .expense-summary-item[onclick]:active {
+            transform: translateY(0px);
+            opacity: 0.85;
         }
 
         .expense-summary-item[onclick]:hover .icon,
@@ -17407,13 +17413,29 @@ async function showPayrollSummary() {
             
             try {
                 await dbAdd('cashAdvances', advance);
+
+                // ── Auto-record as Expense (cash actually left the business) ──
+                const _advEmp = await dbGet('employees', employeeId);
+                const _advEmpName = _advEmp ? (_advEmp.name || 'Staff') : 'Staff';
+                const _advExpense = {
+                    category: 'Staff Advance',
+                    description: `Cash advance — ${_advEmpName}${notes ? ' (' + notes + ')' : ''}`,
+                    amount: amount,
+                    date: date,
+                    type: 'cash_advance',
+                    employeeId: employeeId,
+                    recordedBy: currentAppUser?.username || 'unknown',
+                    createdAt: new Date().toISOString()
+                };
+                await dbAdd('expenses', _advExpense);
+                // ────────────────────────────────────────────────────────────────
+
                 hideModal('advance-modal');
                 loadEmployees();
                 viewEmployeeDetails(employeeId);
                 if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
-                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
-        debouncedSync();
-                showToast('Cash advance recorded!', 'success');
+                debouncedSync();
+                showToast('✅ Cash advance recorded + added to Expenses!', 'success');
                 if (currentAppUser && currentAppUser.role === 'cashier' && typeof loadCashierDashboard === 'function') {
                     setTimeout(loadCashierDashboard, 400);
                 }
@@ -20099,7 +20121,10 @@ async function showPayrollSummary() {
             } else if (_expenseRange === 'custom') {
                 const from = document.getElementById('exp-from')?.value;
                 const to   = document.getElementById('exp-to')?.value;
-                if (!from || !to) return null;
+                // If custom inputs are empty, default to today to avoid showing ₱0
+                const todayFallback = (new Date()).getFullYear()+'-'+String((new Date()).getMonth()+1).padStart(2,'0')+'-'+String((new Date()).getDate()).padStart(2,'0');
+                if (!from && !to) return { from: todayFallback, to: todayFallback };
+                if (!from || !to) return { from: from||todayFallback, to: to||todayFallback };
                 return { from, to };
             } else { // all
                 return { from: '2000-01-01', to: '2099-12-31' };
@@ -20558,6 +20583,8 @@ async function showPayrollSummary() {
         // Show category breakdown first, with option to add new expense
         async function showExpenseCategoryDetail(category) {
             try {
+                // Remove focus from the clicked tile so it doesn't stay highlighted
+                if (document.activeElement) document.activeElement.blur();
                 const allExp = await dbGetAll('expenses');
                 const catIcons = {
                     electric:'⚡', water:'💧', fuel:'⛽', repairs:'🔧', taxes:'📋',
@@ -27888,9 +27915,17 @@ async function clearAllData() {
 
         async function deleteCashAdvance(id) {
             if (!await showConfirm('Delete this cash advance record?','danger','🗑 Delete','Yes, Delete','Cancel')) return;
+            // Also delete the linked expense entry if it exists
+            const advance = await dbGet('cashAdvances', id);
+            if (advance) {
+                const allExpenses = await dbGetAll('expenses');
+                const linked = allExpenses.find(e => e.type === 'cash_advance' && String(e.employeeId) === String(advance.employeeId) && e.amount === advance.amount && e.date === advance.date);
+                if (linked) await dbDelete('expenses', linked.id);
+            }
             await dbDelete('cashAdvances', id);
             try { await syncToFirebase(); } catch(e) { debouncedSync(); }
             if (typeof loadEmployees === 'function') loadEmployees();
+            if(typeof prismAutoRefreshCurrent==='function') prismAutoRefreshCurrent();
             showToast('🗑 Cash advance deleted.','success');
         }
         window.deleteCashAdvance = deleteCashAdvance;
