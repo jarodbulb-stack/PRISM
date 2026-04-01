@@ -6316,7 +6316,7 @@
     </div>
     <button class="fab" id="fab-btn" onclick="toggleFabMenu()">+</button>
     <!-- Mini floating refresh button -->
-    <button id="prism-mini-refresh" title="Refresh current section" onclick="(function(){const a=document.querySelector('.section.active');if(a&&typeof prismRefreshSection==='function')prismRefreshSection(a.id);})()" style="position:fixed;bottom:90px;right:16px;width:36px;height:36px;border-radius:50%;background:rgba(99,102,241,0.85);border:none;color:#fff;font-size:1rem;cursor:pointer;z-index:9998;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.3);backdrop-filter:blur(4px);">🔄</button>
+    <button id="prism-mini-refresh" title="Pull from cloud then refresh" onclick="prismCloudRefresh()" style="position:fixed;bottom:90px;right:16px;width:36px;height:36px;border-radius:50%;background:rgba(99,102,241,0.85);border:none;color:#fff;font-size:1rem;cursor:pointer;z-index:9998;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.3);backdrop-filter:blur(4px);">🔄</button>
 
     <!-- Bottom Navigation -->
     <div class="bottom-nav">
@@ -8926,6 +8926,53 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             }
         }
         window.prismAutoRefreshCurrent = prismAutoRefreshCurrent;
+
+        // ── Cloud Refresh: pull from Firebase first, then reload current section ──
+        async function prismCloudRefresh() {
+            const btn = document.getElementById('prism-mini-refresh');
+            if (btn) { btn.textContent = '⏳'; btn.style.pointerEvents = 'none'; }
+            try {
+                // ── Wait for Firebase to be fully ready before pulling ──
+                if (!window.db || !window.auth) {
+                    showToast('⏳ Waiting for cloud connection...', 'info', 1500);
+                    let _wait = 0;
+                    while ((!window.db || !window.auth) && _wait < 30) {
+                        await new Promise(r => setTimeout(r, 300));
+                        _wait++;
+                    }
+                }
+                // Also wait for IDB to be ready
+                if (window._dbReadyPromise) await window._dbReadyPromise;
+
+                if (!window.db) {
+                    showToast('⚠️ No cloud connection — showing local data', 'warning');
+                } else {
+                    showToast('☁️ Pulling from cloud...', 'info', 1500);
+                    if (typeof pullFromFirebase === 'function') {
+                        await pullFromFirebase();
+                    } else if (typeof syncToFirebase === 'function') {
+                        await syncToFirebase();
+                    }
+                }
+                // Then refresh current section from updated IDB
+                const active = document.querySelector('.section.active');
+                if (active && typeof prismRefreshSection === 'function') {
+                    await prismRefreshSection(active.id);
+                }
+                showToast('✅ Synced from cloud!', 'success', 1500);
+            } catch(e) {
+                console.warn('[CloudRefresh]', e);
+                showToast('⚠️ Cloud sync failed — showing local data', 'warning');
+                // Fallback: refresh from local IDB anyway
+                const active = document.querySelector('.section.active');
+                if (active && typeof prismRefreshSection === 'function') {
+                    await prismRefreshSection(active.id);
+                }
+            } finally {
+                if (btn) { btn.textContent = '🔄'; btn.style.pointerEvents = ''; }
+            }
+        }
+        window.prismCloudRefresh = prismCloudRefresh;
 
         async function syncToFirebase() {
             // STARTUP FIX: Wait for IndexedDB to be ready before syncing
@@ -24036,7 +24083,11 @@ async function showPayrollSummary() {
         }
         function prismStartSessionTimeout() {
             const role = currentAppUser && currentAppUser.role;
-            const timeoutMs = role === 'cashier' ? 15 * 60 * 1000 : 60 * 60 * 1000;
+            // Owner/admin: 8 hours. Cashier: 15 min. Others: 2 hours.
+            const timeoutMs = role === 'owner'   ? 8 * 60 * 60 * 1000 :
+                              role === 'admin'   ? 8 * 60 * 60 * 1000 :
+                              role === 'cashier' ? 15 * 60 * 1000 :
+                                                   2 * 60 * 60 * 1000;
             clearInterval(_sessionTimer);
             _sessionTimer = setInterval(async () => {
                 if (Date.now() - _lastActivity > timeoutMs) {
@@ -24202,12 +24253,20 @@ async function showPayrollSummary() {
         }
         window.prismRecordError = prismRecordError;
 
-        // ── Suppress harmless SVG image load warnings ──
+        // ── Suppress harmless SVG/base64 image load warnings ──
         window.addEventListener('unhandledrejection', function(e) {
-            if (e.reason && e.reason.message && e.reason.message.includes('Unable to load image')) {
-                e.preventDefault(); // suppress the console error
+            const msg = (e.reason && (e.reason.message || e.reason.toString())) || '';
+            if (msg.includes('Unable to load image') || msg.includes('data:image/svg')) {
+                e.preventDefault();
             }
         });
+        // Also suppress via error event for img elements
+        document.addEventListener('error', function(e) {
+            if (e.target && e.target.tagName === 'IMG') {
+                const src = e.target.src || '';
+                if (src.startsWith('data:image/svg')) e.stopPropagation();
+            }
+        }, true);
         // ── LAYER 1: GLOBAL ERROR BOUNDARY ──
         // Catches unhandled JS errors and promise rejections
         (function installErrorBoundary() {
