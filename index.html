@@ -5808,8 +5808,25 @@
             <div class="card">
                 <div class="card-header">
                     <div class="card-title">💰 Financial Overview</div>
-                    <button class="btn btn-sm btn-secondary" onclick="refreshFinancialOverview()">Refresh</button>
+                    <button class="btn btn-sm btn-secondary" onclick="refreshFinancialOverview()">🔄 Refresh</button>
                 </div>
+                <!-- Date range picker -->
+                <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding:8px 0;border-bottom:1px solid var(--border-color);">
+                    <span style="font-size:0.75rem;font-weight:700;color:var(--text-secondary);">📅 Period:</span>
+                    <button onclick="finOvSetRange('month')" id="finov-btn-month" style="padding:3px 10px;border-radius:6px;border:1px solid #6366f1;background:#6366f1;color:#fff;cursor:pointer;font-size:0.75rem;font-weight:600;">This Month</button>
+                    <button onclick="finOvSetRange('lastmonth')" id="finov-btn-lastmonth" style="padding:3px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;">Last Month</button>
+                    <button onclick="finOvSetRange('3m')" id="finov-btn-3m" style="padding:3px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;">3 Months</button>
+                    <button onclick="finOvSetRange('year')" id="finov-btn-year" style="padding:3px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;">This Year</button>
+                    <button onclick="finOvSetRange('all')" id="finov-btn-all" style="padding:3px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;">All Time</button>
+                    <button onclick="finOvSetRange('custom')" id="finov-btn-custom" style="padding:3px 10px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.75rem;">✏️ Custom</button>
+                </div>
+                <div id="finov-custom-row" style="display:none;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+                    <label style="font-size:0.78rem;color:var(--text-secondary);">From:</label>
+                    <input type="date" id="finov-from" onchange="refreshFinancialOverview()" style="padding:5px 8px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;">
+                    <label style="font-size:0.78rem;color:var(--text-secondary);">To:</label>
+                    <input type="date" id="finov-to" onchange="refreshFinancialOverview()" style="padding:5px 8px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);font-size:0.78rem;">
+                </div>
+                <div id="finov-period-label" style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:10px;text-align:center;"></div>
                 <div id="financial-overview">
                     <!-- MONEY IN -->
                     <div style="background: #ecfdf5; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
@@ -8713,6 +8730,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             try {
                 const provider = new firebase.auth.GoogleAuthProvider();
                 provider.setCustomParameters({ prompt: 'select_account' });
+                await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
                 await auth.signInWithPopup(provider);
                 try { showToast('✅ Signed in with Google!', 'success'); } catch(e) {}
             } catch (error) {
@@ -8787,6 +8805,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             }
 
             try {
+                await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
                 await auth.signInWithEmailAndPassword(email, password);
                 clearLoginFields(); // Clear for security
                 hideModal('app-login-modal');
@@ -25355,21 +25374,86 @@ async function clearAllData() {
         window.initReportsPage = initReportsPage;
 
         // ── Financial Overview (Income page) ──
+        // ── Financial Overview date range state ──
+        let _finovRange = 'month';
+        function finOvSetRange(range) {
+            _finovRange = range;
+            const now = new Date();
+            const fmt = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+            const today = fmt(now);
+            const fromEl = document.getElementById('finov-from');
+            const toEl   = document.getElementById('finov-to');
+            const customRow = document.getElementById('finov-custom-row');
+            // Highlight active button
+            ['month','lastmonth','3m','year','all','custom'].forEach(r => {
+                const btn = document.getElementById('finov-btn-'+r);
+                if (btn) { btn.style.background = r===range?'#6366f1':'var(--bg-card)'; btn.style.color = r===range?'#fff':'var(--text-secondary)'; btn.style.borderColor = r===range?'#6366f1':'var(--border-color)'; }
+            });
+            if (customRow) customRow.style.display = range==='custom'?'flex':'none';
+            if (range === 'month') {
+                if (fromEl) fromEl.value = fmt(new Date(now.getFullYear(), now.getMonth(), 1));
+                if (toEl)   toEl.value   = today;
+            } else if (range === 'lastmonth') {
+                if (fromEl) fromEl.value = fmt(new Date(now.getFullYear(), now.getMonth()-1, 1));
+                if (toEl)   toEl.value   = fmt(new Date(now.getFullYear(), now.getMonth(), 0));
+            } else if (range === '3m') {
+                if (fromEl) fromEl.value = fmt(new Date(now.getFullYear(), now.getMonth()-3, now.getDate()));
+                if (toEl)   toEl.value   = today;
+            } else if (range === 'year') {
+                if (fromEl) fromEl.value = fmt(new Date(now.getFullYear(), 0, 1));
+                if (toEl)   toEl.value   = today;
+            } else if (range === 'all') {
+                if (fromEl) fromEl.value = '2000-01-01';
+                if (toEl)   toEl.value   = '2099-12-31';
+            }
+            if (range !== 'custom') refreshFinancialOverview();
+        }
+        window.finOvSetRange = finOvSetRange;
+
         async function refreshFinancialOverview() {
             try {
+                // ── Get date range from picker ──
+                const now = new Date();
+                const fmt = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+                const fromEl = document.getElementById('finov-from');
+                const toEl   = document.getElementById('finov-to');
+                // Default to this month if not yet initialized
+                if (!fromEl || !fromEl.value) {
+                    if (fromEl) fromEl.value = fmt(new Date(now.getFullYear(), now.getMonth(), 1));
+                    if (toEl)   toEl.value   = fmt(now);
+                }
+                const fromStr = (fromEl && fromEl.value) || fmt(new Date(now.getFullYear(), now.getMonth(), 1));
+                const toStr   = (toEl   && toEl.value)   || fmt(now);
+                const inRange = item => {
+                    const d = (item.date||'').substring(0,10);
+                    return d >= fromStr && d <= toStr;
+                };
+                // Update period label
+                const labelEl = document.getElementById('finov-period-label');
+                if (labelEl) {
+                    const fromD = new Date(fromStr+'T00:00:00');
+                    const toD   = new Date(toStr+'T00:00:00');
+                    const diffD = Math.round((toD-fromD)/86400000)+1;
+                    labelEl.textContent = fromStr === toStr
+                        ? '📅 ' + fromD.toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})
+                        : '📅 ' + fromD.toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})
+                            + ' — ' + toD.toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})
+                            + ' (' + diffD + ' day' + (diffD===1?'':'s') + ')';
+                }
+
                 const [payments, creditPayments, credits, expenses, additionalIncome, waterSales] = await Promise.all([
                     dbGetAll('payments'), dbGetAll('creditPayments'), dbGetAll('credits'),
                     dbGetAll('expenses'), dbGetAll('additionalIncome'), dbGetAll('waterSales')
                 ]);
                 const waterStoreSalesAll = await dbGetAll('waterStoreSales').catch(()=>[]);
 
-                const rentCollected  = payments.filter(p=>!p.voided).reduce((s,p)=>s+(p.amount||0),0);
-                const creditRepaid   = creditPayments.filter(p=>!p.voided).reduce((s,p)=>s+(p.amount||0),0);
-                const waterStation   = waterSales.filter(s=>!s.voided).reduce((s,x)=>s+(x.amountPaid||0),0);
-                const waterStore     = waterStoreSalesAll.filter(s=>!s.voided).reduce((s,x)=>s+(x.total||0),0);
-                const otherInc       = additionalIncome.filter(i=>!i.storeRef).reduce((s,i)=>s+(i.amount||0),0);
+                const rentCollected  = payments.filter(p=>!p.voided&&inRange(p)).reduce((s,p)=>s+(p.amount||0),0);
+                const creditRepaid   = creditPayments.filter(p=>!p.voided&&inRange(p)).reduce((s,p)=>s+(p.amount||0),0);
+                const waterStation   = waterSales.filter(s=>!s.voided&&inRange(s)).reduce((s,x)=>s+(x.amountPaid||0),0);
+                const waterStore     = waterStoreSalesAll.filter(s=>!s.voided&&inRange(s)).reduce((s,x)=>s+(x.total||0),0);
+                const otherInc       = additionalIncome.filter(i=>!i.storeRef&&inRange(i)).reduce((s,i)=>s+(i.amount||0),0);
                 const totalIncome    = Math.round((rentCollected+creditRepaid+waterStation+waterStore+otherInc)*100)/100;
-                const totalExpenses  = expenses.reduce((s,e)=>s+(e.amount||0),0);
+                const totalExpenses  = expenses.filter(e=>inRange(e)).reduce((s,e)=>s+(e.amount||0),0);
                 const netIncome      = Math.round((totalIncome-totalExpenses)*100)/100;
 
                 const totalLent      = credits.reduce((s,c)=>s+(c.principal||0),0);
@@ -25390,7 +25474,7 @@ async function clearAllData() {
                 safeSet('stat-total-repaid',   '₱'+totalRepaid.toLocaleString());
 
                 // ── Government contributions breakdown ──
-                const catSum = (cat) => expenses.filter(e=>e.category===cat).reduce((s,e)=>s+(e.amount||0),0);
+                const catSum = (cat) => expenses.filter(e=>e.category===cat&&inRange(e)).reduce((s,e)=>s+(e.amount||0),0);
                 const sss         = catSum('sss');
                 const philhealth  = catSum('philhealth');
                 const pagibig     = catSum('pagibig');
