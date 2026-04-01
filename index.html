@@ -17937,7 +17937,7 @@ async function showPayrollSummary() {
                 ...creditPayments.filter(p=>p.date===today).map(p=>({type:'💳 Credit',name:p.debtorName||'Debtor',amount:p.amount||0,in:true,time:p.createdAt||p.date})),
                 ...waterSales.filter(s=>s.date===today&&!s.voided).map(s=>({type:'💧 Water',name:s.customerName||'Customer',amount:s.amountPaid||0,in:true,time:s.createdAt||s.date})),
                 ...expenses.filter(e=>e.date===today).map(e=>({type:'💸 Expense',name:e.category||'Expense',amount:e.amount||0,in:false,time:e.createdAt||e.date})),
-                ...additionalIncome.filter(i=>i.date===today).map(i=>({type:'💰 Income',name:i.source||'Other',amount:i.amount||0,in:true,time:i.createdAt||i.date})),
+                ...additionalIncome.filter(i=>i.date===today&&!i.storeRef).map(i=>({type:'💰 Income',name:i.source||'Other',amount:i.amount||0,in:true,time:i.createdAt||i.date})),
             ];
             const totalIn = txns.filter(t=>t.in).reduce((s,t)=>s+t.amount,0);
             const totalOut = txns.filter(t=>!t.in).reduce((s,t)=>s+t.amount,0);
@@ -25133,9 +25133,12 @@ async function clearAllData() {
             const toDate   = new Date((toEl.value   || (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date())) + 'T23:59:59');
             if (fromDate > toDate) { showToast('⚠️ "From" date must be before "To" date.','warning'); return; }
 
-            const diffDays = Math.round((toDate - fromDate) / 86400000) + 1;
+            // Count distinct calendar days in range (not hours)
+            const fromDay = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate());
+            const toDay   = new Date(toDate.getFullYear(),   toDate.getMonth(),   toDate.getDate());
+            const diffDays = Math.round((toDay - fromDay) / 86400000) + 1;
             const fmt = d => d.toLocaleDateString('en-PH', {month:'short',day:'numeric',year:'numeric'});
-            const rangeLabel = fmt(fromDate) + ' — ' + fmt(toDate) + ' (' + diffDays + ' days)';
+            const rangeLabel = fmt(fromDate) + ' — ' + fmt(toDate) + ' (' + diffDays + ' day' + (diffDays===1?'':'s') + ')';
             const rlEl = document.getElementById('report-range-label');
             if (rlEl) rlEl.textContent = rangeLabel;
 
@@ -29423,12 +29426,14 @@ async function clearAllData() {
                     dbGetAll('payments'), dbGetAll('creditPayments'), dbGetAll('waterSales'),
                     dbGetAll('expenses'), dbGetAll('additionalIncome')
                 ]);
+                const storeSalesToday = await dbGetAll('waterStoreSales').catch(()=>[]);
                 const txns = [
                     ...payments.filter(p=>p.date===today&&!p.voided).map(p=>({type:'🏠 Rent', name:p.tenantName||'Tenant', amount:p.amount||0, in:true, method:p.paymentMethod||'cash', id:p.id, src:'rent', navId:p.tenantId})),
                     ...creditPayments.filter(p=>p.date===today&&!p.voided).map(p=>({type:'💳 Credit', name:p.debtorName||'Debtor', amount:p.amount||0, in:true, method:p.paymentMethod||'cash', id:p.id, src:'credit', navId:p.creditId})),
                     ...waterSales.filter(s=>s.date===today&&!s.voided).map(s=>({type:'💧 Water', name:s.customerName||'Customer', amount:s.amountPaid||0, in:true, gallons:s.gallons, id:s.id, src:'water', navId:s.customerId})),
+                    ...storeSalesToday.filter(s=>s.date===today&&!s.voided).map(s=>({type:'🛒 Store', name:s.itemName||s.customerName||'Walk-in', amount:s.total||0, in:true, id:s.id, src:'store'})),
                     ...expenses.filter(e=>e.date===today).map(e=>({type:'💸 Expense', name:e.category||'Expense', amount:e.amount||0, in:false, id:e.id, src:'expense', desc:e.description||''})),
-                    ...income.filter(i=>i.date===today).map(i=>({type:'💰 Income', name:i.source||'Other', amount:i.amount||0, in:true, id:i.id, src:'income'})),
+                    ...income.filter(i=>i.date===today&&!i.storeRef).map(i=>({type:'💰 Income', name:i.source||'Other', amount:i.amount||0, in:true, id:i.id, src:'income'})),
                 ].sort((a,b) => (b.createdAt||'') > (a.createdAt||'') ? 1 : -1);
 
                 if (txns.length === 0) {
