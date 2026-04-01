@@ -8932,38 +8932,42 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             const btn = document.getElementById('prism-mini-refresh');
             if (btn) { btn.textContent = '⏳'; btn.style.pointerEvents = 'none'; }
             try {
-                // ── Wait for Firebase to be fully ready before pulling ──
-                if (!window.db || !window.auth) {
-                    showToast('⏳ Waiting for cloud connection...', 'info', 1500);
-                    let _wait = 0;
-                    while ((!window.db || !window.auth) && _wait < 30) {
-                        await new Promise(r => setTimeout(r, 300));
-                        _wait++;
-                    }
-                }
-                // Also wait for IDB to be ready
+                // ── Step 1: Wait for IDB to be ready ──
                 if (window._dbReadyPromise) await window._dbReadyPromise;
 
-                if (!window.db) {
-                    showToast('⚠️ No cloud connection — showing local data', 'warning');
-                } else {
-                    showToast('☁️ Pulling from cloud...', 'info', 1500);
-                    if (typeof pullFromFirebase === 'function') {
-                        await pullFromFirebase();
-                    } else if (typeof syncToFirebase === 'function') {
-                        await syncToFirebase();
+                // ── Step 2: Wait for Firebase to fully initialize (up to 9s) ──
+                if (!window.db || !window.auth || !window.auth.currentUser) {
+                    showToast('⏳ Connecting to cloud...', 'info', 1500);
+                    let _wait = 0;
+                    while (_wait < 30) {
+                        await new Promise(r => setTimeout(r, 300));
+                        _wait++;
+                        if (window.db && window.auth && window.auth.currentUser) break;
                     }
                 }
-                // Then refresh current section from updated IDB
+
+                // ── Step 3: Pull from Firebase using the correct function ──
+                if (!window.db || !window.auth || !window.auth.currentUser) {
+                    showToast('⚠️ No cloud connection — showing local data', 'warning');
+                } else {
+                    showToast('☁️ Pulling latest data from cloud...', 'info', 2000);
+                    // syncFromFirebase is the real pull-from-cloud function
+                    if (typeof syncFromFirebase === 'function') {
+                        await syncFromFirebase();
+                    } else if (typeof pullFromCloud === 'function') {
+                        await pullFromCloud();
+                    }
+                }
+
+                // ── Step 4: Reload current section from updated IDB ──
                 const active = document.querySelector('.section.active');
                 if (active && typeof prismRefreshSection === 'function') {
                     await prismRefreshSection(active.id);
                 }
-                showToast('✅ Synced from cloud!', 'success', 1500);
+                showToast('✅ Cloud sync complete!', 'success', 2000);
             } catch(e) {
                 console.warn('[CloudRefresh]', e);
                 showToast('⚠️ Cloud sync failed — showing local data', 'warning');
-                // Fallback: refresh from local IDB anyway
                 const active = document.querySelector('.section.active');
                 if (active && typeof prismRefreshSection === 'function') {
                     await prismRefreshSection(active.id);
