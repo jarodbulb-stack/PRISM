@@ -13626,190 +13626,475 @@ async function recordTenantPayment(tenantId) {
         // QUICK SELL MODAL — custom item only, no preloaded list
         // context: 'payment' (floating + water) | 'income' (income page)
         // ═══════════════════════════════════════════════════════
+        // ═══════════════════════════════════════════════════════════
+        // UNIFIED CART SELL MODAL (Income page + anywhere)
+        // Handles: Store items, Custom items, Water
+        // ═══════════════════════════════════════════════════════════
+        window._qsCart = [];   // unified cart
+
+        function qsCartRender() {
+            const cart = window._qsCart || [];
+            const listEl  = document.getElementById('qs-cart-list');
+            const totalEl = document.getElementById('qs-cart-total');
+            const emptyEl = document.getElementById('qs-cart-empty');
+            const recBtn  = document.getElementById('qs-record-btn');
+            if (!listEl) return;
+
+            if (cart.length === 0) {
+                if (listEl)  listEl.innerHTML = '';
+                if (emptyEl) emptyEl.style.display = 'block';
+                if (totalEl) totalEl.style.display = 'none';
+                if (recBtn)  { recBtn.disabled = true; recBtn.style.opacity = '0.5'; }
+                return;
+            }
+            if (emptyEl) emptyEl.style.display = 'none';
+            if (totalEl) totalEl.style.display = 'flex';
+            if (recBtn)  { recBtn.disabled = false; recBtn.style.opacity = '1'; }
+
+            const grandTotal = cart.reduce((s,i) => s + i.subtotal, 0);
+            listEl.innerHTML = cart.map((item, idx) => {
+                const color  = item.type === 'water' ? '#22d3ee' : '#a78bfa';
+                const border = item.type === 'water' ? '#06b6d4' : '#a78bfa';
+                return `<div style="display:flex;justify-content:space-between;align-items:center;
+                            padding:8px 10px;border-radius:8px;margin-bottom:5px;
+                            background:rgba(15,23,42,0.6);border-left:3px solid ${border};">
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-weight:600;font-size:0.85rem;color:#f1f5f9;">${item.label}</div>
+                        ${item.note ? `<div style="font-size:0.7rem;color:#64748b;">${item.note}</div>` : ''}
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                        <span style="font-weight:800;color:${color};">₱${item.subtotal.toLocaleString()}</span>
+                        <button onclick="qsCartRemove(${idx})" style="padding:2px 7px;background:rgba(239,68,68,0.1);
+                            border:1px solid rgba(239,68,68,0.3);color:#ef4444;border-radius:5px;cursor:pointer;font-size:0.72rem;">✕</button>
+                    </div>
+                </div>`;
+            }).join('');
+
+            if (totalEl) totalEl.querySelector('#qs-grand-total').textContent = '₱' + grandTotal.toLocaleString();
+        }
+        window.qsCartRender = qsCartRender;
+
+        function qsCartRemove(idx) {
+            (window._qsCart || []).splice(idx, 1);
+            qsCartRender();
+        }
+        window.qsCartRemove = qsCartRemove;
+
+        function qsCalcTotal() {
+            const qty   = parseFloat(document.getElementById('qs-qty')?.value)   || 0;
+            const price = parseFloat(document.getElementById('qs-price')?.value) || 0;
+            const el = document.getElementById('qs-item-subtotal');
+            if (el) el.textContent = '₱' + (qty * price).toLocaleString();
+        }
+        window.qsCalcTotal = qsCalcTotal;
+
+        function qsWaterCalcTotal() {
+            const bigQty   = parseFloat(document.getElementById('qs-w-big-qty')?.value)   || 0;
+            const smallQty = parseFloat(document.getElementById('qs-w-small-qty')?.value) || 0;
+            const bigPrice   = window._qsWaterBigPrice   || 25;
+            const smallPrice = window._qsWaterSmallPrice || 5;
+            const el = document.getElementById('qs-water-subtotal');
+            if (el) el.textContent = '₱' + ((bigQty * bigPrice) + (smallQty * smallPrice)).toLocaleString();
+        }
+        window.qsWaterCalcTotal = qsWaterCalcTotal;
+
+        function qsWaterSetBigPrice(p) {
+            window._qsWaterBigPrice = p;
+            document.querySelectorAll('.qs-w-big-btn').forEach(b => {
+                const active = b.dataset.price == p;
+                b.style.background  = active ? '#3b82f6' : 'transparent';
+                b.style.color       = active ? '#fff'    : '#94a3b8';
+                b.style.borderColor = active ? '#3b82f6' : '#334155';
+            });
+            qsWaterCalcTotal();
+        }
+        window.qsWaterSetBigPrice = qsWaterSetBigPrice;
+
+        function qsWaterSetSmallPrice(p, label) {
+            window._qsWaterSmallPrice = p;
+            window._qsWaterSmallLabel = label;
+            document.querySelectorAll('.qs-w-sm-btn').forEach(b => {
+                const active = b.dataset.price == p;
+                b.style.background  = active ? '#6366f1' : 'transparent';
+                b.style.color       = active ? '#fff'    : '#94a3b8';
+                b.style.borderColor = active ? '#6366f1' : '#334155';
+            });
+            qsWaterCalcTotal();
+        }
+        window.qsWaterSetSmallPrice = qsWaterSetSmallPrice;
+
+        function qsAddStoreItem() {
+            const sel   = document.getElementById('qs-store-sel');
+            const qty   = parseFloat(document.getElementById('qs-qty')?.value)   || 0;
+            const price = parseFloat(document.getElementById('qs-price')?.value) || 0;
+            const icon  = (document.getElementById('qs-icon')?.value?.trim())    || '🛒';
+            const name  = (document.getElementById('qs-name')?.value?.trim())    || '';
+
+            // Determine item name and icon from dropdown or custom
+            let itemName = name, itemIcon = icon, productId = null;
+            if (sel && sel.value && sel.value !== 'custom') {
+                const opt = sel.options[sel.selectedIndex];
+                itemName  = opt.dataset.name  || opt.text.split(' — ')[0];
+                itemIcon  = opt.dataset.icon  || '🛒';
+                productId = sel.value;
+                if (!document.getElementById('qs-price').value) {
+                    document.getElementById('qs-price').value = opt.dataset.price || 0;
+                    return qsAddStoreItem(); // retry with price
+                }
+            }
+
+            if (!itemName) { showToast('⚠️ Enter item name or select from list.', 'warning'); return; }
+            if (qty <= 0)  { showToast('⚠️ Qty must be > 0.', 'warning'); return; }
+            if (price <= 0){ showToast('⚠️ Price must be > 0.', 'warning'); return; }
+
+            const subtotal = qty * price;
+            window._qsCart = window._qsCart || [];
+            window._qsCart.push({
+                type: 'store', productId, itemName, itemIcon, qty, price, subtotal,
+                label: `${itemIcon} ${itemName} × ${qty} @₱${price}`
+            });
+            qsCartRender();
+            // Reset item inputs
+            if (sel) sel.value = '';
+            document.getElementById('qs-icon').value  = '🛒';
+            document.getElementById('qs-name').value  = '';
+            document.getElementById('qs-qty').value   = '1';
+            document.getElementById('qs-price').value = '';
+            qsCalcTotal();
+            showToast('🛒 Added!', 'success', 800);
+        }
+        window.qsAddStoreItem = qsAddStoreItem;
+
+        function qsAddWaterItem() {
+            const bigQty   = parseFloat(document.getElementById('qs-w-big-qty')?.value)   || 0;
+            const smallQty = parseFloat(document.getElementById('qs-w-small-qty')?.value) || 0;
+            if (bigQty <= 0 && smallQty <= 0) { showToast('⚠️ Add at least 1 bottle.', 'warning'); return; }
+            const bigPrice   = window._qsWaterBigPrice   || 25;
+            const smallPrice = window._qsWaterSmallPrice || 5;
+            const smallLabel = window._qsWaterSmallLabel || 'Small';
+            window._qsCart = window._qsCart || [];
+            if (bigQty > 0) {
+                // Remove existing big water entry first
+                window._qsCart = window._qsCart.filter(i => !(i.type==='water' && i.waterType==='big'));
+                window._qsCart.push({
+                    type:'water', waterType:'big', qty:bigQty, price:bigPrice,
+                    subtotal:bigQty*bigPrice,
+                    label:`💧 ${bigQty} × Big (18L) @₱${bigPrice}`
+                });
+            }
+            if (smallQty > 0) {
+                window._qsCart = window._qsCart.filter(i => !(i.type==='water' && i.waterType==='small'));
+                window._qsCart.push({
+                    type:'water', waterType:'small', qty:smallQty, price:smallPrice,
+                    subtotal:smallQty*smallPrice,
+                    label:`💧 ${smallQty} × ${smallLabel} @₱${smallPrice}`
+                });
+            }
+            qsCartRender();
+            document.getElementById('qs-w-big-qty').value   = '0';
+            document.getElementById('qs-w-small-qty').value = '0';
+            qsWaterCalcTotal();
+            showToast('💧 Water added!', 'success', 800);
+        }
+        window.qsAddWaterItem = qsAddWaterItem;
+
+        function qsStoreSelChange() {
+            const sel = document.getElementById('qs-store-sel');
+            const customRow = document.getElementById('qs-custom-row');
+            if (!sel) return;
+            if (sel.value === 'custom' || !sel.value) {
+                if (customRow) customRow.style.display = 'flex';
+                if (!sel.value) document.getElementById('qs-price').value = '';
+            } else {
+                if (customRow) customRow.style.display = 'none';
+                const opt = sel.options[sel.selectedIndex];
+                document.getElementById('qs-icon').value  = opt.dataset.icon  || '🛒';
+                document.getElementById('qs-name').value  = opt.dataset.name  || '';
+                document.getElementById('qs-price').value = opt.dataset.price || '';
+                qsCalcTotal();
+            }
+        }
+        window.qsStoreSelChange = qsStoreSelChange;
+
+        function qsToggleSection(section) {
+            ['store','water'].forEach(s => {
+                const p = document.getElementById('qs-'+s+'-panel');
+                const c = document.getElementById('qs-'+s+'-chev');
+                const b = document.getElementById('qs-'+s+'-tab');
+                if (s === section) {
+                    if (p) p.style.display = p.style.display==='none' ? 'block' : 'none';
+                    if (c) c.textContent = p && p.style.display!=='none' ? '▲' : '▶';
+                }
+            });
+        }
+        window.qsToggleSection = qsToggleSection;
+
         async function showQuickSellModal(context) {
             context = context || 'income';
             const existing = document.getElementById('quick-sell-modal');
             if (existing) existing.remove();
+            window._qsCart = [];
+            window._qsWaterBigPrice   = 25;
+            window._qsWaterSmallPrice = 5;
+            window._qsWaterSmallLabel = 'Small(500cc)';
 
             const customers = await dbGetAll('waterCustomers').catch(()=>[]);
-            const custOpts  = '<option value="">Walk-in / No customer</option>'
-                + customers.map(c => '<option value="' + c.id + '">' + c.name + '</option>').join('');
+            const products  = await getStoreProducts().catch(()=>[]);
+
+            const custOpts = '<option value="">Walk-in / No customer</option>'
+                + customers.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+            const prodOpts = '<option value="">— Select from inventory —</option>'
+                + products.map(p => `<option value="${p.id}" data-price="${p.price}" data-icon="${p.icon||'🛒'}" data-name="${p.name}">${p.icon||'🛒'} ${p.name} — ₱${p.price}</option>`).join('')
+                + '<option value="custom">✏️ Custom / New Item</option>';
+
+            const today = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
 
             const modal = document.createElement('div');
             modal.id = 'quick-sell-modal';
-            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
+            modal.onclick = e => { if (e.target === modal) modal.remove(); };
+
+            const inp = 'width:100%;padding:9px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:0.88rem;box-sizing:border-box;';
 
             modal.innerHTML = `
-                <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;width:100%;max-width:400px;max-height:92vh;overflow-y:auto;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                        <h3 style="margin:0;color:#f1f5f9;font-size:1rem;">🛒 Sell Item</h3>
-                        <button onclick="document.getElementById('quick-sell-modal').remove()"
-                            style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.2rem;line-height:1;">✕</button>
-                    </div>
+                <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;width:100%;max-width:420px;max-height:92vh;overflow-y:auto;">
 
-                    <!-- Icon + Name -->
-                    <div style="display:flex;gap:8px;margin-bottom:10px;">
+                    <!-- Header -->
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #334155;">
                         <div>
-                            <label style="font-size:0.75rem;color:#94a3b8;display:block;margin-bottom:3px;">Icon</label>
-                            <input type="text" id="qs-icon" value="🛒" maxlength="4"
-                                style="width:52px;padding:9px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:1.2rem;text-align:center;">
+                            <h3 style="margin:0;color:#f1f5f9;font-size:1rem;">🛒 Sell Anything</h3>
+                            <div style="font-size:0.7rem;color:#64748b;margin-top:2px;">Add items to cart, then record all at once</div>
                         </div>
-                        <div style="flex:1;">
-                            <label style="font-size:0.75rem;color:#94a3b8;display:block;margin-bottom:3px;">Item Name *</label>
-                            <input type="text" id="qs-name" placeholder="e.g. Umbrella seal, bottle, sticker..."
-                                style="width:100%;padding:9px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:0.88rem;box-sizing:border-box;">
+                        <button onclick="document.getElementById('quick-sell-modal').remove()"
+                            style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.3rem;">✕</button>
+                    </div>
+
+                    <!-- ── SECTION 1: Store Items ── -->
+                    <div style="border:1px solid rgba(167,139,250,0.25);border-radius:10px;margin-bottom:10px;overflow:hidden;">
+                        <button onclick="qsToggleSection('store')" id="qs-store-tab"
+                            style="width:100%;padding:9px 14px;background:rgba(167,139,250,0.08);border:none;color:#a78bfa;font-weight:700;font-size:0.82rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">
+                            <span>🛒 Store / Custom Items</span><span id="qs-store-chev">▲</span>
+                        </button>
+                        <div id="qs-store-panel" style="padding:12px;">
+                            <!-- Inventory dropdown -->
+                            <div style="margin-bottom:8px;">
+                                <label style="font-size:0.75rem;color:#94a3b8;display:block;margin-bottom:3px;">Select from Inventory</label>
+                                <select id="qs-store-sel" onchange="qsStoreSelChange()" style="${inp}">
+                                    ${prodOpts}
+                                </select>
+                            </div>
+                            <!-- Custom item row -->
+                            <div id="qs-custom-row" style="display:flex;gap:6px;margin-bottom:8px;">
+                                <input type="text" id="qs-icon" value="🛒" maxlength="4"
+                                    style="width:46px;padding:9px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:1.2rem;text-align:center;">
+                                <input type="text" id="qs-name" placeholder="Item name..."
+                                    style="flex:1;padding:9px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:0.88rem;box-sizing:border-box;">
+                            </div>
+                            <!-- Qty + Price -->
+                            <div style="display:flex;gap:6px;margin-bottom:8px;">
+                                <div style="flex:1;">
+                                    <label style="font-size:0.72rem;color:#94a3b8;display:block;margin-bottom:3px;">Qty</label>
+                                    <input type="number" id="qs-qty" value="1" min="1" oninput="qsCalcTotal()"
+                                        style="${inp}font-size:1rem;">
+                                </div>
+                                <div style="flex:1;">
+                                    <label style="font-size:0.72rem;color:#94a3b8;display:block;margin-bottom:3px;">Unit Price (₱)</label>
+                                    <input type="number" id="qs-price" min="0" placeholder="0" oninput="qsCalcTotal()"
+                                        style="${inp}border-color:#4f46e5;color:#a78bfa;font-weight:700;font-size:1rem;">
+                                </div>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                                <span style="font-size:0.78rem;color:#94a3b8;">Subtotal: <strong id="qs-item-subtotal" style="color:#a78bfa;">₱0</strong></span>
+                                <button onclick="qsAddStoreItem()"
+                                    style="padding:7px 16px;background:#a78bfa;border:none;border-radius:8px;color:white;font-weight:700;font-size:0.82rem;cursor:pointer;">+ Add to Cart</button>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Qty + Price -->
-                    <div style="display:flex;gap:8px;margin-bottom:10px;">
-                        <div style="flex:1;">
-                            <label style="font-size:0.75rem;color:#94a3b8;display:block;margin-bottom:3px;">Qty *</label>
-                            <input type="number" id="qs-qty" value="1" min="1" oninput="qsCalcTotal()"
-                                style="width:100%;padding:9px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:1rem;box-sizing:border-box;">
+                    <!-- ── SECTION 2: Water ── -->
+                    <div style="border:1px solid rgba(6,182,212,0.25);border-radius:10px;margin-bottom:10px;overflow:hidden;">
+                        <button onclick="qsToggleSection('water')" id="qs-water-tab"
+                            style="width:100%;padding:9px 14px;background:rgba(6,182,212,0.08);border:none;color:#22d3ee;font-weight:700;font-size:0.82rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">
+                            <span>💧 Water</span><span id="qs-water-chev">▶</span>
+                        </button>
+                        <div id="qs-water-panel" style="display:none;padding:12px;">
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+                                <!-- Big -->
+                                <div style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.2);border-radius:8px;padding:8px;">
+                                    <div style="font-size:0.72rem;font-weight:700;color:#60a5fa;margin-bottom:5px;">🔵 Big (18L)</div>
+                                    <div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:5px;">
+                                        <button class="qs-w-big-btn" data-price="20" onclick="qsWaterSetBigPrice(20)"
+                                            style="padding:3px 7px;border-radius:5px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-size:0.7rem;">₱20</button>
+                                        <button class="qs-w-big-btn" data-price="25" onclick="qsWaterSetBigPrice(25)"
+                                            style="padding:3px 7px;border-radius:5px;border:1px solid #3b82f6;background:#3b82f6;color:#fff;cursor:pointer;font-size:0.7rem;">₱25</button>
+                                        <button class="qs-w-big-btn" data-price="30" onclick="qsWaterSetBigPrice(30)"
+                                            style="padding:3px 7px;border-radius:5px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-size:0.7rem;">₱30</button>
+                                        <button class="qs-w-big-btn" data-price="35" onclick="qsWaterSetBigPrice(35)"
+                                            style="padding:3px 7px;border-radius:5px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-size:0.7rem;">₱35</button>
+                                    </div>
+                                    <input type="number" id="qs-w-big-qty" value="0" min="0" oninput="qsWaterCalcTotal()"
+                                        style="width:100%;padding:6px;background:#0f172a;border:1px solid #334155;border-radius:6px;color:#f1f5f9;text-align:center;font-size:0.9rem;box-sizing:border-box;">
+                                </div>
+                                <!-- Small -->
+                                <div style="background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.2);border-radius:8px;padding:8px;">
+                                    <div style="font-size:0.72rem;font-weight:700;color:#818cf8;margin-bottom:5px;">🫙 Small</div>
+                                    <div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:5px;">
+                                        <button class="qs-w-sm-btn" data-price="5" onclick="qsWaterSetSmallPrice(5,'Small(500cc)')"
+                                            style="padding:3px 6px;border-radius:5px;border:1px solid #6366f1;background:#6366f1;color:#fff;cursor:pointer;font-size:0.68rem;">₱5</button>
+                                        <button class="qs-w-sm-btn" data-price="15" onclick="qsWaterSetSmallPrice(15,'Med(4-10L)')"
+                                            style="padding:3px 6px;border-radius:5px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-size:0.68rem;">₱15</button>
+                                        <button class="qs-w-sm-btn" data-price="20" onclick="qsWaterSetSmallPrice(20,'Lg(15L)')"
+                                            style="padding:3px 6px;border-radius:5px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-size:0.68rem;">₱20</button>
+                                    </div>
+                                    <input type="number" id="qs-w-small-qty" value="0" min="0" oninput="qsWaterCalcTotal()"
+                                        style="width:100%;padding:6px;background:#0f172a;border:1px solid #334155;border-radius:6px;color:#f1f5f9;text-align:center;font-size:0.9rem;box-sizing:border-box;">
+                                </div>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <span style="font-size:0.78rem;color:#94a3b8;">Subtotal: <strong id="qs-water-subtotal" style="color:#22d3ee;">₱0</strong></span>
+                                <button onclick="qsAddWaterItem()"
+                                    style="padding:7px 16px;background:#06b6d4;border:none;border-radius:8px;color:white;font-weight:700;font-size:0.82rem;cursor:pointer;">+ Add to Cart</button>
+                            </div>
                         </div>
-                        <div style="flex:1;">
-                            <label style="font-size:0.75rem;color:#94a3b8;display:block;margin-bottom:3px;">Unit Price (₱) *</label>
-                            <input type="number" id="qs-price" min="0" placeholder="0" oninput="qsCalcTotal()"
-                                style="width:100%;padding:9px;background:#0f172a;border:1px solid #4f46e5;border-radius:8px;color:#a78bfa;font-weight:700;font-size:1rem;box-sizing:border-box;">
+                    </div>
+
+                    <!-- ── CART ── -->
+                    <div style="background:rgba(15,23,42,0.5);border:1px solid #334155;border-radius:10px;padding:10px;margin-bottom:10px;min-height:50px;">
+                        <div style="font-size:0.72rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">🧾 Cart</div>
+                        <div id="qs-cart-empty" style="text-align:center;color:#475569;font-size:0.8rem;padding:8px;">Add items above ↑</div>
+                        <div id="qs-cart-list"></div>
+                        <div id="qs-cart-total" style="display:none;justify-content:space-between;align-items:center;border-top:1px solid #334155;padding-top:8px;margin-top:4px;">
+                            <span style="font-weight:700;color:#f1f5f9;">Grand Total:</span>
+                            <span id="qs-grand-total" style="font-weight:900;color:#10b981;font-size:1.1rem;">₱0</span>
                         </div>
                     </div>
 
-                    <!-- Total -->
-                    <div style="background:#0f172a;border-radius:8px;padding:9px 12px;margin-bottom:12px;display:flex;justify-content:space-between;">
-                        <span style="font-size:0.82rem;color:#94a3b8;">Total:</span>
-                        <span id="qs-total-display" style="font-weight:800;color:#a78bfa;font-size:1.1rem;">₱0</span>
-                    </div>
-
-                    <!-- Customer (optional) -->
-                    <div style="margin-bottom:10px;">
-                        <label style="font-size:0.75rem;color:#94a3b8;display:block;margin-bottom:3px;">Customer (optional)</label>
-                        <select id="qs-customer"
-                            style="width:100%;padding:9px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;box-sizing:border-box;">
-                            ${custOpts}
-                        </select>
-                    </div>
-
-                    <!-- Payment + Date -->
-                    <div style="display:flex;gap:8px;margin-bottom:10px;">
+                    <!-- ── Customer / Payment / Date ── -->
+                    <div style="display:flex;gap:6px;margin-bottom:8px;">
                         <div style="flex:1;">
-                            <label style="font-size:0.75rem;color:#94a3b8;display:block;margin-bottom:3px;">Payment</label>
-                            <select id="qs-payment"
-                                style="width:100%;padding:9px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;box-sizing:border-box;">
-                                <option value="cash">💵 Cash</option>
+                            <label style="font-size:0.72rem;color:#94a3b8;display:block;margin-bottom:3px;">Customer</label>
+                            <select id="qs-customer" style="${inp}">${custOpts}</select>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:6px;margin-bottom:8px;">
+                        <div style="flex:1;">
+                            <label style="font-size:0.72rem;color:#94a3b8;display:block;margin-bottom:3px;">Payment</label>
+                            <select id="qs-payment" style="${inp}">
+                                <option value="cash">💵 Cash (Paid)</option>
                                 <option value="gcash">📱 GCash</option>
-                                <option value="credit">📝 Credit</option>
+                                <option value="credit">📝 Credit (Pay Later)</option>
                             </select>
                         </div>
                         <div style="flex:1;">
-                            <label style="font-size:0.75rem;color:#94a3b8;display:block;margin-bottom:3px;">Date</label>
-                            <input type="date" id="qs-date" value="${(function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date())}"
-                                style="width:100%;padding:9px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;box-sizing:border-box;">
+                            <label style="font-size:0.72rem;color:#94a3b8;display:block;margin-bottom:3px;">Date</label>
+                            <input type="date" id="qs-date" value="${today}" style="${inp}">
                         </div>
                     </div>
-
-                    <div style="margin-bottom:14px;">
-                        <label style="font-size:0.75rem;color:#94a3b8;display:block;margin-bottom:3px;">Notes (optional)</label>
-                        <input type="text" id="qs-notes" placeholder="Any notes..."
-                            style="width:100%;padding:9px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:0.85rem;box-sizing:border-box;">
+                    <div style="margin-bottom:12px;">
+                        <label style="font-size:0.72rem;color:#94a3b8;display:block;margin-bottom:3px;">Notes (optional)</label>
+                        <input type="text" id="qs-notes" placeholder="Any notes..." style="${inp}">
                     </div>
 
+                    <!-- Record button -->
                     <div style="display:flex;gap:8px;">
-                        <button onclick="saveQuickSell('${context}')"
-                            style="flex:1;padding:12px;background:#a78bfa;border:none;border-radius:8px;color:white;font-weight:700;cursor:pointer;font-size:0.92rem;">
-                            💾 Record Sale
+                        <button id="qs-record-btn" onclick="saveQuickSell('${context}')"
+                            style="flex:1;padding:13px;background:linear-gradient(135deg,#6366f1,#a78bfa);border:none;border-radius:10px;color:white;font-weight:800;font-size:0.95rem;cursor:pointer;opacity:0.5;" disabled>
+                            💾 Record All Sales
                         </button>
                         <button onclick="document.getElementById('quick-sell-modal').remove()"
-                            style="flex:1;padding:12px;background:rgba(255,255,255,0.05);border:1px solid #334155;border-radius:8px;color:#94a3b8;cursor:pointer;">
+                            style="padding:13px 16px;background:rgba(255,255,255,0.05);border:1px solid #334155;border-radius:10px;color:#94a3b8;cursor:pointer;">
                             Cancel
                         </button>
                     </div>
                 </div>`;
 
             document.body.appendChild(modal);
-            // Focus name field
-            setTimeout(function(){ var n = document.getElementById('qs-name'); if(n) n.focus(); }, 80);
+            qsCartRender();
         }
         window.showQuickSellModal = showQuickSellModal;
 
-        function qsCalcTotal() {
-            var qty   = parseFloat(document.getElementById('qs-qty')?.value)   || 0;
-            var price = parseFloat(document.getElementById('qs-price')?.value) || 0;
-            var el    = document.getElementById('qs-total-display');
-            if (el) el.textContent = '₱' + (qty * price).toLocaleString();
-        }
-        window.qsCalcTotal = qsCalcTotal;
-
         async function saveQuickSell(context) {
-            const icon    = (document.getElementById('qs-icon')?.value?.trim())    || '🛒';
-            const name    = (document.getElementById('qs-name')?.value?.trim())    || '';
-            const qty     = parseFloat(document.getElementById('qs-qty')?.value)   || 0;
-            const price   = parseFloat(document.getElementById('qs-price')?.value) || 0;
-            const custId  = document.getElementById('qs-customer')?.value          || '';
-            const payment = document.getElementById('qs-payment')?.value           || 'cash';
-            const date    = document.getElementById('qs-date')?.value              || (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
-            const notes   = (document.getElementById('qs-notes')?.value?.trim())   || '';
+            const cart    = window._qsCart || [];
+            if (cart.length === 0) { showToast('⚠️ Cart is empty. Add items first.', 'warning'); return; }
 
-            if (!name)    { showToast('⚠️ Please enter an item name.', 'warning');  return; }
-            if (qty <= 0) { showToast('⚠️ Quantity must be at least 1.', 'warning'); return; }
-            if (price <= 0){ showToast('⚠️ Please enter a price.', 'warning');      return; }
+            const custId  = document.getElementById('qs-customer')?.value  || '';
+            const payment = document.getElementById('qs-payment')?.value   || 'cash';
+            const date    = document.getElementById('qs-date')?.value      || localDateStr();
+            const notes   = document.getElementById('qs-notes')?.value?.trim() || '';
 
-            const total = qty * price;
             let customerName = 'Walk-in';
             if (custId) {
                 const cust = await dbGet('waterCustomers', parseInt(custId)).catch(()=>null);
                 if (cust) customerName = cust.name;
             }
 
-            try {
-                // Save to waterStoreSales
-                const storeSale = {
-                    productId:     'custom',
-                    itemName:      name,
-                    itemIcon:      icon,
-                    qty,
-                    unitPrice:     price,
-                    total,
-                    customerName,
-                    customerId:    custId ? parseInt(custId) : null,
-                    status:        payment === 'cash' || payment === 'gcash' ? 'paid' : 'credit',
-                    paymentMethod: payment,
-                    date,
-                    notes,
-                    recordedBy:    currentAppUser?.username   || 'unknown',
-                    recordedByRole:currentAppUser?.role       || 'unknown',
-                    createdAt:     new Date().toISOString()
-                };
-                await dbAdd('waterStoreSales', storeSale);
+            const status = payment === 'cash' || payment === 'gcash' ? 'paid' : 'credit';
+            const grandTotal = cart.reduce((s,i) => s + i.subtotal, 0);
 
-                // Also record in additionalIncome for reports/dashboard
-                await dbAdd('additionalIncome', {
-                    source:      'Water Store',
-                    description: icon + ' ' + name + ' x' + qty + ' @ ₱' + price,
-                    amount:      total,
-                    date,
-                    notes,
-                    storeRef:    true,
-                    recordedBy:  currentAppUser?.username || 'unknown',
-                    createdAt:   new Date().toISOString()
-                });
+            try {
+                for (const item of cart) {
+                    if (item.type === 'water') {
+                        // Save as waterSale
+                        await dbAdd('waterSales', {
+                            customerId:    custId ? parseInt(custId) : null,
+                            customerName,
+                            gallons:       item.waterType === 'big'   ? item.qty : 0,
+                            bottles:       item.waterType === 'small' ? item.qty : 0,
+                            total:         item.subtotal,
+                            amountPaid:    status === 'paid' ? item.subtotal : 0,
+                            status,
+                            paymentMethod: payment,
+                            date, notes,
+                            cart: [item],
+                            recordedBy:    currentAppUser?.username || 'unknown',
+                            createdAt:     new Date().toISOString()
+                        });
+                    } else {
+                        // Save as store sale + additionalIncome
+                        await dbAdd('waterStoreSales', {
+                            productId:     item.productId || 'custom',
+                            itemName:      item.itemName || item.label,
+                            itemIcon:      item.itemIcon || '🛒',
+                            qty:           item.qty,
+                            unitPrice:     item.price,
+                            total:         item.subtotal,
+                            customerName,
+                            customerId:    custId ? parseInt(custId) : null,
+                            status,
+                            paymentMethod: payment,
+                            date, notes,
+                            recordedBy:    currentAppUser?.username || 'unknown',
+                            createdAt:     new Date().toISOString()
+                        });
+                        await dbAdd('additionalIncome', {
+                            source:      'Water Store',
+                            description: (item.itemIcon||'🛒') + ' ' + (item.itemName||item.label) + ' ×' + item.qty + ' @₱' + item.price,
+                            amount:      item.subtotal,
+                            date, notes, storeRef: true,
+                            recordedBy:  currentAppUser?.username || 'unknown',
+                            createdAt:   new Date().toISOString()
+                        });
+                    }
+                }
 
                 document.getElementById('quick-sell-modal')?.remove();
-                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
-                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
-        debouncedSync();
+                window._qsCart = [];
+                if (typeof prismAutoRefreshCurrent === 'function') prismAutoRefreshCurrent();
+                debouncedSync();
                 if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
-                if (typeof loadDashboard        === 'function') loadDashboard();
-                if (typeof loadIncome           === 'function') loadIncome();
-                if (typeof renderWaterStore     === 'function') renderWaterStore();
+                if (typeof loadWaterCustomers  === 'function') loadWaterCustomers();
+                if (typeof renderWaterStore    === 'function') renderWaterStore();
 
-                showToast('✅ ' + icon + ' ' + name + ' x' + qty + ' — ₱' + total.toLocaleString() + ' recorded!', 'success');
+                const summary = cart.map(i => i.label).join(' + ');
+                showToast('✅ Recorded: ₱' + grandTotal.toLocaleString() + ' — ' + cart.length + ' item(s)!', 'success');
 
             } catch(e) {
                 showToast('❌ Error: ' + e.message, 'error');
             }
         }
         window.saveQuickSell = saveQuickSell;
+
 
         // Live qty update for floating + button water cart
         function pmWsQtyChanged(type) {
