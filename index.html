@@ -7176,6 +7176,30 @@
                                 </div>
                             </div>
                         </div>
+                        <!-- ═══ ADD STORE ITEMS ═══ -->
+                        <div style="margin-top:8px;">
+                            <button type="button" onclick="wsToggleStoreItems()" id="ws-store-toggle"
+                                style="width:100%;padding:8px 12px;background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.25);border-radius:8px;color:#a78bfa;font-weight:700;font-size:0.78rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">
+                                <span>🛒 Add Store Item to Cart</span>
+                                <span id="ws-store-chevron">▶</span>
+                            </button>
+                            <div id="ws-store-items-panel" style="display:none;margin-top:8px;background:rgba(167,139,250,0.05);border:1px solid rgba(167,139,250,0.15);border-radius:8px;padding:10px;">
+                                <div style="display:flex;gap:6px;margin-bottom:8px;">
+                                    <select id="ws-store-product" onchange="wsStoreProductChange()" style="flex:2;padding:7px;background:#0f172a;border:1px solid #334155;border-radius:7px;color:#f1f5f9;font-size:0.82rem;box-sizing:border-box;">
+                                        <option value="">— Select product —</option>
+                                    </select>
+                                    <input type="number" id="ws-store-qty" value="1" min="1" oninput="wsStoreCalcSubtotal()" style="width:52px;padding:7px;background:#0f172a;border:1px solid #334155;border-radius:7px;color:#f1f5f9;text-align:center;font-size:0.88rem;">
+                                    <input type="number" id="ws-store-price" min="0" placeholder="₱" oninput="wsStoreCalcSubtotal()" style="width:64px;padding:7px;background:#0f172a;border:1px solid #4f46e5;border-radius:7px;color:#f1f5f9;font-weight:700;font-size:0.88rem;">
+                                </div>
+                                <div id="ws-store-custom-row" style="display:none;margin-bottom:6px;">
+                                    <input type="text" id="ws-store-custom-name" placeholder="Custom item name..." style="width:100%;padding:7px;background:#0f172a;border:1px solid #334155;border-radius:7px;color:#f1f5f9;font-size:0.82rem;box-sizing:border-box;">
+                                </div>
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                                    <span style="font-size:0.78rem;color:#94a3b8;">Subtotal: <strong id="ws-store-subtotal" style="color:#a78bfa;">₱0</strong></span>
+                                    <button type="button" onclick="wsAddStoreToCart()" style="padding:6px 14px;background:#a78bfa;border:none;border-radius:7px;color:white;font-weight:700;font-size:0.8rem;cursor:pointer;">+ Add to Cart</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- ═══ ORDER LIST ═══ -->
@@ -7221,7 +7245,57 @@
                         <textarea id="water-sale-notes" rows="2" placeholder="Any notes..."></textarea>
                     </div>
 
-                    <button type="button" class="btn btn-success btn-block" id="ws-submit-btn" onclick="saveWaterSale(event)">Record Sale</button>
+                    <button type="button" class="btn btn-success btn-block" id="ws-submit-btn" onclick="saveWaterSale(event)">💧 Record Water Sale</button>
+
+                    <!-- Collapsible: Also Sell Item -->
+                    <div style="margin-top:14px;border:1px solid rgba(167,139,250,0.3);border-radius:10px;overflow:hidden;">
+                        <button type="button" onclick="wsToggleSellItem()" id="ws-sell-item-toggle"
+                            style="width:100%;padding:10px 14px;background:rgba(139,92,246,0.1);border:none;color:#a78bfa;font-weight:700;font-size:0.85rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center;text-align:left;">
+                            <span>🛒 Also Sell Store Item?</span>
+                            <span id="ws-sell-item-chevron" style="transition:transform 0.2s;">▼</span>
+                        </button>
+                        <div id="ws-sell-item-panel" style="display:none;padding:12px;background:rgba(15,23,42,0.6);">
+                            <div class="form-group">
+                                <label style="font-size:0.8rem;color:#94a3b8;">Product</label>
+                                <select id="ws-si-product" onchange="wsSiUpdatePrice()" style="width:100%;padding:8px;background:#0f172a;border:1px solid #334155;border-radius:7px;color:#f1f5f9;font-size:0.85rem;box-sizing:border-box;">
+                                    <option value="">— Select product —</option>
+                                </select>
+                            </div>
+                            <div id="ws-si-custom-fields" style="display:none;">
+                                <div class="form-group">
+                                    <label style="font-size:0.8rem;color:#94a3b8;">Custom Item Name *</label>
+                                    <input type="text" id="ws-si-custom-name" placeholder="Item name..." style="width:100%;padding:8px;background:#0f172a;border:1px solid #334155;border-radius:7px;color:#f1f5f9;box-sizing:border-box;">
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:8px;">
+                                <div class="form-group" style="flex:1;">
+                                    <label style="font-size:0.8rem;color:#94a3b8;">Qty</label>
+                                    <input type="number" id="ws-si-qty" value="1" min="1" oninput="wsSiCalcTotal()" style="width:100%;padding:8px;background:#0f172a;border:1px solid #334155;border-radius:7px;color:#f1f5f9;box-sizing:border-box;">
+                                </div>
+                                <div class="form-group" style="flex:1;">
+                                    <label style="font-size:0.8rem;color:#94a3b8;">Unit Price (₱)</label>
+                                    <input type="number" id="ws-si-price" min="0" placeholder="0" oninput="wsSiCalcTotal()" style="width:100%;padding:8px;background:#0f172a;border:1px solid #4f46e5;border-radius:7px;color:#f1f5f9;font-weight:700;box-sizing:border-box;">
+                                </div>
+                            </div>
+                            <div style="background:#0f172a;border-radius:7px;padding:8px 12px;margin-bottom:10px;display:flex;justify-content:space-between;">
+                                <span style="font-size:0.8rem;color:#94a3b8;">Store Item Total:</span>
+                                <span id="ws-si-total" style="font-weight:800;color:#a78bfa;">₱0</span>
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size:0.8rem;color:#94a3b8;">Payment</label>
+                                <select id="ws-si-payment" style="width:100%;padding:8px;background:#0f172a;border:1px solid #334155;border-radius:7px;color:#f1f5f9;box-sizing:border-box;">
+                                    <option value="cash">💵 Cash (Paid)</option>
+                                    <option value="gcash">📱 GCash</option>
+                                    <option value="credit">📝 Credit (Pay Later)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size:0.8rem;color:#94a3b8;">Notes (Optional)</label>
+                                <textarea id="ws-si-notes" rows="2" style="width:100%;padding:8px;background:#0f172a;border:1px solid #334155;border-radius:7px;color:#f1f5f9;font-size:0.82rem;box-sizing:border-box;resize:none;"></textarea>
+                            </div>
+                            <button type="button" onclick="wsRecordStoreItem()" style="width:100%;padding:10px;background:#a78bfa;border:none;border-radius:8px;color:white;font-weight:700;cursor:pointer;font-size:0.88rem;">🛒 Record Store Item Too</button>
+                        </div>
+                    </div>
                 </form>
             </div>
         </div>
@@ -15221,26 +15295,34 @@ async function loadWaterCustomers() {
                 grandTotal   += item.subtotal;
                 totalBottles += item.qty;
                 if (item.discount > 0) pkgDeals.push(item.label + ' -P' + item.discount);
-                return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:var(--bg-primary);border-radius:7px;margin-bottom:4px;">' +
+                var isStore = item.type === 'store';
+                var itemColor = isStore ? '#a78bfa' : '#10b981';
+                var itemBg    = isStore ? 'rgba(167,139,250,0.06)' : 'var(--bg-primary)';
+                var itemBorder= isStore ? 'border-left:3px solid #a78bfa;' : 'border-left:3px solid #10b981;';
+                return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:'+itemBg+';border-radius:7px;margin-bottom:4px;'+itemBorder+'">' +
                     '<div>' +
-                        '<div style="font-weight:600;font-size:0.85rem;">' + item.label + '</div>' +
+                        '<div style="font-weight:600;font-size:0.85rem;">' + (isStore?'🛒 ':'') + item.label + '</div>' +
                         (item.discount > 0 ? '<div style="font-size:0.72rem;color:#10b981;">Package deal -P' + item.discount + '</div>' : '') +
                     '</div>' +
                     '<div style="display:flex;align-items:center;gap:8px;">' +
-                        '<span style="font-weight:700;color:#10b981;">P' + item.subtotal.toLocaleString() + '</span>' +
+                        '<span style="font-weight:700;color:'+itemColor+';">P' + item.subtotal.toLocaleString() + '</span>' +
                         '<button type="button" onclick="wsCartRemove(' + idx + ')" style="padding:2px 7px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#ef4444;border-radius:5px;cursor:pointer;font-size:0.72rem;">X</button>' +
                     '</div>' +
                 '</div>';
             }).join('');
             var linesEl = document.getElementById('ws-order-lines');
-            if (linesEl) linesEl.innerHTML = cart.map(function(i){ return '<span style="display:block;">' + i.qty + ' x ' + (i.type==='big'?'Big (18L)':i.bottleSize) + ' @ P' + i.price + ' = P' + (i.qty*i.price).toLocaleString() + '</span>'; }).join('');
+            if (linesEl) linesEl.innerHTML = cart.map(function(i){
+                if (i.type === 'store') return '<span style="display:block;color:#a78bfa;">🛒 ' + i.label + ' @ P' + i.price + ' = P' + i.subtotal.toLocaleString() + '</span>';
+                return '<span style="display:block;">'+i.qty+' x '+(i.type==='big'?'Big (18L)':i.bottleSize)+' @ P'+i.price+' = P'+(i.qty*i.price).toLocaleString()+'</span>';
+            }).join('');
             var pkgEl = document.getElementById('ws-package-notice');
             var pkgLbl = document.getElementById('ws-package-label');
             if (pkgEl) pkgEl.style.display = pkgDeals.length > 0 ? 'block' : 'none';
             if (pkgLbl && pkgDeals.length > 0) pkgLbl.textContent = pkgDeals.join(', ');
             if (totalDisplay) totalDisplay.textContent = 'P' + grandTotal.toLocaleString();
+            var waterBottles = cart.filter(function(i){ return i.type !== 'store'; }).reduce(function(s,i){ return s+i.qty; }, 0);
             var tEl = document.getElementById('water-sale-total');   if (tEl) tEl.value = grandTotal;
-            var gEl = document.getElementById('water-sale-gallons'); if (gEl) gEl.value = totalBottles;
+            var gEl = document.getElementById('water-sale-gallons'); if (gEl) gEl.value = waterBottles;
         }
         window.wsCartRender = wsCartRender;
 
@@ -15249,6 +15331,85 @@ async function loadWaterCustomers() {
             wsCartRender();
         }
         window.wsCartRemove = wsCartRemove;
+
+        // ── Store Items in Water Sale Cart ──
+        async function wsToggleStoreItems() {
+            const panel = document.getElementById('ws-store-items-panel');
+            const chev  = document.getElementById('ws-store-chevron');
+            if (!panel) return;
+            const open = panel.style.display === 'none';
+            panel.style.display = open ? 'block' : 'none';
+            if (chev) chev.textContent = open ? '▲' : '▶';
+            if (open) {
+                // Populate product dropdown
+                const sel = document.getElementById('ws-store-product');
+                if (sel && sel.options.length <= 1) {
+                    const products = await getStoreProducts();
+                    const opts = products.map(p => `<option value="${p.id}" data-price="${p.price}" data-icon="${p.icon||'🛒'}" data-name="${p.name}">${p.icon||'🛒'} ${p.name} — ₱${p.price}</option>`).join('');
+                    sel.innerHTML = '<option value="">— Select product —</option>' + opts + '<option value="custom">✏️ Custom Item</option>';
+                }
+            }
+        }
+        window.wsToggleStoreItems = wsToggleStoreItems;
+
+        function wsStoreProductChange() {
+            const sel = document.getElementById('ws-store-product');
+            const customRow = document.getElementById('ws-store-custom-row');
+            if (!sel) return;
+            if (sel.value === 'custom') {
+                if (customRow) customRow.style.display = 'block';
+                document.getElementById('ws-store-price').value = '';
+            } else {
+                if (customRow) customRow.style.display = 'none';
+                const opt = sel.options[sel.selectedIndex];
+                if (opt && opt.dataset.price) document.getElementById('ws-store-price').value = opt.dataset.price;
+            }
+            wsStoreCalcSubtotal();
+        }
+        window.wsStoreProductChange = wsStoreProductChange;
+
+        function wsStoreCalcSubtotal() {
+            const qty   = parseFloat(document.getElementById('ws-store-qty')?.value)   || 0;
+            const price = parseFloat(document.getElementById('ws-store-price')?.value) || 0;
+            const el = document.getElementById('ws-store-subtotal');
+            if (el) el.textContent = '₱' + (qty * price).toLocaleString();
+        }
+        window.wsStoreCalcSubtotal = wsStoreCalcSubtotal;
+
+        function wsAddStoreToCart() {
+            const sel   = document.getElementById('ws-store-product');
+            const qty   = parseFloat(document.getElementById('ws-store-qty')?.value)   || 0;
+            const price = parseFloat(document.getElementById('ws-store-price')?.value) || 0;
+            if (!sel || !sel.value) { showToast('⚠️ Select a product.', 'warning'); return; }
+            if (qty <= 0)   { showToast('⚠️ Qty must be > 0.', 'warning'); return; }
+            if (price <= 0) { showToast('⚠️ Price must be > 0.', 'warning'); return; }
+            let itemName = '', itemIcon = '🛒', productId = sel.value;
+            if (productId === 'custom') {
+                itemName = document.getElementById('ws-store-custom-name')?.value?.trim() || '';
+                if (!itemName) { showToast('⚠️ Enter item name.', 'warning'); return; }
+            } else {
+                const opt = sel.options[sel.selectedIndex];
+                itemName = opt.dataset.name || opt.text.split(' — ')[0].replace(/^[^\s]+\s/, '');
+                itemIcon = opt.dataset.icon || '🛒';
+            }
+            const subtotal = qty * price;
+            window._wsCart = window._wsCart || [];
+            window._wsCart.push({
+                type: 'store', productId, itemName, itemIcon, qty, price,
+                subtotal, discount: 0,
+                label: qty + ' × ' + itemIcon + ' ' + itemName + ' @₱' + price
+            });
+            wsCartRender();
+            // Reset store inputs
+            if (sel) sel.value = '';
+            const qEl = document.getElementById('ws-store-qty');   if (qEl) qEl.value = '1';
+            const pEl = document.getElementById('ws-store-price'); if (pEl) pEl.value = '';
+            const cEl = document.getElementById('ws-store-custom-name'); if (cEl) cEl.value = '';
+            const cRow = document.getElementById('ws-store-custom-row'); if (cRow) cRow.style.display = 'none';
+            wsStoreCalcSubtotal();
+            showToast('🛒 Added to cart!', 'success', 1000);
+        }
+        window.wsAddStoreToCart = wsAddStoreToCart;
 
         function wsQuickAddBig(price) {
             // Mark this price as active
@@ -15390,12 +15551,17 @@ async function loadWaterCustomers() {
                 return;
             }
 
+            // ── Separate water items from store items in cart ──
+            const waterItems = cart.filter(i => i.type !== 'store');
+            const storeItems = cart.filter(i => i.type === 'store');
+
             // Build a human-readable order summary
-            const orderSummary = cart.map(i => i.label).join(' + ');
+            const orderSummary = waterItems.map(i => i.label).join(' + ')
+                + (storeItems.length ? ' + 🛒 ' + storeItems.map(i=>i.label).join(' + ') : '');
 
             // Build per-type summaries for backward-compat display
-            const bigItems   = cart.filter(i => i.type === 'big');
-            const smallItems = cart.filter(i => i.type === 'small');
+            const bigItems   = waterItems.filter(i => i.type === 'big');
+            const smallItems = waterItems.filter(i => i.type === 'small');
             const bigBottles  = bigItems.reduce((s,i) => s + i.qty, 0);
             const smallBottles= smallItems.reduce((s,i) => s + i.qty, 0);
             // Use first big price / first small price for compat fields
@@ -15410,8 +15576,8 @@ async function loadWaterCustomers() {
                 cart:          cart,
                 orderSummary:  orderSummary,
                 // Totals
-                bottles:       totalBottles,
-                gallons:       totalBottles,   // backward compat
+                bottles:       waterItems.reduce((s,i)=>s+i.qty,0),
+                gallons:       waterItems.reduce((s,i)=>s+i.qty,0),   // backward compat
                 total:         grandTotal,
                 grossTotal:    grandTotal + totalDiscount,
                 discount:      totalDiscount,
@@ -15437,21 +15603,53 @@ async function loadWaterCustomers() {
             };
 
             try {
-                await dbAdd('waterSales', sale);
+                // ── Save water sale (water items only) ──
+                if (waterItems.length > 0) {
+                    await dbAdd('waterSales', sale);
+                }
+
+                // ── Save each store item separately ──
+                for (const si of storeItems) {
+                    const siSale = {
+                        productId:   si.productId || null,
+                        itemName:    si.itemName,
+                        itemIcon:    si.itemIcon || '🛒',
+                        qty:         si.qty,
+                        unitPrice:   si.price,
+                        total:       si.subtotal,
+                        customerName: sale.customerName,
+                        customerId:  sale.customerId || null,
+                        status:      paymentType === 'cash' ? 'paid' : (paidNow > 0 ? 'partial' : 'credit'),
+                        paymentMethod: paymentType,
+                        date,  notes,
+                        recordedBy:  currentAppUser?.username || 'unknown',
+                        createdAt:   new Date().toISOString()
+                    };
+                    await dbAdd('waterStoreSales', siSale);
+                    await dbAdd('additionalIncome', {
+                        source: 'Water Store',
+                        description: si.itemIcon+' '+si.itemName+' × '+si.qty+' @ ₱'+si.price,
+                        amount: si.subtotal, date, notes, storeRef: true,
+                        recordedBy: currentAppUser?.username || 'unknown',
+                        createdAt: new Date().toISOString()
+                    });
+                }
+
                 // Reset
                 window._wsCart = [];
                 hideModal('water-sale-modal');
                 loadWaterCustomers();
                 if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
+                if (typeof renderWaterStore === 'function') renderWaterStore();
                 if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
-                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
-        debouncedSync();
+                debouncedSync();
 
-                // Toast with order summary
-                const bigLine   = bigBottles   ? bigBottles   + ' Big'   : '';
-                const smallLine = smallBottles ? smallBottles + ' Small' : '';
-                const summary   = [bigLine, smallLine].filter(Boolean).join(' + ');
-                showToast('✅ ' + summary + ' bottle' + (totalBottles !== 1 ? 's' : '') + ' — ₱' + grandTotal.toLocaleString() + ' recorded!', 'success');
+                // Toast with full order summary
+                const bigLine   = bigItems.reduce((s,i)=>s+i.qty,0) > 0 ? bigItems.reduce((s,i)=>s+i.qty,0)+' Big' : '';
+                const smallLine = smallItems.reduce((s,i)=>s+i.qty,0) > 0 ? smallItems.reduce((s,i)=>s+i.qty,0)+' Small' : '';
+                const storeLine = storeItems.length > 0 ? storeItems.length+' store item'+(storeItems.length>1?'s':'') : '';
+                const summary   = [bigLine, smallLine, storeLine].filter(Boolean).join(' + ');
+                showToast('✅ Order recorded: '+summary+' — ₱'+grandTotal.toLocaleString()+'!', 'success');
 
                 if (currentAppUser && currentAppUser.role === 'cashier' && typeof loadCashierDashboard === 'function') {
                     setTimeout(loadCashierDashboard, 400);
@@ -29863,11 +30061,310 @@ async function clearAllData() {
                         <button onclick="saveStoreSale()" style="flex:1;padding:12px;background:#a78bfa;border:none;border-radius:8px;color:white;font-weight:700;cursor:pointer;font-size:0.92rem;">💾 Record Sale</button>
                         <button onclick="document.getElementById('water-store-sell-modal').remove()" style="flex:1;padding:12px;background:rgba(255,255,255,0.06);border:1px solid #334155;border-radius:8px;color:#94a3b8;cursor:pointer;">Cancel</button>
                     </div>
+                    <!-- Collapsible: Also Add Water Sale -->
+                    <div style="margin-top:14px;border:1px solid rgba(6,182,212,0.3);border-radius:10px;overflow:hidden;">
+                        <button type="button" onclick="ssToggleWaterSale()" id="ss-water-toggle"
+                            style="width:100%;padding:10px 14px;background:rgba(6,182,212,0.1);border:none;color:#22d3ee;font-weight:700;font-size:0.85rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">
+                            <span>💧 Also Add Water Sale?</span>
+                            <span id="ss-water-chevron" style="transition:transform 0.2s;">▶</span>
+                        </button>
+                        <div id="ss-water-panel" style="display:none;padding:12px;background:rgba(15,23,42,0.6);">
+                            <div class="form-group">
+                                <label style="font-size:0.8rem;color:#94a3b8;">Big Round (18L) Price</label>
+                                <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;" id="ss-w-price-btns">
+                                    <span onclick="ssWaterSetPrice(20)" class="ss-w-pbtn" style="padding:4px 10px;border-radius:6px;border:1px solid #334155;background:#0f172a;color:#94a3b8;cursor:pointer;font-size:0.78rem;">₱20</span>
+                                    <span onclick="ssWaterSetPrice(25)" class="ss-w-pbtn" style="padding:4px 10px;border-radius:6px;border:1px solid #6366f1;background:#6366f1;color:#fff;cursor:pointer;font-size:0.78rem;">₱25</span>
+                                    <span onclick="ssWaterSetPrice(30)" class="ss-w-pbtn" style="padding:4px 10px;border-radius:6px;border:1px solid #334155;background:#0f172a;color:#94a3b8;cursor:pointer;font-size:0.78rem;">₱30</span>
+                                    <span onclick="ssWaterSetPrice(35)" class="ss-w-pbtn" style="padding:4px 10px;border-radius:6px;border:1px solid #334155;background:#0f172a;color:#94a3b8;cursor:pointer;font-size:0.78rem;">₱35</span>
+                                </div>
+                                <input type="number" id="ss-w-big-qty" value="0" min="0" oninput="ssWaterCalcTotal()" placeholder="Big bottle qty" style="width:100%;padding:8px;background:#0f172a;border:1px solid #334155;border-radius:7px;color:#f1f5f9;box-sizing:border-box;">
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size:0.8rem;color:#94a3b8;">Small Bottle Price</label>
+                                <div style="display:flex;gap:6px;margin-bottom:6px;" id="ss-w-sprice-btns">
+                                    <span onclick="ssWaterSetSmallPrice(5)" class="ss-w-spbtn" style="padding:4px 10px;border-radius:6px;border:1px solid #6366f1;background:#6366f1;color:#fff;cursor:pointer;font-size:0.78rem;">Small ₱5</span>
+                                    <span onclick="ssWaterSetSmallPrice(15)" class="ss-w-spbtn" style="padding:4px 10px;border-radius:6px;border:1px solid #334155;background:#0f172a;color:#94a3b8;cursor:pointer;font-size:0.78rem;">Med ₱15</span>
+                                    <span onclick="ssWaterSetSmallPrice(20)" class="ss-w-spbtn" style="padding:4px 10px;border-radius:6px;border:1px solid #334155;background:#0f172a;color:#94a3b8;cursor:pointer;font-size:0.78rem;">Lg ₱20</span>
+                                </div>
+                                <input type="number" id="ss-w-small-qty" value="0" min="0" oninput="ssWaterCalcTotal()" placeholder="Small bottle qty" style="width:100%;padding:8px;background:#0f172a;border:1px solid #334155;border-radius:7px;color:#f1f5f9;box-sizing:border-box;">
+                            </div>
+                            <div style="background:#0f172a;border-radius:7px;padding:8px 12px;margin-bottom:10px;display:flex;justify-content:space-between;">
+                                <span style="font-size:0.8rem;color:#94a3b8;">Water Total:</span>
+                                <span id="ss-w-total" style="font-weight:800;color:#22d3ee;">₱0</span>
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size:0.8rem;color:#94a3b8;">Water Payment</label>
+                                <select id="ss-w-payment" style="width:100%;padding:8px;background:#0f172a;border:1px solid #334155;border-radius:7px;color:#f1f5f9;box-sizing:border-box;">
+                                    <option value="cash">💵 Cash (Paid)</option>
+                                    <option value="gcash">📱 GCash</option>
+                                    <option value="credit">📝 Credit (Pay Later)</option>
+                                </select>
+                            </div>
+                            <button type="button" onclick="ssRecordWaterSale()" style="width:100%;padding:10px;background:linear-gradient(135deg,#06b6d4,#0284c7);border:none;border-radius:8px;color:white;font-weight:700;cursor:pointer;font-size:0.88rem;">💧 Record Water Sale Too</button>
+                        </div>
+                    </div>
                 </div>`;
             document.body.appendChild(modal);
             ssCalcTotal();
         }
         window.showWaterStoreItemModal = showWaterStoreItemModal;
+
+        // ══════════════════════════════════════════════════════════
+        // CROSS-SELL HELPERS
+        // ══════════════════════════════════════════════════════════
+
+        // ── Water Sale modal: toggle Sell Item panel ──
+        function wsToggleSellItem() {
+            const panel = document.getElementById('ws-sell-item-panel');
+            const chev  = document.getElementById('ws-sell-item-chevron');
+            if (!panel) return;
+            const open = panel.style.display === 'none';
+            panel.style.display = open ? 'block' : 'none';
+            if (chev) { chev.textContent = open ? '▲' : '▼'; }
+            // Populate product dropdown when opening
+            if (open) wsPopulateSiProducts();
+        }
+        window.wsToggleSellItem = wsToggleSellItem;
+
+        async function wsPopulateSiProducts() {
+            const sel = document.getElementById('ws-si-product');
+            if (!sel || sel.options.length > 1) return; // already populated
+            const products = await getStoreProducts();
+            const opts = products.map(p => `<option value="${p.id}" data-price="${p.price}" data-icon="${p.icon||'🛒'}">${p.icon||'🛒'} ${p.name} — ₱${p.price}</option>`).join('');
+            sel.innerHTML = '<option value="">— Select product —</option>' + opts + '<option value="custom">✏️ Custom Item</option>';
+        }
+
+        function wsSiUpdatePrice() {
+            const sel = document.getElementById('ws-si-product');
+            const opt = sel ? sel.options[sel.selectedIndex] : null;
+            const customFields = document.getElementById('ws-si-custom-fields');
+            if (!opt || !sel) return;
+            if (sel.value === 'custom') {
+                if (customFields) customFields.style.display = 'block';
+                document.getElementById('ws-si-price').value = '';
+            } else {
+                if (customFields) customFields.style.display = 'none';
+                const price = opt.dataset.price || '';
+                document.getElementById('ws-si-price').value = price;
+            }
+            wsSiCalcTotal();
+        }
+        window.wsSiUpdatePrice = wsSiUpdatePrice;
+
+        function wsSiCalcTotal() {
+            const qty   = parseFloat(document.getElementById('ws-si-qty')?.value)   || 0;
+            const price = parseFloat(document.getElementById('ws-si-price')?.value) || 0;
+            const total = qty * price;
+            const el = document.getElementById('ws-si-total');
+            if (el) el.textContent = '₱' + total.toLocaleString();
+        }
+        window.wsSiCalcTotal = wsSiCalcTotal;
+
+        async function wsRecordStoreItem() {
+            const sel       = document.getElementById('ws-si-product');
+            const productId = sel ? sel.value : '';
+            const qty       = parseFloat(document.getElementById('ws-si-qty')?.value)   || 0;
+            const unitPrice = parseFloat(document.getElementById('ws-si-price')?.value) || 0;
+            const payment   = document.getElementById('ws-si-payment')?.value || 'cash';
+            const notes     = document.getElementById('ws-si-notes')?.value?.trim()   || '';
+            const date      = document.getElementById('water-sale-date')?.value || localDateStr();
+
+            if (!productId) { showToast('⚠️ Select a product first.', 'warning'); return; }
+            if (qty <= 0)   { showToast('⚠️ Qty must be > 0.', 'warning'); return; }
+            if (unitPrice <= 0) { showToast('⚠️ Price must be > 0.', 'warning'); return; }
+
+            let itemName = 'Custom Item', itemIcon = '🛒';
+            if (productId === 'custom') {
+                itemName = document.getElementById('ws-si-custom-name')?.value?.trim() || 'Custom Item';
+            } else if (sel) {
+                const opt = sel.options[sel.selectedIndex];
+                itemName = opt.text.replace(/^[^\s]+\s/, '').split(' — ')[0];
+                itemIcon = opt.dataset.icon || '🛒';
+            }
+
+            // Get customer from the water sale form
+            const custSel = document.getElementById('water-sale-customer');
+            const customerId = custSel ? custSel.value : '';
+            let customerName = 'Walk-in';
+            if (customerId) {
+                const cust = await dbGet('waterCustomers', parseInt(customerId));
+                if (cust) customerName = cust.name;
+            }
+
+            const total = qty * unitPrice;
+            const sale = {
+                productId, itemName, itemIcon, qty, unitPrice, total,
+                customerName, customerId: customerId ? parseInt(customerId) : null,
+                status: payment === 'cash' || payment === 'gcash' ? 'paid' : 'credit',
+                paymentMethod: payment, date, notes,
+                recordedBy: currentAppUser?.username || 'unknown',
+                createdAt: new Date().toISOString()
+            };
+            try {
+                await dbAdd('waterStoreSales', sale);
+                await dbAdd('additionalIncome', {
+                    source: 'Water Store', description: itemIcon+' '+itemName+' × '+qty+' @ ₱'+unitPrice,
+                    amount: total, date, notes, storeRef: true,
+                    recordedBy: currentAppUser?.username || 'unknown',
+                    createdAt: new Date().toISOString()
+                });
+                // Add to calendar if credit
+                if (payment === 'credit') {
+                    // Store sale credit tracked in waterStoreSales with status:'credit'
+                }
+                debouncedSync();
+                if (typeof prismAutoRefreshCurrent === 'function') prismAutoRefreshCurrent();
+                showToast('✅ Store item recorded! Now tap "Record Water Sale" to finish.', 'success');
+                // Reset the panel inputs
+                if (sel) sel.value = '';
+                const qtyEl = document.getElementById('ws-si-qty'); if (qtyEl) qtyEl.value = '1';
+                const priceEl = document.getElementById('ws-si-price'); if (priceEl) priceEl.value = '';
+                wsSiCalcTotal();
+                // Auto-collapse the panel and scroll back to top so main button is visible
+                const _siPanel = document.getElementById('ws-sell-item-panel');
+                const _siChev  = document.getElementById('ws-sell-item-chevron');
+                if (_siPanel) _siPanel.style.display = 'none';
+                if (_siChev)  _siChev.textContent = '▼';
+                // Scroll the modal back to top
+                const _wsMod = document.querySelector('#water-sale-modal .modal');
+                if (_wsMod) _wsMod.scrollTop = 0;
+                // Highlight the main Record Sale button briefly
+                const _mainBtn = document.getElementById('ws-submit-btn');
+                if (_mainBtn) {
+                    _mainBtn.style.boxShadow = '0 0 0 3px #10b981, 0 0 20px rgba(16,185,129,0.4)';
+                    _mainBtn.style.transform = 'scale(1.02)';
+                    setTimeout(() => {
+                        _mainBtn.style.boxShadow = '';
+                        _mainBtn.style.transform = '';
+                    }, 2000);
+                }
+            } catch(e) { showToast('❌ Error: '+e.message, 'error'); }
+        }
+        window.wsRecordStoreItem = wsRecordStoreItem;
+
+        // ── Sell Item modal: toggle Water Sale panel ──
+        let _ssWaterBigPrice  = 25;
+        let _ssWaterSmallPrice = 5;
+
+        function ssToggleWaterSale() {
+            const panel = document.getElementById('ss-water-panel');
+            const chev  = document.getElementById('ss-water-chevron');
+            if (!panel) return;
+            const open = panel.style.display === 'none';
+            panel.style.display = open ? 'block' : 'none';
+            if (chev) { chev.textContent = open ? '▲' : '▶'; }
+        }
+        window.ssToggleWaterSale = ssToggleWaterSale;
+
+        function ssWaterSetPrice(p) {
+            _ssWaterBigPrice = p;
+            document.querySelectorAll('.ss-w-pbtn').forEach(b => {
+                const match = b.textContent.trim() === '₱'+p;
+                b.style.background   = match ? '#6366f1' : '#0f172a';
+                b.style.color        = match ? '#fff'    : '#94a3b8';
+                b.style.borderColor  = match ? '#6366f1' : '#334155';
+            });
+            ssWaterCalcTotal();
+        }
+        window.ssWaterSetPrice = ssWaterSetPrice;
+
+        function ssWaterSetSmallPrice(p) {
+            _ssWaterSmallPrice = p;
+            document.querySelectorAll('.ss-w-spbtn').forEach(b => {
+                const labels = {'5':'Small ₱5','15':'Med ₱15','20':'Lg ₱20'};
+                const match  = b.textContent.trim() === labels[p];
+                b.style.background   = match ? '#6366f1' : '#0f172a';
+                b.style.color        = match ? '#fff'    : '#94a3b8';
+                b.style.borderColor  = match ? '#6366f1' : '#334155';
+            });
+            ssWaterCalcTotal();
+        }
+        window.ssWaterSetSmallPrice = ssWaterSetSmallPrice;
+
+        function ssWaterCalcTotal() {
+            const bigQty   = parseFloat(document.getElementById('ss-w-big-qty')?.value)   || 0;
+            const smallQty = parseFloat(document.getElementById('ss-w-small-qty')?.value) || 0;
+            const total    = (bigQty * _ssWaterBigPrice) + (smallQty * _ssWaterSmallPrice);
+            const el = document.getElementById('ss-w-total');
+            if (el) el.textContent = '₱' + total.toLocaleString();
+        }
+        window.ssWaterCalcTotal = ssWaterCalcTotal;
+
+        async function ssRecordWaterSale() {
+            const bigQty   = parseFloat(document.getElementById('ss-w-big-qty')?.value)   || 0;
+            const smallQty = parseFloat(document.getElementById('ss-w-small-qty')?.value) || 0;
+            if (bigQty <= 0 && smallQty <= 0) { showToast('⚠️ Add at least 1 bottle qty.', 'warning'); return; }
+
+            const payment  = document.getElementById('ss-w-payment')?.value || 'cash';
+            const date     = document.getElementById('ss-date')?.value || localDateStr();
+
+            // Get customer from the store sale form
+            const custSel    = document.getElementById('ss-customer');
+            const customerId = custSel ? custSel.value : '';
+            let customerName = 'Walk-in';
+            if (customerId) {
+                const cust = await dbGet('waterCustomers', parseInt(customerId));
+                if (cust) customerName = cust.name;
+            }
+
+            const bigTotal   = bigQty   * _ssWaterBigPrice;
+            const smallTotal = smallQty * _ssWaterSmallPrice;
+            const total      = bigTotal + smallTotal;
+            const paidNow    = payment === 'credit' ? 0 : total;
+
+            const cart = [];
+            if (bigQty > 0)   cart.push({ type:'big',   qty:bigQty,   price:_ssWaterBigPrice,   subtotal:bigTotal });
+            if (smallQty > 0) cart.push({ type:'small', qty:smallQty, price:_ssWaterSmallPrice, subtotal:smallTotal });
+
+            const desc = cart.map(i => i.qty+'×'+(i.type==='big'?'Big':'Small')+' @₱'+i.price).join(' + ');
+
+            const sale = {
+                customerId:     customerId ? parseInt(customerId) : null,
+                customerName,
+                gallons:        bigQty,
+                bottles:        smallQty,
+                total,
+                amountPaid:     paidNow,
+                status:         payment === 'credit' ? 'credit' : 'paid',
+                paymentMethod:  payment,
+                date,
+                description:    desc,
+                cart,
+                recordedBy:     currentAppUser?.username || 'unknown',
+                createdAt:      new Date().toISOString()
+            };
+
+            try {
+                await dbAdd('waterSales', sale);
+                debouncedSync();
+                if (typeof prismAutoRefreshCurrent === 'function') prismAutoRefreshCurrent();
+                if (typeof loadWaterCustomers === 'function') loadWaterCustomers();
+                showToast('💧 Water recorded! Now tap "Record Store Sale" to finish.', 'success');
+                // Reset panel inputs
+                const bqEl = document.getElementById('ss-w-big-qty');   if (bqEl) bqEl.value = '0';
+                const sqEl = document.getElementById('ss-w-small-qty'); if (sqEl) sqEl.value = '0';
+                ssWaterCalcTotal();
+                // Auto-collapse the panel and scroll back to top
+                const _wPanel = document.getElementById('ss-water-panel');
+                const _wChev  = document.getElementById('ss-water-chevron');
+                if (_wPanel) _wPanel.style.display = 'none';
+                if (_wChev)  _wChev.textContent = '▶';
+                // Scroll modal to top
+                const _ssMod = document.querySelector('#water-store-sell-modal > div');
+                if (_ssMod) _ssMod.scrollTop = 0;
+                // Highlight the main Record Sale button
+                const _ssBtn = _ssMod ? _ssMod.querySelector('button[onclick="saveStoreSale()"]') : null;
+                if (_ssBtn) {
+                    _ssBtn.style.boxShadow = '0 0 0 3px #a78bfa, 0 0 20px rgba(167,139,250,0.4)';
+                    _ssBtn.style.transform = 'scale(1.02)';
+                    setTimeout(() => {
+                        _ssBtn.style.boxShadow = '';
+                        _ssBtn.style.transform = '';
+                    }, 2000);
+                }
+            } catch(e) { showToast('❌ Error: '+e.message, 'error'); }
+        }
+        window.ssRecordWaterSale = ssRecordWaterSale;
 
         function ssUpdatePrice() {
             const sel = document.getElementById('ss-product');
