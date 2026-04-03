@@ -5840,6 +5840,10 @@
                             <span style="font-weight: 600;" id="fin-credit-repaid">₱0</span>
                         </div>
                         <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="color: #374151;">Water Sales</span>
+                            <span style="font-weight: 600;" id="fin-water-income">₱0</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                             <span style="color: #374151;">Store/Business</span>
                             <span style="font-weight: 600;" id="fin-store-income">₱0</span>
                         </div>
@@ -5950,6 +5954,7 @@
                     <div id="fin-net-container" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 12px; padding: 20px; text-align: center;">
                         <small style="color: rgba(255,255,255,0.9); display: block; margin-bottom: 5px;">CASH REMAINING</small>
                         <div id="fin-net-profit" style="color: white; font-weight: 700; font-size: 1.8rem;">₱0</div>
+                        <div id="fin-net-income" style="display:none;">₱0</div>
                         <small style="color: rgba(255,255,255,0.7); display: block; margin-top: 5px;">In − Out − Gov't − Set Aside</small>
                     </div>
                 </div>
@@ -13632,7 +13637,7 @@ async function recordTenantPayment(tenantId) {
         // ═══════════════════════════════════════════════════════════
         window._qsCart = [];   // unified cart
 
-        function qsCartRender() {
+        function qsCartRender(highlightLast) {
             const cart = window._qsCart || [];
             const listEl  = document.getElementById('qs-cart-list');
             const totalEl = document.getElementById('qs-cart-total');
@@ -13649,28 +13654,54 @@ async function recordTenantPayment(tenantId) {
             }
             if (emptyEl) emptyEl.style.display = 'none';
             if (totalEl) totalEl.style.display = 'flex';
-            if (recBtn)  { recBtn.disabled = false; recBtn.style.opacity = '1'; }
+            if (recBtn)  { recBtn.disabled = false; recBtn.style.opacity = '1'; recBtn.style.background = 'linear-gradient(135deg,#6366f1,#a78bfa)'; }
 
             const grandTotal = cart.reduce((s,i) => s + i.subtotal, 0);
             listEl.innerHTML = cart.map((item, idx) => {
-                const color  = item.type === 'water' ? '#22d3ee' : '#a78bfa';
-                const border = item.type === 'water' ? '#06b6d4' : '#a78bfa';
-                return `<div style="display:flex;justify-content:space-between;align-items:center;
+                const isWater = item.type === 'water';
+                const color   = isWater ? '#22d3ee' : '#a78bfa';
+                const border  = isWater ? '#06b6d4' : '#a78bfa';
+                const bgColor = isWater ? 'rgba(6,182,212,0.06)' : 'rgba(167,139,250,0.06)';
+                const num     = idx + 1; // chronological order number
+                const isNew   = highlightLast && idx === cart.length - 1;
+                return `<div style="display:flex;align-items:center;gap:8px;
                             padding:8px 10px;border-radius:8px;margin-bottom:5px;
-                            background:rgba(15,23,42,0.6);border-left:3px solid ${border};">
+                            background:${bgColor};border-left:3px solid ${border};
+                            ${isNew ? 'animation:qsFlash 0.5s ease;' : ''}">
+                    <div style="font-size:0.7rem;font-weight:800;color:${color};min-width:18px;text-align:center;
+                        background:rgba(255,255,255,0.06);border-radius:4px;padding:2px 4px;">${num}</div>
                     <div style="flex:1;min-width:0;">
-                        <div style="font-weight:600;font-size:0.85rem;color:#f1f5f9;">${item.label}</div>
-                        ${item.note ? `<div style="font-size:0.7rem;color:#64748b;">${item.note}</div>` : ''}
+                        <div style="font-weight:600;font-size:0.84rem;color:#f1f5f9;">${item.label}</div>
                     </div>
-                    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-                        <span style="font-weight:800;color:${color};">₱${item.subtotal.toLocaleString()}</span>
+                    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+                        <span style="font-weight:800;color:${color};font-size:0.92rem;">₱${item.subtotal.toLocaleString()}</span>
                         <button onclick="qsCartRemove(${idx})" style="padding:2px 7px;background:rgba(239,68,68,0.1);
                             border:1px solid rgba(239,68,68,0.3);color:#ef4444;border-radius:5px;cursor:pointer;font-size:0.72rem;">✕</button>
                     </div>
                 </div>`;
             }).join('');
 
-            if (totalEl) totalEl.querySelector('#qs-grand-total').textContent = '₱' + grandTotal.toLocaleString();
+            const grandEl = document.getElementById('qs-grand-total');
+            if (grandEl) grandEl.textContent = '₱' + grandTotal.toLocaleString();
+
+            // Pulse the cart container to signal new item
+            if (highlightLast) {
+                const cartBox = listEl.closest('div[style*="min-height"]');
+                if (cartBox) {
+                    cartBox.style.borderColor = '#10b981';
+                    cartBox.style.boxShadow   = '0 0 12px rgba(16,185,129,0.25)';
+                    setTimeout(() => { cartBox.style.borderColor = '#334155'; cartBox.style.boxShadow = ''; }, 1200);
+                }
+                // Scroll cart into view
+                listEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+        // Add flash animation CSS once
+        if (!document.getElementById('qs-flash-style')) {
+            const s = document.createElement('style');
+            s.id = 'qs-flash-style';
+            s.textContent = '@keyframes qsFlash { 0%{opacity:0;transform:translateY(-4px)} 100%{opacity:1;transform:translateY(0)} }';
+            document.head.appendChild(s);
         }
         window.qsCartRender = qsCartRender;
 
@@ -13753,7 +13784,7 @@ async function recordTenantPayment(tenantId) {
                 type: 'store', productId, itemName, itemIcon, qty, price, subtotal,
                 label: `${itemIcon} ${itemName} × ${qty} @₱${price}`
             });
-            qsCartRender();
+            qsCartRender(true);
             // Reset item inputs
             if (sel) sel.value = '';
             document.getElementById('qs-icon').value  = '🛒';
@@ -13790,7 +13821,7 @@ async function recordTenantPayment(tenantId) {
                     label:`💧 ${smallQty} × ${smallLabel} @₱${smallPrice}`
                 });
             }
-            qsCartRender();
+            qsCartRender(true);
             document.getElementById('qs-w-big-qty').value   = '0';
             document.getElementById('qs-w-small-qty').value = '0';
             qsWaterCalcTotal();
@@ -13861,13 +13892,24 @@ async function recordTenantPayment(tenantId) {
                 <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;width:100%;max-width:420px;max-height:92vh;overflow-y:auto;">
 
                     <!-- Header -->
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #334155;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
                         <div>
                             <h3 style="margin:0;color:#f1f5f9;font-size:1rem;">🛒 Sell Anything</h3>
-                            <div style="font-size:0.7rem;color:#64748b;margin-top:2px;">Add items to cart, then record all at once</div>
+                            <div style="font-size:0.7rem;color:#64748b;margin-top:1px;">Add items to cart → Record all at once</div>
                         </div>
                         <button onclick="document.getElementById('quick-sell-modal').remove()"
                             style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.3rem;">✕</button>
+                    </div>
+
+                    <!-- ── CART FIRST — always visible at top ── -->
+                    <div style="background:rgba(15,23,42,0.7);border:1px solid #334155;border-radius:10px;padding:10px;margin-bottom:12px;min-height:60px;">
+                        <div style="font-size:0.7rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">🧾 Cart — Customer Order</div>
+                        <div id="qs-cart-empty" style="text-align:center;color:#475569;font-size:0.78rem;padding:6px 0;">No items yet — add below ↓</div>
+                        <div id="qs-cart-list"></div>
+                        <div id="qs-cart-total" style="display:none;justify-content:space-between;align-items:center;border-top:1px solid #334155;padding-top:8px;margin-top:6px;">
+                            <span style="font-weight:700;color:#f1f5f9;font-size:0.9rem;">Grand Total:</span>
+                            <span id="qs-grand-total" style="font-weight:900;color:#10b981;font-size:1.15rem;">₱0</span>
+                        </div>
                     </div>
 
                     <!-- ── SECTION 1: Store Items ── -->
@@ -13906,8 +13948,8 @@ async function recordTenantPayment(tenantId) {
                             </div>
                             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
                                 <span style="font-size:0.78rem;color:#94a3b8;">Subtotal: <strong id="qs-item-subtotal" style="color:#a78bfa;">₱0</strong></span>
-                                <button onclick="qsAddStoreItem()"
-                                    style="padding:7px 16px;background:#a78bfa;border:none;border-radius:8px;color:white;font-weight:700;font-size:0.82rem;cursor:pointer;">+ Add to Cart</button>
+                                <button onclick="qsAddStoreItem()" id="qs-add-store-btn"
+                                    style="padding:7px 16px;background:linear-gradient(135deg,#7c3aed,#a78bfa);border:none;border-radius:8px;color:white;font-weight:700;font-size:0.82rem;cursor:pointer;box-shadow:0 2px 8px rgba(167,139,250,0.3);">🛒 Add to Cart</button>
                             </div>
                         </div>
                     </div>
@@ -13954,19 +13996,8 @@ async function recordTenantPayment(tenantId) {
                             <div style="display:flex;justify-content:space-between;align-items:center;">
                                 <span style="font-size:0.78rem;color:#94a3b8;">Subtotal: <strong id="qs-water-subtotal" style="color:#22d3ee;">₱0</strong></span>
                                 <button onclick="qsAddWaterItem()"
-                                    style="padding:7px 16px;background:#06b6d4;border:none;border-radius:8px;color:white;font-weight:700;font-size:0.82rem;cursor:pointer;">+ Add to Cart</button>
+                                    style="padding:7px 16px;background:linear-gradient(135deg,#0284c7,#06b6d4);border:none;border-radius:8px;color:white;font-weight:700;font-size:0.82rem;cursor:pointer;box-shadow:0 2px 8px rgba(6,182,212,0.3);">💧 Add to Cart</button>
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- ── CART ── -->
-                    <div style="background:rgba(15,23,42,0.5);border:1px solid #334155;border-radius:10px;padding:10px;margin-bottom:10px;min-height:50px;">
-                        <div style="font-size:0.72rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">🧾 Cart</div>
-                        <div id="qs-cart-empty" style="text-align:center;color:#475569;font-size:0.8rem;padding:8px;">Add items above ↑</div>
-                        <div id="qs-cart-list"></div>
-                        <div id="qs-cart-total" style="display:none;justify-content:space-between;align-items:center;border-top:1px solid #334155;padding-top:8px;margin-top:4px;">
-                            <span style="font-weight:700;color:#f1f5f9;">Grand Total:</span>
-                            <span id="qs-grand-total" style="font-weight:900;color:#10b981;font-size:1.1rem;">₱0</span>
                         </div>
                     </div>
 
@@ -21907,6 +21938,20 @@ async function showPayrollSummary() {
                     '<input type="date" id="ife-date" value="'+(record.date||'')+'" style="'+_inp+'"></div>' +
                     '<div class="form-group"><label style="font-size:0.82rem;color:#94a3b8;">Notes</label>' +
                     '<textarea id="ife-notes" rows="2" style="'+_inp+'font-size:0.88rem;resize:none;">'+(record.notes||'')+'</textarea></div>';
+            } else if (src === 'income') {
+                record = await dbGet('additionalIncome', id);
+                if (!record) { showToast('⚠️ Income record not found.', 'warning'); return; }
+                title = '✏️ Edit Income Record';
+                const _inp2 = 'width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;box-sizing:border-box;';
+                fields =
+                    '<div class="form-group"><label style="font-size:0.82rem;color:#94a3b8;">Source / Description</label>' +
+                    '<input type="text" id="ife-source" value="'+(record.source||record.description||'').replace(/"/g,'&quot;')+'" style="'+_inp2+'font-size:0.92rem;"></div>' +
+                    '<div class="form-group"><label style="font-size:0.82rem;color:#94a3b8;">Amount (₱)</label>' +
+                    '<input type="number" id="ife-amount" value="'+(record.amount||0)+'" min="0" style="'+_inp2+'font-size:1rem;font-weight:700;"></div>' +
+                    '<div class="form-group"><label style="font-size:0.82rem;color:#94a3b8;">Date</label>' +
+                    '<input type="date" id="ife-date" value="'+(record.date||'')+'" style="'+_inp2+'"></div>' +
+                    '<div class="form-group"><label style="font-size:0.82rem;color:#94a3b8;">Notes</label>' +
+                    '<textarea id="ife-notes" rows="2" style="'+_inp2+'font-size:0.88rem;resize:none;">'+(record.notes||'')+'</textarea></div>';
             } else { return; }
 
             // Build modal
@@ -22029,11 +22074,24 @@ async function showPayrollSummary() {
                 s.editedBy      = currentAppUser?.username || 'admin';
                 s.editedAt      = new Date().toISOString();
                 await dbUpdate('waterStoreSales', s);
+            } else if (src === 'income') {
+                if (amount <= 0) { showToast('⚠️ Amount must be greater than 0.', 'warning'); return; }
+                const rec = await dbGet('additionalIncome', id);
+                if (!rec) { showToast('⚠️ Record not found.', 'warning'); return; }
+                const source = document.getElementById('ife-source')?.value?.trim() || rec.source || '';
+                rec.source      = source;
+                rec.description = source;
+                rec.amount      = amount;
+                rec.date        = date;
+                rec.notes       = notes;
+                rec.editedBy    = currentAppUser?.username || 'admin';
+                rec.editedAt    = new Date().toISOString();
+                await dbUpdate('additionalIncome', rec);
             }
 
             document.getElementById('ife-modal')?.remove();
             if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
-        debouncedSync();
+            debouncedSync();
             loadDashboard();
             if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
             if (typeof renderWaterAllSales === 'function' && src === 'water') renderWaterAllSales();
