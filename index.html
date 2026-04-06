@@ -9025,6 +9025,75 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
         }
         window.prismAutoRefreshCurrent = prismAutoRefreshCurrent;
 
+        // ══════════════════════════════════════════════════════
+        // prismFullRefresh(type, options)
+        // Central refresh hub — call after ANY save/record/edit
+        // type: 'income'|'expense'|'water'|'tenant'|'credit'|'staff'|'payable'|'all'
+        // options: { isCredit: bool, dueDate: string, skipCalendar: bool }
+        // ══════════════════════════════════════════════════════
+        async function prismFullRefresh(type, options) {
+            options = options || {};
+            try {
+                // 1. Sync to Firebase (non-blocking)
+                debouncedSync();
+
+                // 2. Refresh the active section immediately
+                const active = document.querySelector('.section.active');
+                const sid    = active ? active.id : '';
+                if (sid && typeof prismRefreshSection === 'function') {
+                    prismRefreshSection(sid).catch(()=>{});
+                }
+                // Also directly refresh income feed regardless of active section
+                // because income page may have been open when save was triggered
+                if (typeof loadIncomeTodayFeed === 'function') {
+                    setTimeout(() => loadIncomeTodayFeed(), 100);
+                }
+
+                // 3. Always refresh dashboard stats + I/E widget
+                if (typeof loadDashboard === 'function') {
+                    loadDashboard().catch(()=>{});
+                }
+
+                // 4. Always refresh income feed for any income-related save
+                // Income feed shows ALL types so any sale affects it
+                if (typeof loadIncomeTodayFeed === 'function') {
+                    loadIncomeTodayFeed();
+                }
+
+                // 5. Refresh expense card on dashboard if expense-related
+                if (type === 'expense' || type === 'all') {
+                    if (typeof loadExpCardData === 'function') loadExpCardData();
+                    if (typeof loadExpenses    === 'function') loadExpenses();
+                }
+
+                // 6. Refresh water if water-related
+                if (type === 'water' || type === 'all') {
+                    if (typeof loadWaterCustomers === 'function') loadWaterCustomers();
+                }
+
+                // 7. Refresh calendar — always for credits/unpaid, skip for paid cash
+                const skipCal = options.skipCalendar === true;
+                if (!skipCal) {
+                    // Re-render calendar so dots update
+                    if (typeof renderCalendar === 'function') {
+                        // Only reload if dashboard is active or calendar is visible
+                        const calEl = document.getElementById('collection-calendar');
+                        if (calEl) loadDashboard().catch(()=>{});
+                    }
+                }
+
+                // 8. Update financial overview if open
+                if (typeof refreshFinancialOverview === 'function') {
+                    const finEl = document.getElementById('financial-overview');
+                    if (finEl && finEl.offsetParent) refreshFinancialOverview();
+                }
+
+            } catch(e) {
+                console.warn('[prismFullRefresh]', e);
+            }
+        }
+        window.prismFullRefresh = prismFullRefresh;
+
         // ── Cloud Refresh: pull from Firebase first, then reload current section ──
         async function prismCloudRefresh() {
             const btn = document.getElementById('prism-mini-refresh');
@@ -11804,7 +11873,9 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 loadDashboard();
                 loadTenants();
                 // Immediate sync for critical data
-                try { await syncToFirebase(); } catch(e) { debouncedSync(); }
+                try { await syncToFirebase(); } catch(e) { debouncedSync();
+                prismFullRefresh('all', {skipCalendar: true});
+ }
             } catch (error) {
                 console.error('Error saving property:', error);
                 showToast('❌ Error saving property: ' + error.message, 'error');
@@ -12117,7 +12188,9 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             hideModal('expense-detail-modal');
             loadProperties();
             loadDashboard();
-            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
+            try { await syncToFirebase(); } catch(e) { debouncedSync();
+            prismFullRefresh('all', {skipCalendar: true});
+ }
         }
 
         async function populatePropertyDropdown() {
@@ -12335,12 +12408,9 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
 
                 hideModal('tenant-modal');
                 resetTenantForm();
-                loadTenants();
-                loadProperties();
-                loadDashboard();
-                // Immediate sync for critical data
                 try { await syncToFirebase(); } catch(e) { debouncedSync(); }
-                showToast('Tenant saved successfully! Property is now occupied.', 'success');
+                prismFullRefresh('tenant', {skipCalendar: true});
+                showToast('✅ Tenant saved successfully!', 'success');
             } catch (error) {
                 console.error('Error saving tenant:', error);
                 showToast('❌ Error saving tenant: ' + error.message, 'error');
@@ -12676,6 +12746,8 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
 
             if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
         debouncedSync();
+            prismFullRefresh('tenant', {skipCalendar: true});
+
             loadTenants();
             loadDashboard();
             showToast(`✅ ${tenant.name} reactivated successfully!`, 'success');
@@ -12728,7 +12800,8 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 (tenant.depositPaid ? '✅ Paid' : '⏳ Pending') : 'Not required';
 
             document.getElementById('tenant-detail-name').textContent = tenant.name;
-            window._tenantDetailId = id;
+            window.viewTenantDetails = viewTenantDetails;
+        window._tenantDetailId = id;
             // Show edit button in header for admin/owner/manager only
             
             document.getElementById('tenant-detail-content').innerHTML = `
@@ -12943,6 +13016,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             await viewTenantDetails(tenantId);
             if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
         debouncedSync();
+                prismFullRefresh('tenant', {skipCalendar: true});
         }
 
         // Edit Tenant
@@ -13079,6 +13153,8 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             loadDashboard();
             if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
         debouncedSync();
+            prismFullRefresh('tenant', {skipCalendar: true});
+
         }
 
         // Record payment for specific tenant
@@ -13252,10 +13328,7 @@ async function recordTenantPayment(tenantId) {
             await dbAdd('payments', payment);
             await viewTenantDetails(tenantId);
             loadTenants();
-            loadDashboard();
-            if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
-            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
-        debouncedSync();
+            prismFullRefresh('tenant', { skipCalendar: false });
             showToast('✅ Payment recorded successfully!', 'success');
             if (currentAppUser && currentAppUser.role === 'cashier' && typeof loadCashierDashboard === 'function') {
                 setTimeout(loadCashierDashboard, 400);
@@ -13268,6 +13341,7 @@ async function recordTenantPayment(tenantId) {
         }
 
         // Delete payment
+        window.saveTenantPayment = saveTenantPayment;
         async function deletePayment(paymentId, type, parentId) {
             if (currentAppUser && currentAppUser.role === 'cashier') {
                 showToast('⛔ Cashiers cannot delete payments. Contact admin.', 'error');
@@ -13353,7 +13427,8 @@ async function recordTenantPayment(tenantId) {
             s.voidedAt = new Date().toISOString();
             await dbUpdate('waterSales', s);
             if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
-        debouncedSync(); loadWaterCustomers();
+        debouncedSync();
+                prismFullRefresh('tenant', {skipCalendar: true}); loadWaterCustomers();
             showToast('🚫 Water sale voided.', 'success');
             await viewWaterCustomerDetails(customerId);
         }
@@ -13384,7 +13459,9 @@ async function recordTenantPayment(tenantId) {
             if (!currentAppUser || !['owner','admin'].includes(currentAppUser.role)) return;
             if (!await showConfirm('Delete this salary payment record? This cannot be undone.', 'danger', '🗑️ Delete Salary Record', 'Yes, Delete')) return;
             await dbDelete('salaryPayments', salaryId);
-            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
+            try { await syncToFirebase(); } catch(e) { debouncedSync();
+            prismFullRefresh('staff', {skipCalendar: true});
+ }
             showToast('Salary record deleted.', 'success');
             await viewEmployeeDetails(employeeId);
         }
@@ -13461,7 +13538,8 @@ async function recordTenantPayment(tenantId) {
             hideModal('tenant-detail-modal');
             loadTenants();
             loadDashboard();
-            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
+            try { await syncToFirebase(); } catch(e) { debouncedSync();
+                prismFullRefresh('tenant', {skipCalendar: true}); }
         }
 
         async function populateTenantDropdown() {
@@ -14111,12 +14189,10 @@ async function recordTenantPayment(tenantId) {
 
                 document.getElementById('quick-sell-modal')?.remove();
                 window._qsCart = [];
-                if (typeof prismAutoRefreshCurrent === 'function') prismAutoRefreshCurrent();
-                debouncedSync();
-                if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
-                if (typeof loadWaterCustomers  === 'function') loadWaterCustomers();
-                if (typeof renderWaterStore    === 'function') renderWaterStore();
-
+                const _qsHasCredit = payment === 'credit';
+                const _qsHasWater  = cart.some(i => i.type === 'water');
+                prismFullRefresh(_qsHasWater ? 'water' : 'income', { skipCalendar: !_qsHasCredit });
+                if (typeof renderWaterStore === 'function') renderWaterStore();
                 const summary = cart.map(i => i.label).join(' + ');
                 showToast('✅ Recorded: ₱' + grandTotal.toLocaleString() + ' — ' + cart.length + ' item(s)!', 'success');
 
@@ -15398,7 +15474,9 @@ async function recordTenantPayment(tenantId) {
     if (!await showConfirm('This water sale record will be permanently deleted.', 'danger', '🗑️ Delete Water Sale', 'Yes, Delete')) return;
     showToast('⏳ Deleting record...', 'info');
                 await dbDelete('waterSales', id);
-    try { await syncToFirebase(); } catch(e) { debouncedSync(); }
+    try { await syncToFirebase(); } catch(e) { debouncedSync();
+            prismFullRefresh('water', {skipCalendar: true});
+ }
     loadWaterCustomers();
     showToast('Water sale deleted', 'success');
 }
@@ -15546,6 +15624,8 @@ async function loadWaterCustomers() {
                 if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
                 if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
         debouncedSync();
+            prismFullRefresh('water', {skipCalendar: true});
+
             } catch (error) {
                 console.error('Error saving water customer:', error);
                 showToast('❌ Error: ' + error.message, 'error');
@@ -15951,16 +16031,13 @@ async function loadWaterCustomers() {
                     });
                 }
 
-                // Reset
                 window._wsCart = [];
                 hideModal('water-sale-modal');
-                loadWaterCustomers();
-                if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
+                // Full refresh — update everything
+                const _hasCredit = paymentType === 'credit' || paymentType === 'partial';
+                prismFullRefresh('water', { skipCalendar: !_hasCredit });
                 if (typeof renderWaterStore === 'function') renderWaterStore();
-                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
-                debouncedSync();
 
-                // Toast with full order summary
                 const bigLine   = bigItems.reduce((s,i)=>s+i.qty,0) > 0 ? bigItems.reduce((s,i)=>s+i.qty,0)+' Big' : '';
                 const smallLine = smallItems.reduce((s,i)=>s+i.qty,0) > 0 ? smallItems.reduce((s,i)=>s+i.qty,0)+' Small' : '';
                 const storeLine = storeItems.length > 0 ? storeItems.length+' store item'+(storeItems.length>1?'s':'') : '';
@@ -16207,7 +16284,9 @@ async function loadWaterCustomers() {
             }
             loadWaterCustomers();
             viewWaterCustomerDetails(customerId);
-            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
+            try { await syncToFirebase(); } catch(e) { debouncedSync();
+            prismFullRefresh('water', {skipCalendar: true});
+ }
             if (remaining > 0) {
                 showToast(`✅ ₱${paymentAmount.toLocaleString()} recorded! ₱${(paymentAmount-remaining).toLocaleString()} applied to ${appliedCount} sale(s). ₱${remaining.toLocaleString()} is advance credit.`, 'success');
             } else {
@@ -16262,7 +16341,9 @@ async function loadWaterCustomers() {
             await dbDelete('waterCustomers', id);
             hideModal('water-customer-detail-modal');
             loadWaterCustomers();
-            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
+            try { await syncToFirebase(); } catch(e) { debouncedSync();
+            prismFullRefresh('water', {skipCalendar: true});
+ }
         }
         window.deleteWaterCustomer = deleteWaterCustomer;
 
@@ -16510,6 +16591,8 @@ async function loadWaterCustomers() {
                 if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
                 if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
         debouncedSync();
+            prismFullRefresh('staff', {skipCalendar: true});
+
             } catch (error) {
                 console.error('Error saving employee:', error);
                 showToast('❌ Error: ' + error.message, 'error');
@@ -16910,6 +16993,8 @@ async function loadWaterCustomers() {
                 }
                 if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
         debouncedSync();
+            prismFullRefresh('staff', {skipCalendar: true});
+
                 showToast('Attendance recorded!', 'success');
             } catch (error) {
                 console.error('Error saving time record:', error);
@@ -16937,6 +17022,7 @@ async function loadWaterCustomers() {
             hideModal('employee-detail-modal');
             showModal('time-record-modal');
         }
+            prismFullRefresh('staff', {skipCalendar: true});
         window.editTimeRecord = editTimeRecord;
 
         // Quick Attendance for all employees
@@ -17015,6 +17101,8 @@ async function showQuickAttendance() {
             loadEmployees();
             if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
         debouncedSync();
+            prismFullRefresh('staff', {skipCalendar: true});
+
         }
 
         // ============================================================
@@ -17782,6 +17870,8 @@ async function showPayrollSummary() {
                 if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
                 if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
         debouncedSync();
+            prismFullRefresh('staff', {skipCalendar: true});
+
                 
                 showToast(`✅ Salary of ₱${netPay.toLocaleString()} paid to ${employee.name}! — Records reset for next pay period.`, 'success');
                 
@@ -18017,8 +18107,7 @@ async function showPayrollSummary() {
                 hideModal('advance-modal');
                 loadEmployees();
                 viewEmployeeDetails(employeeId);
-                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
-                debouncedSync();
+                prismFullRefresh('expense', { skipCalendar: true });
                 showToast('✅ Cash advance recorded + added to Expenses!', 'success');
                 if (currentAppUser && currentAppUser.role === 'cashier' && typeof loadCashierDashboard === 'function') {
                     setTimeout(loadCashierDashboard, 400);
@@ -18209,9 +18298,8 @@ async function showPayrollSummary() {
                 hideModal('salary-modal');
                 loadEmployees();
                 viewEmployeeDetails(employeeId);
-                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
-                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
-        debouncedSync();
+                debouncedSync();
+                prismFullRefresh('staff', {skipCalendar: true});
                 showToast(`✅ Salary paid! ${unpaidRecords.length} days marked as paid`, 'success');
             } catch (error) {
                 console.error('Error paying salary:', error);
@@ -18287,7 +18375,9 @@ async function showPayrollSummary() {
                 await dbDelete('employees', id);
             hideModal('employee-detail-modal');
             loadEmployees();
-            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
+            try { await syncToFirebase(); } catch(e) { debouncedSync();
+            prismFullRefresh('staff', {skipCalendar: true});
+ }
             showToast('Employee deleted successfully!', 'success');
         }
     window.deleteEmployee = deleteEmployee;
@@ -18341,7 +18431,9 @@ async function showPayrollSummary() {
                 loadCredits();
                 loadDashboard();
                 // Immediate sync for critical data
-                try { await syncToFirebase(); } catch(e) { debouncedSync(); }
+                try { await syncToFirebase(); } catch(e) { debouncedSync();
+                prismFullRefresh('credit', {skipCalendar: true});
+ }
                 showToast('Credit/Loan saved successfully!', 'success');
 
                 // Auto-endorse new credits to admin
@@ -18642,6 +18734,7 @@ async function showPayrollSummary() {
 
             document.getElementById('payroll-adjust-modal').remove();
             showToast(`✅ ${typeLabels[type]} of ₱${amount.toLocaleString()} added for ${date}`, 'success');
+            prismFullRefresh('staff', {skipCalendar: true});
             loadEmployees();
         }
 
@@ -18757,7 +18850,8 @@ async function showPayrollSummary() {
             const daysUntilDue = credit.dueDate ? Math.ceil((new Date(credit.dueDate) - new Date()) / (1000 * 60 * 60 * 24)) : null;
 
             document.getElementById('credit-detail-name').textContent = credit.debtor;
-            window._creditDetailId = id;
+            window.viewCreditDetails = viewCreditDetails;
+        window._creditDetailId = id;
             // Show edit button in header for admin/owner/manager only
             
             document.getElementById('credit-detail-content').innerHTML = `
@@ -18962,6 +19056,8 @@ async function showPayrollSummary() {
             loadDashboard();
             if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
         debouncedSync();
+            prismFullRefresh('credit', {skipCalendar: true});
+
         }
 
         // Record payment for specific credit
@@ -19145,11 +19241,7 @@ async function showPayrollSummary() {
             
             await viewCreditDetails(creditId);
             loadCredits();
-            loadDashboard();
-            if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
-            // Sync to Firebase
-            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
-        debouncedSync();
+            prismFullRefresh('credit', { skipCalendar: false });
 
             // Cashier: auto-endorse credit payment to admin
             if (currentAppUser && currentAppUser.role === 'cashier') {
@@ -19158,6 +19250,7 @@ async function showPayrollSummary() {
             }
         }
 
+        window.saveCreditPayment = saveCreditPayment;
         async function deleteCredit(id) {
             if (currentAppUser && currentAppUser.role === 'cashier') {
                 showToast('⛔ Cashiers cannot delete credits. Contact admin.', 'error');
@@ -19178,7 +19271,8 @@ async function showPayrollSummary() {
             hideModal('credit-detail-modal');
             loadCredits();
             loadDashboard();
-            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
+            try { await syncToFirebase(); } catch(e) { debouncedSync();
+                prismFullRefresh('credit', {skipCalendar: true}); }
         }
 
         async function populateCreditDropdown() {
@@ -19425,6 +19519,8 @@ async function showPayrollSummary() {
                 if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
                 if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
         debouncedSync();
+            prismFullRefresh('notes', {skipCalendar: true});
+
             } catch (error) {
                 console.error('Error saving note:', error);
                 showToast('❌ Error saving note: ' + error.message, 'error');
@@ -19725,6 +19821,8 @@ async function showPayrollSummary() {
             showToast(note.done ? '✅ Note marked done!' : '↩ Note reopened', 'success');
             loadNotes();
             debouncedSync && debouncedSync();
+            prismFullRefresh('notes', {skipCalendar: true});
+
         }
         window.toggleNoteDone = toggleNoteDone;
 
@@ -19989,7 +20087,9 @@ async function showPayrollSummary() {
             loadNotes();
             showToast('🗑️ Note deleted.', 'success');
             // Sync immediately (not debounced) so deletion reaches Firebase before logout
-            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
+            try { await syncToFirebase(); } catch(e) { debouncedSync();
+            prismFullRefresh('notes', {skipCalendar: true});
+ }
         }
 
         // =====================
@@ -20271,6 +20371,7 @@ async function showPayrollSummary() {
             }
             if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
         debouncedSync();
+                prismFullRefresh('income', {skipCalendar: true});
         }
 
         // =====================
@@ -20464,6 +20565,7 @@ async function showPayrollSummary() {
                 if (descEl) descEl.value = '';
                 if (amtEl)  amtEl.value = '';
                 if (statusEl) { statusEl.textContent = '✅ Added: '+catLabel+' — ₱'+amount.toLocaleString(); statusEl.style.display='block'; setTimeout(()=>{ if(statusEl) statusEl.style.display='none'; },3000); }
+                prismFullRefresh('expense', {skipCalendar: true});
                 showToast('✅ Expense added: ₱'+amount.toLocaleString(),'success');
                 if (typeof loadExpenses === 'function') loadExpenses();
                 if (typeof loadExpCardData === 'function') loadExpCardData();
@@ -20532,13 +20634,8 @@ async function showPayrollSummary() {
                 if (_hp) { _hp.style.display='none'; }
                 const _ha = document.getElementById('exp-hist-arrow');
                 if (_ha) { _ha.style.transform='rotate(0deg)'; }
-                loadExpenses();
-                loadDashboard();
-                // Sync to Firebase
-                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
-                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
-        debouncedSync();
-                showToast('Expense saved successfully!', 'success');
+                prismFullRefresh('expense', { skipCalendar: true });
+                showToast('✅ Expense saved successfully!', 'success');
 
                 if (currentAppUser && currentAppUser.role === 'cashier' && typeof loadCashierDashboard === 'function') {
                     setTimeout(loadCashierDashboard, 400);
@@ -20556,6 +20653,7 @@ async function showPayrollSummary() {
         }
 
         // ── Expense Category History ──
+        window.saveExpense = saveExpense;
         function expHistOnCategoryChange() {
             const panel = document.getElementById('exp-hist-panel');
             if (panel && panel.style.display !== 'none') {
@@ -21000,6 +21098,8 @@ async function showPayrollSummary() {
             loadDashboard();
             if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
         debouncedSync();
+            prismFullRefresh('expense', {skipCalendar: true});
+
         }
     window.deleteExpense = deleteExpense;
 
@@ -22090,13 +22190,9 @@ async function showPayrollSummary() {
             }
 
             document.getElementById('ife-modal')?.remove();
-            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
-            debouncedSync();
-            loadDashboard();
-            if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
-            if (typeof renderWaterAllSales === 'function' && src === 'water') renderWaterAllSales();
-            if (src === 'water') loadWaterCustomers();
-            if (src === 'store') { loadWaterCustomers(); if(typeof renderWaterStore==='function') renderWaterStore(); }
+            prismFullRefresh(src, { skipCalendar: false });
+            if (src === 'water') { if(typeof renderWaterAllSales==='function') renderWaterAllSales(); }
+            if (src === 'store') { if(typeof renderWaterStore==='function') renderWaterStore(); }
             if (src === 'rent')  loadTenants();
             if (src === 'credit') loadCredits();
             showToast('✅ Record updated successfully!', 'success');
@@ -22120,11 +22216,9 @@ async function showPayrollSummary() {
             if (!confirmed) return;
             await dbDelete(dbStore, id);
             try { await syncToFirebase(); } catch(e) { debouncedSync(); }
-            loadDashboard();
-            if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
-            if (typeof renderWaterAllSales === 'function' && src === 'water') renderWaterAllSales();
-            if (src === 'water') loadWaterCustomers();
-            if (src === 'store') { loadWaterCustomers(); if(typeof renderWaterStore==='function') renderWaterStore(); }
+            prismFullRefresh(src, {skipCalendar: true});
+            if (src === 'water') { if(typeof renderWaterAllSales==='function') renderWaterAllSales(); }
+            if (src === 'store') { if(typeof renderWaterStore==='function') renderWaterStore(); }
             if (src === 'rent')  loadTenants();
             if (src === 'credit') loadCredits();
             showToast('🗑 Record deleted.', 'success');
@@ -22269,6 +22363,7 @@ async function showPayrollSummary() {
                 if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
                 if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
         debouncedSync();
+                prismFullRefresh('income', {skipCalendar: true});
 
                 // Cashier: auto-endorse income entry to admin
                 if (currentAppUser && currentAppUser.role === 'cashier' && !id) {
@@ -22320,6 +22415,7 @@ async function showPayrollSummary() {
                 if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
                 if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
         debouncedSync();
+                prismFullRefresh('income', {skipCalendar: true});
             } catch (error) {
                 console.error('Error deleting income:', error);
                 showToast('❌ Error deleting income: ' + error.message, 'error');
@@ -25115,8 +25211,9 @@ async function showPayrollSummary() {
 
         
         // ── Full UI refresh — called after any bulk data operation ──
-        async function prismFullRefresh() {
-            // 1. Reset all in-memory caches
+        // Renamed: prismHardRefresh — reloads ALL sections (used in Settings only)
+        // prismFullRefresh is the smart targeted version defined earlier
+        async function prismHardRefresh() {
             window.allTenantsData        = [];
             window.allCreditsData        = [];
             window.allExpensesData       = [];
@@ -25124,24 +25221,19 @@ async function showPayrollSummary() {
             window.allTasksData          = [];
             window.allEmployeesData      = [];
             window.allWaterCustomersData = [];
-    // Reset Jarod trend chart and analysis panel on full refresh
-    try {
-        if (typeof _dashTrendChart !== 'undefined' && _dashTrendChart) { _dashTrendChart.destroy(); _dashTrendChart = null; }
-        const _jp = document.getElementById('jarods-analysis-panel');
-        const _jt = document.getElementById('jarods-analysis-text');
-        if (_jp) _jp.style.display = 'none';
-        if (_jt) _jt.innerHTML = '';
-        window._trendData = null;
-    } catch(e) {}
-
-            // 1b. Immediately zero the Notes badge and clear reminder banner
+            try {
+                if (typeof _dashTrendChart !== 'undefined' && _dashTrendChart) { _dashTrendChart.destroy(); _dashTrendChart = null; }
+                const _jp = document.getElementById('jarods-analysis-panel');
+                const _jt = document.getElementById('jarods-analysis-text');
+                if (_jp) _jp.style.display = 'none';
+                if (_jt) _jt.innerHTML = '';
+                window._trendData = null;
+            } catch(e) {}
             try { prismUpdateReminderBadge(0); } catch(e) {}
             try {
                 const banner = document.getElementById('reminders-banner');
                 if (banner) { banner.classList.add('hidden'); banner.innerHTML = ''; }
             } catch(e) {}
-
-            // 2. Reload every data page sequentially
             const loaders = [
                 loadDashboard, loadProperties, loadTenants, loadCredits,
                 loadWaterCustomers, loadEmployees, loadExpenses, loadIncome,
@@ -25153,23 +25245,12 @@ async function showPayrollSummary() {
                 typeof updateDeleteStats === 'function' ? updateDeleteStats : null,
             ].filter(Boolean);
             for (const fn of loaders) {
-                try { await fn(); } catch(e) { console.warn('[prismFullRefresh] skipped:', fn.name, e.message); }
+                try { await fn(); } catch(e) { console.warn('[prismHardRefresh] skipped:', fn.name, e.message); }
             }
-    try { if (typeof loadStaffCashierActivity === 'function') setTimeout(loadStaffCashierActivity, 400); } catch(e) {}
-
-            // 3. Force re-render the currently visible tab
-            try {
-                const activeTab = document.querySelector('.nav-tab.active, .tab-btn.active, [data-tab].active');
-                if (activeTab) {
-                    const tab = activeTab.dataset.tab || activeTab.getAttribute('data-section');
-                    if (tab) showSection(tab);
-                }
-            } catch(e) {}
-
-            // 4. Re-run reminder check so badge reflects fresh (empty) data
+            try { if (typeof loadStaffCashierActivity === 'function') setTimeout(loadStaffCashierActivity, 400); } catch(e) {}
             try { await prismCheckReminders(); } catch(e) {}
         }
-        window.prismFullRefresh = prismFullRefresh;
+        window.prismHardRefresh = prismHardRefresh;
 
 async function clearAllData() {
             // ── Pause realtime sync so it doesn't race against the wipe ──
@@ -27750,6 +27831,7 @@ async function clearAllData() {
             document.getElementById('supplier-delete-btn').style.display = 'inline-block';
             showModal('supplier-modal');
         }
+            prismFullRefresh('supplier', {skipCalendar: true});
         window.editSupplier = editSupplier;
 
         async function saveSupplier(e) {
@@ -27786,7 +27868,9 @@ async function clearAllData() {
             hideModal('supplier-modal');
             showToast('✅ Supplier saved!','success');
             await loadSuppliers();
-            try { await syncToFirebase(); } catch(e2) { debouncedSync(); }
+            try { await syncToFirebase(); } catch(e2) { debouncedSync();
+            prismFullRefresh('supplier', {skipCalendar: true});
+ }
         }
         window.saveSupplier = saveSupplier;
 
@@ -27799,7 +27883,9 @@ async function clearAllData() {
             hideModal('supplier-modal');
             showToast('🗑 Supplier deleted.','success');
             await loadSuppliers();
-            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
+            try { await syncToFirebase(); } catch(e) { debouncedSync();
+            prismFullRefresh('supplier', {skipCalendar: true});
+ }
         }
         window.deleteSupplierById = deleteSupplierById;
 
@@ -28179,7 +28265,9 @@ async function clearAllData() {
             await _ensureSupplierExists(supplier);
             await loadPayables();
             await loadSuppliers();
-            try { await syncToFirebase(); } catch(err) { debouncedSync(); }
+            try { await syncToFirebase(); } catch(err) { debouncedSync();
+            prismFullRefresh('payable', {skipCalendar: true});
+ }
         }
         window.savePayable = savePayable;
 
@@ -28197,7 +28285,9 @@ async function clearAllData() {
             await dbDelete('payables', id);
             showToast('🗑 Invoice deleted.','success');
             await loadPayables();
-            try { await syncToFirebase(); } catch(err) { debouncedSync(); }
+            try { await syncToFirebase(); } catch(err) { debouncedSync();
+            prismFullRefresh('payable', {skipCalendar: true});
+ }
         }
         window.deletePayableById = deletePayableById;
 
@@ -28275,7 +28365,8 @@ async function clearAllData() {
             }
             await loadPayables();
             loadExpenses(); loadDashboard();
-            try { await syncToFirebase(); } catch(err) { debouncedSync(); }
+            try { await syncToFirebase(); } catch(err) { debouncedSync();
+                prismFullRefresh('payable', {skipCalendar: true}); }
         }
         window.confirmPayablePayment = confirmPayablePayment;
 
@@ -28476,11 +28567,7 @@ async function clearAllData() {
                 showToast('✅ Income recorded.','success');
             }
             hideModal('income-modal');
-            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
-        debouncedSync();
-            if (typeof loadIncome === 'function') loadIncome();
-            if (typeof loadDashboard === 'function') loadDashboard();
-            if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
+            prismFullRefresh('income', { skipCalendar: true });
         }
         window.saveAdditionalIncome = saveAdditionalIncome;
 
@@ -28555,6 +28642,7 @@ async function clearAllData() {
                 showToast('✅ Salary payment recorded.','success');
             }
         }
+            prismFullRefresh('staff', {skipCalendar: true});
         window.saveSalaryPayment = saveSalaryPayment;
 
         function toggleSalaryPartial() {
@@ -28625,6 +28713,7 @@ async function clearAllData() {
         async function saveStoreProduct() {
             if (typeof addStoreProduct === 'function') await addStoreProduct();
         }
+            prismFullRefresh('income', {skipCalendar: true});
         window.saveStoreProduct = saveStoreProduct;
 
                 // ═══════════════════════════════════════════════
@@ -29934,6 +30023,7 @@ async function clearAllData() {
             showToast('🗑 Task deleted.', 'success');
             // Sync immediately so deletion reaches Firebase before logout
             try { await syncToFirebase(); } catch(e) { debouncedSync(); }
+                prismFullRefresh('tasks', {skipCalendar: true});
         }
         window.deleteTask = deleteTask;
 
@@ -29949,6 +30039,7 @@ async function clearAllData() {
             await loadTasks();
             if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
         debouncedSync();
+                prismFullRefresh('tasks', {skipCalendar: true});
             showToast('✅ Task marked ' + nextStatus + '.', 'success');
         }
         window.toggleTaskStatus = toggleTaskStatus;
@@ -30310,6 +30401,7 @@ async function clearAllData() {
             const product = products.find(p => p.id === productId) || { id: productId, name: productName, price: unitPrice, unit, icon };
             showWaterStoreItemModal(product);
         }
+            prismFullRefresh('income', {skipCalendar: false});
         window.quickSellStoreItem = quickSellStoreItem;
 
         async function showWaterStoreItemModal(product) {
@@ -30555,8 +30647,7 @@ async function clearAllData() {
                 if (payment === 'credit') {
                     // Store sale credit tracked in waterStoreSales with status:'credit'
                 }
-                debouncedSync();
-                if (typeof prismAutoRefreshCurrent === 'function') prismAutoRefreshCurrent();
+                prismFullRefresh('income', { skipCalendar: payment === 'cash' || payment === 'gcash' });
                 showToast('✅ Store item recorded! Now tap "Record Water Sale" to finish.', 'success');
                 // Reset the panel inputs
                 if (sel) sel.value = '';
@@ -30679,9 +30770,7 @@ async function clearAllData() {
 
             try {
                 await dbAdd('waterSales', sale);
-                debouncedSync();
-                if (typeof prismAutoRefreshCurrent === 'function') prismAutoRefreshCurrent();
-                if (typeof loadWaterCustomers === 'function') loadWaterCustomers();
+                prismFullRefresh('water', { skipCalendar: payment === 'cash' || payment === 'gcash' });
                 showToast('💧 Water recorded! Now tap "Record Store Sale" to finish.', 'success');
                 // Reset panel inputs
                 const bqEl = document.getElementById('ss-w-big-qty');   if (bqEl) bqEl.value = '0';
@@ -30811,12 +30900,9 @@ async function clearAllData() {
                 });
 
                 document.getElementById('water-store-sell-modal')?.remove();
-                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
-                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
-        debouncedSync();
-                renderWaterStore();
-                if (typeof loadIncomeTodayFeed === 'function') loadIncomeTodayFeed();
-                if (typeof loadDashboard === 'function') loadDashboard();
+                const _ssIsCredit = payment === 'credit';
+                prismFullRefresh('income', { skipCalendar: !_ssIsCredit });
+                if (typeof renderWaterStore === 'function') renderWaterStore();
                 showToast('✅ ' + itemName + ' × ' + qty + ' sold for ₱' + total.toLocaleString() + '!', 'success');
             } catch(e) {
                 showToast('❌ Error: ' + e.message, 'error');
@@ -30866,6 +30952,7 @@ async function clearAllData() {
                 ssCalcTotal();
             }, 80);
         }
+            prismFullRefresh('income', {skipCalendar: true});
         window.editStoreSale = editStoreSale;
 
         // Manage products modal
@@ -30957,6 +31044,7 @@ async function clearAllData() {
             } catch(e) {}
             if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
         debouncedSync();
+                prismFullRefresh('income', {skipCalendar: true});
             document.getElementById('ws-manage-products-modal')?.remove();
             showManageStoreProducts();
             renderWaterStore();
@@ -31013,6 +31101,7 @@ async function clearAllData() {
                 </div>`;
             document.body.appendChild(modal);
         }
+            prismFullRefresh('income', {skipCalendar: true});
         window.editStoreProduct = editStoreProduct;
 
         async function saveEditedProduct(productId) {
@@ -31059,6 +31148,7 @@ async function clearAllData() {
             } catch(e) {}
             if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
         debouncedSync();
+                prismFullRefresh('income', {skipCalendar: true});
             showToast('✅ Price updated to ₱' + newPrice + '/' + products[idx].unit, 'success');
         }
         window.updateStoreProductPrice = updateStoreProductPrice;
