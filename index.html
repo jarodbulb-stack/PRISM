@@ -9044,9 +9044,9 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     prismRefreshSection(sid).catch(()=>{});
                 }
                 // Also directly refresh income feed regardless of active section
-                // because income page may have been open when save was triggered
-                if (typeof loadIncomeTodayFeed === 'function') {
-                    setTimeout(() => loadIncomeTodayFeed(), 100);
+                // Guard: only call after user is authenticated
+                if (typeof loadIncomeTodayFeed === 'function' && window.currentAppUser) {
+                    setTimeout(() => { if (window.currentAppUser) loadIncomeTodayFeed(); }, 150);
                 }
 
                 // 3. Always refresh dashboard stats + I/E widget
@@ -9054,9 +9054,8 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     loadDashboard().catch(()=>{});
                 }
 
-                // 4. Always refresh income feed for any income-related save
-                // Income feed shows ALL types so any sale affects it
-                if (typeof loadIncomeTodayFeed === 'function') {
+                // 4. Always refresh income feed — only after user authenticated
+                if (typeof loadIncomeTodayFeed === 'function' && window.currentAppUser) {
                     loadIncomeTodayFeed();
                 }
 
@@ -21740,6 +21739,8 @@ async function showPayrollSummary() {
         window.exportTransactionsTxt = exportTransactionsTxt;
 
         async function loadIncomeTodayFeed() {
+            // Guard: don't run before auth is ready
+            if (!window.currentAppUser) return;
             const feedEl  = document.getElementById('income-today-feed');
             const summEl  = document.getElementById('income-today-summary');
             if (!feedEl) return;
@@ -34922,9 +34923,9 @@ window.mtSAToggleOrgStatus=mtSAToggleOrgStatus;
             const _origSyncToFirebase = typeof window.syncToFirebase === 'function' ? window.syncToFirebase : null;
             if (_origSyncToFirebase && !_origSyncToFirebase._req7guarded) {
                 window.syncToFirebase = async function(...args) {
-                    const _role = currentAppUser?.role || 'viewer';
+                    const _role = window.currentAppUser?.role || 'viewer';
                     // Always allow SUPER_ADMINS through regardless of stored role
-                    const _email = (currentAppUser?.email || MT?.currentUser?.email || '').toLowerCase();
+                    const _email = (window.currentAppUser?.email || MT?.currentUser?.email || '').toLowerCase();
                     const _isSuperAdmin = MT?.SUPER_ADMINS && MT.SUPER_ADMINS.map(e=>e.toLowerCase()).includes(_email);
                     if (_isSuperAdmin) return _origSyncToFirebase(...args);
                     if (['viewer','cashier'].includes(_role)) {
