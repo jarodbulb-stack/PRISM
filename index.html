@@ -3,15 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <!-- CSP handled at server level via Firebase/GitHub Pages headers -->
-    <!-- Suppress harmless SVG base64 image load warnings early -->
-    <script>
-    window.addEventListener('unhandledrejection', function(e) {
-        var msg = (e.reason && (e.reason.message || e.reason.toString())) || '';
-        if (msg.includes('Unable to load image') || msg.includes('data:image/svg')) {
-            e.preventDefault();
-        }
-    });
-    </script>
     <!-- Firebase Performance: DNS prefetch + preconnect -->
     <link rel="dns-prefetch" href="//www.gstatic.com">
     <link rel="dns-prefetch" href="//firestore.googleapis.com">
@@ -10520,17 +10511,12 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             if (id === undefined || id === null) {
                 return null;
             }
-            // Walk-in or non-numeric IDs (e.g. 'walkin_...') are not stored in IDB — return null safely
-            const numId = Number(id);
-            if (isNaN(numId) || String(id).startsWith('walkin_')) {
-                return null;
-            }
             await ensureDB();
             return new Promise((resolve, reject) => {
                 try {
                     const tx = db.transaction(storeName, 'readonly');
                     const store = tx.objectStore(storeName);
-                    const request = store.get(numId);
+                    const request = store.get(Number(id));
                     request.onsuccess = () => resolve(request.result || null);
                     request.onerror = () => reject(request.error);
                     tx.onerror = () => reject(tx.error);
@@ -13427,6 +13413,14 @@ async function recordTenantPayment(tenantId) {
         }
         window.editWaterSaleRecord = editWaterSaleRecord;
 
+        // Open the edit/view modal for any water sale (including walk-in)
+        async function viewWaterSaleDetail(saleId, customerId) {
+            if (!saleId) return;
+            const cid = (!customerId || String(customerId).startsWith('walkin_') || isNaN(Number(customerId))) ? 0 : customerId;
+            incomeFeedEdit('water', saleId, cid);
+        }
+        window.viewWaterSaleDetail = viewWaterSaleDetail;
+
         async function voidWaterSale(saleId, customerId) {
             if (!currentAppUser || !['owner','admin'].includes(currentAppUser.role)) return;
             const reason = await showInputModal('Void Water Sale', 'Enter reason for voiding:', 'Reason');
@@ -15980,7 +15974,7 @@ async function loadWaterCustomers() {
                                 : bigItems.length ? 'big' : 'small';
 
             const sale = {
-                customerId:    (customerId && !String(customerId).startsWith('walkin_')) ? parseInt(customerId) : null,
+                customerId:    parseInt(customerId),
                 // Cart (full multi-item detail)
                 cart:          cart,
                 orderSummary:  orderSummary,
@@ -16073,13 +16067,18 @@ async function loadWaterCustomers() {
         window.saveWaterSale = saveWaterSale;
 
         async function viewWaterCustomerDetails(id) {
-            // Walk-in sales have no stored customer record — skip lookup
+            // Walk-in or non-numeric IDs have no customer profile — show their sales directly
             if (!id || String(id).startsWith('walkin_') || isNaN(Number(id))) {
-                showToast('ℹ️ Walk-in sale — no customer record to view.', 'info');
+                showToast('ℹ️ Walk-in — showing all walk-in sales.', 'info');
+                setWaterView('sales');
                 return;
             }
             const customer = await dbGet('waterCustomers', id);
-            if (!customer) return;
+            if (!customer) {
+                showToast('ℹ️ Customer record not found.', 'warning');
+                setWaterView('sales');
+                return;
+            }
             
             const sales = await dbGetAll('waterSales');
             const customerSales = sales.filter(s => String(s.customerId) === String(id)).sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -23170,20 +23169,11 @@ async function showPayrollSummary() {
 
         if (!window.Chart) {
             console.warn('[Trend] Chart.js not ready, retrying in 1s...');
-            const _args = arguments;
-            const _retryCount = renderTrendChart._retryCount = (renderTrendChart._retryCount || 0) + 1;
-            if (_retryCount <= 15) {
-                setTimeout(function() {
-                    renderTrendChart._retryCount = _retryCount;
-                    renderTrendChart.apply(null, _args);
-                }, 1000);
-            } else {
-                console.warn('[Trend] Chart.js failed to load after 15s — giving up.');
-                renderTrendChart._retryCount = 0;
-            }
+            setTimeout(function() {
+                if (typeof loadDashboard === 'function') loadDashboard();
+            }, 1000);
             return;
         }
-        renderTrendChart._retryCount = 0;
 
         _dashTrendChart = new window.Chart(canvas, {
             type: 'line',
@@ -26938,7 +26928,8 @@ async function clearAllData() {
                             : x.status==='partial'
                             ? '<span style="color:#f97316;font-size:0.7rem;font-weight:700;">PARTIAL</span>'
                             : '<span style="color:#10b981;font-size:0.7rem;font-weight:700;">PAID</span>';
-                        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color);cursor:pointer;" onclick="document.getElementById(&quot;wfd-modal&quot;).remove();viewWaterCustomerDetails(' + (x.customerId) + ')">';
+                        const _cid26 = x.customerId && !String(x.customerId).startsWith('walkin_') && !isNaN(Number(x.customerId)) ? x.customerId : 0;
+                        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color);cursor:pointer;" onclick="document.getElementById(&quot;wfd-modal&quot;).remove();' + (_cid26 ? 'viewWaterCustomerDetails(' + _cid26 + ')' : 'viewWaterSaleDetail(' + (x.id||0) + ',0)') + '">';
                         html += '<div><div style="font-weight:600;font-size:0.85rem;color:#60a5fa;">' + name + '</div>';
                         html += '<div style="font-size:0.72rem;color:#64748b;">' + summary + ' · ' + (x.date||'') + ' ' + statusBadge + '</div></div>';
                         html += '<span style="font-weight:700;color:' + (isPaid?'#10b981':'#f59e0b') + ';white-space:nowrap;margin-left:8px;">₱' + (x.total||x.amountPaid||0).toLocaleString() + '</span>';
@@ -29666,7 +29657,9 @@ async function clearAllData() {
             }
             contEl.innerHTML = filtered.map(s => {
                 const statusColor = s.status==='paid' ? '#10b981' : s.status==='credit' ? '#f59e0b' : '#3b82f6';
-                return `<div onclick="viewWaterCustomerDetails(${s.customerId})" style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:var(--bg-primary);border-radius:8px;margin-bottom:5px;border-left:3px solid ${statusColor};cursor:pointer;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                const _cid = s.customerId && !String(s.customerId).startsWith('walkin_') && !isNaN(Number(s.customerId)) ? s.customerId : 0;
+                const _navFn = _cid ? `viewWaterCustomerDetails(${_cid})` : `viewWaterSaleDetail(${s.id||0},0)`;
+                return `<div onclick="${_navFn}" style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:var(--bg-primary);border-radius:8px;margin-bottom:5px;border-left:3px solid ${statusColor};cursor:pointer;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
                     <div><div style="font-weight:600;font-size:0.85rem;">💧 ${_esc(s.customerName||'Walk-in')}</div>
                     <div style="font-size:0.72rem;color:#64748b;">${s.date} · ${s.gallons||s.bottles||0} gal${s.status?' · '+s.status:''}</div></div>
                     <div style="display:flex;align-items:center;gap:4px;"><span style="font-weight:700;color:${statusColor};">₱${(s.amountPaid||0).toLocaleString()}</span><span style="color:#64748b;font-size:0.72rem;">›</span></div>
@@ -31286,7 +31279,8 @@ async function clearAllData() {
                             data-name="${(s.customerName||'').toLowerCase()}"
                             data-date="${s.date||''}"
                             data-status="${statusKey}"
-                            style="${vs}margin-bottom:4px;border-radius:8px;">
+                            onclick="if(!event.target.closest('button')){incomeFeedEdit('water',${s.id},${s.customerId||0});setTimeout(renderWaterAllSales,800);}"
+                            style="${vs}margin-bottom:4px;border-radius:8px;cursor:pointer;">
                             <div style="flex:1;">
                                 <div style="font-weight:600;font-size:0.88rem;">${s.customerName || _wCustMap[s.customerId] || _wCustMap[String(s.customerId)] || 'Walk-in'}</div>
                                 <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:1px;">
