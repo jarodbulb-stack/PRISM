@@ -4108,6 +4108,10 @@
                         <div class="stat-value text-warning" id="stat-pending-charges">₱0</div>
                         <div class="stat-label">⏳ Pending Charges</div>
                     </div>
+                    <div class="stat-card stat-card-danger" style="cursor: pointer;" onclick="setWaterView('store'); showSection('water');">
+                        <div class="stat-value text-warning" id="stat-store-credits">₱0</div>
+                        <div class="stat-label">🛒 Store Credits</div>
+                    </div>
                     <div class="stat-card stat-card-danger" style="cursor: pointer; background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);" onclick="showFlashcardDetail('total-receivables')">
                         <div class="stat-value text-danger" id="stat-total-receivables">₱0</div>
                         <div class="stat-label">💰 Total Receivables</div>
@@ -6084,6 +6088,13 @@
                         <p id="del-stats-waterStoreProducts">0 items</p>
                     </div>
                     <button class="btn btn-sm btn-danger" onclick="clearSpecificData('waterStoreProducts')">Delete</button>
+                </div>
+                <div class="settings-item">
+                    <div class="settings-info">
+                        <h4>🛒 Store Credit Payments</h4>
+                        <p id="del-stats-storeSalePayments">0 items</p>
+                    </div>
+                    <button class="btn btn-sm btn-danger" onclick="clearSpecificData('storeSalePayments')">Delete</button>
                 </div>
                 </div><!-- end del-specific-body -->
             </div>
@@ -9312,7 +9323,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     const stores = ['properties','tenants','payments','credits','creditPayments',
                         'expenses','customNotes','additionalIncome','clientCharges',
                         'waterCustomers','waterSales','employees','cashAdvances',
-                        'salaryPayments','timeRecords','tasks','payables','suppliers'];
+                        'salaryPayments','timeRecords','tasks','payables','suppliers','storeSalePayments'];
                     for (const s of stores) {
                         const cloudArr = Array.isArray(data[s]) ? data[s] : [];
                         // Only do authoritative (clear+replace) if Firebase actually has records
@@ -10257,7 +10268,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             return 'PrismDB_' + orgId;
         }
         let DB_NAME = getMTDbName();
-        const DB_VERSION = 12; // v12: Added Suppliers ledger
+        const DB_VERSION = 13; // v13: Added storeSalePayments for store credit tracking
         let db = null;
         let dbReady = false;
         // Global promise that resolves when IndexedDB is ready — sync functions wait on this
@@ -10462,6 +10473,12 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                         const supStore = database.createObjectStore('suppliers', { keyPath: 'id', autoIncrement: true });
                         supStore.createIndex('name', 'name', { unique: false });
                         supStore.createIndex('createdAt', 'createdAt', { unique: false });
+                    }
+                    // Store Sale Payments — payment history for waterStoreSales on credit (v13)
+                    if (!database.objectStoreNames.contains('storeSalePayments')) {
+                        const sspStore = database.createObjectStore('storeSalePayments', { keyPath: 'id', autoIncrement: true });
+                        sspStore.createIndex('saleId', 'saleId', { unique: false });
+                        sspStore.createIndex('date', 'date', { unique: false });
                     }
                 };
 
@@ -13413,14 +13430,6 @@ async function recordTenantPayment(tenantId) {
         }
         window.editWaterSaleRecord = editWaterSaleRecord;
 
-        // Open the edit/view modal for any water sale (including walk-in)
-        async function viewWaterSaleDetail(saleId, customerId) {
-            if (!saleId) return;
-            const cid = (!customerId || String(customerId).startsWith('walkin_') || isNaN(Number(customerId))) ? 0 : customerId;
-            incomeFeedEdit('water', saleId, cid);
-        }
-        window.viewWaterSaleDetail = viewWaterSaleDetail;
-
         async function voidWaterSale(saleId, customerId) {
             if (!currentAppUser || !['owner','admin'].includes(currentAppUser.role)) return;
             const reason = await showInputModal('Void Water Sale', 'Enter reason for voiding:', 'Reason');
@@ -14167,7 +14176,8 @@ async function recordTenantPayment(tenantId) {
                             createdAt:     new Date().toISOString()
                         });
                     } else {
-                        // Save as store sale + additionalIncome
+                        // Save as store sale
+                        const _ssIsPaid = (status === 'paid');
                         await dbAdd('waterStoreSales', {
                             productId:     item.productId || 'custom',
                             itemName:      item.itemName || item.label,
@@ -14175,6 +14185,9 @@ async function recordTenantPayment(tenantId) {
                             qty:           item.qty,
                             unitPrice:     item.price,
                             total:         item.subtotal,
+                            amountPaid:    _ssIsPaid ? item.subtotal : 0,
+                            balance:       _ssIsPaid ? 0 : item.subtotal,
+                            dueDate:       null,
                             customerName,
                             customerId:    custId ? parseInt(custId) : null,
                             status,
@@ -14183,14 +14196,17 @@ async function recordTenantPayment(tenantId) {
                             recordedBy:    currentAppUser?.username || 'unknown',
                             createdAt:     new Date().toISOString()
                         });
-                        await dbAdd('additionalIncome', {
-                            source:      'Water Store',
-                            description: (item.itemIcon||'🛒') + ' ' + (item.itemName||item.label) + ' ×' + item.qty + ' @₱' + item.price,
-                            amount:      item.subtotal,
-                            date, notes, storeRef: true,
-                            recordedBy:  currentAppUser?.username || 'unknown',
-                            createdAt:   new Date().toISOString()
-                        });
+                        // Only create additionalIncome entry for paid sales — credit sales tracked via storeSalePayments
+                        if (_ssIsPaid) {
+                            await dbAdd('additionalIncome', {
+                                source:      'Water Store',
+                                description: (item.itemIcon||'🛒') + ' ' + (item.itemName||item.label) + ' ×' + item.qty + ' @₱' + item.price,
+                                amount:      item.subtotal,
+                                date, notes, storeRef: true,
+                                recordedBy:  currentAppUser?.username || 'unknown',
+                                createdAt:   new Date().toISOString()
+                            });
+                        }
                     }
                 }
 
@@ -16013,6 +16029,9 @@ async function loadWaterCustomers() {
 
                 // ── Save each store item separately ──
                 for (const si of storeItems) {
+                    const _siPaid = paymentType === 'cash' || paymentType === 'gcash';
+                    const _siStatus = _siPaid ? 'paid' : (paidNow > 0 ? 'partial' : 'credit');
+                    const _siAmtPaid = _siPaid ? si.subtotal : 0;
                     const siSale = {
                         productId:   si.productId || null,
                         itemName:    si.itemName,
@@ -16020,22 +16039,28 @@ async function loadWaterCustomers() {
                         qty:         si.qty,
                         unitPrice:   si.price,
                         total:       si.subtotal,
+                        amountPaid:  _siAmtPaid,
+                        balance:     Math.max(0, si.subtotal - _siAmtPaid),
+                        dueDate:     null,
                         customerName: sale.customerName,
                         customerId:  sale.customerId || null,
-                        status:      paymentType === 'cash' ? 'paid' : (paidNow > 0 ? 'partial' : 'credit'),
+                        status:      _siStatus,
                         paymentMethod: paymentType,
                         date,  notes,
                         recordedBy:  currentAppUser?.username || 'unknown',
                         createdAt:   new Date().toISOString()
                     };
                     await dbAdd('waterStoreSales', siSale);
-                    await dbAdd('additionalIncome', {
-                        source: 'Water Store',
-                        description: si.itemIcon+' '+si.itemName+' × '+si.qty+' @ ₱'+si.price,
-                        amount: si.subtotal, date, notes, storeRef: true,
-                        recordedBy: currentAppUser?.username || 'unknown',
-                        createdAt: new Date().toISOString()
-                    });
+                    // Only create additionalIncome for paid sales — credit tracked via storeSalePayments
+                    if (_siPaid) {
+                        await dbAdd('additionalIncome', {
+                            source: 'Water Store',
+                            description: si.itemIcon+' '+si.itemName+' × '+si.qty+' @ ₱'+si.price,
+                            amount: si.subtotal, date, notes, storeRef: true,
+                            recordedBy: currentAppUser?.username || 'unknown',
+                            createdAt: new Date().toISOString()
+                        });
+                    }
                 }
 
                 window._wsCart = [];
@@ -16067,18 +16092,8 @@ async function loadWaterCustomers() {
         window.saveWaterSale = saveWaterSale;
 
         async function viewWaterCustomerDetails(id) {
-            // Walk-in or non-numeric IDs have no customer profile — show their sales directly
-            if (!id || String(id).startsWith('walkin_') || isNaN(Number(id))) {
-                showToast('ℹ️ Walk-in — showing all walk-in sales.', 'info');
-                setWaterView('sales');
-                return;
-            }
             const customer = await dbGet('waterCustomers', id);
-            if (!customer) {
-                showToast('ℹ️ Customer record not found.', 'warning');
-                setWaterView('sales');
-                return;
-            }
+            if (!customer) return;
             
             const sales = await dbGetAll('waterSales');
             const customerSales = sales.filter(s => String(s.customerId) === String(id)).sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -22756,6 +22771,41 @@ async function showPayrollSummary() {
                 }
             });
 
+            // ── Store Credits — check overdue (no payment in 30+ days) ──
+            try {
+                const _ssAll = await dbGetAll('waterStoreSales').catch(()=>[]);
+                const _sspAll = await dbGetAll('storeSalePayments').catch(()=>[]);
+                _ssAll.filter(s => !s.voided && (s.status === 'credit' || s.status === 'partial')).forEach(s => {
+                    const balance = Math.max(0, (s.total||0) - (s.amountPaid||0));
+                    if (balance <= 0) return;
+                    const pmts = _sspAll.filter(p => p.saleId === s.id);
+                    const lastPmt = pmts.sort((a,b) => new Date(b.date)-new Date(a.date))[0];
+                    const refDate = lastPmt ? new Date(lastPmt.date) : new Date(s.date||s.createdAt);
+                    const daysSince = Math.floor((now - refDate) / (1000*60*60*24));
+                    if (daysSince > 30) {
+                        overdueCount++;
+                        notificationData.overdue.push({
+                            type: 'store-credit',
+                            id: s.id,
+                            name: (s.customerName||'Walk-in') + ' — ' + (s.itemName||'Item'),
+                            amount: balance,
+                            daysOverdue: daysSince - 30,
+                            dueDate: 'Store credit since ' + (s.date||'')
+                        });
+                    } else if (daysSince >= 25) {
+                        dueSoonCount++;
+                        notificationData.due.push({
+                            type: 'store-credit',
+                            id: s.id,
+                            name: (s.customerName||'Walk-in') + ' — ' + (s.itemName||'Item'),
+                            amount: balance,
+                            daysUntilDue: 30 - daysSince,
+                            dueDate: 'Store credit since ' + (s.date||'')
+                        });
+                    }
+                });
+            } catch(e) {}
+
             const statOverdue = document.getElementById('stat-overdue');
             const statDueToday = document.getElementById('stat-due-today');
             
@@ -22957,9 +23007,18 @@ async function showPayrollSummary() {
             }, 0);
             safeSetText('stat-outstanding', '₱' + _outstandingCredit.toLocaleString());
 
-            // Total Receivables = Outstanding Rent (this month) + Outstanding Credit + Pending Charges
+            // ── Store Credits (waterStoreSales on credit with balance remaining) ──
+            let _storeCreditsTotal = 0;
+            try {
+                const _storeSalesAll = await dbGetAll('waterStoreSales').catch(()=>[]);
+                _storeCreditsTotal = _storeSalesAll.filter(s => !s.voided && (s.status === 'credit' || s.status === 'partial'))
+                    .reduce((sum, s) => sum + Math.max(0, (s.total||0) - (s.amountPaid||0)), 0);
+                safeSetText('stat-store-credits', '₱' + _storeCreditsTotal.toLocaleString());
+            } catch(e) { _storeCreditsTotal = 0; }
+
+            // Total Receivables = Outstanding Rent + Outstanding Credit + Pending Charges + Store Credits
             const outstandingRent = Math.max(0, expectedRent - collected);
-            const totalReceivables = outstandingRent + _outstandingCredit + pendingChargesTotal;
+            const totalReceivables = outstandingRent + _outstandingCredit + pendingChargesTotal + _storeCreditsTotal;
             document.getElementById('stat-total-receivables').textContent = '₱' + totalReceivables.toLocaleString();
 
             // Monthly credit collection progress
@@ -23142,7 +23201,7 @@ async function showPayrollSummary() {
             const creditIn  = creditPayments.filter(function(p){ return p.date && p.date.startsWith(m.key) && !p.voided; }).reduce(function(s,p){ return s + prismSafeNumber(p.amount); }, 0);
             const addIn     = additionalIncome.filter(function(p){ return p.date && p.date.startsWith(m.key) && !p.storeRef; }).reduce(function(s,p){ return s + prismSafeNumber(p.amount); }, 0);
             const waterIn   = waterSales.filter(function(p){ return p.date && p.date.startsWith(m.key) && !p.voided; }).reduce(function(s,p){ return s + prismSafeNumber(p.amountPaid || p.total); }, 0);
-            const storeIn   = (waterStoreSalesAll||[]).filter(function(p){ return p.date && p.date.startsWith(m.key) && !p.voided; }).reduce(function(s,p){ return s + prismSafeNumber(p.total); }, 0);
+            const storeIn   = (waterStoreSalesAll||[]).filter(function(p){ return p.date && p.date.startsWith(m.key) && !p.voided; }).reduce(function(s,p){ return s + prismSafeNumber(p.amountPaid !== undefined ? p.amountPaid : p.total); }, 0);
             const totalInc  = Math.round((rentIn + creditIn + addIn + waterIn + storeIn) * 100) / 100;
 
             const expOut    = expenses.filter(function(e){ return e.date && e.date.startsWith(m.key); }).reduce(function(s,e){ return s + prismSafeNumber(e.amount); }, 0);
@@ -23648,6 +23707,25 @@ async function showPayrollSummary() {
         if (!sd3.water) sd3.water = [];
         sd3.water.push({ type: 'water', label: 'Water Sales', sub: waterByDay[d3] + ' transaction' + (waterByDay[d3] > 1 ? 's' : '') });
     });
+
+    // ── STORE CREDITS on calendar — show unpaid store sales on their sale date ──
+    try {
+        const _ssCalAll = await dbGetAll('waterStoreSales').catch(()=>[]);
+        _ssCalAll.filter(s => !s.voided && (s.status==='credit'||s.status==='partial')).forEach(function(s) {
+            const _bal = Math.max(0,(s.total||0)-(s.amountPaid||0));
+            if (_bal <= 0) return;
+            const _refDateStr = s.dueDate || s.date;
+            if (!_refDateStr) return;
+            const _sDate = new Date(_refDateStr + 'T00:00:00');
+            if (isNaN(_sDate) || _sDate.getFullYear() !== year || _sDate.getMonth() !== month) return;
+            const _d = _sDate.getDate();
+            const _sd = getDay(_d);
+            const _isOv = today > _sDate;
+            const _entry = { type:'store-credit', label:'🛒 '+(s.customerName||'Walk-in'), sub:'Balance: ₱'+_bal.toLocaleString()+' · '+(s.itemName||'Item'), amount:_bal, id:s.id };
+            if (_isOv) _sd.overdue.push(_entry);
+            else _sd.debtors.push(_entry);
+        });
+    } catch(e) {}
 
 
             // ── TASKS with dueDate (+ repeat projection) ──
@@ -25446,7 +25524,7 @@ async function clearAllData() {
 
         // Update delete section stats
         async function updateDeleteStats() {
-            const stores = ['properties', 'tenants', 'payments', 'credits', 'creditPayments', 'expenses', 'customNotes', 'tasks', 'additionalIncome', 'clientCharges', 'waterStoreSales', 'waterStoreProducts', 'payables', 'suppliers'];
+            const stores = ['properties', 'tenants', 'payments', 'credits', 'creditPayments', 'expenses', 'customNotes', 'tasks', 'additionalIncome', 'clientCharges', 'waterStoreSales', 'waterStoreProducts', 'payables', 'suppliers', 'storeSalePayments'];
             
             for (const store of stores) {
                 try {
@@ -25598,7 +25676,7 @@ async function clearAllData() {
                 const STORES = ['properties','tenants','payments','credits','creditPayments',
                     'expenses','customNotes','additionalIncome','clientCharges',
                     'waterCustomers','waterSales','waterStoreSales','waterStoreProducts',
-                    'employees','cashAdvances','salaryPayments','timeRecords','tasks','payables','suppliers'];
+                    'employees','cashAdvances','salaryPayments','timeRecords','tasks','payables','suppliers','storeSalePayments'];
                 const backup = {
                     version: '1.0', exportedAt: new Date().toISOString(),
                     orgId: (MT && MT.currentOrg && MT.currentOrg.id) || 'unknown',
@@ -26928,8 +27006,7 @@ async function clearAllData() {
                             : x.status==='partial'
                             ? '<span style="color:#f97316;font-size:0.7rem;font-weight:700;">PARTIAL</span>'
                             : '<span style="color:#10b981;font-size:0.7rem;font-weight:700;">PAID</span>';
-                        const _cid26 = x.customerId && !String(x.customerId).startsWith('walkin_') && !isNaN(Number(x.customerId)) ? x.customerId : 0;
-                        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color);cursor:pointer;" onclick="document.getElementById(&quot;wfd-modal&quot;).remove();' + (_cid26 ? 'viewWaterCustomerDetails(' + _cid26 + ')' : 'viewWaterSaleDetail(' + (x.id||0) + ',0)') + '">';
+                        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color);cursor:pointer;" onclick="document.getElementById(&quot;wfd-modal&quot;).remove();viewWaterCustomerDetails(' + (x.customerId) + ')">';
                         html += '<div><div style="font-weight:600;font-size:0.85rem;color:#60a5fa;">' + name + '</div>';
                         html += '<div style="font-size:0.72rem;color:#64748b;">' + summary + ' · ' + (x.date||'') + ' ' + statusBadge + '</div></div>';
                         html += '<span style="font-weight:700;color:' + (isPaid?'#10b981':'#f59e0b') + ';white-space:nowrap;margin-left:8px;">₱' + (x.total||x.amountPaid||0).toLocaleString() + '</span>';
@@ -29657,9 +29734,7 @@ async function clearAllData() {
             }
             contEl.innerHTML = filtered.map(s => {
                 const statusColor = s.status==='paid' ? '#10b981' : s.status==='credit' ? '#f59e0b' : '#3b82f6';
-                const _cid = s.customerId && !String(s.customerId).startsWith('walkin_') && !isNaN(Number(s.customerId)) ? s.customerId : 0;
-                const _navFn = _cid ? `viewWaterCustomerDetails(${_cid})` : `viewWaterSaleDetail(${s.id||0},0)`;
-                return `<div onclick="${_navFn}" style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:var(--bg-primary);border-radius:8px;margin-bottom:5px;border-left:3px solid ${statusColor};cursor:pointer;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                return `<div onclick="viewWaterCustomerDetails(${s.customerId})" style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:var(--bg-primary);border-radius:8px;margin-bottom:5px;border-left:3px solid ${statusColor};cursor:pointer;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
                     <div><div style="font-weight:600;font-size:0.85rem;">💧 ${_esc(s.customerName||'Walk-in')}</div>
                     <div style="font-size:0.72rem;color:#64748b;">${s.date} · ${s.gallons||s.bottles||0} gal${s.status?' · '+s.status:''}</div></div>
                     <div style="display:flex;align-items:center;gap:4px;"><span style="font-weight:700;color:${statusColor};">₱${(s.amountPaid||0).toLocaleString()}</span><span style="color:#64748b;font-size:0.72rem;">›</span></div>
@@ -30319,9 +30394,14 @@ async function clearAllData() {
             const isAdmin = currentAppUser && ['owner','admin'].includes(currentAppUser.role);
             const products = await getStoreProducts();
             const storeSales = await dbGetAll('waterStoreSales').catch(()=>[]);
+            const storeSalePayments = await dbGetAll('storeSalePayments').catch(()=>[]);
             const today = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             const todaySales = storeSales.filter(s => s.date === today && !s.voided);
-            const todayTotal = todaySales.reduce((s,x) => s + (x.total||0), 0);
+            const todayTotal = todaySales.reduce((s,x) => s + (x.amountPaid !== undefined ? (x.status==='paid'?x.total:x.amountPaid) : (x.total||0)), 0);
+
+            // Credit summary
+            const creditSales = storeSales.filter(s => !s.voided && (s.status==='credit'||s.status==='partial'));
+            const totalStoreCredit = creditSales.reduce((s,x) => s + Math.max(0,(x.total||0)-(x.amountPaid||0)), 0);
 
             // Group store sales by date for history
             const recentSales = storeSales.filter(s => !s.voided)
@@ -30339,10 +30419,47 @@ async function clearAllData() {
                         <div style="font-weight:800;color:#10b981;font-size:0.95rem;">${todaySales.length}</div>
                         <div style="font-size:0.67rem;color:var(--text-secondary);">Transactions</div>
                     </div>
-                    <div style="background:rgba(99,102,241,0.1);border-radius:10px;padding:10px;text-align:center;">
-                        <div style="font-weight:800;color:#818cf8;font-size:0.95rem;">${products.length}</div>
-                        <div style="font-size:0.67rem;color:var(--text-secondary);">Products</div>
+                    <div style="background:rgba(239,68,68,0.1);border-radius:10px;padding:10px;text-align:center;cursor:pointer;" onclick="document.getElementById('store-credits-section').scrollIntoView({behavior:'smooth'})">
+                        <div style="font-weight:800;color:#ef4444;font-size:0.95rem;">₱${totalStoreCredit.toLocaleString()}</div>
+                        <div style="font-size:0.67rem;color:var(--text-secondary);">🛒 Store Credits</div>
                     </div>
+                </div>
+
+                <!-- Store Credits Tracking Panel -->
+                <div id="store-credits-section" style="margin-bottom:16px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <strong style="font-size:0.88rem;color:#ef4444;">🛒 Store Credits (Unpaid)</strong>
+                        <span style="font-size:0.72rem;color:#64748b;">${creditSales.length} account(s)</span>
+                    </div>
+                    ${creditSales.length === 0
+                        ? '<div style="text-align:center;color:var(--text-secondary);padding:12px;font-size:0.82rem;background:rgba(16,185,129,0.05);border-radius:8px;">✅ No outstanding store credits.</div>'
+                        : creditSales.sort((a,b)=>(b.date||'')>(a.date||'')?1:-1).map(s => {
+                            const bal = Math.max(0,(s.total||0)-(s.amountPaid||0));
+                            const pmts = storeSalePayments.filter(p=>p.saleId===s.id);
+                            const sc = s.status==='partial'?'#f59e0b':'#ef4444';
+                            const isOverdue = s.dueDate && new Date(s.dueDate+'T00:00:00') < new Date();
+                            return `<div style="background:var(--bg-primary);border-radius:10px;padding:11px 13px;margin-bottom:8px;border-left:3px solid ${sc};">
+                                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+                                    <div>
+                                        <div style="font-weight:700;font-size:0.88rem;">${s.itemIcon||'🛒'} ${s.itemName||'Item'}</div>
+                                        <div style="font-size:0.73rem;color:var(--text-secondary);">${s.customerName||'Walk-in'} · ${s.date||''} · ${s.qty||1}×₱${(s.unitPrice||0).toLocaleString()}</div>
+                                        ${s.dueDate?`<div style="font-size:0.70rem;color:${isOverdue?'#ef4444':'#f59e0b'};">${isOverdue?'⚠️ Overdue':'📅 Due'}: ${s.dueDate}</div>`:''}
+                                    </div>
+                                    <div style="text-align:right;">
+                                        <div style="font-weight:800;color:${sc};font-size:0.95rem;">₱${bal.toLocaleString()}</div>
+                                        <div style="font-size:0.68rem;color:var(--text-secondary);">of ₱${(s.total||0).toLocaleString()}</div>
+                                        <span style="font-size:0.65rem;background:${sc}22;color:${sc};padding:1px 6px;border-radius:5px;">${s.status}</span>
+                                    </div>
+                                </div>
+                                ${pmts.length > 0 ? `<div style="font-size:0.70rem;color:#64748b;margin-bottom:5px;">Payments: ${pmts.map(p=>'₱'+p.amount.toLocaleString()+' ('+p.date+')').join(', ')}</div>` : ''}
+                                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                                    <button onclick="collectStoreSalePayment(${s.id})" style="flex:1;padding:5px 8px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.35);color:#10b981;border-radius:7px;cursor:pointer;font-size:0.75rem;font-weight:700;">💰 Collect Payment</button>
+                                    <button onclick="setStoreSaleDueDate(${s.id})" style="padding:5px 8px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);color:#818cf8;border-radius:7px;cursor:pointer;font-size:0.72rem;">📅 Set Due</button>
+                                    ${isAdmin?`<button onclick="editStoreSale(${s.id})" style="padding:5px 8px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);color:#818cf8;border-radius:7px;cursor:pointer;font-size:0.72rem;">✏️</button>
+                                    <button onclick="deleteStoreSale(${s.id})" style="padding:5px 8px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#ef4444;border-radius:7px;cursor:pointer;font-size:0.72rem;">🗑</button>`:''}
+                                </div>
+                            </div>`;
+                        }).join('')}
                 </div>
 
                 <!-- Product quick-sell buttons -->
@@ -30398,6 +30515,7 @@ async function clearAllData() {
                     ? '<div style="text-align:center;color:var(--text-secondary);padding:16px;font-size:0.82rem;">No store sales yet. Tap a product above to sell.</div>'
                     : recentSales.map(s => {
                         const sc = s.status==='paid'?'#10b981':s.status==='credit'?'#ef4444':'#f59e0b';
+                        const bal = Math.max(0,(s.total||0)-(s.amountPaid||0));
                         return `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:var(--bg-primary);border-radius:8px;margin-bottom:5px;border-left:3px solid #a78bfa;">
                             <div>
                                 <div style="font-weight:600;font-size:0.85rem;">${s.itemIcon||'🛒'} ${s.itemName||'Item'}</div>
@@ -30405,11 +30523,13 @@ async function clearAllData() {
                             </div>
                             <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:3px;">
                                 <div style="font-weight:700;color:#a78bfa;">₱${(s.total||0).toLocaleString()}</div>
+                                ${s.status!=='paid'?`<div style="font-size:0.68rem;color:#ef4444;">Balance: ₱${bal.toLocaleString()}</div>`:''}
                                 <span style="font-size:0.67rem;background:${sc}22;color:${sc};padding:1px 6px;border-radius:5px;">${s.status||'paid'}</span>
-                                ${isAdmin ? `<div style="display:flex;gap:3px;">
-                                    <button onclick="editStoreSale(${s.id})" style="padding:1px 6px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25);color:#818cf8;border-radius:4px;cursor:pointer;font-size:0.65rem;">✏️</button>
-                                    <button onclick="deleteStoreSale(${s.id})" style="padding:1px 6px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#ef4444;border-radius:4px;cursor:pointer;font-size:0.65rem;">🗑</button>
-                                </div>` : ''}
+                                <div style="display:flex;gap:3px;">
+                                    ${s.status!=='paid'?`<button onclick="collectStoreSalePayment(${s.id})" style="padding:1px 6px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);color:#10b981;border-radius:4px;cursor:pointer;font-size:0.65rem;">💰</button>`:''}
+                                    ${isAdmin ? `<button onclick="editStoreSale(${s.id})" style="padding:1px 6px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25);color:#818cf8;border-radius:4px;cursor:pointer;font-size:0.65rem;">✏️</button>
+                                    <button onclick="deleteStoreSale(${s.id})" style="padding:1px 6px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#ef4444;border-radius:4px;cursor:pointer;font-size:0.65rem;">🗑</button>` : ''}
+                                </div>
                             </div>
                         </div>`;
                     }).join('')}
@@ -30649,28 +30769,38 @@ async function clearAllData() {
             }
 
             const total = qty * unitPrice;
+            const _wsiStatus = payment === 'cash' || payment === 'gcash' ? 'paid' : 'credit';
+            const _wsiPaid = _wsiStatus === 'paid';
             const sale = {
                 productId, itemName, itemIcon, qty, unitPrice, total,
+                amountPaid:  _wsiPaid ? total : 0,
+                balance:     _wsiPaid ? 0 : total,
+                dueDate:     null,
                 customerName, customerId: customerId ? parseInt(customerId) : null,
-                status: payment === 'cash' || payment === 'gcash' ? 'paid' : 'credit',
+                status: _wsiStatus,
                 paymentMethod: payment, date, notes,
                 recordedBy: currentAppUser?.username || 'unknown',
                 createdAt: new Date().toISOString()
             };
             try {
                 await dbAdd('waterStoreSales', sale);
-                await dbAdd('additionalIncome', {
-                    source: 'Water Store', description: itemIcon+' '+itemName+' × '+qty+' @ ₱'+unitPrice,
-                    amount: total, date, notes, storeRef: true,
-                    recordedBy: currentAppUser?.username || 'unknown',
-                    createdAt: new Date().toISOString()
-                });
-                // Add to calendar if credit
-                if (payment === 'credit') {
-                    // Store sale credit tracked in waterStoreSales with status:'credit'
+                // Only add additionalIncome for paid sales — credit tracked via storeSalePayments
+                if (_wsiPaid) {
+                    await dbAdd('additionalIncome', {
+                        source: 'Water Store', description: itemIcon+' '+itemName+' × '+qty+' @ ₱'+unitPrice,
+                        amount: total, date, notes, storeRef: true,
+                        recordedBy: currentAppUser?.username || 'unknown',
+                        createdAt: new Date().toISOString()
+                    });
                 }
-                prismFullRefresh('income', { skipCalendar: payment === 'cash' || payment === 'gcash' });
-                showToast('✅ Store item recorded! Now tap "Record Water Sale" to finish.', 'success');
+                // Credit reminder — notify user balance is being tracked
+                if (!_wsiPaid) {
+                    prismFullRefresh('income', { skipCalendar: false });
+                    showToast('✅ Store item on credit recorded — trackable in Store Credits!', 'success');
+                } else {
+                    prismFullRefresh('income', { skipCalendar: true });
+                    showToast('✅ Store item recorded! Now tap "Record Water Sale" to finish.', 'success');
+                }
                 // Reset the panel inputs
                 if (sel) sel.value = '';
                 const qtyEl = document.getElementById('ws-si-qty'); if (qtyEl) qtyEl.value = '1';
@@ -30957,6 +31087,129 @@ async function clearAllData() {
             showToast('🗑 Sale deleted.', 'success');
         }
         window.deleteStoreSale = deleteStoreSale;
+
+        // ── Collect payment on a store credit sale ──
+        async function collectStoreSalePayment(saleId) {
+            const sale = await dbGet('waterStoreSales', saleId).catch(()=>null);
+            if (!sale) { showToast('⚠️ Sale record not found.', 'warning'); return; }
+            const balance = Math.max(0, (sale.total||0) - (sale.amountPaid||0));
+            if (balance <= 0) { showToast('ℹ️ This sale is already fully paid.', 'info'); return; }
+
+            // Build payment modal
+            const existing = document.getElementById('ssp-modal');
+            if (existing) existing.remove();
+            const modal = document.createElement('div');
+            modal.id = 'ssp-modal';
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
+            const today = localDateStr ? localDateStr() : new Date().toISOString().slice(0,10);
+            modal.innerHTML = `
+                <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:22px;width:100%;max-width:380px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                        <h3 style="margin:0;color:#f1f5f9;font-size:1rem;">💰 Collect Store Payment</h3>
+                        <button onclick="document.getElementById('ssp-modal').remove()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.2rem;">✕</button>
+                    </div>
+                    <div style="background:#0f172a;border-radius:10px;padding:12px;margin-bottom:14px;">
+                        <div style="font-weight:700;font-size:0.88rem;color:#f1f5f9;">${sale.itemIcon||'🛒'} ${sale.itemName||'Item'}</div>
+                        <div style="font-size:0.78rem;color:#64748b;margin-top:3px;">${sale.customerName||'Walk-in'} · Sold: ${sale.date||''}</div>
+                        <div style="display:flex;justify-content:space-between;margin-top:8px;">
+                            <span style="font-size:0.8rem;color:#64748b;">Total: ₱${(sale.total||0).toLocaleString()}</span>
+                            <span style="font-size:0.8rem;color:#10b981;">Paid: ₱${(sale.amountPaid||0).toLocaleString()}</span>
+                            <span style="font-weight:800;color:#ef4444;">Balance: ₱${balance.toLocaleString()}</span>
+                        </div>
+                    </div>
+                    <label style="font-size:0.82rem;color:#94a3b8;display:block;margin-bottom:5px;">Amount to Collect (₱) *</label>
+                    <input type="number" id="ssp-amount" min="0.01" max="${balance}" step="0.01" value="${balance}"
+                        style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:1rem;margin-bottom:10px;box-sizing:border-box;">
+                    <label style="font-size:0.82rem;color:#94a3b8;display:block;margin-bottom:5px;">Payment Method *</label>
+                    <select id="ssp-method" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;margin-bottom:10px;box-sizing:border-box;">
+                        <option value="cash">💵 Cash</option>
+                        <option value="gcash">📱 GCash</option>
+                        <option value="bank">🏦 Bank Transfer</option>
+                        <option value="maya">💳 Maya</option>
+                    </select>
+                    <label style="font-size:0.82rem;color:#94a3b8;display:block;margin-bottom:5px;">Date *</label>
+                    <input type="date" id="ssp-date" value="${today}"
+                        style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;margin-bottom:10px;box-sizing:border-box;">
+                    <label style="font-size:0.82rem;color:#94a3b8;display:block;margin-bottom:5px;">Notes (optional)</label>
+                    <input type="text" id="ssp-notes" placeholder="Any notes..."
+                        style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;margin-bottom:14px;box-sizing:border-box;">
+                    <button onclick="saveStoreSalePayment(${saleId},${balance})"
+                        style="width:100%;padding:12px;background:#10b981;border:none;border-radius:10px;color:white;font-weight:700;cursor:pointer;font-size:0.95rem;">
+                        ✅ Save Payment
+                    </button>
+                </div>`;
+            document.body.appendChild(modal);
+        }
+        window.collectStoreSalePayment = collectStoreSalePayment;
+
+        async function saveStoreSalePayment(saleId, maxBalance) {
+            const amount  = parseFloat(document.getElementById('ssp-amount')?.value) || 0;
+            const method  = document.getElementById('ssp-method')?.value || 'cash';
+            const date    = document.getElementById('ssp-date')?.value || '';
+            const notes   = document.getElementById('ssp-notes')?.value?.trim() || '';
+
+            if (amount <= 0)           { showToast('⚠️ Amount must be greater than 0.', 'warning'); return; }
+            if (amount > maxBalance)   { showToast('⚠️ Amount exceeds outstanding balance.', 'warning'); return; }
+            if (!date)                 { showToast('⚠️ Date is required.', 'warning'); return; }
+
+            const sale = await dbGet('waterStoreSales', saleId).catch(()=>null);
+            if (!sale) { showToast('⚠️ Sale not found.', 'warning'); return; }
+
+            // Save payment record
+            await dbAdd('storeSalePayments', {
+                saleId, amount, method, date, notes,
+                customerName: sale.customerName || 'Walk-in',
+                itemName:     sale.itemName || 'Item',
+                recordedBy:   currentAppUser?.username || 'unknown',
+                createdAt:    new Date().toISOString()
+            });
+
+            // Update sale amountPaid and status
+            const newAmountPaid = (sale.amountPaid||0) + amount;
+            const newBalance    = Math.max(0, (sale.total||0) - newAmountPaid);
+            sale.amountPaid     = newAmountPaid;
+            sale.balance        = newBalance;
+            sale.status         = newBalance <= 0 ? 'paid' : (newAmountPaid > 0 ? 'partial' : 'credit');
+            await dbUpdate('waterStoreSales', sale);
+
+            // Record additionalIncome for EVERY payment collected (partial or full)
+            // Each entry records the actual amount received on that date
+            const _isPaidFull = newBalance <= 0;
+            await dbAdd('additionalIncome', {
+                source:      'Water Store',
+                description: (sale.itemIcon||'🛒') + ' ' + (sale.itemName||'Item')
+                             + ' ×' + (sale.qty||1) + ' @₱' + (sale.unitPrice||0).toLocaleString()
+                             + (_isPaidFull ? ' [fully paid]' : ' [partial payment — balance: ₱' + newBalance.toLocaleString() + ']'),
+                amount:      amount,
+                date, notes,
+                storeRef:    true,
+                storeSaleId: saleId,
+                paymentType: _isPaidFull ? 'full' : 'partial',
+                recordedBy:  currentAppUser?.username || 'unknown',
+                createdAt:   new Date().toISOString()
+            });
+
+            document.getElementById('ssp-modal')?.remove();
+            showToast(`✅ Payment of ₱${amount.toLocaleString()} collected! ${newBalance > 0 ? 'Remaining balance: ₱'+newBalance.toLocaleString() : 'Fully paid! 🎉'}`, 'success');
+            prismFullRefresh('income', { skipCalendar: false });
+            if (typeof renderWaterStore === 'function') renderWaterStore();
+            if (typeof loadDashboard === 'function') loadDashboard();
+        }
+        window.saveStoreSalePayment = saveStoreSalePayment;
+
+        // ── Set due date on a store credit sale ──
+        async function setStoreSaleDueDate(saleId) {
+            const sale = await dbGet('waterStoreSales', saleId).catch(()=>null);
+            if (!sale) return;
+            const newDate = await showInputModal('Set Due Date', 'Enter due date for this store credit (YYYY-MM-DD):', 'YYYY-MM-DD', sale.dueDate || '');
+            if (newDate === null) return;
+            sale.dueDate = newDate.trim() || null;
+            await dbUpdate('waterStoreSales', sale);
+            showToast('📅 Due date updated.', 'success');
+            if (typeof renderWaterStore === 'function') renderWaterStore();
+            prismFullRefresh('income', { skipCalendar: false });
+        }
+        window.setStoreSaleDueDate = setStoreSaleDueDate;
 
         async function editStoreSale(id) {
             const sale = await dbGet('waterStoreSales', id);
@@ -31279,8 +31532,7 @@ async function clearAllData() {
                             data-name="${(s.customerName||'').toLowerCase()}"
                             data-date="${s.date||''}"
                             data-status="${statusKey}"
-                            onclick="if(!event.target.closest('button')){incomeFeedEdit('water',${s.id},${s.customerId||0});setTimeout(renderWaterAllSales,800);}"
-                            style="${vs}margin-bottom:4px;border-radius:8px;cursor:pointer;">
+                            style="${vs}margin-bottom:4px;border-radius:8px;">
                             <div style="flex:1;">
                                 <div style="font-weight:600;font-size:0.88rem;">${s.customerName || _wCustMap[s.customerId] || _wCustMap[String(s.customerId)] || 'Walk-in'}</div>
                                 <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:1px;">
@@ -35218,7 +35470,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     const tables = ['properties','tenants','payments','credits','creditPayments',
                         'expenses','customNotes','additionalIncome','clientCharges',
                         'waterCustomers','waterSales','employees','cashAdvances',
-                        'salaryPayments','timeRecords','tasks','payables','suppliers'];
+                        'salaryPayments','timeRecords','tasks','payables','suppliers','storeSalePayments'];
 
                     // Always authoritative — realtime cloud changes always win
                     for (const t of tables) {
