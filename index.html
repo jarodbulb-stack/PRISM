@@ -4043,6 +4043,14 @@
                     <div class="stat-value" style="color:#38bdf8;" id="stat-dash-water-credits">0</div>
                     <div class="stat-label">💧 Water Credits</div>
                 </div>
+                <div class="stat-card stat-card-warning" style="cursor: pointer;" onclick="showFlashcardDetail('store-credits')">
+                    <div class="stat-value" style="color:#a78bfa;" id="stat-dash-store-credits">0</div>
+                    <div class="stat-label">🛒 Store Credits</div>
+                </div>
+                <div class="stat-card stat-card-danger" style="cursor: pointer;" onclick="showFlashcardDetail('staff-salary-due')">
+                    <div class="stat-value" style="color:#f97316;" id="stat-dash-salary-due">₱0</div>
+                    <div class="stat-label">👷 Salary Due</div>
+                </div>
             </div>
 
             <!-- Tasks & Notes Overdue -->
@@ -4107,10 +4115,6 @@
                     <div class="stat-card stat-card-warning" style="cursor: pointer; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);" onclick="showFlashcardDetail('pending-charges')">
                         <div class="stat-value text-warning" id="stat-pending-charges">₱0</div>
                         <div class="stat-label">⏳ Pending Charges</div>
-                    </div>
-                    <div class="stat-card stat-card-danger" style="cursor: pointer;" onclick="setWaterView('store'); showSection('water');">
-                        <div class="stat-value text-warning" id="stat-store-credits">₱0</div>
-                        <div class="stat-label">🛒 Store Credits</div>
                     </div>
                     <div class="stat-card stat-card-danger" style="cursor: pointer; background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);" onclick="showFlashcardDetail('total-receivables')">
                         <div class="stat-value text-danger" id="stat-total-receivables">₱0</div>
@@ -4915,9 +4919,9 @@
                     <div class="stat-value text-success" id="stat-water-today">₱0</div>
                     <div class="stat-label">Today's Sales</div>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card" style="cursor:pointer;" onclick="showWaterFlashcardDetail('today-gallons')" title="Tap to see today's bottle breakdown">
                     <div class="stat-value" id="stat-water-gallons">0</div>
-                    <div class="stat-label">Bottles Today</div>
+                    <div class="stat-label">💧 Bottles Today</div>
                 </div>
             </div>
 
@@ -5995,6 +5999,76 @@
                 </div>
             </div>
 
+            <!-- ═══ DATA HEALTH CARD ═══ -->
+            <div class="card mt-4" style="border:1px solid rgba(16,185,129,0.25);">
+                <div class="card-header" style="background:rgba(16,185,129,0.06);">
+                    <div class="card-title" style="color:#10b981;">🧹 Data Health & Cleanup</div>
+                </div>
+                <div style="padding:16px;">
+                    <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:14px;">
+                        Keeps your app fast by removing completed tasks, old voided records, 
+                        dismissed reminders, and orphan data. Your active records are never touched.
+                    </p>
+
+                    <!-- Storage Usage -->
+                    <div id="prism-storage-bar" style="margin-bottom:16px;">
+                        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                            <span style="font-size:0.78rem;font-weight:700;color:#f1f5f9;">📦 Storage Used</span>
+                            <span id="prism-storage-label" style="font-size:0.78rem;color:#94a3b8;">calculating...</span>
+                        </div>
+                        <div style="background:#1e293b;border-radius:6px;height:8px;overflow:hidden;">
+                            <div id="prism-storage-fill" style="height:8px;background:linear-gradient(90deg,#10b981,#3b82f6);border-radius:6px;width:0%;transition:width 0.5s;"></div>
+                        </div>
+                        <div id="prism-store-breakdown" style="margin-top:8px;font-size:0.73rem;color:#64748b;"></div>
+                    </div>
+
+                    <!-- Cleanup options -->
+                    <div style="display:flex;flex-direction:column;gap:8px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(15,23,42,0.5);border-radius:8px;border:1px solid #334155;">
+                            <div>
+                                <div style="font-size:0.85rem;font-weight:600;color:#f1f5f9;">✅ Completed & Old Tasks</div>
+                                <div style="font-size:0.73rem;color:#64748b;" id="prism-task-count">Tasks completed 30+ days ago</div>
+                            </div>
+                            <button onclick="prismCleanup('tasks')" style="padding:6px 12px;background:#10b981;border:none;border-radius:7px;color:white;font-weight:700;font-size:0.78rem;cursor:pointer;white-space:nowrap;">Clean</button>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(15,23,42,0.5);border-radius:8px;border:1px solid #334155;">
+                            <div>
+                                <div style="font-size:0.85rem;font-weight:600;color:#f1f5f9;">🔕 Dismissed Reminders</div>
+                                <div style="font-size:0.73rem;color:#64748b;" id="prism-reminder-count">Notes/reminders already dismissed</div>
+                            </div>
+                            <button onclick="prismCleanup('reminders')" style="padding:6px 12px;background:#10b981;border:none;border-radius:7px;color:white;font-weight:700;font-size:0.78rem;cursor:pointer;white-space:nowrap;">Clean</button>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(15,23,42,0.5);border-radius:8px;border:1px solid #334155;">
+                            <div>
+                                <div style="font-size:0.85rem;font-weight:600;color:#f1f5f9;">🚫 Voided Transactions</div>
+                                <div style="font-size:0.73rem;color:#64748b;" id="prism-void-count">Voided payments older than 90 days</div>
+                            </div>
+                            <button onclick="prismCleanup('voided')" style="padding:6px 12px;background:#10b981;border:none;border-radius:7px;color:white;font-weight:700;font-size:0.78rem;cursor:pointer;white-space:nowrap;">Clean</button>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(15,23,42,0.5);border-radius:8px;border:1px solid #334155;">
+                            <div>
+                                <div style="font-size:0.85rem;font-weight:600;color:#f1f5f9;">📅 Old Water Sale Records</div>
+                                <div style="font-size:0.73rem;color:#64748b;" id="prism-water-old-count">Water sales older than 1 year</div>
+                            </div>
+                            <button onclick="prismCleanup('oldWater')" style="padding:6px 12px;background:#10b981;border:none;border-radius:7px;color:white;font-weight:700;font-size:0.78rem;cursor:pointer;white-space:nowrap;">Clean</button>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(15,23,42,0.5);border-radius:8px;border:1px solid #334155;">
+                            <div>
+                                <div style="font-size:0.85rem;font-weight:600;color:#f1f5f9;">💸 Old Expense Records</div>
+                                <div style="font-size:0.73rem;color:#64748b;" id="prism-expense-old-count">Expenses older than 1 year</div>
+                            </div>
+                            <button onclick="prismCleanup('oldExpenses')" style="padding:6px 12px;background:#10b981;border:none;border-radius:7px;color:white;font-weight:700;font-size:0.78rem;cursor:pointer;white-space:nowrap;">Clean</button>
+                        </div>
+                        <button onclick="prismCleanupAll()" style="width:100%;padding:11px;background:linear-gradient(135deg,#10b981,#059669);border:none;border-radius:9px;color:white;font-weight:800;font-size:0.88rem;cursor:pointer;margin-top:4px;">
+                            🧹 Run Full Cleanup (All of the Above)
+                        </button>
+                        <button onclick="prismStorageAnalysis()" style="width:100%;padding:9px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.25);border-radius:9px;color:#60a5fa;font-weight:700;font-size:0.82rem;cursor:pointer;">
+                            📊 Refresh Storage Analysis
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Delete Specific Data Card -->
             <div class="card mt-4">
                 <div class="card-header">
@@ -6088,13 +6162,6 @@
                         <p id="del-stats-waterStoreProducts">0 items</p>
                     </div>
                     <button class="btn btn-sm btn-danger" onclick="clearSpecificData('waterStoreProducts')">Delete</button>
-                </div>
-                <div class="settings-item">
-                    <div class="settings-info">
-                        <h4>🛒 Store Credit Payments</h4>
-                        <p id="del-stats-storeSalePayments">0 items</p>
-                    </div>
-                    <button class="btn btn-sm btn-danger" onclick="clearSpecificData('storeSalePayments')">Delete</button>
                 </div>
                 </div><!-- end del-specific-body -->
             </div>
@@ -7924,8 +7991,16 @@
                     <!-- REMINDER ONLY: Time + Repeat fields (shown only for ⏰ Reminder category) -->
                     <div id="reminder-extra-fields" class="reminder-hidden">
                         <div class="form-group">
-                            <label>⏰ Reminder Time <span style="font-size:0.78rem;color:#64748b;">(shown on dashboard when you open the app)</span></label>
-                            <input type="time" id="note-reminder-time" value="08:00" style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:8px;padding:10px 12px;color:var(--text-primary);width:100%;font-size:0.95rem;">
+                            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                                <label style="margin:0;cursor:pointer;display:flex;align-items:center;gap:8px;">
+                                    <input type="checkbox" id="note-reminder-enabled" onchange="noteToggleReminder()" style="width:16px;height:16px;accent-color:#3b82f6;cursor:pointer;">
+                                    <span>⏰ Set Reminder Time</span>
+                                </label>
+                                <span style="font-size:0.75rem;color:#64748b;">(shown on dashboard)</span>
+                            </div>
+                            <div id="note-reminder-time-wrap" style="display:none;">
+                                <input type="time" id="note-reminder-time" value="" style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:8px;padding:10px 12px;color:var(--text-primary);width:100%;font-size:0.95rem;">
+                            </div>
                         </div>
                         <div class="form-group">
                             <label>🔁 Repeat</label>
@@ -8314,8 +8389,16 @@
                     </div>
 
                     <div class="form-group">
-                        <label>⏰ Reminder Time <span style="font-size:0.78rem;color:#64748b;">(optional — shown on dashboard)</span></label>
-                        <input type="time" id="task-reminder-time" value="08:00" style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:8px;padding:10px 12px;color:var(--text-primary);width:100%;font-size:0.95rem;">
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                            <label style="margin:0;cursor:pointer;display:flex;align-items:center;gap:8px;">
+                                <input type="checkbox" id="task-reminder-enabled" onchange="taskToggleReminder()" style="width:16px;height:16px;accent-color:#3b82f6;cursor:pointer;">
+                                <span>⏰ Set Reminder</span>
+                            </label>
+                            <span style="font-size:0.75rem;color:#64748b;">(shown on dashboard)</span>
+                        </div>
+                        <div id="task-reminder-time-wrap" style="display:none;">
+                            <input type="time" id="task-reminder-time" value="" style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:8px;padding:10px 12px;color:var(--text-primary);width:100%;font-size:0.95rem;">
+                        </div>
                     </div>
                     
                     <div class="form-group">
@@ -9323,7 +9406,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     const stores = ['properties','tenants','payments','credits','creditPayments',
                         'expenses','customNotes','additionalIncome','clientCharges',
                         'waterCustomers','waterSales','employees','cashAdvances',
-                        'salaryPayments','timeRecords','tasks','payables','suppliers','storeSalePayments'];
+                        'salaryPayments','timeRecords','tasks','payables','suppliers'];
                     for (const s of stores) {
                         const cloudArr = Array.isArray(data[s]) ? data[s] : [];
                         // Only do authoritative (clear+replace) if Firebase actually has records
@@ -10268,7 +10351,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             return 'PrismDB_' + orgId;
         }
         let DB_NAME = getMTDbName();
-        const DB_VERSION = 13; // v13: Added storeSalePayments for store credit tracking
+        const DB_VERSION = 12; // v12: Added Suppliers ledger
         let db = null;
         let dbReady = false;
         // Global promise that resolves when IndexedDB is ready — sync functions wait on this
@@ -10473,12 +10556,6 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                         const supStore = database.createObjectStore('suppliers', { keyPath: 'id', autoIncrement: true });
                         supStore.createIndex('name', 'name', { unique: false });
                         supStore.createIndex('createdAt', 'createdAt', { unique: false });
-                    }
-                    // Store Sale Payments — payment history for waterStoreSales on credit (v13)
-                    if (!database.objectStoreNames.contains('storeSalePayments')) {
-                        const sspStore = database.createObjectStore('storeSalePayments', { keyPath: 'id', autoIncrement: true });
-                        sspStore.createIndex('saleId', 'saleId', { unique: false });
-                        sspStore.createIndex('date', 'date', { unique: false });
                     }
                 };
 
@@ -14176,8 +14253,7 @@ async function recordTenantPayment(tenantId) {
                             createdAt:     new Date().toISOString()
                         });
                     } else {
-                        // Save as store sale
-                        const _ssIsPaid = (status === 'paid');
+                        // Save as store sale + additionalIncome
                         await dbAdd('waterStoreSales', {
                             productId:     item.productId || 'custom',
                             itemName:      item.itemName || item.label,
@@ -14185,9 +14261,6 @@ async function recordTenantPayment(tenantId) {
                             qty:           item.qty,
                             unitPrice:     item.price,
                             total:         item.subtotal,
-                            amountPaid:    _ssIsPaid ? item.subtotal : 0,
-                            balance:       _ssIsPaid ? 0 : item.subtotal,
-                            dueDate:       null,
                             customerName,
                             customerId:    custId ? parseInt(custId) : null,
                             status,
@@ -14196,17 +14269,14 @@ async function recordTenantPayment(tenantId) {
                             recordedBy:    currentAppUser?.username || 'unknown',
                             createdAt:     new Date().toISOString()
                         });
-                        // Only create additionalIncome entry for paid sales — credit sales tracked via storeSalePayments
-                        if (_ssIsPaid) {
-                            await dbAdd('additionalIncome', {
-                                source:      'Water Store',
-                                description: (item.itemIcon||'🛒') + ' ' + (item.itemName||item.label) + ' ×' + item.qty + ' @₱' + item.price,
-                                amount:      item.subtotal,
-                                date, notes, storeRef: true,
-                                recordedBy:  currentAppUser?.username || 'unknown',
-                                createdAt:   new Date().toISOString()
-                            });
-                        }
+                        await dbAdd('additionalIncome', {
+                            source:      'Water Store',
+                            description: (item.itemIcon||'🛒') + ' ' + (item.itemName||item.label) + ' ×' + item.qty + ' @₱' + item.price,
+                            amount:      item.subtotal,
+                            date, notes, storeRef: true,
+                            recordedBy:  currentAppUser?.username || 'unknown',
+                            createdAt:   new Date().toISOString()
+                        });
                     }
                 }
 
@@ -16029,9 +16099,6 @@ async function loadWaterCustomers() {
 
                 // ── Save each store item separately ──
                 for (const si of storeItems) {
-                    const _siPaid = paymentType === 'cash' || paymentType === 'gcash';
-                    const _siStatus = _siPaid ? 'paid' : (paidNow > 0 ? 'partial' : 'credit');
-                    const _siAmtPaid = _siPaid ? si.subtotal : 0;
                     const siSale = {
                         productId:   si.productId || null,
                         itemName:    si.itemName,
@@ -16039,28 +16106,22 @@ async function loadWaterCustomers() {
                         qty:         si.qty,
                         unitPrice:   si.price,
                         total:       si.subtotal,
-                        amountPaid:  _siAmtPaid,
-                        balance:     Math.max(0, si.subtotal - _siAmtPaid),
-                        dueDate:     null,
                         customerName: sale.customerName,
                         customerId:  sale.customerId || null,
-                        status:      _siStatus,
+                        status:      paymentType === 'cash' ? 'paid' : (paidNow > 0 ? 'partial' : 'credit'),
                         paymentMethod: paymentType,
                         date,  notes,
                         recordedBy:  currentAppUser?.username || 'unknown',
                         createdAt:   new Date().toISOString()
                     };
                     await dbAdd('waterStoreSales', siSale);
-                    // Only create additionalIncome for paid sales — credit tracked via storeSalePayments
-                    if (_siPaid) {
-                        await dbAdd('additionalIncome', {
-                            source: 'Water Store',
-                            description: si.itemIcon+' '+si.itemName+' × '+si.qty+' @ ₱'+si.price,
-                            amount: si.subtotal, date, notes, storeRef: true,
-                            recordedBy: currentAppUser?.username || 'unknown',
-                            createdAt: new Date().toISOString()
-                        });
-                    }
+                    await dbAdd('additionalIncome', {
+                        source: 'Water Store',
+                        description: si.itemIcon+' '+si.itemName+' × '+si.qty+' @ ₱'+si.price,
+                        amount: si.subtotal, date, notes, storeRef: true,
+                        recordedBy: currentAppUser?.username || 'unknown',
+                        createdAt: new Date().toISOString()
+                    });
                 }
 
                 window._wsCart = [];
@@ -19517,7 +19578,9 @@ async function showPayrollSummary() {
                     return;
                 }
 
-                const reminderTime = document.getElementById('note-reminder-time')?.value || '08:00';
+                const _remNoteEnabled = document.getElementById('note-reminder-enabled')?.checked;
+                const reminderTime = (_remNoteEnabled && document.getElementById('note-reminder-time')?.value)
+                    ? document.getElementById('note-reminder-time').value : null;
                 const repeat       = document.getElementById('note-repeat')?.value || 'none';
 
                 const note = {
@@ -20087,10 +20150,15 @@ async function showPayrollSummary() {
             // Restore reminder fields
             prismToggleReminderFields(note.category);
             if (note.category === 'reminder') {
-                const rtEl = document.getElementById('note-reminder-time');
-                const rpEl = document.getElementById('note-repeat');
-                if (rtEl) rtEl.value = note.reminderTime || '08:00';
-                if (rpEl) rpEl.value = note.repeat || 'none';
+                const rtEl  = document.getElementById('note-reminder-time');
+                const rpEl  = document.getElementById('note-repeat');
+                const rtCb  = document.getElementById('note-reminder-enabled');
+                const rtWrap= document.getElementById('note-reminder-time-wrap');
+                const hasRem= !!(note.reminderTime);
+                if (rtCb)   rtCb.checked = hasRem;
+                if (rtWrap) rtWrap.style.display = hasRem ? 'block' : 'none';
+                if (rtEl)   rtEl.value = note.reminderTime || '08:00';
+                if (rpEl)   rpEl.value = note.repeat || 'none';
             }
             
             await populateNoteLinkDropdown();
@@ -22771,41 +22839,6 @@ async function showPayrollSummary() {
                 }
             });
 
-            // ── Store Credits — check overdue (no payment in 30+ days) ──
-            try {
-                const _ssAll = await dbGetAll('waterStoreSales').catch(()=>[]);
-                const _sspAll = await dbGetAll('storeSalePayments').catch(()=>[]);
-                _ssAll.filter(s => !s.voided && (s.status === 'credit' || s.status === 'partial')).forEach(s => {
-                    const balance = Math.max(0, (s.total||0) - (s.amountPaid||0));
-                    if (balance <= 0) return;
-                    const pmts = _sspAll.filter(p => p.saleId === s.id);
-                    const lastPmt = pmts.sort((a,b) => new Date(b.date)-new Date(a.date))[0];
-                    const refDate = lastPmt ? new Date(lastPmt.date) : new Date(s.date||s.createdAt);
-                    const daysSince = Math.floor((now - refDate) / (1000*60*60*24));
-                    if (daysSince > 30) {
-                        overdueCount++;
-                        notificationData.overdue.push({
-                            type: 'store-credit',
-                            id: s.id,
-                            name: (s.customerName||'Walk-in') + ' — ' + (s.itemName||'Item'),
-                            amount: balance,
-                            daysOverdue: daysSince - 30,
-                            dueDate: 'Store credit since ' + (s.date||'')
-                        });
-                    } else if (daysSince >= 25) {
-                        dueSoonCount++;
-                        notificationData.due.push({
-                            type: 'store-credit',
-                            id: s.id,
-                            name: (s.customerName||'Walk-in') + ' — ' + (s.itemName||'Item'),
-                            amount: balance,
-                            daysUntilDue: 30 - daysSince,
-                            dueDate: 'Store credit since ' + (s.date||'')
-                        });
-                    }
-                });
-            } catch(e) {}
-
             const statOverdue = document.getElementById('stat-overdue');
             const statDueToday = document.getElementById('stat-due-today');
             
@@ -22823,6 +22856,30 @@ async function showPayrollSummary() {
                 }).length;
                 const _elWC = document.getElementById('stat-dash-water-credits');
                 if (_elWC) _elWC.textContent = _wCreditCount;
+            } catch(e) {}
+
+            // ── Store Credits count (waterStoreSales with status credit/partial) ──
+            try {
+                const _storeSales = await dbGetAll('waterStoreSales').catch(()=>[]);
+                const _storeCreditCusts = new Set(
+                    _storeSales.filter(s=>s.status==='credit'||s.status==='partial')
+                               .map(s=>s.customerName||'Walk-in').filter(n=>n&&n!=='Walk-in')
+                );
+                const _elSC = document.getElementById('stat-dash-store-credits');
+                if (_elSC) _elSC.textContent = _storeCreditCusts.size;
+            } catch(e) {}
+
+            // ── Staff Salary Due ──
+            try {
+                const _emps    = await dbGetAll('employees').catch(()=>[]);
+                const _tRecs   = await dbGetAll('timeRecords').catch(()=>[]);
+                const _salPmts = await dbGetAll('salaryPayments').catch(()=>[]);
+                const _salDue  = _emps.filter(e=>e.status!=='inactive').reduce((sum,emp)=>{
+                    const unpaid = _tRecs.filter(r=>r.employeeId===emp.id&&r.status==='unpaid').length;
+                    return sum + (unpaid * (emp.dailyRate||0));
+                },0);
+                const _elSD = document.getElementById('stat-dash-salary-due');
+                if (_elSD) _elSD.textContent = _salDue > 0 ? '₱'+_salDue.toLocaleString() : '₱0';
             } catch(e) {}
 
             // ── Overdue Tasks count ──
@@ -23007,18 +23064,9 @@ async function showPayrollSummary() {
             }, 0);
             safeSetText('stat-outstanding', '₱' + _outstandingCredit.toLocaleString());
 
-            // ── Store Credits (waterStoreSales on credit with balance remaining) ──
-            let _storeCreditsTotal = 0;
-            try {
-                const _storeSalesAll = await dbGetAll('waterStoreSales').catch(()=>[]);
-                _storeCreditsTotal = _storeSalesAll.filter(s => !s.voided && (s.status === 'credit' || s.status === 'partial'))
-                    .reduce((sum, s) => sum + Math.max(0, (s.total||0) - (s.amountPaid||0)), 0);
-                safeSetText('stat-store-credits', '₱' + _storeCreditsTotal.toLocaleString());
-            } catch(e) { _storeCreditsTotal = 0; }
-
-            // Total Receivables = Outstanding Rent + Outstanding Credit + Pending Charges + Store Credits
+            // Total Receivables = Outstanding Rent (this month) + Outstanding Credit + Pending Charges
             const outstandingRent = Math.max(0, expectedRent - collected);
-            const totalReceivables = outstandingRent + _outstandingCredit + pendingChargesTotal + _storeCreditsTotal;
+            const totalReceivables = outstandingRent + _outstandingCredit + pendingChargesTotal;
             document.getElementById('stat-total-receivables').textContent = '₱' + totalReceivables.toLocaleString();
 
             // Monthly credit collection progress
@@ -23201,7 +23249,7 @@ async function showPayrollSummary() {
             const creditIn  = creditPayments.filter(function(p){ return p.date && p.date.startsWith(m.key) && !p.voided; }).reduce(function(s,p){ return s + prismSafeNumber(p.amount); }, 0);
             const addIn     = additionalIncome.filter(function(p){ return p.date && p.date.startsWith(m.key) && !p.storeRef; }).reduce(function(s,p){ return s + prismSafeNumber(p.amount); }, 0);
             const waterIn   = waterSales.filter(function(p){ return p.date && p.date.startsWith(m.key) && !p.voided; }).reduce(function(s,p){ return s + prismSafeNumber(p.amountPaid || p.total); }, 0);
-            const storeIn   = (waterStoreSalesAll||[]).filter(function(p){ return p.date && p.date.startsWith(m.key) && !p.voided; }).reduce(function(s,p){ return s + prismSafeNumber(p.amountPaid !== undefined ? p.amountPaid : p.total); }, 0);
+            const storeIn   = (waterStoreSalesAll||[]).filter(function(p){ return p.date && p.date.startsWith(m.key) && !p.voided; }).reduce(function(s,p){ return s + prismSafeNumber(p.total); }, 0);
             const totalInc  = Math.round((rentIn + creditIn + addIn + waterIn + storeIn) * 100) / 100;
 
             const expOut    = expenses.filter(function(e){ return e.date && e.date.startsWith(m.key); }).reduce(function(s,e){ return s + prismSafeNumber(e.amount); }, 0);
@@ -23707,25 +23755,6 @@ async function showPayrollSummary() {
         if (!sd3.water) sd3.water = [];
         sd3.water.push({ type: 'water', label: 'Water Sales', sub: waterByDay[d3] + ' transaction' + (waterByDay[d3] > 1 ? 's' : '') });
     });
-
-    // ── STORE CREDITS on calendar — show unpaid store sales on their sale date ──
-    try {
-        const _ssCalAll = await dbGetAll('waterStoreSales').catch(()=>[]);
-        _ssCalAll.filter(s => !s.voided && (s.status==='credit'||s.status==='partial')).forEach(function(s) {
-            const _bal = Math.max(0,(s.total||0)-(s.amountPaid||0));
-            if (_bal <= 0) return;
-            const _refDateStr = s.dueDate || s.date;
-            if (!_refDateStr) return;
-            const _sDate = new Date(_refDateStr + 'T00:00:00');
-            if (isNaN(_sDate) || _sDate.getFullYear() !== year || _sDate.getMonth() !== month) return;
-            const _d = _sDate.getDate();
-            const _sd = getDay(_d);
-            const _isOv = today > _sDate;
-            const _entry = { type:'store-credit', label:'🛒 '+(s.customerName||'Walk-in'), sub:'Balance: ₱'+_bal.toLocaleString()+' · '+(s.itemName||'Item'), amount:_bal, id:s.id };
-            if (_isOv) _sd.overdue.push(_entry);
-            else _sd.debtors.push(_entry);
-        });
-    } catch(e) {}
 
 
             // ── TASKS with dueDate (+ repeat projection) ──
@@ -25349,6 +25378,215 @@ async function showPayrollSummary() {
         }
         window.prismHardRefresh = prismHardRefresh;
 
+        // ══════════════════════════════════════════════════════════
+        // DATA HEALTH & CLEANUP SYSTEM
+        // ══════════════════════════════════════════════════════════
+
+        async function prismStorageAnalysis() {
+            // Update storage bar and per-store record counts
+            const stores = [
+                'waterSales','waterStoreSales','additionalIncome','expenses',
+                'payments','creditPayments','salaryPayments','timeRecords',
+                'cashAdvances','customNotes','tasks','tenants','credits',
+                'employees','waterCustomers','properties','suppliers','payables'
+            ];
+
+            let totalRecords = 0;
+            const counts = {};
+            for (const s of stores) {
+                try {
+                    const recs = await dbGetAll(s);
+                    counts[s] = recs.length;
+                    totalRecords += recs.length;
+                } catch(e) { counts[s] = 0; }
+            }
+
+            // Update storage label
+            const label = document.getElementById('prism-storage-label');
+            if (label) label.textContent = totalRecords.toLocaleString() + ' total records';
+
+            // Fill bar (rough estimate: assume warning at 10k records)
+            const fill = document.getElementById('prism-storage-fill');
+            const pct  = Math.min(100, Math.round((totalRecords / 10000) * 100));
+            if (fill) {
+                fill.style.width = pct + '%';
+                fill.style.background = pct > 80 ? 'linear-gradient(90deg,#ef4444,#f97316)'
+                    : pct > 50 ? 'linear-gradient(90deg,#f59e0b,#10b981)'
+                    : 'linear-gradient(90deg,#10b981,#3b82f6)';
+            }
+
+            // Top stores breakdown
+            const breakdown = document.getElementById('prism-store-breakdown');
+            if (breakdown) {
+                const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,5);
+                breakdown.innerHTML = sorted.map(([s,c])=>
+                    `<span style="margin-right:10px;">📁 ${s}: <strong style="color:#f1f5f9;">${c}</strong></span>`
+                ).join('');
+            }
+
+            // Update individual count labels
+            try {
+                const now = new Date();
+                const tasks = await dbGetAll('tasks');
+                const oldDone = tasks.filter(t => t.status === 'completed' && t.updatedAt &&
+                    (now - new Date(t.updatedAt)) > 30 * 86400000);
+                const tcEl = document.getElementById('prism-task-count');
+                if (tcEl) tcEl.textContent = oldDone.length + ' completed tasks (30+ days old)';
+
+                const notes = await dbGetAll('customNotes');
+                const dismissed = notes.filter(n => n.dismissed === true);
+                const rcEl = document.getElementById('prism-reminder-count');
+                if (rcEl) rcEl.textContent = dismissed.length + ' dismissed reminders';
+
+                const payments = await dbGetAll('payments');
+                const voidedOld = payments.filter(p => p.voided &&
+                    (now - new Date(p.createdAt || p.date || 0)) > 90 * 86400000);
+                const vcEl = document.getElementById('prism-void-count');
+                if (vcEl) vcEl.textContent = voidedOld.length + ' voided records (90+ days old)';
+
+                const ws = await dbGetAll('waterSales');
+                const oldWs = ws.filter(w => w.date &&
+                    (now - new Date(w.date)) > 365 * 86400000);
+                const wcEl = document.getElementById('prism-water-old-count');
+                if (wcEl) wcEl.textContent = oldWs.length + ' water sale records (1+ year old)';
+
+                const exp = await dbGetAll('expenses');
+                const oldExp = exp.filter(e => e.date &&
+                    (now - new Date(e.date)) > 365 * 86400000);
+                const ecEl = document.getElementById('prism-expense-old-count');
+                if (ecEl) ecEl.textContent = oldExp.length + ' expense records (1+ year old)';
+            } catch(e) { console.warn('[Storage Analysis]', e); }
+        }
+        window.prismStorageAnalysis = prismStorageAnalysis;
+
+        async function prismCleanup(type) {
+            const now = new Date();
+            let deleted = 0;
+
+            try {
+                if (type === 'tasks') {
+                    const tasks = await dbGetAll('tasks');
+                    const toDelete = tasks.filter(t => t.status === 'completed' && t.updatedAt &&
+                        (now - new Date(t.updatedAt)) > 30 * 86400000);
+                    if (toDelete.length === 0) { showToast('✅ No old completed tasks to clean.', 'info'); return; }
+                    if (!await showConfirm(
+                        `Remove ${toDelete.length} completed tasks (30+ days old)? This cannot be undone.`,
+                        'warning','🧹 Clean Tasks','Yes, Clean','Cancel')) return;
+                    for (const t of toDelete) await dbDelete('tasks', t.id);
+                    deleted = toDelete.length;
+                    showToast(`🧹 Removed ${deleted} old completed tasks.`, 'success');
+
+                } else if (type === 'reminders') {
+                    const notes = await dbGetAll('customNotes');
+                    const toDelete = notes.filter(n => n.dismissed === true);
+                    if (toDelete.length === 0) { showToast('✅ No dismissed reminders to clean.', 'info'); return; }
+                    if (!await showConfirm(
+                        `Remove ${toDelete.length} dismissed reminders?`,
+                        'warning','🧹 Clean Reminders','Yes, Clean','Cancel')) return;
+                    for (const n of toDelete) await dbDelete('customNotes', n.id);
+                    deleted = toDelete.length;
+                    showToast(`🧹 Removed ${deleted} dismissed reminders.`, 'success');
+
+                } else if (type === 'voided') {
+                    const payments = await dbGetAll('payments');
+                    const toDelete = payments.filter(p => p.voided &&
+                        (now - new Date(p.createdAt || p.date || 0)) > 90 * 86400000);
+                    if (toDelete.length === 0) { showToast('✅ No old voided records to clean.', 'info'); return; }
+                    if (!await showConfirm(
+                        `Remove ${toDelete.length} voided payment records (90+ days old)?`,
+                        'warning','🧹 Clean Voided','Yes, Clean','Cancel')) return;
+                    for (const p of toDelete) await dbDelete('payments', p.id);
+                    deleted = toDelete.length;
+                    showToast(`🧹 Removed ${deleted} old voided records.`, 'success');
+
+                } else if (type === 'oldWater') {
+                    const ws = await dbGetAll('waterSales');
+                    const toDelete = ws.filter(w => w.status === 'paid' && w.date &&
+                        (now - new Date(w.date)) > 365 * 86400000);
+                    if (toDelete.length === 0) { showToast('✅ No old water sales to clean.', 'info'); return; }
+                    if (!await showConfirm(
+                        `Archive ${toDelete.length} paid water sale records older than 1 year?`,
+                        'warning','🧹 Clean Old Water','Yes, Clean','Cancel')) return;
+                    for (const w of toDelete) await dbDelete('waterSales', w.id);
+                    deleted = toDelete.length;
+                    showToast(`🧹 Archived ${deleted} old water sale records.`, 'success');
+
+                } else if (type === 'oldExpenses') {
+                    const exp = await dbGetAll('expenses');
+                    const toDelete = exp.filter(e => e.date &&
+                        (now - new Date(e.date)) > 365 * 86400000);
+                    if (toDelete.length === 0) { showToast('✅ No old expenses to clean.', 'info'); return; }
+                    if (!await showConfirm(
+                        `Archive ${toDelete.length} expense records older than 1 year?`,
+                        'warning','🧹 Clean Old Expenses','Yes, Clean','Cancel')) return;
+                    for (const e of toDelete) await dbDelete('expenses', e.id);
+                    deleted = toDelete.length;
+                    showToast(`🧹 Archived ${deleted} old expense records.`, 'success');
+                }
+
+                if (deleted > 0) {
+                    debouncedSync();
+                    await prismStorageAnalysis(); // refresh counts
+                }
+            } catch(e) {
+                showToast('❌ Cleanup error: ' + e.message, 'error');
+            }
+        }
+        window.prismCleanup = prismCleanup;
+
+        async function prismCleanupAll() {
+            const now = new Date();
+            // Preview counts first
+            const tasks    = await dbGetAll('tasks');
+            const notes    = await dbGetAll('customNotes');
+            const payments = await dbGetAll('payments');
+            const ws       = await dbGetAll('waterSales');
+            const exp      = await dbGetAll('expenses');
+
+            const oldTasks    = tasks.filter(t=>t.status==='completed'&&t.updatedAt&&(now-new Date(t.updatedAt))>30*86400000).length;
+            const dismissed   = notes.filter(n=>n.dismissed===true).length;
+            const voidedOld   = payments.filter(p=>p.voided&&(now-new Date(p.createdAt||p.date||0))>90*86400000).length;
+            const oldWs       = ws.filter(w=>w.status==='paid'&&w.date&&(now-new Date(w.date))>365*86400000).length;
+            const oldExp      = exp.filter(e=>e.date&&(now-new Date(e.date))>365*86400000).length;
+            const total       = oldTasks + dismissed + voidedOld + oldWs + oldExp;
+
+            if (total === 0) {
+                showToast('✅ App is clean — no junk data found!', 'success'); return;
+            }
+
+            const msg = `Full Cleanup will remove:
+• ${oldTasks} old completed tasks
+• ${dismissed} dismissed reminders
+• ${voidedOld} old voided records
+• ${oldWs} old water sale records
+• ${oldExp} old expense records
+
+Total: ${total} records. Your active data is safe.`;
+            if (!await showConfirm(msg, 'warning', '🧹 Full Cleanup', 'Yes, Clean All', 'Cancel')) return;
+
+            await prismCleanup('tasks');
+            await prismCleanup('reminders');
+            await prismCleanup('voided');
+            await prismCleanup('oldWater');
+            await prismCleanup('oldExpenses');
+
+            showToast(`🧹 Full cleanup complete! Removed ${total} junk records.`, 'success');
+            await prismStorageAnalysis();
+            debouncedSync();
+        }
+        window.prismCleanupAll = prismCleanupAll;
+
+        // Auto-run storage analysis when Settings section opens
+        const _origShowSection = typeof showSection === 'function' ? showSection : null;
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('[data-section]');
+            if (btn && btn.dataset.section === 'settings') {
+                setTimeout(prismStorageAnalysis, 300);
+            }
+        });
+
+
+
 async function clearAllData() {
             // ── Pause realtime sync so it doesn't race against the wipe ──
             try { if (typeof mtStopRealtimeSync === 'function') mtStopRealtimeSync(); } catch(e) {}
@@ -25524,7 +25762,7 @@ async function clearAllData() {
 
         // Update delete section stats
         async function updateDeleteStats() {
-            const stores = ['properties', 'tenants', 'payments', 'credits', 'creditPayments', 'expenses', 'customNotes', 'tasks', 'additionalIncome', 'clientCharges', 'waterStoreSales', 'waterStoreProducts', 'payables', 'suppliers', 'storeSalePayments'];
+            const stores = ['properties', 'tenants', 'payments', 'credits', 'creditPayments', 'expenses', 'customNotes', 'tasks', 'additionalIncome', 'clientCharges', 'waterStoreSales', 'waterStoreProducts', 'payables', 'suppliers'];
             
             for (const store of stores) {
                 try {
@@ -25676,7 +25914,7 @@ async function clearAllData() {
                 const STORES = ['properties','tenants','payments','credits','creditPayments',
                     'expenses','customNotes','additionalIncome','clientCharges',
                     'waterCustomers','waterSales','waterStoreSales','waterStoreProducts',
-                    'employees','cashAdvances','salaryPayments','timeRecords','tasks','payables','suppliers','storeSalePayments'];
+                    'employees','cashAdvances','salaryPayments','timeRecords','tasks','payables','suppliers'];
                 const backup = {
                     version: '1.0', exportedAt: new Date().toISOString(),
                     orgId: (MT && MT.currentOrg && MT.currentOrg.id) || 'unknown',
@@ -26635,6 +26873,20 @@ async function clearAllData() {
                         }).join('');
                     }
 
+                    // 4. Store credit customers
+                    const _storeSalesOv = await dbGetAll('waterStoreSales').catch(()=>[]);
+                    const storeCreditors = {};
+                    _storeSalesOv.filter(s=>s.status==='credit'||s.status==='partial').forEach(s=>{
+                        const key = s.customerName||'Walk-in';
+                        if (key==='Walk-in') return;
+                        storeCreditors[key] = (storeCreditors[key]||0) + Math.max(0,(s.total||0)-(s.amountPaid||0));
+                    });
+                    const storeCreditList = Object.entries(storeCreditors).sort((a,b)=>b[1]-a[1]);
+                    if (storeCreditList.length > 0) {
+                        rows += `<div style="font-size:0.75rem;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:0.05em;padding:12px 0 4px;">🛒 Store Credits (${storeCreditList.length})</div>`;
+                        rows += storeCreditList.map(([name,amt])=>`<div onclick="(function(){var fm=document.getElementById('flashcard-modal');if(fm)fm.remove();showSection('water');})()" style="display:flex;justify-content:space-between;padding:10px 8px;border-bottom:1px solid var(--border-color);cursor:pointer;border-radius:6px;" onmouseover="this.style.background='rgba(167,139,250,0.08)'" onmouseout="this.style.background=''"><div><div style="font-weight:600;">${name}</div><div style="font-size:0.72rem;color:#64748b;">Store credit balance</div></div><span style="color:#a78bfa;font-weight:700;">₱${amt.toLocaleString()}</span></div>`).join('');
+                    }
+
                     if (!rows) rows = '<div style="color:#10b981;padding:16px;text-align:center;">✅ No overdue collections!</div>';
                     html = rows + `<div style="display:flex;gap:8px;margin-top:12px;"><button onclick="(function(){var fm=document.getElementById('flashcard-modal');if(fm)fm.remove();showSection('tenants');})()" style="flex:1;padding:8px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:#f87171;border-radius:8px;cursor:pointer;font-size:0.78rem;font-weight:600;">🏠 All Tenants</button><button onclick="(function(){var fm=document.getElementById('flashcard-modal');if(fm)fm.remove();showSection('credits');})()" style="flex:1;padding:8px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:#f59e0b;border-radius:8px;cursor:pointer;font-size:0.78rem;font-weight:600;">💳 All Credits</button><button onclick="(function(){var fm=document.getElementById('flashcard-modal');if(fm)fm.remove();showSection('water');})()" style="flex:1;padding:8px;background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.3);color:#38bdf8;border-radius:8px;cursor:pointer;font-size:0.78rem;font-weight:600;">💧 Water</button></div>`;
 
@@ -26688,6 +26940,43 @@ async function clearAllData() {
                         html += overdueNotes.map(n=>`<div onclick="showSection('notes')" style="padding:10px 8px;border-bottom:1px solid var(--border-color);cursor:pointer;border-radius:6px;" onmouseover="this.style.background='rgba(245,158,11,0.08)'" onmouseout="this.style.background=''"><div style="font-weight:600;">${n.title||'Note'}</div><div style="font-size:0.72rem;color:#f59e0b;margin-top:2px;">Reminder was: ${n.reminderDate}</div>${n.content?`<div style="font-size:0.75rem;color:#64748b;margin-top:3px;">${(n.content||'').substring(0,60)}${(n.content||'').length>60?'...':''}</div>`:''}</div>`).join('');
                     }
                     html += _navBtn('Notes','notes');
+
+                } else if (type==='store-credits') {
+                    title='🛒 Store Credit Customers';
+                    const _sSales = await dbGetAll('waterStoreSales').catch(()=>[]);
+                    const storeCredMap = {};
+                    _sSales.filter(s=>s.status==='credit'||s.status==='partial').forEach(s=>{
+                        const key = s.customerName||'Walk-in';
+                        if (!storeCredMap[key]) storeCredMap[key] = 0;
+                        storeCredMap[key] += Math.max(0,(s.total||0)-(s.amountPaid||0));
+                    });
+                    const storeCreds = Object.entries(storeCredMap).sort((a,b)=>b[1]-a[1]);
+                    const totalSC = storeCreds.reduce((s,[,v])=>s+v,0);
+                    html += `<div style="background:rgba(167,139,250,0.1);border-radius:8px;padding:10px;text-align:center;margin-bottom:14px;"><div style="font-weight:800;color:#a78bfa;font-size:1.2rem;">₱${totalSC.toLocaleString()}</div><div style="font-size:0.72rem;color:#64748b;">${storeCreds.length} customer(s) with unpaid store balance</div></div>`;
+                    if (storeCreds.length === 0) {
+                        html += '<div style="color:#10b981;padding:16px;text-align:center;">✅ No store credit balances!</div>';
+                    } else {
+                        html += storeCreds.map(([name,amt])=>`<div onclick="(function(){var fm=document.getElementById('flashcard-modal');if(fm)fm.remove();showSection('water');})()" style="display:flex;justify-content:space-between;padding:10px 8px;border-bottom:1px solid var(--border-color);cursor:pointer;border-radius:6px;" onmouseover="this.style.background='rgba(167,139,250,0.08)'" onmouseout="this.style.background=''"><div><span style="font-weight:600;">${name}</span><div style="font-size:0.72rem;color:#64748b;">Tap to go to Water/Store section</div></div><span style="color:#a78bfa;font-weight:700;">₱${amt.toLocaleString()}</span></div>`).join('');
+                    }
+                    html += _navBtn('Water Station','water');
+
+                } else if (type==='staff-salary-due') {
+                    title='👷 Staff Salary Due';
+                    const _emps2   = await dbGetAll('employees').catch(()=>[]);
+                    const _tRecs2  = await dbGetAll('timeRecords').catch(()=>[]);
+                    const staffDue = _emps2.filter(e=>e.status!=='inactive').map(emp=>{
+                        const unpaidDays = _tRecs2.filter(r=>r.employeeId===emp.id&&r.status==='unpaid');
+                        const totalDue   = unpaidDays.length * (emp.dailyRate||0);
+                        return {...emp, unpaidDays:unpaidDays.length, totalDue};
+                    }).filter(e=>e.totalDue>0).sort((a,b)=>b.totalDue-a.totalDue);
+                    const grandSalDue = staffDue.reduce((s,e)=>s+e.totalDue,0);
+                    html += `<div style="background:rgba(249,115,22,0.1);border-radius:8px;padding:10px;text-align:center;margin-bottom:14px;"><div style="font-weight:800;color:#f97316;font-size:1.2rem;">₱${grandSalDue.toLocaleString()}</div><div style="font-size:0.72rem;color:#64748b;">${staffDue.length} staff with unpaid days</div></div>`;
+                    if (staffDue.length === 0) {
+                        html += '<div style="color:#10b981;padding:16px;text-align:center;">✅ All staff salary is up to date!</div>';
+                    } else {
+                        html += staffDue.map(e=>`<div onclick="(function(){var fm=document.getElementById('flashcard-modal');if(fm)fm.remove();showSection('staff');setTimeout(function(){viewEmployeeDetails(${e.id});},350);})()" style="display:flex;justify-content:space-between;padding:10px 8px;border-bottom:1px solid var(--border-color);cursor:pointer;border-radius:6px;" onmouseover="this.style.background='rgba(249,115,22,0.08)'" onmouseout="this.style.background=''"><div><div style="font-weight:600;">${e.name}</div><div style="font-size:0.72rem;color:#64748b;">${e.unpaidDays} unpaid day${e.unpaidDays!==1?'s':''} × ₱${(e.dailyRate||0).toLocaleString()} · Tap to pay</div></div><span style="color:#f97316;font-weight:700;">₱${e.totalDue.toLocaleString()}</span></div>`).join('');
+                    }
+                    html += _navBtn('Staff','staff');
 
                 } else if (type==='pay-overdue' || type==='pay-due-soon' || type==='payables' || type==='pay-total') {
                     const isOverdueCard = type==='pay-overdue';
@@ -27666,7 +27955,31 @@ async function clearAllData() {
 
                 let title = '', rows = '';
 
-                if (type === 'income' || type === 'today-in') {
+                if (type === 'today-gallons') {
+                    // Bottles Today breakdown
+                    const todaySales = allSales.filter(s => s.date === today && !s.voided);
+                    const bigTotal   = todaySales.reduce((s,x)=>s+(x.gallons||x.cart?.filter(c=>c.type==='big').reduce((a,c)=>a+c.qty,0)||0),0);
+                    const smallTotal = todaySales.reduce((s,x)=>s+(x.bottles||x.cart?.filter(c=>c.type==='small').reduce((a,c)=>a+c.qty,0)||0),0);
+                    const totalBtl   = bigTotal + smallTotal;
+                    title = '💧 Bottles Sold Today';
+                    html += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
+                        <div style="background:rgba(59,130,246,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#60a5fa;font-size:1.3rem;">${bigTotal}</div><div style="font-size:0.7rem;color:#64748b;">🔵 Big (18L)</div></div>
+                        <div style="background:rgba(99,102,241,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#818cf8;font-size:1.3rem;">${smallTotal}</div><div style="font-size:0.7rem;color:#64748b;">🫙 Small</div></div>
+                        <div style="background:rgba(16,185,129,0.1);border-radius:8px;padding:10px;text-align:center;"><div style="font-weight:800;color:#10b981;font-size:1.3rem;">${totalBtl}</div><div style="font-size:0.7rem;color:#64748b;">Total</div></div>
+                    </div>`;
+                    if (todaySales.length === 0) {
+                        html += '<div style="color:#64748b;padding:16px;text-align:center;">No water sales recorded today.</div>';
+                    } else {
+                        html += '<div style="font-size:0.75rem;color:#64748b;margin-bottom:6px;">Per-transaction:</div>';
+                        html += todaySales.map(s=>{
+                            const bg = s.big||s.gallons; const sm = s.bottles||s.small;
+                            const desc = [bg?`${bg}×Big`:'', sm?`${sm}×Small`:''].filter(Boolean).join(' + ')||s.description||'Sale';
+                            const col  = s.status==='credit'?'#f59e0b':s.status==='partial'?'#38bdf8':'#10b981';
+                            return `<div style="display:flex;justify-content:space-between;padding:7px 8px;border-bottom:1px solid var(--border-color);"><div><div style="font-size:0.83rem;font-weight:600;">${s.customerName||'Walk-in'}</div><div style="font-size:0.72rem;color:#64748b;">${desc}</div></div><span style="color:${col};font-weight:700;">₱${(s.total||0).toLocaleString()}</span></div>`;
+                        }).join('');
+                    }
+
+                } else if (type === 'income' || type === 'today-in') {
                     title = '💰 Income — ' + periodLabel;
                     const groups = [
                         {label:'🏠 Rent', nav:"showSection('tenants')", items: filteredRent.map(p=>({name:p.tenantName||'Tenant',amount:p.amount||0,date:p.date,sub:'Rent payment',nav:p.tenantId?"viewTenantDetails("+p.tenantId+");":"showSection('tenants')"}))},
@@ -27879,7 +28192,7 @@ async function clearAllData() {
                 const icon = catIcons[s.category||'other'] || '📝';
                 // Count their invoices
                 const invoiceCount = _allPayables.filter(p => (p.supplier||'').toLowerCase().trim() === (s.name||'').toLowerCase().trim()).length;
-                const unpaidTotal  = _allPayables.filter(p => (p.supplier||'').toLowerCase().trim() === (s.name||'').toLowerCase().trim() && p.status !== 'paid').reduce((sum,p)=>sum+(p.amount||0),0);
+                const unpaidTotal  = _allPayables.filter(p => (p.supplier||'').toLowerCase().trim() === (s.name||'').toLowerCase().trim() && p.status !== 'paid').reduce((sum,p)=>sum+Math.max(0,(p.amount||0)-(p.paidAmount||0)),0);
                 return '<div style="background:var(--bg-primary);border-radius:12px;margin-bottom:8px;border-left:4px solid #6366f1;overflow:hidden;">' +
                     '<div style="padding:12px 14px;cursor:pointer;" onclick="viewSupplierLedger('+s.id+')">' +
                     '<div style="display:flex;justify-content:space-between;align-items:flex-start;">' +
@@ -29934,6 +30247,29 @@ async function clearAllData() {
         
         // Task functions
         window.showAddTaskModal = showAddTaskModal;
+
+        function taskToggleReminder() {
+            const cb   = document.getElementById('task-reminder-enabled');
+            const wrap = document.getElementById('task-reminder-time-wrap');
+            const inp  = document.getElementById('task-reminder-time');
+            if (!wrap) return;
+            const on = cb && cb.checked;
+            wrap.style.display = on ? 'block' : 'none';
+            // Set a sensible default time when first enabled
+            if (on && inp && !inp.value) inp.value = '08:00';
+        }
+        window.taskToggleReminder = taskToggleReminder;
+
+        function noteToggleReminder() {
+            const cb   = document.getElementById('note-reminder-enabled');
+            const wrap = document.getElementById('note-reminder-time-wrap');
+            const inp  = document.getElementById('note-reminder-time');
+            if (!wrap) return;
+            const on = cb && cb.checked;
+            wrap.style.display = on ? 'block' : 'none';
+            if (on && inp && !inp.value) inp.value = '08:00';
+        }
+        window.noteToggleReminder = noteToggleReminder;
         window.filterTasks = filterTasks;
         window.setTaskStatusFilter = setTaskStatusFilter;
         window.filterTasksByStatus = filterTasksByStatus;
@@ -30059,7 +30395,9 @@ async function clearAllData() {
             const priority  = document.getElementById('task-priority').value;
             const dueDate   = document.getElementById('task-due-date').value;
             const repeat    = (document.getElementById('task-repeat')||{}).value || 'none';
-            const reminder  = (document.getElementById('task-reminder-time')||{}).value || '';
+            const _remTaskEnabled = document.getElementById('task-reminder-enabled')?.checked;
+            const reminder  = (_remTaskEnabled && (document.getElementById('task-reminder-time')||{}).value)
+                ? document.getElementById('task-reminder-time').value : '';
             const status    = document.getElementById('task-status').value;
             const assignedTo= document.getElementById('task-assigned-to').value.trim();
 
@@ -30106,8 +30444,14 @@ async function clearAllData() {
             document.getElementById('task-assigned-to').value = task.assignedTo || '';
             const repEl = document.getElementById('task-repeat');
             if (repEl) repEl.value = task.repeat || 'none';
+            // Restore reminder checkbox + time from saved task
+            const remCb = document.getElementById('task-reminder-enabled');
             const remEl = document.getElementById('task-reminder-time');
+            const remWrap = document.getElementById('task-reminder-time-wrap');
+            const hasReminder = !!(task.reminderTime);
+            if (remCb) remCb.checked = hasReminder;
             if (remEl) remEl.value = task.reminderTime || '08:00';
+            if (remWrap) remWrap.style.display = hasReminder ? 'block' : 'none';
             document.getElementById('task-modal-title').textContent = 'Edit Task';
             showModal('task-modal');
         }
@@ -30175,6 +30519,11 @@ async function clearAllData() {
             document.getElementById('task-modal-title').textContent = 'Add New Task';
             const dateEl = document.getElementById('task-due-date');
             if (dateEl) dateEl.value = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
+            // Always start with reminder unchecked for new tasks
+            const _rcb = document.getElementById('task-reminder-enabled');
+            const _rwrap = document.getElementById('task-reminder-time-wrap');
+            if (_rcb) _rcb.checked = false;
+            if (_rwrap) _rwrap.style.display = 'none';
             showModal('task-modal');
         }
         window.showAddTaskModal = showAddTaskModal;
@@ -30394,14 +30743,9 @@ async function clearAllData() {
             const isAdmin = currentAppUser && ['owner','admin'].includes(currentAppUser.role);
             const products = await getStoreProducts();
             const storeSales = await dbGetAll('waterStoreSales').catch(()=>[]);
-            const storeSalePayments = await dbGetAll('storeSalePayments').catch(()=>[]);
             const today = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             const todaySales = storeSales.filter(s => s.date === today && !s.voided);
-            const todayTotal = todaySales.reduce((s,x) => s + (x.amountPaid !== undefined ? (x.status==='paid'?x.total:x.amountPaid) : (x.total||0)), 0);
-
-            // Credit summary
-            const creditSales = storeSales.filter(s => !s.voided && (s.status==='credit'||s.status==='partial'));
-            const totalStoreCredit = creditSales.reduce((s,x) => s + Math.max(0,(x.total||0)-(x.amountPaid||0)), 0);
+            const todayTotal = todaySales.reduce((s,x) => s + (x.total||0), 0);
 
             // Group store sales by date for history
             const recentSales = storeSales.filter(s => !s.voided)
@@ -30419,47 +30763,10 @@ async function clearAllData() {
                         <div style="font-weight:800;color:#10b981;font-size:0.95rem;">${todaySales.length}</div>
                         <div style="font-size:0.67rem;color:var(--text-secondary);">Transactions</div>
                     </div>
-                    <div style="background:rgba(239,68,68,0.1);border-radius:10px;padding:10px;text-align:center;cursor:pointer;" onclick="document.getElementById('store-credits-section').scrollIntoView({behavior:'smooth'})">
-                        <div style="font-weight:800;color:#ef4444;font-size:0.95rem;">₱${totalStoreCredit.toLocaleString()}</div>
-                        <div style="font-size:0.67rem;color:var(--text-secondary);">🛒 Store Credits</div>
+                    <div style="background:rgba(99,102,241,0.1);border-radius:10px;padding:10px;text-align:center;">
+                        <div style="font-weight:800;color:#818cf8;font-size:0.95rem;">${products.length}</div>
+                        <div style="font-size:0.67rem;color:var(--text-secondary);">Products</div>
                     </div>
-                </div>
-
-                <!-- Store Credits Tracking Panel -->
-                <div id="store-credits-section" style="margin-bottom:16px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                        <strong style="font-size:0.88rem;color:#ef4444;">🛒 Store Credits (Unpaid)</strong>
-                        <span style="font-size:0.72rem;color:#64748b;">${creditSales.length} account(s)</span>
-                    </div>
-                    ${creditSales.length === 0
-                        ? '<div style="text-align:center;color:var(--text-secondary);padding:12px;font-size:0.82rem;background:rgba(16,185,129,0.05);border-radius:8px;">✅ No outstanding store credits.</div>'
-                        : creditSales.sort((a,b)=>(b.date||'')>(a.date||'')?1:-1).map(s => {
-                            const bal = Math.max(0,(s.total||0)-(s.amountPaid||0));
-                            const pmts = storeSalePayments.filter(p=>p.saleId===s.id);
-                            const sc = s.status==='partial'?'#f59e0b':'#ef4444';
-                            const isOverdue = s.dueDate && new Date(s.dueDate+'T00:00:00') < new Date();
-                            return `<div style="background:var(--bg-primary);border-radius:10px;padding:11px 13px;margin-bottom:8px;border-left:3px solid ${sc};">
-                                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
-                                    <div>
-                                        <div style="font-weight:700;font-size:0.88rem;">${s.itemIcon||'🛒'} ${s.itemName||'Item'}</div>
-                                        <div style="font-size:0.73rem;color:var(--text-secondary);">${s.customerName||'Walk-in'} · ${s.date||''} · ${s.qty||1}×₱${(s.unitPrice||0).toLocaleString()}</div>
-                                        ${s.dueDate?`<div style="font-size:0.70rem;color:${isOverdue?'#ef4444':'#f59e0b'};">${isOverdue?'⚠️ Overdue':'📅 Due'}: ${s.dueDate}</div>`:''}
-                                    </div>
-                                    <div style="text-align:right;">
-                                        <div style="font-weight:800;color:${sc};font-size:0.95rem;">₱${bal.toLocaleString()}</div>
-                                        <div style="font-size:0.68rem;color:var(--text-secondary);">of ₱${(s.total||0).toLocaleString()}</div>
-                                        <span style="font-size:0.65rem;background:${sc}22;color:${sc};padding:1px 6px;border-radius:5px;">${s.status}</span>
-                                    </div>
-                                </div>
-                                ${pmts.length > 0 ? `<div style="font-size:0.70rem;color:#64748b;margin-bottom:5px;">Payments: ${pmts.map(p=>'₱'+p.amount.toLocaleString()+' ('+p.date+')').join(', ')}</div>` : ''}
-                                <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                                    <button onclick="collectStoreSalePayment(${s.id})" style="flex:1;padding:5px 8px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.35);color:#10b981;border-radius:7px;cursor:pointer;font-size:0.75rem;font-weight:700;">💰 Collect Payment</button>
-                                    <button onclick="setStoreSaleDueDate(${s.id})" style="padding:5px 8px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);color:#818cf8;border-radius:7px;cursor:pointer;font-size:0.72rem;">📅 Set Due</button>
-                                    ${isAdmin?`<button onclick="editStoreSale(${s.id})" style="padding:5px 8px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);color:#818cf8;border-radius:7px;cursor:pointer;font-size:0.72rem;">✏️</button>
-                                    <button onclick="deleteStoreSale(${s.id})" style="padding:5px 8px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);color:#ef4444;border-radius:7px;cursor:pointer;font-size:0.72rem;">🗑</button>`:''}
-                                </div>
-                            </div>`;
-                        }).join('')}
                 </div>
 
                 <!-- Product quick-sell buttons -->
@@ -30515,7 +30822,6 @@ async function clearAllData() {
                     ? '<div style="text-align:center;color:var(--text-secondary);padding:16px;font-size:0.82rem;">No store sales yet. Tap a product above to sell.</div>'
                     : recentSales.map(s => {
                         const sc = s.status==='paid'?'#10b981':s.status==='credit'?'#ef4444':'#f59e0b';
-                        const bal = Math.max(0,(s.total||0)-(s.amountPaid||0));
                         return `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:var(--bg-primary);border-radius:8px;margin-bottom:5px;border-left:3px solid #a78bfa;">
                             <div>
                                 <div style="font-weight:600;font-size:0.85rem;">${s.itemIcon||'🛒'} ${s.itemName||'Item'}</div>
@@ -30523,13 +30829,11 @@ async function clearAllData() {
                             </div>
                             <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:3px;">
                                 <div style="font-weight:700;color:#a78bfa;">₱${(s.total||0).toLocaleString()}</div>
-                                ${s.status!=='paid'?`<div style="font-size:0.68rem;color:#ef4444;">Balance: ₱${bal.toLocaleString()}</div>`:''}
                                 <span style="font-size:0.67rem;background:${sc}22;color:${sc};padding:1px 6px;border-radius:5px;">${s.status||'paid'}</span>
-                                <div style="display:flex;gap:3px;">
-                                    ${s.status!=='paid'?`<button onclick="collectStoreSalePayment(${s.id})" style="padding:1px 6px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);color:#10b981;border-radius:4px;cursor:pointer;font-size:0.65rem;">💰</button>`:''}
-                                    ${isAdmin ? `<button onclick="editStoreSale(${s.id})" style="padding:1px 6px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25);color:#818cf8;border-radius:4px;cursor:pointer;font-size:0.65rem;">✏️</button>
-                                    <button onclick="deleteStoreSale(${s.id})" style="padding:1px 6px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#ef4444;border-radius:4px;cursor:pointer;font-size:0.65rem;">🗑</button>` : ''}
-                                </div>
+                                ${isAdmin ? `<div style="display:flex;gap:3px;">
+                                    <button onclick="editStoreSale(${s.id})" style="padding:1px 6px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25);color:#818cf8;border-radius:4px;cursor:pointer;font-size:0.65rem;">✏️</button>
+                                    <button onclick="deleteStoreSale(${s.id})" style="padding:1px 6px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);color:#ef4444;border-radius:4px;cursor:pointer;font-size:0.65rem;">🗑</button>
+                                </div>` : ''}
                             </div>
                         </div>`;
                     }).join('')}
@@ -30769,38 +31073,28 @@ async function clearAllData() {
             }
 
             const total = qty * unitPrice;
-            const _wsiStatus = payment === 'cash' || payment === 'gcash' ? 'paid' : 'credit';
-            const _wsiPaid = _wsiStatus === 'paid';
             const sale = {
                 productId, itemName, itemIcon, qty, unitPrice, total,
-                amountPaid:  _wsiPaid ? total : 0,
-                balance:     _wsiPaid ? 0 : total,
-                dueDate:     null,
                 customerName, customerId: customerId ? parseInt(customerId) : null,
-                status: _wsiStatus,
+                status: payment === 'cash' || payment === 'gcash' ? 'paid' : 'credit',
                 paymentMethod: payment, date, notes,
                 recordedBy: currentAppUser?.username || 'unknown',
                 createdAt: new Date().toISOString()
             };
             try {
                 await dbAdd('waterStoreSales', sale);
-                // Only add additionalIncome for paid sales — credit tracked via storeSalePayments
-                if (_wsiPaid) {
-                    await dbAdd('additionalIncome', {
-                        source: 'Water Store', description: itemIcon+' '+itemName+' × '+qty+' @ ₱'+unitPrice,
-                        amount: total, date, notes, storeRef: true,
-                        recordedBy: currentAppUser?.username || 'unknown',
-                        createdAt: new Date().toISOString()
-                    });
+                await dbAdd('additionalIncome', {
+                    source: 'Water Store', description: itemIcon+' '+itemName+' × '+qty+' @ ₱'+unitPrice,
+                    amount: total, date, notes, storeRef: true,
+                    recordedBy: currentAppUser?.username || 'unknown',
+                    createdAt: new Date().toISOString()
+                });
+                // Add to calendar if credit
+                if (payment === 'credit') {
+                    // Store sale credit tracked in waterStoreSales with status:'credit'
                 }
-                // Credit reminder — notify user balance is being tracked
-                if (!_wsiPaid) {
-                    prismFullRefresh('income', { skipCalendar: false });
-                    showToast('✅ Store item on credit recorded — trackable in Store Credits!', 'success');
-                } else {
-                    prismFullRefresh('income', { skipCalendar: true });
-                    showToast('✅ Store item recorded! Now tap "Record Water Sale" to finish.', 'success');
-                }
+                prismFullRefresh('income', { skipCalendar: payment === 'cash' || payment === 'gcash' });
+                showToast('✅ Store item recorded! Now tap "Record Water Sale" to finish.', 'success');
                 // Reset the panel inputs
                 if (sel) sel.value = '';
                 const qtyEl = document.getElementById('ws-si-qty'); if (qtyEl) qtyEl.value = '1';
@@ -31087,129 +31381,6 @@ async function clearAllData() {
             showToast('🗑 Sale deleted.', 'success');
         }
         window.deleteStoreSale = deleteStoreSale;
-
-        // ── Collect payment on a store credit sale ──
-        async function collectStoreSalePayment(saleId) {
-            const sale = await dbGet('waterStoreSales', saleId).catch(()=>null);
-            if (!sale) { showToast('⚠️ Sale record not found.', 'warning'); return; }
-            const balance = Math.max(0, (sale.total||0) - (sale.amountPaid||0));
-            if (balance <= 0) { showToast('ℹ️ This sale is already fully paid.', 'info'); return; }
-
-            // Build payment modal
-            const existing = document.getElementById('ssp-modal');
-            if (existing) existing.remove();
-            const modal = document.createElement('div');
-            modal.id = 'ssp-modal';
-            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
-            const today = localDateStr ? localDateStr() : new Date().toISOString().slice(0,10);
-            modal.innerHTML = `
-                <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:22px;width:100%;max-width:380px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-                        <h3 style="margin:0;color:#f1f5f9;font-size:1rem;">💰 Collect Store Payment</h3>
-                        <button onclick="document.getElementById('ssp-modal').remove()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1.2rem;">✕</button>
-                    </div>
-                    <div style="background:#0f172a;border-radius:10px;padding:12px;margin-bottom:14px;">
-                        <div style="font-weight:700;font-size:0.88rem;color:#f1f5f9;">${sale.itemIcon||'🛒'} ${sale.itemName||'Item'}</div>
-                        <div style="font-size:0.78rem;color:#64748b;margin-top:3px;">${sale.customerName||'Walk-in'} · Sold: ${sale.date||''}</div>
-                        <div style="display:flex;justify-content:space-between;margin-top:8px;">
-                            <span style="font-size:0.8rem;color:#64748b;">Total: ₱${(sale.total||0).toLocaleString()}</span>
-                            <span style="font-size:0.8rem;color:#10b981;">Paid: ₱${(sale.amountPaid||0).toLocaleString()}</span>
-                            <span style="font-weight:800;color:#ef4444;">Balance: ₱${balance.toLocaleString()}</span>
-                        </div>
-                    </div>
-                    <label style="font-size:0.82rem;color:#94a3b8;display:block;margin-bottom:5px;">Amount to Collect (₱) *</label>
-                    <input type="number" id="ssp-amount" min="0.01" max="${balance}" step="0.01" value="${balance}"
-                        style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:1rem;margin-bottom:10px;box-sizing:border-box;">
-                    <label style="font-size:0.82rem;color:#94a3b8;display:block;margin-bottom:5px;">Payment Method *</label>
-                    <select id="ssp-method" style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;margin-bottom:10px;box-sizing:border-box;">
-                        <option value="cash">💵 Cash</option>
-                        <option value="gcash">📱 GCash</option>
-                        <option value="bank">🏦 Bank Transfer</option>
-                        <option value="maya">💳 Maya</option>
-                    </select>
-                    <label style="font-size:0.82rem;color:#94a3b8;display:block;margin-bottom:5px;">Date *</label>
-                    <input type="date" id="ssp-date" value="${today}"
-                        style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;margin-bottom:10px;box-sizing:border-box;">
-                    <label style="font-size:0.82rem;color:#94a3b8;display:block;margin-bottom:5px;">Notes (optional)</label>
-                    <input type="text" id="ssp-notes" placeholder="Any notes..."
-                        style="width:100%;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;margin-bottom:14px;box-sizing:border-box;">
-                    <button onclick="saveStoreSalePayment(${saleId},${balance})"
-                        style="width:100%;padding:12px;background:#10b981;border:none;border-radius:10px;color:white;font-weight:700;cursor:pointer;font-size:0.95rem;">
-                        ✅ Save Payment
-                    </button>
-                </div>`;
-            document.body.appendChild(modal);
-        }
-        window.collectStoreSalePayment = collectStoreSalePayment;
-
-        async function saveStoreSalePayment(saleId, maxBalance) {
-            const amount  = parseFloat(document.getElementById('ssp-amount')?.value) || 0;
-            const method  = document.getElementById('ssp-method')?.value || 'cash';
-            const date    = document.getElementById('ssp-date')?.value || '';
-            const notes   = document.getElementById('ssp-notes')?.value?.trim() || '';
-
-            if (amount <= 0)           { showToast('⚠️ Amount must be greater than 0.', 'warning'); return; }
-            if (amount > maxBalance)   { showToast('⚠️ Amount exceeds outstanding balance.', 'warning'); return; }
-            if (!date)                 { showToast('⚠️ Date is required.', 'warning'); return; }
-
-            const sale = await dbGet('waterStoreSales', saleId).catch(()=>null);
-            if (!sale) { showToast('⚠️ Sale not found.', 'warning'); return; }
-
-            // Save payment record
-            await dbAdd('storeSalePayments', {
-                saleId, amount, method, date, notes,
-                customerName: sale.customerName || 'Walk-in',
-                itemName:     sale.itemName || 'Item',
-                recordedBy:   currentAppUser?.username || 'unknown',
-                createdAt:    new Date().toISOString()
-            });
-
-            // Update sale amountPaid and status
-            const newAmountPaid = (sale.amountPaid||0) + amount;
-            const newBalance    = Math.max(0, (sale.total||0) - newAmountPaid);
-            sale.amountPaid     = newAmountPaid;
-            sale.balance        = newBalance;
-            sale.status         = newBalance <= 0 ? 'paid' : (newAmountPaid > 0 ? 'partial' : 'credit');
-            await dbUpdate('waterStoreSales', sale);
-
-            // Record additionalIncome for EVERY payment collected (partial or full)
-            // Each entry records the actual amount received on that date
-            const _isPaidFull = newBalance <= 0;
-            await dbAdd('additionalIncome', {
-                source:      'Water Store',
-                description: (sale.itemIcon||'🛒') + ' ' + (sale.itemName||'Item')
-                             + ' ×' + (sale.qty||1) + ' @₱' + (sale.unitPrice||0).toLocaleString()
-                             + (_isPaidFull ? ' [fully paid]' : ' [partial payment — balance: ₱' + newBalance.toLocaleString() + ']'),
-                amount:      amount,
-                date, notes,
-                storeRef:    true,
-                storeSaleId: saleId,
-                paymentType: _isPaidFull ? 'full' : 'partial',
-                recordedBy:  currentAppUser?.username || 'unknown',
-                createdAt:   new Date().toISOString()
-            });
-
-            document.getElementById('ssp-modal')?.remove();
-            showToast(`✅ Payment of ₱${amount.toLocaleString()} collected! ${newBalance > 0 ? 'Remaining balance: ₱'+newBalance.toLocaleString() : 'Fully paid! 🎉'}`, 'success');
-            prismFullRefresh('income', { skipCalendar: false });
-            if (typeof renderWaterStore === 'function') renderWaterStore();
-            if (typeof loadDashboard === 'function') loadDashboard();
-        }
-        window.saveStoreSalePayment = saveStoreSalePayment;
-
-        // ── Set due date on a store credit sale ──
-        async function setStoreSaleDueDate(saleId) {
-            const sale = await dbGet('waterStoreSales', saleId).catch(()=>null);
-            if (!sale) return;
-            const newDate = await showInputModal('Set Due Date', 'Enter due date for this store credit (YYYY-MM-DD):', 'YYYY-MM-DD', sale.dueDate || '');
-            if (newDate === null) return;
-            sale.dueDate = newDate.trim() || null;
-            await dbUpdate('waterStoreSales', sale);
-            showToast('📅 Due date updated.', 'success');
-            if (typeof renderWaterStore === 'function') renderWaterStore();
-            prismFullRefresh('income', { skipCalendar: false });
-        }
-        window.setStoreSaleDueDate = setStoreSaleDueDate;
 
         async function editStoreSale(id) {
             const sale = await dbGet('waterStoreSales', id);
@@ -35470,7 +35641,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     const tables = ['properties','tenants','payments','credits','creditPayments',
                         'expenses','customNotes','additionalIncome','clientCharges',
                         'waterCustomers','waterSales','employees','cashAdvances',
-                        'salaryPayments','timeRecords','tasks','payables','suppliers','storeSalePayments'];
+                        'salaryPayments','timeRecords','tasks','payables','suppliers'];
 
                     // Always authoritative — realtime cloud changes always win
                     for (const t of tables) {
