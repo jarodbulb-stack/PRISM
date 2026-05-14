@@ -9105,7 +9105,11 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
         let _syncDebounceTimer = null;
         function debouncedSync() {
             if (_syncDebounceTimer) clearTimeout(_syncDebounceTimer);
-            _syncDebounceTimer = setTimeout(() => syncToFirebase(), 2000);
+            _syncDebounceTimer = setTimeout(async () => {
+                // Wait for IDB ready before pushing to prevent empty-data wipe
+                if (window._dbReadyPromise) await window._dbReadyPromise;
+                syncToFirebase();
+            }, 2000);
         }
 
         // Auto-refresh current visible section after any save
@@ -9286,6 +9290,11 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 }
                 const dataRef = db.collection('prism_data').doc(orgId);
 
+                // SAFETY GUARD: Wait for IDB to be fully ready
+                if (window._dbReadyPromise) await window._dbReadyPromise;
+                const _safeDb = window.db || db;
+                if (!_safeDb) { console.warn('[Sync] IDB not ready — aborting push'); updateSyncStatus('offline'); window._syncInProgress = false; return; }
+
                 // Get all data from IndexedDB
                 const data = {
                     properties: await getAllFromStore('properties'),
@@ -9299,6 +9308,8 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     clientCharges: await getAllFromStore('clientCharges'),
                     waterCustomers: await getAllFromStore('waterCustomers'),
                     waterSales: await getAllFromStore('waterSales'),
+                    waterStoreSales: await getAllFromStore('waterStoreSales'),
+                    waterStoreProducts: await getAllFromStore('waterStoreProducts'),
                     employees: await getAllFromStore('employees'),
                     cashAdvances: await getAllFromStore('cashAdvances'),
                     salaryPayments: await getAllFromStore('salaryPayments'),
@@ -9311,6 +9322,25 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     lastSync: new Date().toISOString(),
                     orgId: orgId
                 };
+
+                // CRITICAL SAFETY: Never push if all major stores are empty
+                // This prevents wiping Firebase with empty IDB data
+                const _totalRecords = (data.properties||[]).length + (data.tenants||[]).length +
+                    (data.waterCustomers||[]).length + (data.additionalIncome||[]).length +
+                    (data.waterSales||[]).length + (data.employees||[]).length +
+                    (data.expenses||[]).length + (data.credits||[]).length;
+
+                if (_totalRecords === 0) {
+                    console.warn('[Sync] ⚠️ ALL stores empty — aborting push to prevent Firebase wipe');
+                    console.warn('[Sync] IDB may not be ready. Will retry in 3s...');
+                    window._syncInProgress = false;
+                    updateSyncStatus('synced');
+                    // Retry once after delay
+                    setTimeout(() => {
+                        if (typeof syncToFirebase === 'function') syncToFirebase();
+                    }, 3000);
+                    return;
+                }
 
                 _lastSyncTimestamp = data.lastSync;
                 await dataRef.set(data);
@@ -9405,7 +9435,8 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     // This prevents data loss when orgId resolves incorrectly or doc is partial.
                     const stores = ['properties','tenants','payments','credits','creditPayments',
                         'expenses','customNotes','additionalIncome','clientCharges',
-                        'waterCustomers','waterSales','employees','cashAdvances',
+                        'waterCustomers','waterSales','waterStoreSales','waterStoreProducts',
+                        'employees','cashAdvances',
                         'salaryPayments','timeRecords','tasks','payables','suppliers'];
                     for (const s of stores) {
                         const cloudArr = Array.isArray(data[s]) ? data[s] : [];
@@ -9496,15 +9527,19 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
         }
 
         async function getAllFromStore(storeName) {
-            return new Promise((resolve, reject) => {
+            // CRITICAL: Wait for IDB to be ready before reading
+            if (window._dbReadyPromise) await window._dbReadyPromise;
+            const _db = window.db || db;
+            if (!_db) { console.warn('[getAllFromStore] DB not ready for:', storeName); return []; }
+            return new Promise((resolve) => {
                 try {
-                    const transaction = db.transaction([storeName], 'readonly');
+                    const transaction = _db.transaction([storeName], 'readonly');
                     const store = transaction.objectStore(storeName);
                     const request = store.getAll();
-
                     request.onsuccess = () => resolve(request.result || []);
-                    request.onerror = () => resolve([]);
+                    request.onerror  = () => resolve([]);
                 } catch (error) {
+                    console.warn('[getAllFromStore] Error reading', storeName, error.message);
                     resolve([]);
                 }
             });
@@ -34473,17 +34508,14 @@ async function mtInit() {
                         }
                     }
 
-                    mtHideLoading();
-                    mtShowApp();
-                    mtUpdateOrgBadge();
-                    setTimeout(() => {
-                        if (typeof updateUserDisplay === 'function') updateUserDisplay();
-                        // Define sync-after-DB as a pending function —
-                        // it will be called by _mtShowAppActual AFTER init() completes
-                        // This prevents reading empty IDB before the app is ready
-                        window._pendingRunSyncAfterDB = async () => {
-                            if (window._dbReadyPromise) await window._dbReadyPromise;
-                            const _reloadAll = async () => {
+                    // Set _pendingRunSyncAfterDB BEFORE calling mtShowApp
+                    // to avoid race condition where _mtShowAppActual finishes 
+                    // before the setTimeout fires
+                    window._pendingRunSyncAfterDB = async () => {
+                        // Wait for IDB + extra 500ms buffer to ensure data is loaded
+                        if (window._dbReadyPromise) await window._dbReadyPromise;
+                        await new Promise(r => setTimeout(r, 500));
+                        const _reloadAll = async () => {
                                 if (typeof loadAllData === 'function') {
                                     try { await loadAllData(); } catch(e) {
                                         if (typeof loadDashboard === 'function') loadDashboard();
@@ -34493,8 +34525,16 @@ async function mtInit() {
                                 }
                             };
                             // On fresh device (empty IndexedDB), pull first then reload all
-                            const _localProps = await dbGetAll('properties').catch(()=>[]);
-                            const _isFreshDevice = !_localProps || _localProps.length === 0;
+                            // Check multiple stores — fresh if ALL major stores are empty
+                            // (not just properties, since some businesses don't use properties)
+                            const _localProps  = await dbGetAll('properties').catch(()=>[]);
+                            const _localWater  = await dbGetAll('waterCustomers').catch(()=>[]);
+                            const _localTenant = await dbGetAll('tenants').catch(()=>[]);
+                            const _localIncome = await dbGetAll('additionalIncome').catch(()=>[]);
+                            const _isFreshDevice = (!_localProps  || _localProps.length  === 0) &&
+                                                   (!_localWater  || _localWater.length  === 0) &&
+                                                   (!_localTenant || _localTenant.length === 0) &&
+                                                   (!_localIncome || _localIncome.length === 0);
                             if (_isFreshDevice) {
                                 // Fresh device — pull from Firebase first to populate IndexedDB
                                 if (typeof syncFromFirebase === 'function') {
@@ -34516,7 +34556,11 @@ async function mtInit() {
                             // Start real-time listener for live cross-device sync
                             mtStartRealtimeSync();
                         };
-                    }, 200);
+
+                    mtHideLoading();
+                    mtShowApp();
+                    mtUpdateOrgBadge();
+                    if (typeof updateUserDisplay === 'function') updateUserDisplay();
 
                 } else {
                     // No org in localStorage — check Firestore before showing setup
