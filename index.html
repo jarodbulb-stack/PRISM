@@ -34535,14 +34535,35 @@ async function mtInit() {
                                                    (!_localWater  || _localWater.length  === 0) &&
                                                    (!_localTenant || _localTenant.length === 0) &&
                                                    (!_localIncome || _localIncome.length === 0);
+                            // ALWAYS pull from Firebase first on login
+                            // This ensures data shows immediately regardless of device state
+                            // Push happens AFTER pull to avoid race conditions
+                            if (typeof syncFromFirebase === 'function') {
+                                try {
+                                    await syncFromFirebase();
+                                    await _reloadAll();
+                                } catch(e) {
+                                    console.warn('[MT] Pull on login failed:', e);
+                                    await _reloadAll(); // still show local data
+                                }
+                            } else {
+                                await _reloadAll();
+                            }
+                            // Push local data to Firebase AFTER pull (2s delay)
+                            // Only push if we have local data (guard in syncToFirebase handles empty check)
+                            setTimeout(() => {
+                                if (typeof syncToFirebase === 'function') {
+                                    syncToFirebase().catch(e => console.warn('[MT] Push after login failed:', e));
+                                }
+                            }, 2000);
+
+                            if (false) { // legacy code preserved for reference
                             if (_isFreshDevice) {
-                                // Fresh device — pull from Firebase first to populate IndexedDB
                                 if (typeof syncFromFirebase === 'function') {
                                     try { await syncFromFirebase(); } catch(e) {}
                                     await _reloadAll();
                                 }
                             } else {
-                                // Existing device — push first, then pull, then reload all
                                 if (typeof syncToFirebase === 'function') {
                                     syncToFirebase().catch(e => {});
                                 }
@@ -34555,6 +34576,7 @@ async function mtInit() {
                             }
                             // Start real-time listener for live cross-device sync
                             mtStartRealtimeSync();
+                            } // end legacy code
                         };
 
                     mtHideLoading();
