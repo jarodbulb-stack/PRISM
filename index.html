@@ -17581,9 +17581,10 @@ async function showPayrollSummary() {
                 return;
             }
 
-            // Default range = passed preset or all unpaid records
+            // Default range: min = earliest unpaid record, max = TODAY
             const minDate = allUnpaid.reduce((m,r)=>r.date<m?r.date:m, allUnpaid[0].date);
-            const maxDate = allUnpaid.reduce((m,r)=>r.date>m?r.date:m, allUnpaid[0].date);
+            const _todayStr = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
+            const maxDate = _todayStr;
             if (presetFrom && presetTo) { /* use passed range */ }
 
             const dailyRate = parseFloat(employee.dailyRate) || 0;
@@ -17849,7 +17850,9 @@ async function showPayrollSummary() {
         function _refreshPayrollModal(employeeId) {
             const from = document.getElementById('payroll-from')?.value || window._payrollMinDate;
             const to   = document.getElementById('payroll-to')?.value   || window._payrollMaxDate;
+            const _todayRef = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             if (from > to) { showToast('⚠️ From date must be before To date.','warning'); return; }
+            if (to > _todayRef) { showToast('⚠️ Cannot set end date beyond today.','warning'); return; }
             if (typeof window._renderPayrollModal === 'function') window._renderPayrollModal(from, to);
         }
         window._refreshPayrollModal = _refreshPayrollModal;
@@ -17881,9 +17884,10 @@ async function showPayrollSummary() {
                 const lastDay = new Date(today.getFullYear(), today.getMonth()+1, 0).getDate();
                 to = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(lastDay).padStart(2,'0');
             }
-            // Clamp to available range
+            // Only clamp lower bound (can't go before first unpaid record)
             if (from < minDate) from = minDate;
-            if (to > maxDate) to = maxDate;
+            const _todayClamp = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
+            if (to > _todayClamp) to = _todayClamp;
 
             const fi = document.getElementById('payroll-from');
             const ti = document.getElementById('payroll-to');
@@ -26812,19 +26816,7 @@ async function clearAllData() {
                 } else if (type==='overdue') {
                     title='⚠️ All Overdue Collections';
                     const todayDay = now.getDate();
-                    // Helper: close flashcard modal then open ledger
-                    window._flashcardGoLedger = function(type2, id) {
-                        const fm = document.getElementById('flashcard-modal');
-                        if (fm) fm.remove();
-                        if (type2 === 'tenant') {
-                            viewTenantLedgerAndPay(id);
-                        } else if (type2 === 'credit') {
-                            viewCreditDetails(id);
-                        } else if (type2 === 'water') {
-                            showSection('water');
-                            setTimeout(function(){ viewWaterCustomerDetails(id); }, 350);
-                        }
-                    };
+                    // Helper defined globally — see window._flashcardGoLedger below
                     let rows = '';
 
                     // 1. Overdue rent tenants
@@ -27134,6 +27126,31 @@ async function clearAllData() {
         }
 
         window.showFlashcardDetail = showFlashcardDetail;
+
+        // ── _flashcardGoLedger: always available globally ──
+        // Closes the flashcard modal then navigates to the correct ledger
+        window._flashcardGoLedger = function(type2, id) {
+            const fm = document.getElementById('flashcard-modal');
+            if (fm) fm.remove();
+            if (type2 === 'tenant') {
+                if (typeof viewTenantLedgerAndPay === 'function') viewTenantLedgerAndPay(id);
+                else { showSection('tenants'); setTimeout(()=>viewTenantDetails(id), 350); }
+            } else if (type2 === 'credit') {
+                if (typeof viewCreditDetails === 'function') viewCreditDetails(id);
+                else showSection('credits');
+            } else if (type2 === 'water') {
+                showSection('water');
+                setTimeout(function(){ if(typeof viewWaterCustomerDetails==='function') viewWaterCustomerDetails(id); }, 350);
+            } else if (type2 === 'staff') {
+                showSection('staff');
+                setTimeout(function(){ if(typeof viewEmployeeDetails==='function') viewEmployeeDetails(id); }, 350);
+            } else if (type2 === 'payable') {
+                showSection('payables');
+            } else if (type2 === 'supplier') {
+                showSection('suppliers');
+                setTimeout(function(){ if(typeof viewSupplierLedger==='function') viewSupplierLedger(id); }, 350);
+            }
+        };
 
         async function showWaterFlashcardDetail(type) {
             // ── Handle 'credits' — show all unpaid water credit accounts ──
