@@ -9292,8 +9292,13 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
 
                 // SAFETY GUARD: Wait for IDB to be fully ready
                 if (window._dbReadyPromise) await window._dbReadyPromise;
-                const _safeDb = window.db || db;
-                if (!_safeDb) { console.warn('[Sync] IDB not ready — aborting push'); updateSyncStatus('offline'); window._syncInProgress = false; return; }
+                const _safeDb = window._idb || db;
+                if (!_safeDb || typeof _safeDb.transaction !== 'function') {
+                    console.warn('[Sync] IDB not ready — aborting push');
+                    updateSyncStatus('offline');
+                    window._syncInProgress = false;
+                    return;
+                }
 
                 // Get all data from IndexedDB
                 const data = {
@@ -9529,8 +9534,14 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
         async function getAllFromStore(storeName) {
             // CRITICAL: Wait for IDB to be ready before reading
             if (window._dbReadyPromise) await window._dbReadyPromise;
-            const _db = window.db || db;
+            // Use _idb (IndexedDB) — window.db is Firestore and cannot be used here
+            const _db = window._idb || db;
             if (!_db) { console.warn('[getAllFromStore] DB not ready for:', storeName); return []; }
+            if (typeof _db.transaction !== 'function') {
+                console.warn('[getAllFromStore] _db is not IndexedDB for:', storeName);
+                // Try to recover using the local db variable via dbGetAll
+                try { return await dbGetAll(storeName); } catch(e) { return []; }
+            }
             return new Promise((resolve) => {
                 try {
                     const transaction = _db.transaction([storeName], 'readonly');
@@ -10425,8 +10436,9 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 request.onsuccess = (event) => {
                     db = event.target.result;
                     dbReady = true;
+                    window._idb = db; // CRITICAL: store IDB ref separately (window.db = Firestore)
                     // Signal all waiting sync functions that DB is ready
-                    if (window._dbReadyResolve) { window._dbReadyResolve(); window._dbReadyResolve = null; }
+                    if (window._dbReadyResolve) { window._dbReadyResolve(db); window._dbReadyResolve = null; }
 
                     // Handle connection closing unexpectedly
                     db.onclose = () => {
