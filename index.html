@@ -15651,8 +15651,14 @@ async function loadWaterCustomers() {
             customers.forEach(c => {
                 const customerSales = sales.filter(s => String(s.customerId) === String(c.id));
                 const unpaid = customerSales
-                    .filter(s => !s.voided && (s.status === 'credit' || s.status === 'partial'))
-                    .reduce((sum, s) => sum + Math.max(0, (s.total || 0) - (s.amountPaid || 0)), 0);
+                    .filter(s => !s.voided && s.status !== 'paid')
+                    .reduce((sum, s) => {
+                        // Use stored balance field if available, else compute from total-amountPaid
+                        const bal = s.balance !== undefined
+                            ? Math.max(0, s.balance)
+                            : Math.max(0, (s.total || 0) - (s.amountPaid || 0));
+                        return sum + bal;
+                    }, 0);
                 c.balance = unpaid;
                 totalCredits += unpaid;
             });
@@ -16794,7 +16800,7 @@ async function loadWaterCustomers() {
                 const ot     = unpaid.reduce((s,r)=>s+(r.otHours||0),0);
                 const bonus  = unpaid.reduce((s,r)=>s+(r.bonus||0)+(r.incentive||0),0);
                 const lates  = unpaid.reduce((s,r)=>s+(r.lateDeduction||0),0);
-                const advPending = empAdvances.filter(a=>!a.deducted&&(!a.date||(a.date>=from&&a.date<=to)));
+                const advPending = empAdvances.filter(a=>!a.deducted&&(a.date>=from&&a.date<=to));
                 const advTotal = advPending.reduce((s,a)=>s+a.amount,0);
                 const gross  = (full*dailyRate)+(half*dailyRate*0.5)+(ot*otRate)+bonus;
                 const net    = Math.max(0, gross - lates - advTotal);
@@ -16804,9 +16810,10 @@ async function loadWaterCustomers() {
             // ── Render everything ──
             function _empRender(from, to) {
                 const p = _empCalc(from, to);
-                const allUnpaidCount = empRecs.filter(r=>!r.paid&&(r.status==='present'||r.status==='halfday')).length;
                 const rangeRecs   = empRecs.filter(r=>r.date>=from&&r.date<=to);
-                const rangeAdv    = empAdvances.filter(a=>!a.date||(a.date>=from&&a.date<=to));
+                // Count unpaid only within the selected date range
+                const allUnpaidCount = rangeRecs.filter(r=>!r.paid&&(r.status==='present'||r.status==='halfday')).length;
+                const rangeAdv    = empAdvances.filter(a=>a.date>=from&&a.date<=to);
                 const rangeAdj    = rangeRecs.filter(r=>(r.bonus||0)+(r.incentive||0)+(r.otHours||0)+(r.lateDeduction||0)>0||r.adjustmentNote||r.status==='adjustment');
                 const rangeSal    = empSalaries.filter(s=>(!s.dateFrom||s.dateFrom>=from)&&(!s.dateTo||s.dateTo<=to));
 
