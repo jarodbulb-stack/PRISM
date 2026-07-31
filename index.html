@@ -4933,6 +4933,8 @@
                         <button class="btn btn-sm btn-primary" onclick="showModal('water-customer-modal')">+ Customer</button>
                         <button class="btn btn-sm btn-success" onclick="showWaterSaleModal()">+ Sale</button>
                         <button class="btn btn-sm btn-secondary" onclick="setWaterView('store');showWaterStoreItemModal()" style="background:rgba(139,92,246,0.15);border-color:rgba(139,92,246,0.4);color:#a78bfa;">🛒 Sell Item</button>
+                        <button class="btn btn-sm btn-secondary" onclick="showWaterBottleAdvanceModal()" style="background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.4);color:#f59e0b;">🔄 + Bottle Advance</button>
+                        <button class="btn btn-sm btn-secondary" onclick="showWaterBorrowedItemModal()" style="background:rgba(236,72,153,0.15);border-color:rgba(236,72,153,0.4);color:#ec4899;">📦 + Borrowed</button>
                     </div>
                 </div>
 
@@ -4948,6 +4950,8 @@
                     <button id="water-view-customers-btn" class="btn btn-sm btn-primary" onclick="setWaterView('customers')">👥 Customers</button>
                     <button id="water-view-sales-btn" class="btn btn-sm btn-secondary" onclick="setWaterView('sales')">🧾 All Sales</button>
                     <button id="water-view-store-btn" class="btn btn-sm btn-secondary" onclick="setWaterView('store')">🛒 Store</button>
+                    <button id="water-view-advances-btn" class="btn btn-sm btn-secondary" onclick="setWaterView('advances')" style="position:relative;">🔄 Advances<span id="badge-water-advances" style="display:none;position:absolute;top:-6px;right:-6px;background:#f59e0b;color:#000;font-size:0.6rem;font-weight:800;padding:1px 5px;border-radius:8px;"></span></button>
+                    <button id="water-view-borrowed-btn" class="btn btn-sm btn-secondary" onclick="setWaterView('borrowed')" style="position:relative;">📦 Borrowed<span id="badge-water-borrowed" style="display:none;position:absolute;top:-6px;right:-6px;background:#ec4899;color:#fff;font-size:0.6rem;font-weight:800;padding:1px 5px;border-radius:8px;"></span></button>
                     <button id="water-names-toggle-btn" class="btn btn-sm btn-secondary" onclick="toggleWaterCustomerNames()" title="Show customer names" style="background:#6366f1;color:#fff;border-color:#6366f1;">🙈 Names</button>
                     <input type="text" id="water-search" placeholder="🔍 Search name..."
                         style="flex:1;min-width:130px;padding:6px 10px;border:1px solid var(--border-color);border-radius:7px;background:var(--bg-secondary);color:var(--text-primary);font-size:0.82rem;"
@@ -4965,6 +4969,8 @@
 
                 <div id="water-all-sales-list" style="display:none;"></div>
                 <div id="water-store-panel" style="display:none;"></div>
+                <div id="water-advances-panel" style="display:none;"></div>
+                <div id="water-borrowed-panel" style="display:none;"></div>
             </div>
         
             <!-- Water Sales History — inline in Water section -->
@@ -6162,6 +6168,20 @@
                         <p id="del-stats-waterStoreProducts">0 items</p>
                     </div>
                     <button class="btn btn-sm btn-danger" onclick="clearSpecificData('waterStoreProducts')">Delete</button>
+                </div>
+                <div class="settings-item">
+                    <div class="settings-info">
+                        <h4>🔄 Water Bottle Advances</h4>
+                        <p id="del-stats-waterBottleAdvances">0 items</p>
+                    </div>
+                    <button class="btn btn-sm btn-danger" onclick="clearSpecificData('waterBottleAdvances')">Delete</button>
+                </div>
+                <div class="settings-item">
+                    <div class="settings-info">
+                        <h4>📦 Water Borrowed Items</h4>
+                        <p id="del-stats-waterBorrowedItems">0 items</p>
+                    </div>
+                    <button class="btn btn-sm btn-danger" onclick="clearSpecificData('waterBorrowedItems')">Delete</button>
                 </div>
                 </div><!-- end del-specific-body -->
             </div>
@@ -7396,6 +7416,88 @@
         </div>
     </div>
 
+    <!-- Water Bottle Advance Modal -->
+    <div class="modal-overlay" id="water-bottle-advance-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>🔄 <span id="wba-modal-title">Bottle Advance</span></h3>
+                <button class="modal-close" onclick="hideModal('water-bottle-advance-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:12px;">Record empty bottles a customer gave you ahead of delivery, so you remember to return filled bottles for them next time.</p>
+                <form id="water-bottle-advance-form" onsubmit="saveWaterBottleAdvance(event)">
+                    <input type="hidden" id="wba-edit-id">
+                    <div class="form-group">
+                        <label>Customer *</label>
+                        <select id="wba-customer">
+                            <option value="">Select customer</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Or New / Walk-in Name</label>
+                        <input type="text" id="wba-new-customer" placeholder="Enter name if not a saved customer">
+                    </div>
+                    <div class="form-group">
+                        <label>Empty Bottles Collected *</label>
+                        <input type="number" id="wba-quantity" min="1" required placeholder="e.g. 3">
+                    </div>
+                    <div class="form-group">
+                        <label>Date *</label>
+                        <input type="date" id="wba-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <textarea id="wba-notes" rows="2" placeholder="Any notes..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">🔄 Save Advance</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Water Borrowed Item Modal -->
+    <div class="modal-overlay" id="water-borrowed-item-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>📦 <span id="wbi-modal-title">Borrowed Item</span></h3>
+                <button class="modal-close" onclick="hideModal('water-borrowed-item-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:12px;">Record empty bottles and/or dispensers your store lent out to a customer, so you can track what needs to come back.</p>
+                <form id="water-borrowed-item-form" onsubmit="saveWaterBorrowedItem(event)">
+                    <input type="hidden" id="wbi-edit-id">
+                    <div class="form-group">
+                        <label>Customer *</label>
+                        <select id="wbi-customer">
+                            <option value="">Select customer</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Or New / Walk-in Name</label>
+                        <input type="text" id="wbi-new-customer" placeholder="Enter name if not a saved customer">
+                    </div>
+                    <div class="form-group">
+                        <label>Empty Bottles Borrowed</label>
+                        <input type="number" id="wbi-bottle-qty" min="0" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Dispensers Borrowed</label>
+                        <input type="number" id="wbi-dispenser-qty" min="0" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Date *</label>
+                        <input type="date" id="wbi-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <textarea id="wbi-notes" rows="2" placeholder="Any notes..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">📦 Save Borrowed Item(s)</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Employee Modal -->
     <div class="modal-overlay" id="employee-modal">
         <div class="modal">
@@ -8110,113 +8212,16 @@
     </div>
 
     <!-- Admin Passcode Modal -->
-    <div class="modal-overlay" id="admin-passcode-modal">
-        <div class="modal" style="max-width: 350px;">
-            <div class="modal-header">
-                <h3>🔐 Admin Verification</h3>
-                <button class="modal-close" onclick="hideModal('admin-passcode-modal')">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p style="color: var(--text-secondary); margin-bottom: 15px;" id="admin-passcode-message">Enter admin passcode to continue:</p>
-                <div class="form-group">
-                    <input type="password" id="admin-passcode-input" placeholder="Enter passcode" maxlength="6" style="text-align: center; font-size: 1.5rem; letter-spacing: 10px;">
-                </div>
-                <button type="button" class="btn btn-primary btn-block" onclick="verifyAdminPasscode()">Verify</button>
-                <input type="hidden" id="admin-passcode-action">
-                <input type="hidden" id="admin-passcode-data">
-            </div>
-        </div>
-    </div>
+    
 
     <!-- Void Sale Confirmation Modal -->
-    <div class="modal-overlay" id="void-sale-modal">
-        <div class="modal" style="max-width: 400px;">
-            <div class="modal-header">
-                <h3>⚠️ Void Sale</h3>
-                <button class="modal-close" onclick="hideModal('void-sale-modal')">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div style="background: var(--danger); color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center;">
-                    <div style="font-size: 2rem;">⚠️</div>
-                    <p style="margin: 10px 0 0 0;">Are you sure you want to void this sale?</p>
-                </div>
-                <div id="void-sale-details" style="background: var(--bg-secondary); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                    <!-- Sale details will be shown here -->
-                </div>
-                <div class="form-group">
-                    <label>Reason for Voiding</label>
-                    <textarea id="void-sale-reason" rows="2" placeholder="Enter reason..." required></textarea>
-                </div>
-                <input type="hidden" id="void-sale-id">
-                <input type="hidden" id="void-sale-type">
-                <button type="button" class="btn btn-danger btn-block" onclick="confirmVoidSale()">Yes, Void This Sale</button>
-                <button type="button" class="btn btn-secondary btn-block" onclick="hideModal('void-sale-modal')" style="margin-top: 10px;">Cancel</button>
-            </div>
-        </div>
-    </div>
+    
 
     <!-- App Login Modal -->
-    <div class="modal-overlay" id="app-login-modal" style="display: none;">
-        <div class="modal" style="max-width: 400px;">
-            <div class="modal-header">
-                <h3>🏠 PRISM Login</h3>
-                <button class="modal-close" onclick="closeLoginModal()" style="display: none;" id="login-close-btn">&times;</button>
-            </div>
-            <div class="modal-body" style="padding: 30px;">
-                <div style="text-align: center; margin-bottom: 25px;">
-                    <div style="font-size: 4rem; margin-bottom: 10px;">🏠</div>
-                    <h1 style="margin: 0; color: var(--primary); font-size: 2rem;">PRISM</h1>
-                    <p style="color: var(--text-secondary); margin-top: 5px;">Property • Rental • Income • Sales • Management</p>
-                    <p style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 5px;">by OMNIGRID ONLINE</p>
-                </div>
-                
-                <form id="app-login-form" onsubmit="appLogin(event)">
-                    <div class="form-group">
-                        <label style="font-weight: 600;">👤 Username</label>
-                        <input type="text" id="app-login-username" required placeholder="Enter username" style="font-size: 1rem; padding: 12px;">
-                    </div>
-                    <div class="form-group">
-                        <label style="font-weight: 600;">🔑 Password</label>
-                        <div style="position: relative;">
-                            <input type="password" id="app-login-password" required placeholder="Enter password" style="font-size: 1rem; padding: 12px; padding-right: 45px;">
-                            <button type="button" id="toggle-app-login-password" onclick="toggleLoginPassword()" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 1.2rem; padding: 5px; color: var(--text-secondary);" title="Show/Hide Password">
-                                👁️
-                            </button>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-primary btn-block" style="padding: 14px; font-size: 1.1rem; margin-top: 10px;">
-                        🔐 Login
-                    </button>
-                </form>
-                
-                <div style="text-align: center; margin: 20px 0;">
-                    <div style="border-top: 1px solid var(--border-color); position: relative;">
-                        <span style="background: var(--bg-card); padding: 0 15px; position: relative; top: -12px; color: var(--text-secondary);">or</span>
-                    </div>
-                </div>
-                
-                <button class="btn btn-secondary btn-block" onclick="continueAsGuest()" style="padding: 12px;">
-                    👁️ Continue as Guest (View Only)
-                </button>
-            </div>
-        </div>
-    </div>
+    
 
     <!-- User Management Modal -->
-    <div class="modal-overlay" id="user-management-modal">
-        <div class="modal" style="max-width: 500px;">
-            <div class="modal-header">
-                <h3>👥 User Management</h3>
-                <button class="modal-close" onclick="hideModal('user-management-modal')">&times;</button>
-            </div>
-            <div class="modal-body">
-                <button class="btn btn-primary" onclick="showAddUserModal()" style="margin-bottom: 15px;">+ Add User</button>
-                <div id="user-list">
-                    <!-- Users will be listed here -->
-                </div>
-            </div>
-        </div>
-    </div>
+    
 
     <!-- Add/Edit User Modal -->
     <div class="modal-overlay" id="add-user-modal">
@@ -8309,24 +8314,7 @@
     </div>
 
     <!-- Financial Details Modal -->
-    <div class="modal-overlay" id="financial-details-modal">
-        <div class="modal" style="max-width: 600px;">
-            <div class="modal-header">
-                <h3 id="financial-details-title">Financial Details</h3>
-                <button class="modal-close" onclick="hideModal('financial-details-modal')">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div id="financial-details-content"></div>
-                <div style="margin-top: 20px;">
-                    <canvas id="financial-details-chart" style="max-height: 300px;"></canvas>
-                </div>
-            </div>
-            <div class="modal-footer" style="display: flex; gap: 10px; padding: 15px; border-top: 1px solid var(--border-color);">
-                <button class="btn btn-secondary" onclick="hideModal('financial-details-modal')" style="flex: 1;">← Back to Reports</button>
-                <button class="btn btn-primary" onclick="hideModal('financial-details-modal'); showSection('reports');" style="flex: 1;">✏️ Manage Reports</button>
-            </div>
-        </div>
-    </div>
+    
 
     <!-- Task Modal -->
     <div class="modal-overlay" id="task-modal">
@@ -9315,6 +9303,8 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     waterSales: await getAllFromStore('waterSales'),
                     waterStoreSales: await getAllFromStore('waterStoreSales'),
                     waterStoreProducts: await getAllFromStore('waterStoreProducts'),
+                    waterBottleAdvances: await getAllFromStore('waterBottleAdvances'),
+                    waterBorrowedItems: await getAllFromStore('waterBorrowedItems'),
                     employees: await getAllFromStore('employees'),
                     cashAdvances: await getAllFromStore('cashAdvances'),
                     salaryPayments: await getAllFromStore('salaryPayments'),
@@ -9453,6 +9443,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                     const stores = ['properties','tenants','payments','credits','creditPayments',
                         'expenses','customNotes','additionalIncome','clientCharges',
                         'waterCustomers','waterSales','waterStoreSales','waterStoreProducts',
+                        'waterBottleAdvances','waterBorrowedItems',
                         'employees','cashAdvances',
                         'salaryPayments','timeRecords','tasks','payables','suppliers'];
                     for (const s of stores) {
@@ -10378,25 +10369,15 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
         // =====================
         // These replace direct db calls with guarded versions
 
-        async function safeDbGetAll(storeName) {
-            return await PrismGuardian.safeGetAll(storeName);
-        }
+        
 
-        async function safeDbGet(storeName, id) {
-            return await PrismGuardian.safeGet(storeName, id);
-        }
+        
 
-        async function safeDbAdd(storeName, data) {
-            return await PrismGuardian.safeAdd(storeName, data);
-        }
+        
 
-        async function safeDbUpdate(storeName, data) {
-            return await PrismGuardian.safeUpdate(storeName, data);
-        }
+        
 
-        async function safeDbDelete(storeName, id) {
-            return await PrismGuardian.safeDelete(storeName, id);
-        }
+        
 
         // =====================
         // DATABASE SETUP
@@ -10409,7 +10390,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
             return 'PrismDB_' + orgId;
         }
         let DB_NAME = getMTDbName();
-        const DB_VERSION = 12; // v12: Added Suppliers ledger
+        const DB_VERSION = 13; // v13: Added Water Bottle Advances + Borrowed Items ledgers
         let db = null;
         let dbReady = false;
         // Global promise that resolves when IndexedDB is ready — sync functions wait on this
@@ -10616,6 +10597,20 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                         const supStore = database.createObjectStore('suppliers', { keyPath: 'id', autoIncrement: true });
                         supStore.createIndex('name', 'name', { unique: false });
                         supStore.createIndex('createdAt', 'createdAt', { unique: false });
+                    }
+                    // Water — Bottle Advances (empty bottles collected from customers ahead of delivery)
+                    if (!database.objectStoreNames.contains('waterBottleAdvances')) {
+                        const baStore = database.createObjectStore('waterBottleAdvances', { keyPath: 'id', autoIncrement: true });
+                        baStore.createIndex('customerId', 'customerId', { unique: false });
+                        baStore.createIndex('date', 'date', { unique: false });
+                        baStore.createIndex('status', 'status', { unique: false });
+                    }
+                    // Water — Borrowed Items (empty bottles / dispensers lent out to customers)
+                    if (!database.objectStoreNames.contains('waterBorrowedItems')) {
+                        const biStore = database.createObjectStore('waterBorrowedItems', { keyPath: 'id', autoIncrement: true });
+                        biStore.createIndex('customerId', 'customerId', { unique: false });
+                        biStore.createIndex('date', 'date', { unique: false });
+                        biStore.createIndex('status', 'status', { unique: false });
                     }
                 };
 
@@ -12298,32 +12293,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
         }
 
 
-        async function updateProperty(event, id) {
-            event.preventDefault();
-
-            const name = document.getElementById('edit-property-name').value.trim();
-            const type = document.getElementById('edit-property-type').value;
-            const address = document.getElementById('edit-property-address').value.trim();
-            const rentStr = document.getElementById('edit-property-rent').value.trim();
-            const rent = parseFloat(rentStr.replace(/,/g, '')) || 0;
-
-            if (!name || !type || rent <= 0) {
-                showToast('⚠️ ' + (!name?'Property name':!type?'Property type':'Monthly rent') + ' is required.', 'warning');
-                return;
-            }
-
-            const property = await dbGet('properties', id);
-            property.name = name;
-            property.type = type;
-            property.address = address;
-            property.rent = rent;
-            property.updatedAt = new Date().toISOString();
-
-            await dbUpdate('properties', property);
-            hideModal('expense-detail-modal');
-            loadProperties();
-            loadDashboard();
-        }
+        
 
         async function deleteProperty(id) {
             // Check for tenants
@@ -13312,7 +13282,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
         }
 
         // Record payment for specific tenant
-        async function recordPayment(tenantId) { return recordTenantPayment(tenantId); }
+        
 
         // Open tenant ledger then immediately show payment form — used from Unpaid/Overdue filter
         async function viewTenantLedgerAndPay(id) {
@@ -13588,26 +13558,7 @@ async function recordTenantPayment(tenantId) {
         }
         window.voidWaterSale = voidWaterSale;
 
-        async function editSalaryRecord(salaryId, employeeId) {
-            if (!currentAppUser || !['owner','admin'].includes(currentAppUser.role)) return;
-            const s = await dbGet('salaryPayments', salaryId);
-            if (!s) return;
-            const newAmount = await showInputModal('Edit Salary Record', 'Edit net pay (was ₱' + (s.netPay||0).toLocaleString() + ')', 'Net Pay', String(s.netPay||0));
-            if (newAmount === null) return;
-            const amt = parseFloat(newAmount.replace(/,/g,''));
-            if (isNaN(amt) || amt < 0) { showToast('⚠️ Invalid amount.','warning'); return; }
-            const newDate = await showInputModal('Edit Date', 'Edit date (YYYY-MM-DD)', 'Date', s.date);
-            if (newDate === null) return;
-            s.netPay = amt;
-            s.date = newDate || s.date;
-            s.editedBy = currentAppUser.fullname || currentAppUser.username;
-            s.editedAt = new Date().toISOString();
-            await dbUpdate('salaryPayments', s);
-            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
-        debouncedSync();
-            showToast('✅ Salary record updated.', 'success');
-            await viewEmployeeDetails(employeeId);
-        }
+        
 
         async function deleteSalaryRecord(salaryId, employeeId) {
             if (!currentAppUser || !['owner','admin'].includes(currentAppUser.role)) return;
@@ -15641,6 +15592,7 @@ async function loadWaterCustomers() {
             
             allWaterCustomersData = customers;
             if(typeof initWaterSearch==='function')initWaterSearch();
+            if(typeof updateWaterAdvanceBorrowBadges==='function')updateWaterAdvanceBorrowBadges();
             
             // Calculate stats
             let totalCredits = 0;
@@ -16035,11 +15987,7 @@ async function loadWaterCustomers() {
         window.wsCalcBig=wsCalcBig; window.wsCalcSmall=wsCalcSmall; window.wsShowSummary=wsShowSummary;
 
 
-        function calculateWaterTotal() {
-            const gallons = parseFloat(document.getElementById('water-sale-gallons').value) || 0;
-            const price = parseFloat(document.getElementById('water-sale-price').value) || 25;
-            document.getElementById('water-sale-total').value = (gallons * price).toLocaleString();
-        }
+        
 
         function toggleWaterPaymentFields() {
             const type = document.getElementById('water-sale-payment-type').value;
@@ -16230,6 +16178,15 @@ async function loadWaterCustomers() {
             const totalPurchases = customerSales.reduce((sum, s) => sum + s.total, 0);
             const totalPaid = customerSales.reduce((sum, s) => sum + s.amountPaid, 0);
             const balance = totalPurchases - totalPaid;
+
+            const allAdvances = await dbGetAll('waterBottleAdvances').catch(() => []);
+            const custAdvances = allAdvances.filter(r => String(r.customerId) === String(id) && r.status !== 'fulfilled');
+            const pendingAdvanceQty = custAdvances.reduce((s, r) => s + (r.quantity || 0), 0);
+
+            const allBorrowed = await dbGetAll('waterBorrowedItems').catch(() => []);
+            const custBorrowed = allBorrowed.filter(r => String(r.customerId) === String(id) && r.status !== 'returned');
+            const pendingBottlesOut = custBorrowed.filter(r => r.itemType === 'bottle').reduce((s, r) => s + (r.qty || 0), 0);
+            const pendingDispensersOut = custBorrowed.filter(r => r.itemType === 'dispenser').reduce((s, r) => s + (r.qty || 0), 0);
             
             let content = `
                 <div style="text-align: center; margin-bottom: 20px;">
@@ -16259,6 +16216,22 @@ async function loadWaterCustomers() {
                     <strong>⚠️ Outstanding Credit: ₱${balance.toLocaleString()}</strong>
                 </div>
                 ` : ''}
+
+                <div style="background:var(--bg-secondary);border-radius:10px;padding:12px;margin-bottom:15px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <h4 style="margin:0;font-size:0.85rem;">🔄📦 Bottles & Dispensers</h4>
+                        <div style="display:flex;gap:6px;">
+                            <button class="btn btn-sm btn-secondary" onclick="hideModal('water-customer-detail-modal');showWaterBottleAdvanceModal(${id})" style="padding:3px 8px;font-size:0.68rem;background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.4);color:#f59e0b;">🔄 + Advance</button>
+                            <button class="btn btn-sm btn-secondary" onclick="hideModal('water-customer-detail-modal');showWaterBorrowedItemModal(${id})" style="padding:3px 8px;font-size:0.68rem;background:rgba(236,72,153,0.15);border-color:rgba(236,72,153,0.4);color:#ec4899;">📦 + Borrowed</button>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;font-size:0.78rem;">
+                        <span style="color:#f59e0b;">🔄 Bottles owed back: <strong>${pendingAdvanceQty}</strong></span>
+                        <span style="color:#ec4899;">🍶 Bottles borrowed: <strong>${pendingBottlesOut}</strong></span>
+                        <span style="color:#a78bfa;">🚰 Dispensers borrowed: <strong>${pendingDispensersOut}</strong></span>
+                    </div>
+                    ${(pendingAdvanceQty === 0 && pendingBottlesOut === 0 && pendingDispensersOut === 0) ? '<div style="font-size:0.72rem;color:#64748b;margin-top:4px;">Nothing pending for this customer.</div>' : ''}
+                </div>
                 
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
                 <h4 style="margin:0;">📋 Transaction History</h4>
@@ -16454,9 +16427,7 @@ async function loadWaterCustomers() {
             }
         }
 
-        async function recordWaterPayment(customerId, balance) {
-            showWaterPaymentModal(customerId, 'Customer', balance);
-        }
+        
 
         // Add sale for specific customer
         async function addWaterSaleForCustomer(customerId, customerName) {
@@ -17187,7 +17158,7 @@ async function loadWaterCustomers() {
         window.editTimeRecord = editTimeRecord;
 
         // Quick Attendance for all employees
-        async function saveAttendance() { return showQuickAttendance(); }
+        
 async function showQuickAttendance() {
             document.getElementById('attendance-date').value = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
             showModal('quick-attendance-modal');
@@ -17325,49 +17296,9 @@ async function showQuickAttendance() {
         const _originalSaveCashAdvance = window.saveCashAdvance;
 
         // Void request system - cashier submits, admin approves
-        async function requestVoidAttendance(recordId, employeeName, date) {
-            const reason = await showInputModal('Enter Reason', `Request to void attendance for ${employeeName} on ${date}.
+        
 
-Enter reason for void request:`);
-            if (!reason) return;
-
-            const voidRequests = JSON.parse(localStorage.getItem('prism_void_requests') || '[]');
-            voidRequests.push({
-                id: 'vr_' + Date.now(),
-                type: 'attendance',
-                recordId,
-                employeeName,
-                date,
-                reason,
-                requestedBy: currentAppUser?.fullname || 'Cashier',
-                requestedAt: new Date().toISOString(),
-                status: 'pending'
-            });
-            localStorage.setItem('prism_void_requests', JSON.stringify(voidRequests));
-            showToast('✅ Void request sent to admin for approval.', 'success', 4000);
-        }
-
-        async function requestVoidAdvance(advanceId, employeeName, amount) {
-            const reason = await showInputModal('Enter Reason', `Request to void cash advance of ₱${amount.toLocaleString()} for ${employeeName}.
-
-Enter reason:`);
-            if (!reason) return;
-
-            const voidRequests = JSON.parse(localStorage.getItem('prism_void_requests') || '[]');
-            voidRequests.push({
-                id: 'vr_' + Date.now(),
-                type: 'advance',
-                recordId: advanceId,
-                employeeName,
-                amount,
-                reason,
-                requestedBy: currentAppUser?.fullname || 'Cashier',
-                requestedAt: new Date().toISOString(),
-                status: 'pending'
-            });
-            localStorage.setItem('prism_void_requests', JSON.stringify(voidRequests));
-            showToast('✅ Void request sent to admin for approval.', 'success', 4000);
-        }
+        
 
         // Admin: view and process void requests
         async function showVoidRequests() {
@@ -17446,7 +17377,7 @@ Enter reason:`);
         }
 
         // Payroll Summary
-        async function processPayroll() { return showPayrollSummary(); }
+        
 
         // Set payroll date range to cover ALL unpaid attendance records
         async function setPayrollAllUnpaid() {
@@ -17965,86 +17896,7 @@ async function showPayrollSummary() {
         }
         window._payrollPreset = _payrollPreset;
 
-        async function confirmGiveSalary(employeeId, netPay, dateFrom, dateTo, daysWorked, halfDays, otHours, bonus, lates, advances) {
-            if (!await showConfirm(`Pay ₱${netPay.toLocaleString()} to this employee?`, 'success', '💵 Confirm Salary Payment', 'Yes, Pay')) return;
-            
-            const employee = await dbGet('employees', employeeId);
-            const paymentDate = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
-            
-            // Create salary record
-            const salary = {
-                employeeId,
-                period: `${dateFrom} to ${dateTo}`,
-                dateFrom,
-                dateTo,
-                daysWorked: daysWorked + halfDays,
-                fullDays: daysWorked,
-                halfDays: halfDays,
-                otHours,
-                bonus,
-                lates,
-                advancesDeducted: advances,
-                netPay,
-                date: paymentDate,
-                createdAt: new Date().toISOString()
-            };
-            
-            try {
-                showToast('⏳ Processing salary payment...', 'info');
-                await dbAdd('salaryPayments', salary);
-                
-                // Mark ONLY time records within the selected date range as paid
-                const timeRecords = await dbGetAll('timeRecords');
-                const unpaidRecords = timeRecords.filter(r =>
-                    r.employeeId === employeeId && !r.paid &&
-                    r.date >= dateFrom && r.date <= dateTo
-                );
-                for (const record of unpaidRecords) {
-                    record.paid = true;
-                    record.paidDate = paymentDate;
-                    await dbUpdate('timeRecords', record);
-                }
-
-                // Mark advances as deducted (only those within date range or all if no date)
-                if (advances > 0) {
-                    const allAdvances = await dbGetAll('cashAdvances');
-                    const empAdvances = allAdvances.filter(a =>
-                        a.employeeId === employeeId && !a.deducted &&
-                        (!a.date || (a.date >= dateFrom && a.date <= dateTo))
-                    );
-                    for (const adv of empAdvances) {
-                        adv.deducted = true;
-                        adv.deductedDate = paymentDate;
-                        await dbUpdate('cashAdvances', adv);
-                    }
-                }
-                
-                // Record as expense
-                const expense = {
-                    category: 'salaries',
-                    description: `Salary - ${employee.name} (${dateFrom} to ${dateTo})`,
-                    amount: netPay,
-                    date: paymentDate,
-                    notes: `${daysWorked} full + ${halfDays} half days, OT: ${otHours}hrs`,
-                    createdAt: new Date().toISOString()
-                };
-                await dbAdd('expenses', expense);
-                
-                hideModal('give-salary-modal');
-                loadEmployees();
-                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
-                if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
-        debouncedSync();
-            prismFullRefresh('staff', {skipCalendar: true});
-
-                
-                showToast(`✅ Salary of ₱${netPay.toLocaleString()} paid to ${employee.name}! — Records reset for next pay period.`, 'success');
-                
-            } catch (error) {
-                console.error('Error paying salary:', error);
-                showToast('❌ Error: ' + error.message, 'error');
-            }
-        }
+        
 
         // ── Enhanced payroll confirm ── uses deferred advances + manual extras
         async function _confirmPayrollEnhanced(employeeId, dateFrom, dateTo) {
@@ -18283,45 +18135,7 @@ async function showPayrollSummary() {
             }
         }
 
-        function showSalaryModal(employeeId, employeeName, dailyRate, unpaidAdvances) {
-            // Reset form first
-            document.getElementById('salary-form').reset();
-            
-            // Set employee info
-            document.getElementById('salary-employee-id').value = employeeId;
-            document.getElementById('salary-employee-name').value = employeeName;
-            document.getElementById('salary-daily-rate').value = '₱' + dailyRate.toLocaleString() + '/day';
-            document.getElementById('salary-date').value = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
-            document.getElementById('salary-deductions').value = unpaidAdvances.toLocaleString();
-            
-            // Reset all fields
-            document.getElementById('salary-days').value = '';
-            document.getElementById('salary-absences').value = '0';
-            document.getElementById('salary-lates').value = '0';
-            document.getElementById('salary-overtime-hours').value = '0';
-            document.getElementById('salary-overtime-rate').value = Math.round(dailyRate / 8 * 1.25); // Default OT rate
-            document.getElementById('salary-bonus').value = '0';
-            document.getElementById('salary-incentives').value = '0';
-            document.getElementById('salary-allowance').value = '0';
-            document.getElementById('salary-govt-deductions').value = '0';
-            document.getElementById('salary-other-deductions').value = '0';
-            document.getElementById('salary-base').value = '0';
-            document.getElementById('salary-net').value = '0';
-            
-            // Reset displays
-            document.getElementById('salary-base-display').textContent = '₱0';
-            document.getElementById('salary-overtime-display').textContent = '₱0';
-            document.getElementById('salary-additions-display').textContent = '₱0';
-            document.getElementById('salary-deductions-display').textContent = '₱0';
-            document.getElementById('salary-net-display').textContent = '₱0';
-            
-            // Store daily rate for calculation
-            document.getElementById('salary-form').dataset.dailyRate = dailyRate;
-            document.getElementById('salary-form').dataset.advances = unpaidAdvances;
-            
-            hideModal('employee-detail-modal');
-            showModal('salary-modal');
-        }
+        
 
         function toggleSalaryPeriod() {
             const period = document.getElementById('salary-period').value;
@@ -18708,7 +18522,7 @@ async function showPayrollSummary() {
             }).join('');
         }
 
-        function showCreditDetails(id) { viewCreditDetails(id); }
+        
 
         function showCashierTxnDetail() {
             const txnEl = document.getElementById('cashier-txn-list');
@@ -20320,35 +20134,11 @@ async function showPayrollSummary() {
             showModal('income-modal');
         }
 
-        function toggleCustomSource() {
-            const source = document.getElementById('income-source')?.value;
-            const customGroup = document.getElementById('custom-source-group');
-            if (customGroup) customGroup.style.display = source === 'custom' ? 'block' : 'none';
-        }
+        
 
         // [REMOVED: duplicate saveIncome - used wrong form field IDs]
 
-        function getIncomeSourceLabel(source) {
-            const labels = {
-                'water': '💧 Water Payment',
-                'electricity': '⚡ Electricity Payment',
-                'internet': '📶 Internet Payment',
-                'store_sales': '🏪 Store Sales',
-                'store_profit': '💰 Store Profit Share',
-                'business_income': '💼 Business Income',
-                'additional_charge': 'Additional Charge',
-                'service_fee': 'Service Fee',
-                'late_fee': 'Late Fee Collected',
-                'deposit': 'Deposit Received',
-                'advance_rent': 'Advance Rent',
-                'utility_reimbursement': '🔄 Utility Reimbursement',
-                'penalty': 'Penalty Fee',
-                'loan_repayment': '💵 Loan Repayment',
-                'commission': '🤝 Commission',
-                'other': 'Other Income'
-            };
-            return labels[source] || source;
-        }
+        
 
         // Add charge to specific tenant/debtor
         async function addChargeToClient(type, id) {
@@ -21711,25 +21501,16 @@ async function showPayrollSummary() {
             if (el) el.textContent = text;
         }
 
-        function safeSetHTML(elementId, html) {
-            const el = document.getElementById(elementId);
-            if (el) el.innerHTML = html;
-        }
+        
 
-        function safeSetStyle(elementId, property, value) {
-            const el = document.getElementById(elementId);
-            if (el) el.style[property] = value;
-        }
+        
 
-        function safeSetClass(elementId, className) {
-            const el = document.getElementById(elementId);
-            if (el) el.className = className;
-        }
+        
 
         // =====================================================
         // ADDITIONAL INCOME
         // =====================================================
-        function openAddIncomeModal() { showAddIncome(); }
+        
 
         // ── Income Page: Today's Transaction Feed ──
         // ── Transaction Feed — state ──
@@ -23642,63 +23423,7 @@ async function showPayrollSummary() {
             }
         }
 
-        function showDueNotifications(type) {
-            const items = type === 'overdue' ? notificationData.overdue : notificationData.due;
-            
-            if (items.length === 0) {
-                showToast(type === 'overdue' ? '✅ No overdue payments!' : '✅ No payments due soon!', 'success');
-                return;
-            }
-
-            let html = '<div style="max-height: 400px; overflow-y: auto;">';
-            
-            items.forEach(item => {
-                const bgColor = type === 'overdue' ? '#fef2f2' : '#fffbeb';
-                const borderColor = type === 'overdue' ? '#ef4444' : '#f59e0b';
-                const statusText = type === 'overdue' 
-                    ? `${item.daysOverdue} days overdue` 
-                    : `Due in ${item.daysUntilDue} day${item.daysUntilDue !== 1 ? 's' : ''}`;
-                
-                html += `
-                    <div style="padding: 12px; margin-bottom: 8px; background: ${bgColor}; border-left: 3px solid ${borderColor}; border-radius: 8px; cursor: pointer;" 
-                         onclick="hideModal('notification-detail-modal'); ${item.type === 'tenant' ? `viewTenantDetails(${item.id})` : `viewCreditDetails(${item.id})`}">
-                        <div style="display: flex; justify-content: space-between; align-items: start;">
-                            <div>
-                                <strong style="color: var(--text-primary);">${item.name}</strong>
-                                <span class="badge ${item.type === 'tenant' ? 'badge-info' : 'badge-warning'}">${item.type === 'tenant' ? 'Tenant' : 'Debtor'}</span>
-                                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">
-                                    ${item.type === 'tenant' && item.property ? item.property + ' • ' : ''}${statusText}
-                                </p>
-                            </div>
-                            <div style="font-weight: 600; color: ${borderColor};">₱${item.amount.toLocaleString()}</div>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            html += '</div>';
-
-            // Create modal dynamically
-            const existingModal = document.getElementById('notification-detail-modal');
-            if (existingModal) existingModal.remove();
-
-            const modal = document.createElement('div');
-            modal.id = 'notification-detail-modal';
-            modal.className = 'modal-overlay show';
-            modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
-            modal.innerHTML = `
-                <div class="modal">
-                    <div class="modal-header">
-                        <h3>${type === 'overdue' ? '⚠️ Overdue Payments' : '📅 Due Soon'}</h3>
-                        <button class="modal-close" onclick="document.getElementById('notification-detail-modal').remove()">&times;</button>
-                    </div>
-                    <div class="modal-body">
-                        ${html}
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
-        }
+        
 
         // Calendar functions
         function changeCalendarMonth(direction) {
@@ -24453,86 +24178,7 @@ async function showPayrollSummary() {
 
 
 
-        async function showDaySchedule(day, month, year) {
-            const tenants = await dbGetAll('tenants');
-            const credits = await dbGetAll('credits');
-            const payments = await dbGetAll('payments');
-            const creditPayments = await dbGetAll('creditPayments');
-            const properties = await dbGetAll('properties');
-            
-            const currentMonthStr = `${year}-${String(month + 1).padStart(2, '0')}`;
-            const today = new Date();
-            
-            const dateStr = new Date(year, month, day).toLocaleDateString('default', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-            });
-            
-            document.getElementById('day-schedule-title').textContent = dateStr;
-            
-            let html = '<div class="day-schedule-list">';
-            let hasItems = false;
-            
-            // Tenants due on 5th
-            if (day === 5) {
-                tenants.forEach(tenant => {
-                    const paidThisMonth = payments.some(p => p.tenantId === tenant.id && p.monthCovered === currentMonthStr);
-                    const property = properties.find(p => p.id === tenant.propertyId);
-                    
-                    if (!paidThisMonth) {
-                        hasItems = true;
-                        const isOverdue = today.getMonth() === month && today.getFullYear() === year && today.getDate() > day;
-                        const itemClass = isOverdue ? 'overdue-item' : 'tenant-item';
-                        html += `
-                            <div class="schedule-item ${itemClass}">
-                                <h4>${tenant.name} ${isOverdue ? '<span class="badge badge-danger">OVERDUE</span>' : '<span class="badge badge-info">Tenant</span>'}</h4>
-                                <p>${property ? property.name : 'Unknown'} • ₱${tenant.rent.toLocaleString()}</p>
-                            </div>
-                        `;
-                    }
-                });
-            }
-            
-            // Debtors due based on their loan date
-            credits.forEach(credit => {
-                const lentDate = new Date(credit.dateLent);
-                if (lentDate.getDate() === day) {
-                    const creditPmts = creditPayments.filter(p => p.creditId === credit.id && !p.voided);
-                    const totalPaid = creditPmts.reduce((sum, p) => sum + p.amount, 0);
-                    let totalDue = credit.principal;
-                    if (credit.interestType === 'simple') {
-                        const months = Math.ceil((today - new Date(credit.dateLent)) / (1000 * 60 * 60 * 24 * 30));
-                        totalDue = credit.principal + (credit.principal * (credit.interestRate / 100) * months);
-                    } else if (credit.interestType === 'flat') {
-                        totalDue = credit.principal + credit.interestRate;
-                    }
-                    
-                    if (totalPaid < totalDue) {
-                        hasItems = true;
-                        const isOverdue = today.getMonth() === month && today.getFullYear() === year && today.getDate() > day;
-                        const itemClass = isOverdue ? 'overdue-item' : 'debtor-item';
-                        const balance = totalDue - totalPaid;
-                        html += `
-                            <div class="schedule-item ${itemClass}">
-                                <h4>${credit.debtor} ${isOverdue ? '<span class="badge badge-danger">OVERDUE</span>' : '<span class="badge badge-warning">Debtor</span>'}</h4>
-                                <p>Balance: ₱${balance.toLocaleString()}</p>
-                            </div>
-                        `;
-                    }
-                }
-            });
-            
-            if (!hasItems) {
-                html += '<div class="empty-state"><p>No collections scheduled</p></div>';
-            }
-            
-            html += '</div>';
-            
-            document.getElementById('day-schedule-content').innerHTML = html;
-            showModal('day-schedule-modal');
-        }
+        
 
         // =====================
         // BACKUP & RESTORE
@@ -25822,6 +25468,14 @@ async function clearAllData() {
                 if (storeName === 'waterStoreSales' || storeName === 'waterStoreProducts') {
                     if (typeof renderWaterStore === 'function') renderWaterStore();
                 }
+                if (storeName === 'waterBottleAdvances') {
+                    if (typeof renderWaterBottleAdvances === 'function') renderWaterBottleAdvances();
+                    if (typeof updateWaterAdvanceBorrowBadges === 'function') updateWaterAdvanceBorrowBadges();
+                }
+                if (storeName === 'waterBorrowedItems') {
+                    if (typeof renderWaterBorrowedItems === 'function') renderWaterBorrowedItems();
+                    if (typeof updateWaterAdvanceBorrowBadges === 'function') updateWaterAdvanceBorrowBadges();
+                }
                 loadDashboard();
                 refreshStats();
                 updateDeleteStats();
@@ -25834,7 +25488,7 @@ async function clearAllData() {
 
         // Update delete section stats
         async function updateDeleteStats() {
-            const stores = ['properties', 'tenants', 'payments', 'credits', 'creditPayments', 'expenses', 'customNotes', 'tasks', 'additionalIncome', 'clientCharges', 'waterStoreSales', 'waterStoreProducts', 'payables', 'suppliers'];
+            const stores = ['properties', 'tenants', 'payments', 'credits', 'creditPayments', 'expenses', 'customNotes', 'tasks', 'additionalIncome', 'clientCharges', 'waterStoreSales', 'waterStoreProducts', 'waterBottleAdvances', 'waterBorrowedItems', 'payables', 'suppliers'];
             
             for (const store of stores) {
                 try {
@@ -25986,6 +25640,7 @@ async function clearAllData() {
                 const STORES = ['properties','tenants','payments','credits','creditPayments',
                     'expenses','customNotes','additionalIncome','clientCharges',
                     'waterCustomers','waterSales','waterStoreSales','waterStoreProducts',
+                    'waterBottleAdvances','waterBorrowedItems',
                     'employees','cashAdvances','salaryPayments','timeRecords','tasks','payables','suppliers'];
                 const backup = {
                     version: '1.0', exportedAt: new Date().toISOString(),
@@ -27871,9 +27526,7 @@ async function clearAllData() {
             const el = document.getElementById('txn-detail-'+id);
             if (el) el.style.display = el.style.display==='none' ? 'block' : 'none';
         }
-        function _showReportDetail(type) {
-            showToast('ℹ️ Switch to Reports page to see ' + type + ' details.','info');
-        }
+        
 
         // ── Reports page drill-down (uses report date range from generateReports) ──
         function showReportDetail(type) {
@@ -30315,6 +29968,10 @@ async function clearAllData() {
                     const text = (item.textContent || '').toLowerCase();
                     item.style.display = !q || text.includes(q) ? '' : 'none';
                 });
+            } else if (_waterView === 'advances') {
+                renderWaterBottleAdvances();
+            } else if (_waterView === 'borrowed') {
+                renderWaterBorrowedItems();
             }
         }
         window.waterSearchAll = waterSearchAll;
@@ -30744,15 +30401,19 @@ async function clearAllData() {
             const custList  = document.getElementById('water-customers-list');
             const salesList = document.getElementById('water-all-sales-list');
             const storePanel= document.getElementById('water-store-panel');
+            const advPanel  = document.getElementById('water-advances-panel');
+            const borrPanel = document.getElementById('water-borrowed-panel');
             const custBtn   = document.getElementById('water-view-customers-btn');
             const salesBtn  = document.getElementById('water-view-sales-btn');
             const storeBtn  = document.getElementById('water-view-store-btn');
+            const advBtn    = document.getElementById('water-view-advances-btn');
+            const borrBtn   = document.getElementById('water-view-borrowed-btn');
             const searchEl  = document.getElementById('water-search');
             if (!custList) return;
 
             // Hide all, reset button styles
-            [custList, salesList, storePanel].forEach(el => { if (el) el.style.display = 'none'; });
-            [custBtn, salesBtn, storeBtn].forEach(btn => { if (btn) btn.className = 'btn btn-sm btn-secondary'; });
+            [custList, salesList, storePanel, advPanel, borrPanel].forEach(el => { if (el) el.style.display = 'none'; });
+            [custBtn, salesBtn, storeBtn, advBtn, borrBtn].forEach(btn => { if (btn) btn.className = 'btn btn-sm btn-secondary'; });
 
             // Clear search and update placeholder per view
             if (searchEl) {
@@ -30760,6 +30421,8 @@ async function clearAllData() {
                 if (view === 'customers') searchEl.placeholder = '🔍 Search customer...';
                 else if (view === 'sales') searchEl.placeholder = '🔍 Search sales...';
                 else if (view === 'store') searchEl.placeholder = '🔍 Search products...';
+                else if (view === 'advances') searchEl.placeholder = '🔍 Search advances...';
+                else if (view === 'borrowed') searchEl.placeholder = '🔍 Search borrowed...';
             }
 
             if (view === 'customers') {
@@ -30774,9 +30437,398 @@ async function clearAllData() {
                 if (storePanel) storePanel.style.display = '';
                 if (storeBtn)   storeBtn.className = 'btn btn-sm btn-primary';
                 renderWaterStore();
+            } else if (view === 'advances') {
+                if (advPanel) advPanel.style.display = '';
+                if (advBtn)   advBtn.className = 'btn btn-sm btn-primary';
+                renderWaterBottleAdvances();
+            } else if (view === 'borrowed') {
+                if (borrPanel) borrPanel.style.display = '';
+                if (borrBtn)   borrBtn.className = 'btn btn-sm btn-primary';
+                renderWaterBorrowedItems();
             }
         }
         window.setWaterView = setWaterView;
+
+        // ═══════════════════════════════════════════════════════════════
+        // WATER — BOTTLE ADVANCES (empty bottles collected in advance)
+        // ═══════════════════════════════════════════════════════════════
+        async function populateWaterCustomerSelect(selectId) {
+            const customers = await dbGetAll('waterCustomers');
+            let options = '<option value="">Select customer</option>';
+            customers.forEach(c => { options += `<option value="${c.id}">${c.name}</option>`; });
+            const el = document.getElementById(selectId);
+            if (el) el.innerHTML = options;
+        }
+
+        function todayISO() {
+            const d = new Date();
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        }
+
+        async function showWaterBottleAdvanceModal(prefillCustomerId, prefillCustomerName) {
+            await populateWaterCustomerSelect('wba-customer');
+            document.getElementById('water-bottle-advance-form').reset();
+            document.getElementById('wba-edit-id').value = '';
+            document.getElementById('wba-modal-title').textContent = 'Bottle Advance';
+            document.getElementById('wba-date').value = todayISO();
+            if (prefillCustomerId) document.getElementById('wba-customer').value = prefillCustomerId;
+            else if (prefillCustomerName) document.getElementById('wba-new-customer').value = prefillCustomerName;
+            showModal('water-bottle-advance-modal');
+        }
+        window.showWaterBottleAdvanceModal = showWaterBottleAdvanceModal;
+
+        async function editWaterBottleAdvance(id) {
+            const rec = await dbGet('waterBottleAdvances', id);
+            if (!rec) return;
+            await populateWaterCustomerSelect('wba-customer');
+            document.getElementById('wba-edit-id').value = rec.id;
+            document.getElementById('wba-modal-title').textContent = 'Edit Bottle Advance';
+            document.getElementById('wba-customer').value = rec.customerId || '';
+            document.getElementById('wba-new-customer').value = rec.customerId ? '' : (rec.customerName || '');
+            document.getElementById('wba-quantity').value = rec.quantity;
+            document.getElementById('wba-date').value = rec.date;
+            document.getElementById('wba-notes').value = rec.notes || '';
+            showModal('water-bottle-advance-modal');
+        }
+        window.editWaterBottleAdvance = editWaterBottleAdvance;
+
+        async function saveWaterBottleAdvance(event) {
+            event.preventDefault();
+            try {
+                const editId = document.getElementById('wba-edit-id').value;
+                let customerId = document.getElementById('wba-customer').value;
+                const newCustomerName = (document.getElementById('wba-new-customer').value || '').trim();
+                const quantity = parseInt(document.getElementById('wba-quantity').value) || 0;
+                const date = document.getElementById('wba-date').value;
+                const notes = document.getElementById('wba-notes').value.trim();
+
+                if (!customerId && !newCustomerName) {
+                    showToast('⚠️ Select a customer or enter a name.', 'warning');
+                    return;
+                }
+                if (quantity < 1) {
+                    showToast('⚠️ Enter how many bottles were collected.', 'warning');
+                    return;
+                }
+
+                if (!customerId && newCustomerName) {
+                    customerId = await dbAdd('waterCustomers', { name: newCustomerName, createdAt: new Date().toISOString() });
+                }
+                let customerName = newCustomerName;
+                if (customerId) {
+                    const cust = await dbGet('waterCustomers', parseInt(customerId));
+                    if (cust) customerName = cust.name;
+                }
+
+                const record = {
+                    customerId: customerId ? parseInt(customerId) : null,
+                    customerName,
+                    quantity,
+                    date,
+                    notes,
+                    status: 'pending'
+                };
+
+                if (editId) {
+                    record.id = parseInt(editId);
+                    const existing = await dbGet('waterBottleAdvances', record.id);
+                    record.status = existing ? existing.status : 'pending';
+                    record.createdAt = existing ? existing.createdAt : new Date().toISOString();
+                    await dbUpdate('waterBottleAdvances', record);
+                    showToast('✅ Bottle advance updated', 'success');
+                } else {
+                    record.createdAt = new Date().toISOString();
+                    await dbAdd('waterBottleAdvances', record);
+                    showToast('✅ Bottle advance recorded — ' + quantity + ' bottle(s) from ' + customerName, 'success');
+                }
+
+                hideModal('water-bottle-advance-modal');
+                renderWaterBottleAdvances();
+                updateWaterAdvanceBorrowBadges();
+                debouncedSync();
+            } catch (error) {
+                console.error('Error saving bottle advance:', error);
+                showToast('❌ Error: ' + error.message, 'error');
+            }
+        }
+        window.saveWaterBottleAdvance = saveWaterBottleAdvance;
+
+        async function markBottleAdvanceFulfilled(id) {
+            const rec = await dbGet('waterBottleAdvances', id);
+            if (!rec) return;
+            rec.status = rec.status === 'fulfilled' ? 'pending' : 'fulfilled';
+            rec.fulfilledDate = rec.status === 'fulfilled' ? todayISO() : null;
+            await dbUpdate('waterBottleAdvances', rec);
+            showToast(rec.status === 'fulfilled' ? '✅ Marked as delivered/returned' : '↩️ Marked as pending', 'success');
+            renderWaterBottleAdvances();
+            updateWaterAdvanceBorrowBadges();
+            debouncedSync();
+        }
+        window.markBottleAdvanceFulfilled = markBottleAdvanceFulfilled;
+
+        async function deleteWaterBottleAdvance(id) {
+            if (!confirm('Delete this bottle advance record?')) return;
+            await dbDelete('waterBottleAdvances', id);
+            showToast('🗑️ Bottle advance deleted', 'success');
+            renderWaterBottleAdvances();
+            updateWaterAdvanceBorrowBadges();
+            debouncedSync();
+        }
+        window.deleteWaterBottleAdvance = deleteWaterBottleAdvance;
+
+        async function renderWaterBottleAdvances() {
+            const panel = document.getElementById('water-advances-panel');
+            if (!panel) return;
+            let records = await dbGetAll('waterBottleAdvances');
+            records.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            const searchVal = (document.getElementById('water-search')?.value || '').toLowerCase().trim();
+            if (searchVal && _waterView === 'advances') {
+                records = records.filter(r => (r.customerName || '').toLowerCase().includes(searchVal));
+            }
+
+            const pending = records.filter(r => r.status !== 'fulfilled');
+            const totalPending = pending.reduce((s, r) => s + (r.quantity || 0), 0);
+
+            let html = `
+                <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:10px;padding:10px 12px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-size:0.82rem;font-weight:700;color:#f59e0b;">🔄 Bottles owed back to customers</span>
+                    <span style="font-size:1.1rem;font-weight:800;color:#f59e0b;">${totalPending}</span>
+                </div>
+            `;
+
+            if (records.length === 0) {
+                html += '<div class="empty-state"><p>No bottle advances recorded yet. Tap "+ Bottle Advance" when a customer gives you empty bottles ahead of delivery.</p></div>';
+            } else {
+                records.forEach(r => {
+                    const isFulfilled = r.status === 'fulfilled';
+                    const badge = isFulfilled
+                        ? '<span class="badge badge-success">Delivered</span>'
+                        : '<span class="badge badge-warning">Pending</span>';
+                    html += `
+                        <div class="list-item" style="${isFulfilled ? 'opacity:0.6;' : ''}">
+                            <div class="list-item-content" style="flex:1;">
+                                <div class="list-item-title">${r.customerName || 'Unknown'} — ${r.quantity} bottle(s)</div>
+                                <div class="list-item-subtitle">${r.date} ${badge}${r.notes ? ' • ' + r.notes : ''}</div>
+                            </div>
+                            <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;">
+                                <button class="btn btn-sm ${isFulfilled ? 'btn-secondary' : 'btn-success'}" onclick="markBottleAdvanceFulfilled(${r.id})" style="padding:3px 8px;font-size:0.7rem;">${isFulfilled ? '↩️ Undo' : '✅ Delivered'}</button>
+                                <button class="btn btn-sm btn-info" onclick="editWaterBottleAdvance(${r.id})" style="padding:3px 8px;font-size:0.7rem;">✏️</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteWaterBottleAdvance(${r.id})" style="padding:3px 8px;font-size:0.7rem;">🗑️</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            panel.innerHTML = html;
+        }
+        window.renderWaterBottleAdvances = renderWaterBottleAdvances;
+
+        // ═══════════════════════════════════════════════════════════════
+        // WATER — BORROWED ITEMS (empty bottles + dispensers lent out)
+        // ═══════════════════════════════════════════════════════════════
+        async function showWaterBorrowedItemModal(prefillCustomerId, prefillCustomerName) {
+            await populateWaterCustomerSelect('wbi-customer');
+            document.getElementById('water-borrowed-item-form').reset();
+            document.getElementById('wbi-edit-id').value = '';
+            document.getElementById('wbi-modal-title').textContent = 'Borrowed Item';
+            document.getElementById('wbi-date').value = todayISO();
+            document.getElementById('wbi-bottle-qty').value = '0';
+            document.getElementById('wbi-dispenser-qty').value = '0';
+            if (prefillCustomerId) document.getElementById('wbi-customer').value = prefillCustomerId;
+            else if (prefillCustomerName) document.getElementById('wbi-new-customer').value = prefillCustomerName;
+            showModal('water-borrowed-item-modal');
+        }
+        window.showWaterBorrowedItemModal = showWaterBorrowedItemModal;
+
+        async function editWaterBorrowedItem(id) {
+            const rec = await dbGet('waterBorrowedItems', id);
+            if (!rec) return;
+            await populateWaterCustomerSelect('wbi-customer');
+            document.getElementById('wbi-edit-id').value = rec.id;
+            document.getElementById('wbi-modal-title').textContent = 'Edit Borrowed Item';
+            document.getElementById('wbi-customer').value = rec.customerId || '';
+            document.getElementById('wbi-new-customer').value = rec.customerId ? '' : (rec.customerName || '');
+            document.getElementById('wbi-bottle-qty').value = rec.itemType === 'bottle' ? rec.qty : 0;
+            document.getElementById('wbi-dispenser-qty').value = rec.itemType === 'dispenser' ? rec.qty : 0;
+            document.getElementById('wbi-date').value = rec.date;
+            document.getElementById('wbi-notes').value = rec.notes || '';
+            showModal('water-borrowed-item-modal');
+        }
+        window.editWaterBorrowedItem = editWaterBorrowedItem;
+
+        async function saveWaterBorrowedItem(event) {
+            event.preventDefault();
+            try {
+                const editId = document.getElementById('wbi-edit-id').value;
+                let customerId = document.getElementById('wbi-customer').value;
+                const newCustomerName = (document.getElementById('wbi-new-customer').value || '').trim();
+                const bottleQty = parseInt(document.getElementById('wbi-bottle-qty').value) || 0;
+                const dispenserQty = parseInt(document.getElementById('wbi-dispenser-qty').value) || 0;
+                const date = document.getElementById('wbi-date').value;
+                const notes = document.getElementById('wbi-notes').value.trim();
+
+                if (!customerId && !newCustomerName) {
+                    showToast('⚠️ Select a customer or enter a name.', 'warning');
+                    return;
+                }
+                if (bottleQty < 1 && dispenserQty < 1) {
+                    showToast('⚠️ Enter at least one bottle or dispenser quantity.', 'warning');
+                    return;
+                }
+
+                if (!customerId && newCustomerName) {
+                    customerId = await dbAdd('waterCustomers', { name: newCustomerName, createdAt: new Date().toISOString() });
+                }
+                let customerName = newCustomerName;
+                if (customerId) {
+                    const cust = await dbGet('waterCustomers', parseInt(customerId));
+                    if (cust) customerName = cust.name;
+                }
+
+                if (editId) {
+                    // Editing an existing single-type record — keep it single-type
+                    const existing = await dbGet('waterBorrowedItems', parseInt(editId));
+                    const qty = existing && existing.itemType === 'dispenser' ? dispenserQty : bottleQty;
+                    const record = {
+                        id: parseInt(editId),
+                        customerId: customerId ? parseInt(customerId) : null,
+                        customerName,
+                        itemType: existing ? existing.itemType : 'bottle',
+                        qty,
+                        returnedQty: existing ? (existing.returnedQty || 0) : 0,
+                        date, notes,
+                        status: existing ? existing.status : 'pending',
+                        createdAt: existing ? existing.createdAt : new Date().toISOString()
+                    };
+                    await dbUpdate('waterBorrowedItems', record);
+                    showToast('✅ Borrowed item updated', 'success');
+                } else {
+                    // New entry — one record per item type so each can be returned independently
+                    const nowISO = new Date().toISOString();
+                    if (bottleQty > 0) {
+                        await dbAdd('waterBorrowedItems', {
+                            customerId: customerId ? parseInt(customerId) : null,
+                            customerName, itemType: 'bottle', qty: bottleQty, returnedQty: 0,
+                            date, notes, status: 'pending', createdAt: nowISO
+                        });
+                    }
+                    if (dispenserQty > 0) {
+                        await dbAdd('waterBorrowedItems', {
+                            customerId: customerId ? parseInt(customerId) : null,
+                            customerName, itemType: 'dispenser', qty: dispenserQty, returnedQty: 0,
+                            date, notes, status: 'pending', createdAt: nowISO
+                        });
+                    }
+                    showToast('✅ Borrowed item(s) recorded for ' + customerName, 'success');
+                }
+
+                hideModal('water-borrowed-item-modal');
+                renderWaterBorrowedItems();
+                updateWaterAdvanceBorrowBadges();
+                debouncedSync();
+            } catch (error) {
+                console.error('Error saving borrowed item:', error);
+                showToast('❌ Error: ' + error.message, 'error');
+            }
+        }
+        window.saveWaterBorrowedItem = saveWaterBorrowedItem;
+
+        async function markBorrowedItemReturned(id) {
+            const rec = await dbGet('waterBorrowedItems', id);
+            if (!rec) return;
+            rec.status = rec.status === 'returned' ? 'pending' : 'returned';
+            rec.returnedQty = rec.status === 'returned' ? rec.qty : 0;
+            rec.returnedDate = rec.status === 'returned' ? todayISO() : null;
+            await dbUpdate('waterBorrowedItems', rec);
+            showToast(rec.status === 'returned' ? '✅ Marked as returned' : '↩️ Marked as still out', 'success');
+            renderWaterBorrowedItems();
+            updateWaterAdvanceBorrowBadges();
+            debouncedSync();
+        }
+        window.markBorrowedItemReturned = markBorrowedItemReturned;
+
+        async function deleteWaterBorrowedItem(id) {
+            if (!confirm('Delete this borrowed item record?')) return;
+            await dbDelete('waterBorrowedItems', id);
+            showToast('🗑️ Borrowed item record deleted', 'success');
+            renderWaterBorrowedItems();
+            updateWaterAdvanceBorrowBadges();
+            debouncedSync();
+        }
+        window.deleteWaterBorrowedItem = deleteWaterBorrowedItem;
+
+        async function renderWaterBorrowedItems() {
+            const panel = document.getElementById('water-borrowed-panel');
+            if (!panel) return;
+            let records = await dbGetAll('waterBorrowedItems');
+            records.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            const searchVal = (document.getElementById('water-search')?.value || '').toLowerCase().trim();
+            if (searchVal && _waterView === 'borrowed') {
+                records = records.filter(r => (r.customerName || '').toLowerCase().includes(searchVal));
+            }
+
+            const pending = records.filter(r => r.status !== 'returned');
+            const pendingBottles = pending.filter(r => r.itemType === 'bottle').reduce((s, r) => s + (r.qty || 0), 0);
+            const pendingDispensers = pending.filter(r => r.itemType === 'dispenser').reduce((s, r) => s + (r.qty || 0), 0);
+
+            let html = `
+                <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+                    <div style="flex:1;min-width:140px;background:rgba(236,72,153,0.08);border:1px solid rgba(236,72,153,0.25);border-radius:10px;padding:10px 12px;">
+                        <div style="font-size:0.75rem;font-weight:700;color:#ec4899;">🍶 Bottles Out</div>
+                        <div style="font-size:1.2rem;font-weight:800;color:#ec4899;">${pendingBottles}</div>
+                    </div>
+                    <div style="flex:1;min-width:140px;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.25);border-radius:10px;padding:10px 12px;">
+                        <div style="font-size:0.75rem;font-weight:700;color:#a78bfa;">🚰 Dispensers Out</div>
+                        <div style="font-size:1.2rem;font-weight:800;color:#a78bfa;">${pendingDispensers}</div>
+                    </div>
+                </div>
+            `;
+
+            if (records.length === 0) {
+                html += '<div class="empty-state"><p>No borrowed items recorded yet. Tap "+ Borrowed" when a customer takes empty bottles or a dispenser on loan.</p></div>';
+            } else {
+                records.forEach(r => {
+                    const isReturned = r.status === 'returned';
+                    const icon = r.itemType === 'dispenser' ? '🚰' : '🍶';
+                    const label = r.itemType === 'dispenser' ? 'Dispenser(s)' : 'Bottle(s)';
+                    const badge = isReturned
+                        ? '<span class="badge badge-success">Returned</span>'
+                        : '<span class="badge badge-warning">Still Out</span>';
+                    html += `
+                        <div class="list-item" style="${isReturned ? 'opacity:0.6;' : ''}">
+                            <div class="list-item-content" style="flex:1;">
+                                <div class="list-item-title">${icon} ${r.customerName || 'Unknown'} — ${r.qty} ${label}</div>
+                                <div class="list-item-subtitle">${r.date} ${badge}${r.notes ? ' • ' + r.notes : ''}</div>
+                            </div>
+                            <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;">
+                                <button class="btn btn-sm ${isReturned ? 'btn-secondary' : 'btn-success'}" onclick="markBorrowedItemReturned(${r.id})" style="padding:3px 8px;font-size:0.7rem;">${isReturned ? '↩️ Undo' : '✅ Returned'}</button>
+                                <button class="btn btn-sm btn-info" onclick="editWaterBorrowedItem(${r.id})" style="padding:3px 8px;font-size:0.7rem;">✏️</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteWaterBorrowedItem(${r.id})" style="padding:3px 8px;font-size:0.7rem;">🗑️</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            panel.innerHTML = html;
+        }
+        window.renderWaterBorrowedItems = renderWaterBorrowedItems;
+
+        // Badges on the tab buttons showing pending counts
+        async function updateWaterAdvanceBorrowBadges() {
+            try {
+                const advances = await dbGetAll('waterBottleAdvances');
+                const borrowed = await dbGetAll('waterBorrowedItems');
+                const pendingAdv = advances.filter(r => r.status !== 'fulfilled').length;
+                const pendingBorr = borrowed.filter(r => r.status !== 'returned').length;
+                const advBadge = document.getElementById('badge-water-advances');
+                const borrBadge = document.getElementById('badge-water-borrowed');
+                if (advBadge) { advBadge.textContent = pendingAdv; advBadge.style.display = pendingAdv > 0 ? '' : 'none'; }
+                if (borrBadge) { borrBadge.textContent = pendingBorr; borrBadge.style.display = pendingBorr > 0 ? '' : 'none'; }
+            } catch (e) { /* stores may not exist yet on first load */ }
+        }
+        window.updateWaterAdvanceBorrowBadges = updateWaterAdvanceBorrowBadges;
 
         // ── Hide/Show customer names on water page ──
         let _waterNamesHidden = true;  // hidden by default
@@ -31971,33 +32023,6 @@ async function clearAllData() {
         // Do NOT call init() here directly - MT layer controls startup
 
         </script>
-<style id="prism-confirm-styles">
-#prism-confirm-overlay{display:none;position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,.7);align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px)}
-#prism-confirm-overlay.show{display:flex}
-#prism-confirm-box{background:#1e293b;border:1px solid #334155;border-radius:16px;padding:36px 32px;max-width:460px;width:100%;text-align:center;box-shadow:0 30px 70px rgba(0,0,0,.7);animation:cIn .2s ease}
-@keyframes cIn{from{transform:scale(.88);opacity:0}to{transform:scale(1);opacity:1}}
-#prism-confirm-icon{font-size:2.8rem;margin-bottom:14px}
-#prism-confirm-title{font-size:1.1rem;font-weight:700;color:#f1f5f9;margin-bottom:10px}
-#prism-confirm-message{font-size:.88rem;color:#94a3b8;margin-bottom:28px;line-height:1.6;white-space:pre-wrap;text-align:left}
-#prism-confirm-buttons{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
-#prism-confirm-cancel{padding:10px 24px;border-radius:8px;border:1px solid #475569;background:transparent;color:#94a3b8;cursor:pointer;font-size:.9rem}
-#prism-confirm-cancel:hover{background:#334155;color:#f1f5f9}
-#prism-confirm-ok{padding:10px 28px;border-radius:8px;border:none;color:#fff;cursor:pointer;font-size:.9rem;font-weight:700}
-#prism-confirm-ok.danger{background:#ef4444}#prism-confirm-ok.danger:hover{background:#b91c1c}
-#prism-confirm-ok.warning{background:#f59e0b}#prism-confirm-ok.success{background:#10b981}
-#prism-confirm-ok.info{background:#3b82f6}
-</style>
-<div id="prism-confirm-overlay">
-  <div id="prism-confirm-box">
-    <div id="prism-confirm-icon">❓</div>
-    <div id="prism-confirm-title">Confirm</div>
-    <div id="prism-confirm-message"></div>
-    <div id="prism-confirm-buttons">
-      <button id="prism-confirm-cancel" onclick="if(window.prismConfirmResolve)window.prismConfirmResolve(false)">Cancel</button>
-      <button id="prism-confirm-ok" class="danger" onclick="if(window.prismConfirmResolve)window.prismConfirmResolve(true)">Confirm</button>
-    </div>
-  </div>
-</div>
 </div><!-- /prism-app-wrapper -->
 <script>
 // ================================================================
@@ -32068,10 +32093,7 @@ function mtShowScreen(id) {
 function mtShowLanding() { mtShowScreen('mt-landing'); }
 function mtShowSetup() { mtShowScreen('mt-setup'); mtResetSetup(); }
 
-function mtShowAuth(tab = 'login') {
-    mtShowScreen('mt-auth');
-    mtSwitchTab(tab);
-}
+
 
 let _prismAppInitialized = false;
 function mtShowApp() {
@@ -32216,12 +32238,7 @@ function mtShowSuperAdmin() {
 }
 
 // ---- Loading screen ----
-function mtShowLoading(text = 'Loading...') {
-    const el = document.getElementById('mt-loading');
-    if (el) el.classList.add('active');
-    const txt = document.getElementById('mt-loading-text');
-    if (txt) txt.textContent = text;
-}
+
 function mtHideLoading() {
     const el = document.getElementById('mt-loading');
     if (el) el.classList.remove('active');
@@ -32992,50 +33009,10 @@ function _doLocalAdminLogin() {
 }
 
 // ---- Demo Login (no Firebase) ----
-function mtDemoLogin() {
-    MT.currentUser = { uid: 'demo_user', email: 'demo@prism.app', displayName: 'Demo User' };
-    MT.currentOrg = {
-        id: 'demo_org',
-        name: 'Demo Business',
-        bizType: 'mixed',
-        plan: 'standard',
-        address: 'Matalam, North Cotabato',
-        phone: '09xx-xxx-xxxx',
-        ownerId: 'demo_user',
-        createdAt: new Date().toISOString()
-    };
-    MT.currentOrgRole = 'admin';
 
-    const demoAppUser = {
-        id: 1, username: 'demo', fullname: 'Demo Admin',
-        role: 'admin', email: 'demo@prism.app',
-        permissions: { 'add-property':true,'edit-property':true,'delete-property':true,
-            'add-tenant':true,'edit-tenant':true,'delete-tenant':true,
-            'record-payment':true,'water-sales':true,'void-sale':true,
-            'manage-staff':true,'manage-users':true,'view-reports':true,'backup-restore':true,'view-expenses':true,'view-income':true,'view-profiles':true,'access-properties':true,'access-hr':true,'access-settings':true }
-    };
-    // Set BOTH the global var and localStorage so permissions work immediately
-    currentAppUser = demoAppUser;
-    localStorage.setItem('carent_current_user', JSON.stringify(demoAppUser));
-    localStorage.setItem('mt_current_org', JSON.stringify(MT.currentOrg));
-    localStorage.setItem('mt_current_org_id', 'demo_org');
-
-    mtToast('🎉 Demo mode activated!', 'success');
-    mtShowApp();
-    mtUpdateOrgBadge();
-    setTimeout(() => {
-        if (typeof updateUserDisplay === 'function') updateUserDisplay();
-        if (typeof loadDashboard === 'function') loadDashboard();
-    }, 300);
-}
 
 // ---- Org Setup Wizard ----
-function mtSelectBizType(type, el) {
-    MT.selectedBizType = type;
-    document.querySelectorAll('.mt-biz-type').forEach(b => b.classList.remove('selected'));
-    el.classList.add('selected');
-    document.getElementById('mt-step1-next').disabled = false;
-}
+
 
 // New: toggle individual modules on/off
 function mtToggleBizModule(type, el) {
@@ -33613,10 +33590,7 @@ function mtLogout() {
 
 // ---- Data Isolation ----
 // Wraps data keys with orgId so each org has isolated IndexedDB
-function mtGetOrgDbName() {
-    const orgId = MT.currentOrg?.id || localStorage.getItem('mt_current_org_id') || 'default';
-    return `PRISM_${orgId}`;
-}
+
 
 // ================================================================
 // CASHIER ENDORSEMENT & ADMIN NOTIFICATION SYSTEM
@@ -34020,98 +33994,7 @@ async function loadCashierDashboard() {
 // ================================================================
 // ADMIN: CASHIER ACTIVITY SUMMARY
 // ================================================================
-async function loadAdminCashierSummary() {
-    const container = document.getElementById('admin-cashier-summary');
-    if (!container) return;
 
-    try {
-        const today = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
-        const endorsements = JSON.parse(localStorage.getItem('prism_endorsements') || '[]');
-        const todayEndorse = endorsements.filter(e => e.timestamp && e.timestamp.startsWith(today));
-        const unreadCount = endorsements.filter(e => !e.read).length;
-
-        // Get today's transactions from all stores
-        const [payments, waterSales, credits, expenses, income] = await Promise.all([
-            dbGetAll('payments'),
-            dbGetAll('waterSales'),
-            dbGetAll('creditPayments'),
-            dbGetAll('expenses'),
-            dbGetAll('additionalIncome')
-        ]);
-
-        const todayPay = payments.filter(p => p.date === today);
-        const todayWater = waterSales.filter(w => w.date === today);
-        const todayCredit = credits.filter(c => c.date === today);
-        const todayExp = expenses.filter(e => e.date === today);
-        const todayInc = income.filter(i => i.date === today);
-
-        const totalIn = 
-            todayPay.reduce((s,p) => s + (p.amount||0), 0) +
-            todayWater.reduce((s,w) => s + (w.amountPaid||0), 0) +
-            todayCredit.reduce((s,c) => s + (c.amount||0), 0) +
-            todayInc.reduce((s,i) => s + (i.amount||0), 0);
-        const totalOut = todayExp.reduce((s,e) => s + (e.amount||0), 0);
-        const txnCount = todayPay.length + todayWater.length + todayCredit.length + todayExp.length + todayInc.length;
-
-        container.innerHTML = `
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
-                <div onclick="showSection('income')" style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:10px;padding:12px;text-align:center;cursor:pointer;" title="View income">
-                    <div style="font-size:1.2rem;font-weight:700;color:#10b981;">₱${totalIn.toLocaleString()}</div>
-                    <div style="font-size:0.75rem;color:var(--text-secondary);">💰 Collected</div>
-                </div>
-                <div onclick="showSection('expenses')" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:12px;text-align:center;cursor:pointer;" title="View expenses">
-                    <div style="font-size:1.2rem;font-weight:700;color:#ef4444;">₱${totalOut.toLocaleString()}</div>
-                    <div style="font-size:0.75rem;color:var(--text-secondary);">💸 Expenses</div>
-                </div>
-                <div onclick="showCashierTodayTransactions()" style="background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:10px;padding:12px;text-align:center;cursor:pointer;" title="View all today's transactions">
-                    <div style="font-size:1.2rem;font-weight:700;color:#6366f1;">${txnCount}</div>
-                    <div style="font-size:0.75rem;color:var(--text-secondary);">📋 Transactions</div>
-                </div>
-            </div>
-            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;">
-                <div style="background:var(--bg-primary);border-radius:8px;padding:8px;text-align:center;cursor:pointer;" onclick="showSection('tenants')" title="View rent payments">
-                    <div style="font-weight:700;color:#f59e0b;">₱${todayPay.reduce((s,p)=>s+(p.amount||0),0).toLocaleString()}</div>
-                    <div style="font-size:0.7rem;color:var(--text-secondary);">🏠 Rent</div>
-                </div>
-                <div style="background:var(--bg-primary);border-radius:8px;padding:8px;text-align:center;cursor:pointer;" onclick="showSection('water')" title="View water sales">
-                    <div style="font-weight:700;color:#06b6d4;">₱${todayWater.reduce((s,w)=>s+(w.amountPaid||0),0).toLocaleString()}</div>
-                    <div style="font-size:0.7rem;color:var(--text-secondary);">💧 Water</div>
-                </div>
-                <div style="background:var(--bg-primary);border-radius:8px;padding:8px;text-align:center;cursor:pointer;" onclick="showSection('credits')" title="View credit payments">
-                    <div style="font-weight:700;color:#8b5cf6;">₱${todayCredit.reduce((s,c)=>s+(c.amount||0),0).toLocaleString()}</div>
-                    <div style="font-size:0.7rem;color:var(--text-secondary);">💳 Credits</div>
-                </div>
-                <div style="background:var(--bg-primary);border-radius:8px;padding:8px;text-align:center;cursor:pointer;" onclick="showSection('income')" title="View other income">
-                    <div style="font-weight:700;color:#10b981;">₱${todayInc.reduce((s,i)=>s+(i.amount||0),0).toLocaleString()}</div>
-                    <div style="font-size:0.7rem;color:var(--text-secondary);">💰 Income</div>
-                </div>
-            </div>
-            ${unreadCount > 0 ? `
-            <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:10px;margin-bottom:10px;cursor:pointer;" onclick="openAdminInbox()">
-                <div style="display:flex;justify-content:space-between;align-items:center;">
-                    <span style="color:#f87171;font-weight:600;font-size:0.85rem;">📬 ${unreadCount} Unread Endorsement${unreadCount>1?'s':''} from Cashier</span>
-                    <span style="color:#f87171;font-size:0.8rem;">→ View</span>
-                </div>
-            </div>` : `<div style="color:var(--text-secondary);font-size:0.8rem;text-align:center;">✅ No pending endorsements</div>`}
-            ${todayEndorse.length > 0 ? `
-            <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:8px;">
-                <strong style="color:var(--text-primary);">Recent Activity:</strong>
-                ${todayEndorse.slice(0,3).map(e => `
-                <div style="padding:6px 0;border-bottom:1px solid var(--border-color);display:flex;justify-content:space-between;">
-                    <span>${e.fromName||'Cashier'} — ${e.type}</span>
-                    <span style="color:var(--text-secondary);">${new Date(e.timestamp).toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'})}</span>
-                </div>`).join('')}
-                ${todayEndorse.length > 3 ? `<div style="text-align:center;padding-top:6px;"><button class="btn btn-sm btn-secondary" onclick="openAdminInbox()">View All ${todayEndorse.length} activities</button></div>` : ''}
-            </div>` : ''}
-            <div style="display:flex;gap:8px;margin-top:12px;">
-                <button class="btn btn-sm btn-secondary" style="flex:1;" onclick="showSection('reports')">📊 Full Reports</button>
-                <button class="btn btn-sm btn-primary" style="flex:1;" onclick="openAdminInbox()">📬 Admin Inbox</button>
-            </div>
-        `;
-    } catch(e) {
-        container.innerHTML = '<div style="color:var(--text-secondary);text-align:center;padding:20px;">No cashier activity yet today.</div>';
-    }
-}
     // ================================================================
     // loadStaffCashierActivity — Staff page activity card
     // ================================================================
@@ -35754,7 +35637,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
                     const tables = ['properties','tenants','payments','credits','creditPayments',
                         'expenses','customNotes','additionalIncome','clientCharges',
-                        'waterCustomers','waterSales','employees','cashAdvances',
+                        'waterCustomers','waterSales','waterBottleAdvances','waterBorrowedItems',
+                        'employees','cashAdvances',
                         'salaryPayments','timeRecords','tasks','payables','suppliers'];
 
                     // Always authoritative — realtime cloud changes always win
