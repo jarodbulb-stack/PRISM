@@ -2589,6 +2589,87 @@
             background: rgba(99,102,241,0.30);
             color: #c7d2fe;
         }
+
+        /* ========== CUSTOM CONFIRM MODAL (real DOM — fixes showConfirm) ========== */
+        #prism-confirm-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.65);
+            z-index: 999999;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            backdrop-filter: blur(2px);
+        }
+        #prism-confirm-overlay.show {
+            display: flex;
+        }
+        #prism-confirm-box {
+            background: #1e293b;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 28px 24px 20px;
+            width: 100%;
+            max-width: 380px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+            animation: confirmSlideIn 0.18s ease;
+        }
+        @keyframes confirmSlideIn {
+            from { transform: scale(0.92) translateY(10px); opacity: 0; }
+            to   { transform: scale(1) translateY(0); opacity: 1; }
+        }
+        #prism-confirm-icon {
+            font-size: 2.2rem;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+        #prism-confirm-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #f8fafc;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        #prism-confirm-message {
+            font-size: 0.875rem;
+            color: #94a3b8;
+            text-align: center;
+            line-height: 1.5;
+            margin-bottom: 22px;
+        }
+        #prism-confirm-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        #prism-confirm-cancel {
+            flex: 1;
+            padding: 11px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            color: #94a3b8;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        #prism-confirm-cancel:hover { background: rgba(255,255,255,0.1); }
+        #prism-confirm-ok {
+            flex: 1;
+            padding: 11px;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.15s;
+        }
+        #prism-confirm-ok:hover { opacity: 0.88; }
+        #prism-confirm-ok.danger  { background: linear-gradient(135deg,#ef4444,#dc2626); color: #fff; }
+        #prism-confirm-ok.warning { background: linear-gradient(135deg,#f59e0b,#d97706); color: #fff; }
+        #prism-confirm-ok.success { background: linear-gradient(135deg,#10b981,#059669); color: #fff; }
+        #prism-confirm-ok.info    { background: linear-gradient(135deg,#6366f1,#4f46e5); color: #fff; }
     </style>
     <!-- PRISM: Early auth cover — prevents any content flash for returning users -->
     <!-- This runs SYNCHRONOUSLY before body renders -->
@@ -15558,19 +15639,6 @@ async function recordTenantPayment(tenantId) {
 
                     <scr` + `ipt>window.onload = function() { window.print(); }<\/scr` + `ipt>
                 
-    <!-- ========== CUSTOM CONFIRM MODAL ========== -->
-    <div id="prism-confirm-overlay">
-        <div id="prism-confirm-box">
-            <div id="prism-confirm-icon">❓</div>
-            <div id="prism-confirm-title">Confirm</div>
-            <div id="prism-confirm-message"></div>
-            <div id="prism-confirm-buttons">
-                <button id="prism-confirm-cancel" onclick="prismConfirmResolve(false)">Cancel</button>
-                <button id="prism-confirm-ok" class="danger" onclick="prismConfirmResolve(true)">Confirm</button>
-            </div>
-        </div>
-    </div>
-
 </body>
                 </html>
             `);
@@ -36002,6 +36070,22 @@ window.addEventListener('DOMContentLoaded', () => {
   </div>
 </div>
 <!-- ========== END CALENDAR DAY DETAIL MODAL ========== -->
+
+
+
+<!-- ========== CUSTOM CONFIRM MODAL (real DOM — fixes showConfirm) ========== -->
+<div id="prism-confirm-overlay">
+    <div id="prism-confirm-box">
+        <div id="prism-confirm-icon">❓</div>
+        <div id="prism-confirm-title">Confirm</div>
+        <div id="prism-confirm-message"></div>
+        <div id="prism-confirm-buttons">
+            <button id="prism-confirm-cancel" onclick="prismConfirmResolve(false)">Cancel</button>
+            <button id="prism-confirm-ok" class="danger" onclick="prismConfirmResolve(true)">Confirm</button>
+        </div>
+    </div>
+</div>
+<!-- ========== END CUSTOM CONFIRM MODAL ========== -->
 
 
 
