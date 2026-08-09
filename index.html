@@ -35675,13 +35675,19 @@ window.mtSAToggleOrgStatus=mtSAToggleOrgStatus;
             const _origSyncToFirebase = typeof window.syncToFirebase === 'function' ? window.syncToFirebase : null;
             if (_origSyncToFirebase && !_origSyncToFirebase._req7guarded) {
                 window.syncToFirebase = async function(...args) {
-                    const _role = window.currentAppUser?.role || 'viewer';
+                    const _appRole = window.currentAppUser?.role;
+                    const _orgRole = (typeof MT !== 'undefined' && MT.currentOrgRole) || null;
+                    // Prefer whichever role signal is actually populated — currentAppUser is only
+                    // set for local PIN-based sub-accounts; the Firebase org owner/admin login
+                    // path only sets MT.currentOrgRole, so don't let a missing currentAppUser
+                    // silently downgrade a real Owner/Admin to 'viewer'.
+                    const _role = _appRole || _orgRole || 'viewer';
                     // Always allow SUPER_ADMINS through regardless of stored role
                     const _email = (window.currentAppUser?.email || MT?.currentUser?.email || '').toLowerCase();
                     const _isSuperAdmin = MT?.SUPER_ADMINS && MT.SUPER_ADMINS.map(e=>e.toLowerCase()).includes(_email);
                     if (_isSuperAdmin) return _origSyncToFirebase(...args);
                     if (['viewer','cashier'].includes(_role)) {
-                        console.info('[Security REQ7] Sync blocked for role:', _role);
+                        console.info('[Security REQ7] Sync blocked for role:', _role, '(appRole:', _appRole, ', orgRole:', _orgRole, ')');
                         return;
                     }
                     return _origSyncToFirebase(...args);
