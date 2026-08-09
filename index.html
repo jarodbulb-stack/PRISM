@@ -5357,6 +5357,14 @@
                     <button class="btn btn-sm btn-warning" onclick="showPayrollSummary()" title="View and process employee payroll">💰 Payroll Summary</button>
                 </div>
 
+                <!-- Unsigned Salary Alert -->
+                <div id="unsigned-salary-banner" style="display:none;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.35);border-radius:9px;padding:10px 13px;margin-bottom:14px;cursor:pointer;" onclick="jumpToUnsignedSalary()">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="font-size:1.1rem;">✍️</span>
+                        <span id="unsigned-salary-text" style="font-size:0.82rem;font-weight:600;color:#f59e0b;"></span>
+                    </div>
+                </div>
+
                 <input type="text" id="employee-search" placeholder="🔍 Search employee..." style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 15px; background: var(--card-bg); color: var(--text-primary);" oninput="filterEmployees()">
                     <div id="employee-search-dd" class="prism-ac-dd" style="display:none;"></div>
 
@@ -16505,32 +16513,60 @@ async function loadWaterCustomers() {
             let totalAdvances = 0;
             let totalUnpaidDays = 0;
             let paidThisMonth = 0;
-            
+
             const now = new Date();
             const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-            
+
+            // Unsigned salary payments — track per employee for badges + banner
+            const unsignedByEmp = {};
+            salaries.forEach(s => {
+                if (!s.signature) {
+                    unsignedByEmp[s.employeeId] = (unsignedByEmp[s.employeeId] || 0) + 1;
+                }
+            });
+
             employees.forEach(e => {
                 // Calculate unpaid advances
                 const empAdvances = advances.filter(a => a.employeeId === e.id && !a.deducted);
                 const unpaidAdv = empAdvances.reduce((sum, a) => sum + a.amount, 0);
                 e.unpaidAdvances = unpaidAdv;
                 totalAdvances += unpaidAdv;
-                
+
                 // Calculate unpaid work days (present + halfday, not yet paid)
                 const empRecords = timeRecords.filter(r => r.employeeId === e.id && !r.paid && (r.status === 'present' || r.status === 'halfday'));
                 e.unpaidDays = empRecords.length;
                 totalUnpaidDays += empRecords.length;
+
+                e.unsignedSalaries = unsignedByEmp[e.id] || 0;
             });
-            
+
             // Paid this month
             salaries.filter(s => s.date && s.date.startsWith(thisMonth))
                 .forEach(s => paidThisMonth += s.netPay || 0);
-            
+
             document.getElementById('stat-employees').textContent = employees.length;
             document.getElementById('stat-advances').textContent = '₱' + totalAdvances.toLocaleString();
             document.getElementById('stat-payroll-due').textContent = totalUnpaidDays + ' days';
             document.getElementById('stat-paid-salaries').textContent = '₱' + paidThisMonth.toLocaleString();
-            
+
+            // Unsigned salary banner
+            const unsignedTotal = Object.values(unsignedByEmp).reduce((s,n)=>s+n, 0);
+            const banner = document.getElementById('unsigned-salary-banner');
+            const bannerText = document.getElementById('unsigned-salary-text');
+            if (banner && bannerText) {
+                if (unsignedTotal > 0) {
+                    const names = Object.keys(unsignedByEmp)
+                        .map(eid => (employees.find(e => String(e.id) === String(eid)) || {}).name)
+                        .filter(Boolean);
+                    const namesTxt = names.length <= 3 ? names.join(', ') : names.slice(0,3).join(', ') + ' +' + (names.length-3) + ' more';
+                    bannerText.textContent = unsignedTotal + ' paid salary payment' + (unsignedTotal>1?'s':'') + ' still need employee signature — ' + namesTxt + '. Tap to review.';
+                    banner.style.display = 'block';
+                } else {
+                    banner.style.display = 'none';
+                }
+            }
+            window._unsignedSalaryEmpIds = Object.keys(unsignedByEmp);
+
             renderEmployeesList(employees);
     // Refresh staff activity card
     try { if (typeof loadStaffCashierActivity === 'function') loadStaffCashierActivity(); } catch(e) {}
@@ -16546,6 +16582,19 @@ async function loadWaterCustomers() {
         }
 
         window.filterEmployees = filterEmployees;
+
+        // Jump to the first employee with an unsigned salary payment
+        async function jumpToUnsignedSalary() {
+            const ids = window._unsignedSalaryEmpIds || [];
+            if (ids.length === 0) { showToast('✅ No unsigned salary payments right now.', 'success'); return; }
+            const empId = parseInt(ids[0]);
+            await viewEmployeeDetails(empId);
+            if (typeof empHistTab === 'function') empHistTab(empId, 'salaries');
+            if (ids.length > 1) {
+                showToast('ℹ️ ' + (ids.length - 1) + ' more employee(s) also have unsigned payslips — check their Salary tab too.', 'info');
+            }
+        }
+        window.jumpToUnsignedSalary = jumpToUnsignedSalary;
 
         function renderEmployeesList(employees) {
             const container = document.getElementById('employees-list');
@@ -16588,6 +16637,7 @@ async function loadWaterCustomers() {
         var payBadge = e.payFrequency ? '<span style="font-size:0.68rem;color:#818cf8;background:rgba(99,102,241,0.12);padding:2px 7px;border-radius:10px;">'+e.payFrequency+'</span>' : '';
         var unpaidBadge = (e.unpaidDays > 0) ? '<span style="font-size:0.68rem;background:rgba(59,130,246,0.15);color:#60a5fa;padding:2px 7px;border-radius:10px;">'+e.unpaidDays+' unpaid days</span>' : '';
         var advanceBadge = (e.unpaidAdvances > 0) ? '<span style="font-size:0.68rem;background:rgba(245,158,11,0.15);color:#fbbf24;padding:2px 7px;border-radius:10px;">Advance pending</span>' : '';
+        var unsignedBadge = (e.unsignedSalaries > 0) ? '<span style="font-size:0.68rem;background:rgba(245,158,11,0.15);color:#f59e0b;padding:2px 7px;border-radius:10px;">✍️ '+e.unsignedSalaries+' unsigned payslip'+(e.unsignedSalaries>1?'s':'')+'</span>' : '';
         var rateTxt = ''; // salary hidden on list card
         return '<div onclick="viewEmployeeDetails('+e.id+')"'
             + ' style="display:flex;align-items:center;gap:14px;padding:14px 16px;'
@@ -16600,7 +16650,7 @@ async function loadWaterCustomers() {
             + '<div style="flex:1;min-width:0;">'
             + '<div style="font-weight:700;font-size:0.95rem;color:var(--text-primary,#f1f5f9);margin-bottom:3px;">'+e.name+'</div>'
             + '<div style="font-size:0.78rem;color:#64748b;margin-bottom:5px;">'+(e.position||'Staff')+'</div>'
-            + '<div style="display:flex;flex-wrap:wrap;gap:4px;">'+payBadge+unpaidBadge+advanceBadge+'</div>'
+            + '<div style="display:flex;flex-wrap:wrap;gap:4px;">'+payBadge+unpaidBadge+advanceBadge+unsignedBadge+'</div>'
             + '</div>'
             + '<div style="color:#475569;font-size:1.1rem;flex-shrink:0;">&#x203A;</div>'
             + '</div>';
@@ -17753,7 +17803,7 @@ async function showPayrollSummary() {
                     // Employee Signature Pad (reuses the app's existing SignaturePad component)
                     +(noWork?'':(
                     '<div class="signature-capture-container">'
-                    +'<label>\u270d\ufe0f Employee Signature \u2014 required to confirm this payment</label>'
+                    +'<label>\u270d\ufe0f Employee Signature \u2014 optional now, can be added later</label>'
                     +'<div class="signature-canvas-wrapper" id="prl-sig-wrapper">'
                     +'<canvas id="prl-sig-canvas" class="signature-canvas"></canvas>'
                     +'<div class="signature-placeholder">\u270d\ufe0f Sign here</div>'
@@ -17950,12 +18000,8 @@ async function showPayrollSummary() {
 
             if (netPay<=0 && gross<=0) { showToast('\u26a0\ufe0f No payable work found in this period.','warning'); return; }
 
-            // Require employee signature before payment is recorded
+            // Signature is optional at confirm time — can be captured now or added later
             const signatureData = getActiveSignatureData();
-            if (!signatureData) {
-                showToast('\u270d\ufe0f Employee must sign the pad above to confirm this payroll.','warning');
-                return;
-            }
 
             const deferredCount = deferredAdvIds.length;
             const extrasNote = extras.length>0 ? ' | '+extras.length+' manual adjustment'+(extras.length>1?'s':'') : '';
@@ -17996,8 +18042,8 @@ async function showPayrollSummary() {
                     date: a.date||'', amount: a.amount, notes: a.notes||'Cash Advance'
                 })),
                 extrasDetail: extras.map(e=>({ type: e.type, label: e.label, amount: e.amount })),
-                signature: signatureData,
-                signedAt: nowISO
+                signature: signatureData || null,
+                signedAt: signatureData ? nowISO : null
             };
 
             try {
@@ -18180,6 +18226,7 @@ async function showPayrollSummary() {
                 document.getElementById('salary-sign-modal')?.remove();
                 debouncedSync();
                 showToast('\u2705 Signature saved for this payment.','success');
+                if (typeof loadEmployees === 'function') loadEmployees();
                 if (s.employeeId && typeof viewEmployeeDetails === 'function') {
                     await viewEmployeeDetails(s.employeeId);
                     if (typeof empHistTab === 'function') empHistTab(s.employeeId, 'salaries');
