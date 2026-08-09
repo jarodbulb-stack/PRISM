@@ -16960,6 +16960,7 @@ async function loadWaterCustomers() {
                                 <div style="text-align:right;flex-shrink:0;margin-left:8px;">
                                     <div style="font-weight:800;color:#10b981;font-size:0.95rem;">₱${(s.netPay||0).toLocaleString()}</div>
                                     <div style="display:flex;gap:3px;margin-top:3px;justify-content:flex-end;">
+                                        <button onclick="printPayslip(${s.id})" style="padding:2px 6px;font-size:0.65rem;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);border-radius:4px;color:#818cf8;cursor:pointer;">🖨️</button>
                                         <button onclick="deleteSalaryRecord(${s.id},${id})" style="padding:2px 6px;font-size:0.65rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:4px;color:#ef4444;cursor:pointer;">🗑️</button>
                                     </div>
                                 </div>
@@ -17747,7 +17748,20 @@ async function showPayrollSummary() {
                     +'<div style="font-size:0.75rem;opacity:0.8;margin-top:4px;">Gross \u20b1'+p.gross.toLocaleString()+' \u2212 Deductions \u20b1'+p.deductions.toLocaleString()+'</div>'
                     +'</div>'
 
-                    +'<button class="btn btn-success btn-block" '+(noWork?'disabled style="opacity:0.5;cursor:not-allowed;"':'')+' onclick="_confirmPayrollEnhanced('+employeeId+', \''+fromDate+'\', \''+toDate+'\')">'
+                    // Employee Signature Pad (reuses the app's existing SignaturePad component)
+                    +(noWork?'':(
+                    '<div class="signature-capture-container">'
+                    +'<label>\u270d\ufe0f Employee Signature \u2014 required to confirm this payment</label>'
+                    +'<div class="signature-canvas-wrapper" id="prl-sig-wrapper">'
+                    +'<canvas id="prl-sig-canvas" class="signature-canvas"></canvas>'
+                    +'<div class="signature-placeholder">\u270d\ufe0f Sign here</div>'
+                    +'</div>'
+                    +'<div class="signature-actions">'
+                    +'<button type="button" class="btn btn-secondary" onclick="clearActiveSignature()">\ud83d\uddd1\ufe0f Clear</button>'
+                    +'</div></div>'
+                    ))
+
+                    +'<button class="btn btn-success btn-block" '+(noWork?'disabled style="opacity:0.5;cursor:not-allowed;"':'')+' style="margin-top:14px;" onclick="_confirmPayrollEnhanced('+employeeId+', \''+fromDate+'\', \''+toDate+'\')">'
                     +'\u2705 CONFIRM \u2014 Pay \u20b1'+p.net.toLocaleString()
                     +'</button>'
                     +'<button class="btn btn-secondary btn-block" onclick="hideModal(\'give-salary-modal\')" style="margin-top:8px;">Cancel</button>';
@@ -17755,6 +17769,7 @@ async function showPayrollSummary() {
                 // Wire up event delegation
                 const cont = document.getElementById('give-salary-content');
                 if (!cont) return;
+                if (!noWork) setTimeout(function(){ initSignaturePad('prl-sig-canvas'); }, 100);
                 cont.addEventListener('change', function _prlChange(ev) {
                     if (ev.target.dataset.prlAdv !== undefined) {
                         const advId = parseInt(ev.target.dataset.prlAdv);
@@ -17933,6 +17948,13 @@ async function showPayrollSummary() {
 
             if (netPay<=0 && gross<=0) { showToast('\u26a0\ufe0f No payable work found in this period.','warning'); return; }
 
+            // Require employee signature before payment is recorded
+            const signatureData = getActiveSignatureData();
+            if (!signatureData) {
+                showToast('\u270d\ufe0f Employee must sign the pad above to confirm this payroll.','warning');
+                return;
+            }
+
             const deferredCount = deferredAdvIds.length;
             const extrasNote = extras.length>0 ? ' | '+extras.length+' manual adjustment'+(extras.length>1?'s':'') : '';
             const deferNote  = deferredCount>0 ? ' | '+deferredCount+' advance(s) deferred' : '';
@@ -17943,25 +17965,43 @@ async function showPayrollSummary() {
             )) return;
 
             const paymentDate = (function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(new Date());
+            const nowISO = new Date().toISOString();
             const extrasBreakdown = extras.map(e=>(e.type==='bonus'?'+':'-')+'\u20b1'+e.amount+' ('+e.label+')').join(', ');
 
             const salary = {
                 employeeId,
+                employeeName: employee.name,
+                employeePosition: employee.position||'Staff',
+                dailyRate,
                 period: dateFrom+' to '+dateTo,
                 dateFrom, dateTo,
                 daysWorked: full+half, fullDays: full, halfDays: half,
-                otHours: ot, bonus: bonus+extraBonus, lates,
+                otHours: ot, otPay, bonus: bonus+extraBonus, lates,
                 advancesDeducted: advTotal+extraDeductions,
+                grossPay: gross,
                 netPay,
                 extras: extrasBreakdown||'',
                 deferredAdvances: deferredCount,
                 date: paymentDate,
-                createdAt: new Date().toISOString()
+                createdAt: nowISO,
+                // Itemized detail for the printable payslip
+                attendanceDetail: recs.map(r=>({
+                    date: r.date, status: r.status, otHours: r.otHours||0,
+                    bonus: (r.bonus||0)+(r.incentive||0), lateDeduction: r.lateDeduction||0,
+                    notes: r.notes||''
+                })),
+                advancesDetail: advRecs.map(a=>({
+                    date: a.date||'', amount: a.amount, notes: a.notes||'Cash Advance'
+                })),
+                extrasDetail: extras.map(e=>({ type: e.type, label: e.label, amount: e.amount })),
+                signature: signatureData,
+                signedAt: nowISO
             };
 
             try {
                 showToast('\u23f3 Processing salary payment...','info');
-                await dbAdd('salaryPayments', salary);
+                const salaryId = await dbAdd('salaryPayments', salary);
+                clearActiveSignature();
 
                 // Mark time records as paid
                 for (const r of recs) { r.paid=true; r.paidDate=paymentDate; await dbUpdate('timeRecords',r); }
@@ -17989,12 +18029,97 @@ async function showPayrollSummary() {
                 debouncedSync();
                 showToast('\u2705 Salary of \u20b1'+netPay.toLocaleString()+' paid to '+employee.name+'!'+(deferredCount>0?' '+deferredCount+' advance(s) deferred to next payroll.':''),'success');
 
+                if (await showConfirm('Print a payslip for this payment now?','success','\ud83d\uddb8\ufe0f Print Payslip','Yes, Print','Not now')) {
+                    printPayslip(salaryId);
+                }
+
             } catch (err) {
                 console.error('Payroll error:',err);
                 showToast('\u274c Error: '+err.message,'error');
             }
         }
         window._confirmPayrollEnhanced = _confirmPayrollEnhanced;
+
+        // ── Printable Payslip ──
+        async function printPayslip(salaryId) {
+            const s = await dbGet('salaryPayments', salaryId);
+            if (!s) { showToast('\u26a0\ufe0f Payslip record not found.','warning'); return; }
+            const employee = (await dbGet('employees', s.employeeId)) || {};
+            const orgName = (function(){ try { return JSON.parse(localStorage.getItem('mt_current_org')||'{}').name || 'PRISM'; } catch(e){ return 'PRISM'; } })();
+
+            const empName = s.employeeName || employee.name || 'Employee';
+            const position = s.employeePosition || employee.position || 'Staff';
+            const dailyRate = s.dailyRate || parseFloat(employee.dailyRate) || 0;
+
+            const attRows = (s.attendanceDetail||[]).slice().sort((a,b)=>a.date.localeCompare(b.date)).map(r => {
+                const lbl = r.status==='present'?'Present':r.status==='halfday'?'Half-day':r.status==='absent'?'Absent':(r.status||'').charAt(0).toUpperCase()+(r.status||'').slice(1);
+                return '<tr>'
+                    +'<td>'+r.date+'</td>'
+                    +'<td>'+lbl+'</td>'
+                    +'<td>'+(r.otHours>0?r.otHours+'h':'-')+'</td>'
+                    +'<td>'+(r.bonus>0?'\u20b1'+r.bonus.toLocaleString():'-')+'</td>'
+                    +'<td>'+(r.lateDeduction>0?'-\u20b1'+r.lateDeduction.toLocaleString():'-')+'</td>'
+                    +'</tr>';
+            }).join('') || '<tr><td colspan="5" style="text-align:center;color:#888;">No itemized attendance saved for this payslip.</td></tr>';
+
+            const advRows = (s.advancesDetail||[]).map(a =>
+                '<tr><td>'+(a.date||'-')+'</td><td>'+(a.notes||'Cash Advance')+'</td><td style="text-align:right;">-\u20b1'+(a.amount||0).toLocaleString()+'</td></tr>'
+            ).join('') || '<tr><td colspan="3" style="text-align:center;color:#888;">No cash advances deducted.</td></tr>';
+
+            const extraRows = (s.extrasDetail||[]).map(e =>
+                '<tr><td>'+e.label+'</td><td style="text-align:right;color:'+(e.type==='bonus'?'#059669':'#dc2626')+';">'+(e.type==='bonus'?'+':'-')+'\u20b1'+e.amount.toLocaleString()+'</td></tr>'
+            ).join('');
+
+            const sigBlock = s.signature
+                ? '<img src="'+s.signature+'" style="height:70px;display:block;margin:0 auto;">'
+                : '<div style="height:70px;"></div>';
+            const signedDate = s.signedAt ? new Date(s.signedAt).toLocaleDateString() : (s.date||'');
+
+            const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Payslip - '+empName+'</title><style>'
+                +'body{font-family:Arial,Helvetica,sans-serif;color:#111;padding:24px;max-width:720px;margin:0 auto;}'
+                +'h1{font-size:1.3rem;margin:0 0 2px;} .sub{color:#555;font-size:0.85rem;margin-bottom:16px;}'
+                +'table{width:100%;border-collapse:collapse;margin-bottom:14px;font-size:0.82rem;}'
+                +'th,td{border:1px solid #ddd;padding:6px 8px;text-align:left;} th{background:#f3f4f6;}'
+                +'.hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:14px;}'
+                +'.totals{width:280px;margin-left:auto;font-size:0.88rem;}'
+                +'.totals td{border:none;padding:3px 0;} .totals tr.net td{border-top:2px solid #111;font-weight:800;font-size:1.05rem;padding-top:6px;}'
+                +'.sigrow{display:flex;justify-content:space-between;margin-top:36px;}'
+                +'.sigbox{width:48%;text-align:center;font-size:0.8rem;}'
+                +'.sigline{border-top:1px solid #111;margin-top:4px;padding-top:4px;}'
+                +'@media print{body{padding:0;}}'
+                +'</style></head><body>'
+                +'<div class="hdr"><div><h1>'+orgName+'</h1><div class="sub">Payslip / Proof of Salary Payment</div></div>'
+                +'<div style="text-align:right;font-size:0.82rem;"><div><b>Date Paid:</b> '+(s.date||'')+'</div><div><b>Period:</b> '+(s.period||'')+'</div></div></div>'
+                +'<div style="margin-bottom:14px;font-size:0.9rem;"><b>Employee:</b> '+empName+' &nbsp;\u00b7&nbsp; <b>Position:</b> '+position+' &nbsp;\u00b7&nbsp; <b>Daily Rate:</b> \u20b1'+dailyRate.toLocaleString()+'</div>'
+                +'<h3 style="font-size:0.9rem;margin-bottom:6px;">Attendance Record</h3>'
+                +'<table><thead><tr><th>Date</th><th>Status</th><th>OT</th><th>Bonus</th><th>Late Deduction</th></tr></thead><tbody>'+attRows+'</tbody></table>'
+                +'<h3 style="font-size:0.9rem;margin-bottom:6px;">Cash Advances Deducted</h3>'
+                +'<table><thead><tr><th>Date</th><th>Note</th><th style="text-align:right;">Amount</th></tr></thead><tbody>'+advRows+'</tbody></table>'
+                +(extraRows?('<h3 style="font-size:0.9rem;margin-bottom:6px;">Manual Adjustments</h3><table><tbody>'+extraRows+'</tbody></table>'):'')
+                +'<table class="totals"><tbody>'
+                +'<tr><td>Full Days ('+(s.fullDays||0)+')</td><td style="text-align:right;">\u20b1'+((s.fullDays||0)*dailyRate).toLocaleString()+'</td></tr>'
+                +(s.halfDays>0?'<tr><td>Half Days ('+s.halfDays+')</td><td style="text-align:right;">\u20b1'+(s.halfDays*dailyRate*0.5).toLocaleString()+'</td></tr>':'')
+                +(s.otHours>0?'<tr><td>Overtime ('+s.otHours+'h)</td><td style="text-align:right;">\u20b1'+(s.otPay||0).toLocaleString()+'</td></tr>':'')
+                +(s.bonus>0?'<tr><td>Bonus / Incentive</td><td style="text-align:right;">\u20b1'+s.bonus.toLocaleString()+'</td></tr>':'')
+                +'<tr><td>Gross Pay</td><td style="text-align:right;">\u20b1'+(s.grossPay||s.netPay||0).toLocaleString()+'</td></tr>'
+                +(s.lates>0?'<tr><td>Lates / Penalties</td><td style="text-align:right;color:#dc2626;">-\u20b1'+s.lates.toLocaleString()+'</td></tr>':'')
+                +(s.advancesDeducted>0?'<tr><td>Deductions (CA + Manual)</td><td style="text-align:right;color:#dc2626;">-\u20b1'+s.advancesDeducted.toLocaleString()+'</td></tr>':'')
+                +'<tr class="net"><td>NET PAY</td><td style="text-align:right;">\u20b1'+(s.netPay||0).toLocaleString()+'</td></tr>'
+                +'</tbody></table>'
+                +'<div class="sigrow">'
+                +'<div class="sigbox">'+sigBlock+'<div class="sigline">Employee Signature<br>'+empName+' \u00b7 Signed '+signedDate+'</div></div>'
+                +'<div class="sigbox"><div style="height:70px;"></div><div class="sigline">Prepared / Released By</div></div>'
+                +'</div>'
+                +'</body></html>';
+
+            const w = window.open('', '_blank');
+            if (!w) { showToast('\u26a0\ufe0f Please allow pop-ups to print the payslip.','warning'); return; }
+            w.document.open();
+            w.document.write(html);
+            w.document.close();
+            w.onload = function(){ w.focus(); w.print(); };
+        }
+        window.printPayslip = printPayslip;
 
 
         function showCashAdvanceModal(employeeId, employeeName) {
