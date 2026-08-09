@@ -16956,10 +16956,12 @@ async function loadWaterCustomers() {
                                 <div style="flex:1;min-width:0;">
                                     <div style="font-size:0.83rem;font-weight:600;">💰 ${s.date} <span style="font-size:0.68rem;color:var(--text-secondary);">${s.period||''}</span></div>
                                     <div style="font-size:0.68rem;color:var(--text-secondary);">${s.fullDays||s.daysWorked||0}d ${s.halfDays>0?'+ '+s.halfDays+'h ':''} · Gross ₱${(s.grossPay||s.netPay||0).toLocaleString()}${s.advancesDeducted>0?' · Adv -₱'+s.advancesDeducted.toLocaleString():''}</div>
+                                    <div style="font-size:0.65rem;margin-top:2px;">${s.signature ? '<span style="color:#10b981;">✅ Signed</span>' : '<span style="color:#f59e0b;">⚠️ Not signed yet</span>'}</div>
                                 </div>
                                 <div style="text-align:right;flex-shrink:0;margin-left:8px;">
                                     <div style="font-weight:800;color:#10b981;font-size:0.95rem;">₱${(s.netPay||0).toLocaleString()}</div>
                                     <div style="display:flex;gap:3px;margin-top:3px;justify-content:flex-end;">
+                                        ${!s.signature ? `<button onclick="signSalaryPayment(${s.id})" style="padding:2px 6px;font-size:0.65rem;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.35);border-radius:4px;color:#f59e0b;cursor:pointer;">✍️</button>` : ''}
                                         <button onclick="printPayslip(${s.id})" style="padding:2px 6px;font-size:0.65rem;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);border-radius:4px;color:#818cf8;cursor:pointer;">🖨️</button>
                                         <button onclick="deleteSalaryRecord(${s.id},${id})" style="padding:2px 6px;font-size:0.65rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:4px;color:#ef4444;cursor:pointer;">🗑️</button>
                                     </div>
@@ -18120,6 +18122,74 @@ async function showPayrollSummary() {
             w.onload = function(){ w.focus(); w.print(); };
         }
         window.printPayslip = printPayslip;
+
+        // ── Sign a salary payment after the fact (e.g. employee was away, older records) ──
+        async function signSalaryPayment(salaryId) {
+            const s = await dbGet('salaryPayments', salaryId);
+            if (!s) { showToast('\u26a0\ufe0f Payment record not found.','warning'); return; }
+
+            const existingModal = document.getElementById('salary-sign-modal');
+            if (existingModal) existingModal.remove();
+
+            const modal = document.createElement('div');
+            modal.id = 'salary-sign-modal';
+            modal.className = 'modal-overlay show';
+            modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+            modal.innerHTML = `
+                <div class="modal">
+                    <div class="modal-header">
+                        <h3>\u270d\ufe0f Sign Salary Payment</h3>
+                        <button class="modal-close" onclick="document.getElementById('salary-sign-modal').remove()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <p style="margin-bottom:12px;color:var(--text-secondary);">
+                            ${s.employeeName||'Employee'} \u00b7 ${s.period||s.date} \u00b7 <b>\u20b1${(s.netPay||0).toLocaleString()}</b>
+                        </p>
+                        <div class="signature-capture-container">
+                            <label>Employee signs below to confirm they received this payment</label>
+                            <div class="signature-canvas-wrapper" id="sal-sig-wrapper-${salaryId}">
+                                <canvas id="sal-sig-canvas-${salaryId}" class="signature-canvas"></canvas>
+                                <div class="signature-placeholder">\u270d\ufe0f Sign here</div>
+                            </div>
+                            <div class="signature-actions">
+                                <button class="btn btn-secondary" onclick="clearActiveSignature()">\ud83d\uddd1\ufe0f Clear</button>
+                                <button class="btn btn-success" onclick="saveSalarySignature(${salaryId})">\ud83d\udcbe Save Signature</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            setTimeout(() => { initSignaturePad(`sal-sig-canvas-${salaryId}`); }, 100);
+        }
+        window.signSalaryPayment = signSalaryPayment;
+
+        async function saveSalarySignature(salaryId) {
+            const signatureData = getActiveSignatureData();
+            if (!signatureData) {
+                showToast('\u26a0\ufe0f Please have the employee sign before saving.','warning');
+                return;
+            }
+            try {
+                const s = await dbGet('salaryPayments', salaryId);
+                if (!s) { showToast('\u26a0\ufe0f Payment record not found.','warning'); return; }
+                s.signature = signatureData;
+                s.signedAt = new Date().toISOString();
+                await dbUpdate('salaryPayments', s);
+                document.getElementById('salary-sign-modal')?.remove();
+                debouncedSync();
+                showToast('\u2705 Signature saved for this payment.','success');
+                if (s.employeeId && typeof viewEmployeeDetails === 'function') {
+                    await viewEmployeeDetails(s.employeeId);
+                    if (typeof empHistTab === 'function') empHistTab(s.employeeId, 'salaries');
+                }
+            } catch (err) {
+                console.error('Save salary signature error:', err);
+                showToast('\u274c Error: '+err.message,'error');
+            }
+        }
+        window.saveSalarySignature = saveSalarySignature;
 
 
         function showCashAdvanceModal(employeeId, employeeName) {
