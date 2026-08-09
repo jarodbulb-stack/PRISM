@@ -8874,7 +8874,11 @@
                 const dot = document.getElementById('firebase-header-dot');
                 if (dot) { dot.style.background = '#10b981'; dot.title = 'Firebase: Connected ✅'; }
 
-try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.settings({localCache:firebase.firestore.persistentLocalCache({tabManager:firebase.firestore.persistentMultipleTabManager()})});}}catch(e){}
+try{
+    const _fsSettings = {ignoreUndefinedProperties: true};
+    if(firebase.firestore&&firebase.firestore.persistentLocalCache){_fsSettings.localCache=firebase.firestore.persistentLocalCache({tabManager:firebase.firestore.persistentMultipleTabManager()});}
+    firestore.settings(_fsSettings);
+}catch(e){}
 
                 // Auth state listener — lightweight, only tracks currentUser & UI
                 // Sync is handled exclusively by the MT/mtInit auth listener to avoid double-sync
@@ -9439,7 +9443,13 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                 }
 
                 _lastSyncTimestamp = data.lastSync;
-                await dataRef.set(data);
+                // SAFETY NET: strip any undefined values anywhere in the payload before
+                // pushing — Firestore's set() throws on ANY undefined field (even nested),
+                // and that failure blocks the ENTIRE sync, not just the offending record.
+                // JSON round-trip removes undefined object props (and turns undefined array
+                // items into null), which is exactly what we want here.
+                const _cleanData = JSON.parse(JSON.stringify(data));
+                await dataRef.set(_cleanData);
                 console.log('[Sync] Data synced to Firestore — org:', orgId);
                 updateSyncStatus('synced');
                 const _pushedUsers = data.appUsers ? data.appUsers.length : 0;
@@ -12583,7 +12593,7 @@ try{if(firebase.firestore&&firebase.firestore.persistentLocalCache){firestore.se
                         deposit,
                         depositPaid: false,
                         lateFee,
-                        photo: _tenantPhoto || undefined,
+                        photo: _tenantPhoto || null,
                         status: 'active',
                         createdAt: new Date().toISOString()
                     };
@@ -16813,7 +16823,7 @@ async function loadWaterCustomers() {
                 paySchedule,
                 startDate,
                 notes,
-                photo: photoData || undefined,
+                photo: photoData || null,
                 status: 'active',
                 createdAt: new Date().toISOString()
             };
@@ -18703,7 +18713,7 @@ async function showPayrollSummary() {
                 dateLent,
                 dueDate: dueDate || null,
                 purpose,
-                photo: _creditPhoto || undefined,
+                photo: _creditPhoto || null,
                 status: 'active',
                 createdAt: new Date().toISOString()
             };
