@@ -7776,6 +7776,7 @@
                         <input type="text" id="timerecord-notes" placeholder="Optional notes...">
                     </div>
                     <button type="submit" class="btn btn-primary btn-block">Save Record</button>
+                    <button type="button" id="timerecord-delete-btn" onclick="deleteTimeRecordFromModal()" class="btn btn-danger btn-block" style="display:none;margin-top:8px;">🗑️ Delete This Record</button>
                 </form>
             </div>
         </div>
@@ -17247,6 +17248,8 @@ async function loadWaterCustomers() {
             document.getElementById('timerecord-ot-hours').value = '0';
             document.getElementById('timerecord-bonus').value = '0';
             document.getElementById('timerecord-details').style.display = 'block';
+            const delBtn = document.getElementById('timerecord-delete-btn');
+            if (delBtn) delBtn.style.display = 'none';
             hideModal('employee-detail-modal');
             showModal('time-record-modal');
         }
@@ -17341,12 +17344,37 @@ async function loadWaterCustomers() {
             document.getElementById('timerecord-bonus').value = record.bonus || 0;
             document.getElementById('timerecord-notes').value = record.notes || '';
             toggleTimeRecordFields();
+
+            // Show the delete button only when editing an existing record, not when
+            // adding a new one — and disable it if this day is already part of a paid
+            // salary, matching the same protection deleteTimeRecord enforces.
+            const delBtn = document.getElementById('timerecord-delete-btn');
+            if (delBtn) {
+                delBtn.style.display = 'block';
+                if (record.paid) {
+                    delBtn.disabled = true;
+                    delBtn.style.opacity = '0.5';
+                    delBtn.title = 'Already part of a paid salary — edit or delete that payment instead';
+                } else {
+                    delBtn.disabled = false;
+                    delBtn.style.opacity = '1';
+                    delBtn.title = '';
+                }
+            }
             
             hideModal('employee-detail-modal');
             showModal('time-record-modal');
         }
-            prismFullRefresh('staff', {skipCalendar: true});
         window.editTimeRecord = editTimeRecord;
+
+        async function deleteTimeRecordFromModal() {
+            const id = parseInt(document.getElementById('timerecord-edit-id').value);
+            const empId = parseInt(document.getElementById('timerecord-employee-id').value);
+            if (!id) return;
+            hideModal('time-record-modal');
+            await deleteTimeRecord(id, empId);
+        }
+        window.deleteTimeRecordFromModal = deleteTimeRecordFromModal;
 
         // Quick Attendance for all employees
         
