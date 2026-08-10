@@ -13665,13 +13665,63 @@ async function recordTenantPayment(tenantId) {
 
         async function deleteSalaryRecord(salaryId, employeeId) {
             if (!currentAppUser || !['owner','admin'].includes(currentAppUser.role)) return;
-            if (!await showConfirm('Delete this salary payment record? This cannot be undone.', 'danger', '🗑️ Delete Salary Record', 'Yes, Delete')) return;
-            await dbDelete('salaryPayments', salaryId);
-            try { await syncToFirebase(); } catch(e) { debouncedSync();
-            prismFullRefresh('staff', {skipCalendar: true});
- }
-            showToast('Salary record deleted.', 'success');
-            await viewEmployeeDetails(employeeId);
+            const salary = await dbGet('salaryPayments', salaryId);
+            if (!salary) { showToast('⚠️ Payment record not found.', 'warning'); return; }
+
+            if (!await showConfirm(
+                'Delete this salary payment? This will also un-mark the attendance days and cash advances it covered (so they become payable again), and remove the matching expense record.',
+                'danger', '🗑️ Delete Salary Payment', 'Yes, Delete'
+            )) return;
+
+            try {
+                // Un-mark attendance days as unpaid so they're payable again
+                if (Array.isArray(salary.timeRecordIds) && salary.timeRecordIds.length) {
+                    for (const trId of salary.timeRecordIds) {
+                        const r = await dbGet('timeRecords', trId).catch(()=>null);
+                        if (r) { r.paid = false; delete r.paidDate; await dbUpdate('timeRecords', r); }
+                    }
+                } else {
+                    // Older payment made before this link existed — best-effort fallback match
+                    const allTr = await dbGetAll('timeRecords');
+                    const matches = allTr.filter(r => r.employeeId === employeeId && r.paid && r.paidDate === salary.date
+                        && (!salary.dateFrom || (r.date >= salary.dateFrom && r.date <= salary.dateTo)));
+                    for (const r of matches) { r.paid = false; delete r.paidDate; await dbUpdate('timeRecords', r); }
+                }
+
+                // Un-mark cash advances as not-deducted so they're deductible again
+                if (Array.isArray(salary.cashAdvanceIds) && salary.cashAdvanceIds.length) {
+                    for (const advId of salary.cashAdvanceIds) {
+                        const a = await dbGet('cashAdvances', advId).catch(()=>null);
+                        if (a) { a.deducted = false; delete a.deductedDate; await dbUpdate('cashAdvances', a); }
+                    }
+                } else {
+                    const allAdv = await dbGetAll('cashAdvances');
+                    const matches = allAdv.filter(a => a.employeeId === employeeId && a.deducted && a.deductedDate === salary.date);
+                    for (const a of matches) { a.deducted = false; delete a.deductedDate; await dbUpdate('cashAdvances', a); }
+                }
+
+                // Remove the linked expense entry so Net Income/Expenses reflect the reversal
+                if (salary.expenseId) {
+                    await dbDelete('expenses', salary.expenseId).catch(()=>{});
+                } else {
+                    // Older payment — best-effort match by category + employee + amount + date
+                    const allExp = await dbGetAll('expenses');
+                    const linked = allExp.find(e => e.category === 'salaries' && e.date === salary.date
+                        && e.amount === salary.netPay
+                        && (e.employeeId ? e.employeeId === employeeId : (e.description||'').includes(salary.employeeName || '')));
+                    if (linked) await dbDelete('expenses', linked.id).catch(()=>{});
+                }
+
+                await dbDelete('salaryPayments', salaryId);
+                try { await syncToFirebase(); } catch(e) { debouncedSync(); }
+                prismFullRefresh('staff', {skipCalendar: true});
+                loadEmployees();
+                showToast('🗑️ Salary payment deleted — attendance, advances, and expense entry reversed.', 'success');
+                await viewEmployeeDetails(employeeId);
+            } catch (err) {
+                console.error('Delete salary record error:', err);
+                showToast('❌ Error deleting payment: ' + err.message, 'error');
+            }
         }
 
         async function deleteTimeRecord(recordId, employeeId) {
@@ -17100,6 +17150,7 @@ async function loadWaterCustomers() {
                                     <div style="display:flex;gap:3px;margin-top:3px;justify-content:flex-end;">
                                         ${!s.signature ? `<button onclick="signSalaryPayment(${s.id})" style="padding:2px 6px;font-size:0.65rem;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.35);border-radius:4px;color:#f59e0b;cursor:pointer;">✍️</button>` : ''}
                                         <button onclick="printPayslip(${s.id})" style="padding:2px 6px;font-size:0.65rem;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);border-radius:4px;color:#818cf8;cursor:pointer;">🖨️</button>
+                                        <button onclick="editSalaryRecord(${s.id},${id})" style="padding:2px 6px;font-size:0.65rem;background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.3);border-radius:4px;color:#60a5fa;cursor:pointer;">✏️</button>
                                         <button onclick="deleteSalaryRecord(${s.id},${id})" style="padding:2px 6px;font-size:0.65rem;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:4px;color:#ef4444;cursor:pointer;">🗑️</button>
                                     </div>
                                 </div>
@@ -18144,15 +18195,27 @@ async function showPayrollSummary() {
                 // Mark ONLY included advances as deducted (deferred ones stay open)
                 for (const adv of advRecs) { adv.deducted=true; adv.deductedDate=paymentDate; await dbUpdate('cashAdvances',adv); }
 
-                // Record as expense
-                await dbAdd('expenses', {
+                // Record as expense — linked back to this exact payment so deleting/editing
+                // the payroll record can precisely find and remove it later
+                const _expenseId = await dbAdd('expenses', {
                     category: 'salaries',
                     description: 'Salary - '+employee.name+' ('+dateFrom+' to '+dateTo+')',
                     amount: netPay,
                     date: paymentDate,
                     notes: full+' full + '+half+' half days, OT: '+ot+'hrs'+(extrasBreakdown?' | '+extrasBreakdown:'')+(deferNote?deferNote:''),
+                    employeeId,
+                    salaryPaymentId: salaryId,
                     createdAt: new Date().toISOString()
                 });
+
+                // Store links back on the payment so delete/edit can precisely reverse
+                // the exact attendance days, advances, and expense entry it touched —
+                // without this, deleting a payment would silently leave those days stuck
+                // as "paid" and the expense still counted against Net Income.
+                salary.timeRecordIds = recs.map(r => r.id);
+                salary.cashAdvanceIds = advRecs.map(a => a.id);
+                salary.expenseId = _expenseId;
+                await dbUpdate('salaryPayments', salary);
 
                 // Reset all payroll state
                 window._payrollDeferredAdvIds=[]; window._payrollExtraBonus=0;
@@ -29154,13 +29217,96 @@ async function clearAllData() {
         }
         window.editSalaryPayment = editSalaryPayment;
 
+        // Safer "edit": reverses the payment (same clean-up as delete — un-marks
+        // attendance/advances, removes the linked expense) then reopens Payroll
+        // Process pre-filled with the same date range so it can be recalculated
+        // and re-confirmed properly, rather than allowing raw edits to a financial record.
+        async function editSalaryRecord(salaryId, employeeId) {
+            if (!currentAppUser || !['owner','admin'].includes(currentAppUser.role)) return;
+            const salary = await dbGet('salaryPayments', salaryId);
+            if (!salary) { showToast('⚠️ Payment record not found.', 'warning'); return; }
+
+            if (!await showConfirm(
+                'Edit this payment? This will undo it first — un-marking its attendance days and advances, and removing its expense entry — then reopen Payroll Process for '+(salary.dateFrom||'')+' to '+(salary.dateTo||'')+' so you can redo it with corrected numbers.',
+                'warning', '✏️ Edit Salary Payment', 'Yes, Undo & Redo'
+            )) return;
+
+            try {
+                if (Array.isArray(salary.timeRecordIds) && salary.timeRecordIds.length) {
+                    for (const trId of salary.timeRecordIds) {
+                        const r = await dbGet('timeRecords', trId).catch(()=>null);
+                        if (r) { r.paid = false; delete r.paidDate; await dbUpdate('timeRecords', r); }
+                    }
+                } else {
+                    const allTr = await dbGetAll('timeRecords');
+                    const matches = allTr.filter(r => r.employeeId === employeeId && r.paid && r.paidDate === salary.date
+                        && (!salary.dateFrom || (r.date >= salary.dateFrom && r.date <= salary.dateTo)));
+                    for (const r of matches) { r.paid = false; delete r.paidDate; await dbUpdate('timeRecords', r); }
+                }
+
+                if (Array.isArray(salary.cashAdvanceIds) && salary.cashAdvanceIds.length) {
+                    for (const advId of salary.cashAdvanceIds) {
+                        const a = await dbGet('cashAdvances', advId).catch(()=>null);
+                        if (a) { a.deducted = false; delete a.deductedDate; await dbUpdate('cashAdvances', a); }
+                    }
+                } else {
+                    const allAdv = await dbGetAll('cashAdvances');
+                    const matches = allAdv.filter(a => a.employeeId === employeeId && a.deducted && a.deductedDate === salary.date);
+                    for (const a of matches) { a.deducted = false; delete a.deductedDate; await dbUpdate('cashAdvances', a); }
+                }
+
+                if (salary.expenseId) {
+                    await dbDelete('expenses', salary.expenseId).catch(()=>{});
+                } else {
+                    const allExp = await dbGetAll('expenses');
+                    const linked = allExp.find(e => e.category === 'salaries' && e.date === salary.date && e.amount === salary.netPay);
+                    if (linked) await dbDelete('expenses', linked.id).catch(()=>{});
+                }
+
+                const _dateFrom = salary.dateFrom, _dateTo = salary.dateTo;
+                await dbDelete('salaryPayments', salaryId);
+                try { await syncToFirebase(); } catch(e) { debouncedSync(); }
+                loadEmployees();
+                showToast('✅ Payment undone — redo it below with the same period pre-filled.', 'success');
+                hideModal('employee-detail-modal');
+                await showGiveSalaryModal(employeeId, _dateFrom, _dateTo);
+            } catch (err) {
+                console.error('Edit salary record error:', err);
+                showToast('❌ Error: ' + err.message, 'error');
+            }
+        }
+        window.editSalaryRecord = editSalaryRecord;
+
         async function deleteSalaryPayment(id) {
-            if (!await showConfirm('Delete this salary payment?','danger','🗑 Delete','Yes, Delete','Cancel')) return;
-            await dbDelete('salaryPayments', id);
-            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
-            if (typeof loadEmployees === 'function') loadEmployees();
-            if (typeof loadPayrollSummary === 'function') loadPayrollSummary();
-            showToast('🗑 Salary payment deleted.','success');
+            const salary = await dbGet('salaryPayments', id);
+            if (!salary) { showToast('⚠️ Payment record not found.','warning'); return; }
+            if (!await showConfirm('Delete this salary payment? This will also un-mark the attendance/advances it covered and remove the matching expense.','danger','🗑 Delete','Yes, Delete','Cancel')) return;
+
+            try {
+                if (Array.isArray(salary.timeRecordIds) && salary.timeRecordIds.length) {
+                    for (const trId of salary.timeRecordIds) {
+                        const r = await dbGet('timeRecords', trId).catch(()=>null);
+                        if (r) { r.paid = false; delete r.paidDate; await dbUpdate('timeRecords', r); }
+                    }
+                }
+                if (Array.isArray(salary.cashAdvanceIds) && salary.cashAdvanceIds.length) {
+                    for (const advId of salary.cashAdvanceIds) {
+                        const a = await dbGet('cashAdvances', advId).catch(()=>null);
+                        if (a) { a.deducted = false; delete a.deductedDate; await dbUpdate('cashAdvances', a); }
+                    }
+                }
+                if (salary.expenseId) {
+                    await dbDelete('expenses', salary.expenseId).catch(()=>{});
+                }
+                await dbDelete('salaryPayments', id);
+                try { await syncToFirebase(); } catch(e) { debouncedSync(); }
+                if (typeof loadEmployees === 'function') loadEmployees();
+                if (typeof loadPayrollSummary === 'function') loadPayrollSummary();
+                showToast('🗑 Salary payment deleted and reversed.','success');
+            } catch (err) {
+                console.error('Delete salary payment error:', err);
+                showToast('❌ Error: ' + err.message, 'error');
+            }
         }
         window.deleteSalaryPayment = deleteSalaryPayment;
 
