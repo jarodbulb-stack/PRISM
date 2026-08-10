@@ -4767,6 +4767,10 @@
                         <div class="icon">👷</div>
                         <div class="label">Labor</div>
                     </div>
+                    <div class="expense-summary-item" onclick="showExpenseCategoryDetail('salaries')" style="cursor: pointer;">
+                        <div class="icon">👔</div>
+                        <div class="label">Payroll</div>
+                    </div>
                 </div>
                 
                 <p style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin: 15px 0 5px;">💰 Personal</p>
@@ -16914,7 +16918,12 @@ async function loadWaterCustomers() {
                 const allUnpaidCount = rangeRecs.filter(r=>!r.paid&&(r.status==='present'||r.status==='halfday')).length;
                 const rangeAdv    = empAdvances.filter(a=>a.date>=from&&a.date<=to);
                 const rangeAdj    = rangeRecs.filter(r=>(r.bonus||0)+(r.incentive||0)+(r.otHours||0)+(r.lateDeduction||0)>0||r.adjustmentNote||r.status==='adjustment');
-                const rangeSal    = empSalaries.filter(s=>(!s.dateFrom||s.dateFrom>=from)&&(!s.dateTo||s.dateTo<=to));
+                // Salary history isn't tied to the attendance date filter — a payroll run's
+                // period can fall outside the currently-selected attendance range (e.g. older
+                // unsigned payslips from previous months), so always show full salary history
+                // here rather than silently hiding records the "N unsigned payslips" badge
+                // already promised were there.
+                const rangeSal    = empSalaries;
 
                 const html = `
                 <div style="text-align:center;margin-bottom:10px;">
@@ -16995,7 +17004,7 @@ async function loadWaterCustomers() {
                     <button id="empt-att-${id}"  onclick="empHistTab(${id},'attendance')"  style="padding:5px 9px;border-radius:6px;border:none;background:var(--primary);color:#fff;cursor:pointer;font-size:0.72rem;font-weight:700;">📅 Attendance (${rangeRecs.length})</button>
                     <button id="empt-adv-${id}"  onclick="empHistTab(${id},'advances')"    style="padding:5px 9px;border-radius:6px;border:none;background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.72rem;font-weight:600;">💵 Advances (${rangeAdv.length})</button>
                     <button id="empt-adj-${id}"  onclick="empHistTab(${id},'adjustments')" style="padding:5px 9px;border-radius:6px;border:none;background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.72rem;font-weight:600;">⚡ Adj (${rangeAdj.length})</button>
-                    <button id="empt-sal-${id}"  onclick="empHistTab(${id},'salaries')"    style="padding:5px 9px;border-radius:6px;border:none;background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.72rem;font-weight:600;">💰 Salary (${rangeSal.length})</button>
+                    <button id="empt-sal-${id}"  onclick="empHistTab(${id},'salaries')"    style="padding:5px 9px;border-radius:6px;border:none;background:var(--bg-card);color:var(--text-secondary);cursor:pointer;font-size:0.72rem;font-weight:600;">💰 Salary (${rangeSal.length} · all-time)</button>
                 </div>
 
                 <!-- ATTENDANCE TAB -->
@@ -18251,6 +18260,11 @@ async function showPayrollSummary() {
         async function signSalaryPayment(salaryId) {
             const s = await dbGet('salaryPayments', salaryId);
             if (!s) { showToast('\u26a0\ufe0f Payment record not found.','warning'); return; }
+            // Older records saved before employeeName was tracked — look it up as a fallback
+            if (!s.employeeName && s.employeeId) {
+                const _emp = await dbGet('employees', s.employeeId).catch(()=>null);
+                if (_emp) s.employeeName = _emp.name;
+            }
 
             const existingModal = document.getElementById('salary-sign-modal');
             if (existingModal) existingModal.remove();
