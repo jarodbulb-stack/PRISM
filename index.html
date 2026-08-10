@@ -12125,9 +12125,8 @@ try{
                 loadDashboard();
                 loadTenants();
                 // Immediate sync for critical data
-                try { await syncToFirebase(); } catch(e) { debouncedSync();
+                try { await syncToFirebase(); } catch(e) { debouncedSync(); }
                 prismFullRefresh('all', {skipCalendar: true});
- }
             } catch (error) {
                 console.error('Error saving property:', error);
                 showToast('❌ Error saving property: ' + error.message, 'error');
@@ -12415,9 +12414,8 @@ try{
             hideModal('expense-detail-modal');
             loadProperties();
             loadDashboard();
-            try { await syncToFirebase(); } catch(e) { debouncedSync();
+            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
             prismFullRefresh('all', {skipCalendar: true});
- }
         }
 
         async function populatePropertyDropdown() {
@@ -13726,6 +13724,11 @@ async function recordTenantPayment(tenantId) {
 
         async function deleteTimeRecord(recordId, employeeId) {
             if (!currentAppUser || !['owner','admin'].includes(currentAppUser.role)) return;
+            const rec = await dbGet('timeRecords', recordId);
+            if (rec && rec.paid) {
+                showToast('⚠️ This day is already part of a paid salary — delete or edit that payment instead, so the attendance stays correctly linked.', 'warning');
+                return;
+            }
             if (!await showConfirm('Delete this attendance record? This cannot be undone.', 'danger', '🗑️ Delete Attendance', 'Yes, Delete')) return;
             await dbDelete('timeRecords', recordId);
             try { await syncToFirebase(); } catch(e) { debouncedSync(); }
@@ -13796,8 +13799,8 @@ async function recordTenantPayment(tenantId) {
             hideModal('tenant-detail-modal');
             loadTenants();
             loadDashboard();
-            try { await syncToFirebase(); } catch(e) { debouncedSync();
-                prismFullRefresh('tenant', {skipCalendar: true}); }
+            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
+            prismFullRefresh('tenant', {skipCalendar: true});
         }
 
         async function populateTenantDropdown() {
@@ -15719,9 +15722,8 @@ async function recordTenantPayment(tenantId) {
     if (!await showConfirm('This water sale record will be permanently deleted.', 'danger', '🗑️ Delete Water Sale', 'Yes, Delete')) return;
     showToast('⏳ Deleting record...', 'info');
                 await dbDelete('waterSales', id);
-    try { await syncToFirebase(); } catch(e) { debouncedSync();
-            prismFullRefresh('water', {skipCalendar: true});
- }
+    try { await syncToFirebase(); } catch(e) { debouncedSync(); }
+    prismFullRefresh('water', {skipCalendar: true});
     loadWaterCustomers();
     showToast('Water sale deleted', 'success');
 }
@@ -16557,9 +16559,8 @@ async function loadWaterCustomers() {
             }
             loadWaterCustomers();
             viewWaterCustomerDetails(customerId);
-            try { await syncToFirebase(); } catch(e) { debouncedSync();
+            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
             prismFullRefresh('water', {skipCalendar: true});
- }
             if (remaining > 0) {
                 showToast(`✅ ₱${paymentAmount.toLocaleString()} recorded! ₱${(paymentAmount-remaining).toLocaleString()} applied to ${appliedCount} sale(s). ₱${remaining.toLocaleString()} is advance credit.`, 'success');
             } else {
@@ -16612,9 +16613,8 @@ async function loadWaterCustomers() {
             await dbDelete('waterCustomers', id);
             hideModal('water-customer-detail-modal');
             loadWaterCustomers();
-            try { await syncToFirebase(); } catch(e) { debouncedSync();
+            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
             prismFullRefresh('water', {skipCalendar: true});
- }
         }
         window.deleteWaterCustomer = deleteWaterCustomer;
 
@@ -18223,7 +18223,7 @@ async function showPayrollSummary() {
 
                 hideModal('give-salary-modal');
                 loadEmployees();
-                if (typeof prismAutoRefreshCurrent==='function') prismAutoRefreshCurrent();
+                prismFullRefresh('expense', {skipCalendar: true});
                 debouncedSync();
                 showToast('\u2705 Salary of \u20b1'+netPay.toLocaleString()+' paid to '+employee.name+'!'+(deferredCount>0?' '+deferredCount+' advance(s) deferred to next payroll.':''),'success');
 
@@ -18465,11 +18465,17 @@ async function showPayrollSummary() {
         window.empSaveAdvance = empSaveAdvance;
 
         async function deleteAdvanceRecord(advId, empId) {
-            if (!await showConfirm('Delete this cash advance record?', 'danger', '🗑️ Delete', 'Yes, Delete')) return;
+            if (!await showConfirm('Delete this cash advance record? This will also remove its matching expense entry.', 'danger', '🗑️ Delete', 'Yes, Delete')) return;
+            const advance = await dbGet('cashAdvances', advId);
+            if (advance) {
+                const allExpenses = await dbGetAll('expenses');
+                const linked = allExpenses.find(e => e.type === 'cash_advance' && String(e.employeeId) === String(advance.employeeId) && e.amount === advance.amount && e.date === advance.date);
+                if (linked) await dbDelete('expenses', linked.id).catch(()=>{});
+            }
             await dbDelete('cashAdvances', advId);
-            showToast('✅ Cash advance deleted', 'success');
+            showToast('✅ Cash advance and its expense entry deleted', 'success');
             viewEmployeeDetails(empId);
-            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
+            prismFullRefresh('staff', {skipCalendar: true});
             debouncedSync();
         }
         window.deleteAdvanceRecord = deleteAdvanceRecord;
@@ -18741,7 +18747,14 @@ async function showPayrollSummary() {
                 if (a.employeeId === id) await dbDelete('cashAdvances', a.id);
             }
             for (const s of salaries) {
-                if (s.employeeId === id) await dbDelete('salaryPayments', s.id);
+                if (s.employeeId === id) {
+                    // Also remove the linked expense entry so deleting the employee
+                    // doesn't leave a phantom expense still counting against Net Income
+                    if (s.expenseId) {
+                        await dbDelete('expenses', s.expenseId).catch(()=>{});
+                    }
+                    await dbDelete('salaryPayments', s.id);
+                }
             }
             for (const t of timeRecords) {
                 if (t.employeeId === id) await dbDelete('timeRecords', t.id);
@@ -18751,9 +18764,8 @@ async function showPayrollSummary() {
                 await dbDelete('employees', id);
             hideModal('employee-detail-modal');
             loadEmployees();
-            try { await syncToFirebase(); } catch(e) { debouncedSync();
+            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
             prismFullRefresh('staff', {skipCalendar: true});
- }
             showToast('Employee deleted successfully!', 'success');
         }
     window.deleteEmployee = deleteEmployee;
@@ -18807,9 +18819,8 @@ async function showPayrollSummary() {
                 loadCredits();
                 loadDashboard();
                 // Immediate sync for critical data
-                try { await syncToFirebase(); } catch(e) { debouncedSync();
+                try { await syncToFirebase(); } catch(e) { debouncedSync(); }
                 prismFullRefresh('credit', {skipCalendar: true});
- }
                 showToast('Credit/Loan saved successfully!', 'success');
 
                 // Auto-endorse new credits to admin
@@ -19647,8 +19658,8 @@ async function showPayrollSummary() {
             hideModal('credit-detail-modal');
             loadCredits();
             loadDashboard();
-            try { await syncToFirebase(); } catch(e) { debouncedSync();
-                prismFullRefresh('credit', {skipCalendar: true}); }
+            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
+            prismFullRefresh('credit', {skipCalendar: true});
         }
 
         async function populateCreditDropdown() {
@@ -20470,9 +20481,8 @@ async function showPayrollSummary() {
             loadNotes();
             showToast('🗑️ Note deleted.', 'success');
             // Sync immediately (not debounced) so deletion reaches Firebase before logout
-            try { await syncToFirebase(); } catch(e) { debouncedSync();
+            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
             prismFullRefresh('notes', {skipCalendar: true});
- }
         }
 
         // =====================
@@ -20686,8 +20696,8 @@ async function showPayrollSummary() {
             } else {
                 await viewCreditDetails(clientId);
             }
-            if(typeof prismAutoRefreshCurrent==='function')prismAutoRefreshCurrent();
-        debouncedSync();
+            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
+            prismFullRefresh(clientType === 'tenant' ? 'tenant' : 'credit', {skipCalendar: true});
         }
 
         // Add notes to client
@@ -28428,9 +28438,8 @@ async function clearAllData() {
             hideModal('supplier-modal');
             showToast('🗑 Supplier deleted.','success');
             await loadSuppliers();
-            try { await syncToFirebase(); } catch(e) { debouncedSync();
+            try { await syncToFirebase(); } catch(e) { debouncedSync(); }
             prismFullRefresh('supplier', {skipCalendar: true});
- }
         }
         window.deleteSupplierById = deleteSupplierById;
 
@@ -28810,9 +28819,8 @@ async function clearAllData() {
             await _ensureSupplierExists(supplier);
             await loadPayables();
             await loadSuppliers();
-            try { await syncToFirebase(); } catch(err) { debouncedSync();
+            try { await syncToFirebase(); } catch(err) { debouncedSync(); }
             prismFullRefresh('payable', {skipCalendar: true});
- }
         }
         window.savePayable = savePayable;
 
@@ -28825,14 +28833,20 @@ async function clearAllData() {
         window.deletePayable = deletePayable;
 
         async function deletePayableById(id) {
-            const ok = await showConfirm('Delete this supplier invoice?','danger','🗑 Delete','Yes, Delete','Cancel');
+            const ok = await showConfirm('Delete this supplier invoice? This will also remove any payment expense entries recorded against it.','danger','🗑 Delete','Yes, Delete','Cancel');
             if (!ok) return;
+            // A payable can have multiple partial payments, each recorded as its own
+            // expense (linked via supplierRef) — remove all of them, not just one,
+            // so deleting the invoice doesn't leave phantom expenses behind.
+            const allExp = await dbGetAll('expenses');
+            for (const exp of allExp) {
+                if (exp.supplierRef === id) await dbDelete('expenses', exp.id).catch(()=>{});
+            }
             await dbDelete('payables', id);
-            showToast('🗑 Invoice deleted.','success');
+            showToast('🗑 Invoice and its linked payments deleted.','success');
             await loadPayables();
-            try { await syncToFirebase(); } catch(err) { debouncedSync();
+            try { await syncToFirebase(); } catch(err) { debouncedSync(); }
             prismFullRefresh('payable', {skipCalendar: true});
- }
         }
         window.deletePayableById = deletePayableById;
 
@@ -29267,6 +29281,7 @@ async function clearAllData() {
                 await dbDelete('salaryPayments', salaryId);
                 try { await syncToFirebase(); } catch(e) { debouncedSync(); }
                 loadEmployees();
+                prismFullRefresh('expense', {skipCalendar: true});
                 showToast('✅ Payment undone — redo it below with the same period pre-filled.', 'success');
                 hideModal('employee-detail-modal');
                 await showGiveSalaryModal(employeeId, _dateFrom, _dateTo);
@@ -29302,6 +29317,7 @@ async function clearAllData() {
                 try { await syncToFirebase(); } catch(e) { debouncedSync(); }
                 if (typeof loadEmployees === 'function') loadEmployees();
                 if (typeof loadPayrollSummary === 'function') loadPayrollSummary();
+                prismFullRefresh('expense', {skipCalendar: true});
                 showToast('🗑 Salary payment deleted and reversed.','success');
             } catch (err) {
                 console.error('Delete salary payment error:', err);
@@ -29330,7 +29346,7 @@ async function clearAllData() {
             await dbDelete('cashAdvances', id);
             try { await syncToFirebase(); } catch(e) { debouncedSync(); }
             if (typeof loadEmployees === 'function') loadEmployees();
-            if(typeof prismAutoRefreshCurrent==='function') prismAutoRefreshCurrent();
+            prismFullRefresh('staff', {skipCalendar: true});
             showToast('🗑 Cash advance deleted.','success');
         }
         window.deleteCashAdvance = deleteCashAdvance;
@@ -29339,7 +29355,6 @@ async function clearAllData() {
         async function saveStoreProduct() {
             if (typeof addStoreProduct === 'function') await addStoreProduct();
         }
-            prismFullRefresh('income', {skipCalendar: true});
         window.saveStoreProduct = saveStoreProduct;
 
                 // ═══════════════════════════════════════════════
@@ -31047,7 +31062,7 @@ async function clearAllData() {
         window.markBottleAdvanceFulfilled = markBottleAdvanceFulfilled;
 
         async function deleteWaterBottleAdvance(id) {
-            if (!confirm('Delete this bottle advance record?')) return;
+            if (!await showConfirm('Delete this bottle advance record?', 'danger', '🗑️ Delete Bottle Advance', 'Yes, Delete')) return;
             await dbDelete('waterBottleAdvances', id);
             showToast('🗑️ Bottle advance deleted', 'success');
             renderWaterBottleAdvances();
@@ -31229,7 +31244,7 @@ async function clearAllData() {
         window.markBorrowedItemReturned = markBorrowedItemReturned;
 
         async function deleteWaterBorrowedItem(id) {
-            if (!confirm('Delete this borrowed item record?')) return;
+            if (!await showConfirm('Delete this borrowed item record?', 'danger', '🗑️ Delete Borrowed Item', 'Yes, Delete')) return;
             await dbDelete('waterBorrowedItems', id);
             showToast('🗑️ Borrowed item record deleted', 'success');
             renderWaterBorrowedItems();
@@ -36141,6 +36156,16 @@ window.addEventListener('DOMContentLoaded', () => {
                         });
                         localStorage.setItem('prism_app_users', JSON.stringify(merged));
                     }
+
+                    // CRITICAL: the data above is now updated in local storage, but nothing
+                    // on screen has been told to re-read it — without this, a device can sit
+                    // fully synced in the background while still showing stale data until the
+                    // person manually refreshes some other way (e.g. Pull from Cloud).
+                    // This is what makes new records from another device actually appear live.
+                    try {
+                        if (typeof prismFullRefresh === 'function') prismFullRefresh('all', {skipCalendar: false});
+                        if (typeof loadEmployees === 'function') loadEmployees();
+                    } catch(e) { console.warn('[RealtimeSync] UI refresh error:', e); }
                 });
         }
         function mtStopRealtimeSync() {
