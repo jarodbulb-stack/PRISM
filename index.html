@@ -5443,7 +5443,7 @@
                 </div>
 
                 <!-- Unsigned Salary Alert -->
-                <div id="unsigned-salary-banner" style="display:none;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.35);border-radius:9px;padding:10px 13px;margin-bottom:14px;cursor:pointer;" onclick="jumpToUnsignedSalary()">
+                <div id="unsigned-salary-banner" style="display:none;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.35);border-radius:9px;padding:10px 13px;margin-bottom:14px;cursor:pointer;" onclick="showAllUnsignedSalaries()">
                     <div style="display:flex;align-items:center;gap:8px;">
                         <span style="font-size:1.1rem;">✍️</span>
                         <span id="unsigned-salary-text" style="font-size:0.82rem;font-weight:600;color:#f59e0b;"></span>
@@ -16716,18 +16716,52 @@ async function loadWaterCustomers() {
 
         window.filterEmployees = filterEmployees;
 
-        // Jump to the first employee with an unsigned salary payment
-        async function jumpToUnsignedSalary() {
-            const ids = window._unsignedSalaryEmpIds || [];
-            if (ids.length === 0) { showToast('✅ No unsigned salary payments right now.', 'success'); return; }
-            const empId = parseInt(ids[0]);
-            await viewEmployeeDetails(empId);
-            if (typeof empHistTab === 'function') empHistTab(empId, 'salaries');
-            if (ids.length > 1) {
-                showToast('ℹ️ ' + (ids.length - 1) + ' more employee(s) also have unsigned payslips — check their Salary tab too.', 'info');
-            }
+        // Show every unsigned salary payment across ALL employees in one place —
+        // replaces the old "jump to just the first employee" approach, which made
+        // it easy to miss everyone after the first one in the list.
+        async function showAllUnsignedSalaries() {
+            const allSalaries = await dbGetAll('salaryPayments');
+            const unsigned = allSalaries.filter(s => !s.signature);
+            if (unsigned.length === 0) { showToast('✅ No unsigned salary payments right now.', 'success'); return; }
+
+            const employees = await dbGetAll('employees');
+            const empName = (id) => (employees.find(e => String(e.id) === String(id)) || {}).name || 'Unknown';
+
+            unsigned.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+            const existingModal = document.getElementById('all-unsigned-modal');
+            if (existingModal) existingModal.remove();
+
+            const modal = document.createElement('div');
+            modal.id = 'all-unsigned-modal';
+            modal.className = 'modal-overlay show';
+            modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+            const rows = unsigned.map(s => `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border-color);">
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:0.85rem;font-weight:700;">👤 ${s.employeeName || empName(s.employeeId)}</div>
+                        <div style="font-size:0.7rem;color:var(--text-secondary);">${s.period || s.date}</div>
+                    </div>
+                    <div style="text-align:right;flex-shrink:0;margin-left:10px;">
+                        <div style="font-weight:800;color:#10b981;font-size:0.9rem;margin-bottom:4px;">₱${(s.netPay||0).toLocaleString()}</div>
+                        <button onclick="document.getElementById('all-unsigned-modal').remove(); signSalaryPayment(${s.id});" style="padding:4px 10px;font-size:0.72rem;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);border-radius:6px;color:#f59e0b;cursor:pointer;font-weight:600;">✍️ Sign</button>
+                    </div>
+                </div>`).join('');
+
+            modal.innerHTML = `
+                <div class="modal">
+                    <div class="modal-header">
+                        <h3>✍️ Unsigned Salary Payments (${unsigned.length})</h3>
+                        <button class="modal-close" onclick="document.getElementById('all-unsigned-modal').remove()">&times;</button>
+                    </div>
+                    <div class="modal-body" style="max-height:60vh;overflow-y:auto;">
+                        ${rows}
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
         }
-        window.jumpToUnsignedSalary = jumpToUnsignedSalary;
+        window.showAllUnsignedSalaries = showAllUnsignedSalaries;
 
         function renderEmployeesList(employees) {
             const container = document.getElementById('employees-list');
