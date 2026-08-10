@@ -35866,12 +35866,18 @@ window.mtSAToggleOrgStatus=mtSAToggleOrgStatus;
                     // set for local PIN-based sub-accounts; the Firebase org owner/admin login
                     // path only sets MT.currentOrgRole, so don't let a missing currentAppUser
                     // silently downgrade a real Owner/Admin to 'viewer'.
-                    const _role = _appRole || _orgRole || 'viewer';
+                    const _role = _appRole || _orgRole || null;
                     // Always allow SUPER_ADMINS through regardless of stored role
                     const _email = (window.currentAppUser?.email || MT?.currentUser?.email || '').toLowerCase();
                     const _isSuperAdmin = MT?.SUPER_ADMINS && MT.SUPER_ADMINS.map(e=>e.toLowerCase()).includes(_email);
                     if (_isSuperAdmin) return _origSyncToFirebase(...args);
-                    if (['viewer','cashier'].includes(_role)) {
+                    // Only block when a role has ACTUALLY resolved to viewer/cashier — a
+                    // null/undefined role means resolution hasn't finished yet (common on
+                    // slower connections, since this guard installs on a fixed timer), not
+                    // that the person is confirmed low-privilege. Treating "unknown" the same
+                    // as "viewer" silently and permanently blocks real Owner/Admin syncs on
+                    // any device where role resolution is slower than this guard's timer.
+                    if (_role && ['viewer','cashier'].includes(_role)) {
                         console.info('[Security REQ7] Sync blocked for role:', _role, '(appRole:', _appRole, ', orgRole:', _orgRole, ')');
                         return;
                     }
@@ -36114,14 +36120,25 @@ window.addEventListener('DOMContentLoaded', () => {
         let _realtimeSyncUnsubscribe = null;
         let _lastSyncTimestamp = null;
 
-        function mtStartRealtimeSync() {
+        function mtStartRealtimeSync(_retryCount) {
+            _retryCount = _retryCount || 0;
             const dbRef = window.db || (typeof firestore !== 'undefined' ? firestore : null);
             if (!dbRef) return;
 
             const orgId = (() => {
                 try { return (MT && MT.currentOrg && MT.currentOrg.id) || localStorage.getItem('mt_current_org_id'); } catch(e) { return null; }
             })();
-            if (!orgId) return;
+            if (!orgId) {
+                // Org info may not have finished loading yet (common on slower connections) —
+                // retry for up to ~20 seconds instead of silently giving up forever, which was
+                // leaving devices with no realtime updates for the rest of the session.
+                if (_retryCount < 10) {
+                    setTimeout(() => mtStartRealtimeSync(_retryCount + 1), 2000);
+                } else {
+                    console.warn('[RealtimeSync] Gave up waiting for orgId after 10 attempts.');
+                }
+                return;
+            }
 
             if (_realtimeSyncUnsubscribe) { _realtimeSyncUnsubscribe(); _realtimeSyncUnsubscribe = null; }
 
